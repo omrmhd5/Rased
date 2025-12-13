@@ -127,13 +127,6 @@ export default function Matches() {
             <TrendingUp className="h-4 w-4 mr-2" />
             Match Dashboard
           </Button>
-          <Button
-            className="flex-1"
-            onClick={() => navigate("/lab", { state: { matchId: match.id } })}
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            Open Lab
-          </Button>
         </div>
       </Card>
     );

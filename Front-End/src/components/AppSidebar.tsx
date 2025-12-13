@@ -1,4 +1,4 @@
-import { Home, Calendar, Play, BarChart3, FileText, Users, Settings } from "lucide-react";
+import { Home, Calendar, FileText, Users, Settings } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -18,8 +18,6 @@ const analyticsItems = [
 
 const operationsItems = [
   { title: "Matches", url: "/matches", icon: Calendar },
-  { title: "Live Lab", url: "/lab", icon: Play },
-  { title: "Platform Analytics", url: "/platforms", icon: BarChart3 },
 ];
 
 const managementItems = [

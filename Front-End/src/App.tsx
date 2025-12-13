@@ -9,7 +9,6 @@ import { TopBar } from "@/components/TopBar";
 import Dashboard from "./pages/Dashboard";
 import Matches from "./pages/Matches";
 import MatchDashboard from "./pages/MatchDashboard";
-import Lab from "./pages/Lab";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,8 +30,6 @@ const App = () => (
                     <Route path="/" element={<Dashboard />} />
                     <Route path="/matches" element={<Matches />} />
                     <Route path="/match/:id" element={<MatchDashboard />} />
-                    <Route path="/lab" element={<Lab />} />
-                    <Route path="/platforms" element={<Dashboard />} />
                     <Route path="/reports" element={<Dashboard />} />
                     <Route path="/users" element={<Dashboard />} />
                     <Route path="/settings" element={<Dashboard />} />
