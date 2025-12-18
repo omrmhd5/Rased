@@ -32,6 +32,7 @@ export interface Match {
   active: number;
   totalViews: number;
   blockedPercent: number;
+  league: 'saudi' | 'italian' | 'spanish';
 }
 
 export const mockViolations: Violation[] = [
@@ -182,6 +183,7 @@ export const mockViolations: Violation[] = [
 ];
 
 export const mockMatches: Match[] = [
+  // Saudi League Matches
   {
     id: 1,
     description: 'NEOM vs Al Ettifaq',
@@ -195,6 +197,7 @@ export const mockMatches: Match[] = [
     active: 7,
     totalViews: 234000,
     blockedPercent: 92,
+    league: 'saudi',
   },
   {
     id: 2,
@@ -209,6 +212,7 @@ export const mockMatches: Match[] = [
     active: 0,
     totalViews: 0,
     blockedPercent: 0,
+    league: 'saudi',
   },
   {
     id: 3,
@@ -223,6 +227,7 @@ export const mockMatches: Match[] = [
     active: 0,
     totalViews: 0,
     blockedPercent: 0,
+    league: 'saudi',
   },
   {
     id: 4,
@@ -237,6 +242,7 @@ export const mockMatches: Match[] = [
     active: 0,
     totalViews: 156000,
     blockedPercent: 91,
+    league: 'saudi',
   },
   {
     id: 5,
@@ -251,6 +257,99 @@ export const mockMatches: Match[] = [
     active: 0,
     totalViews: 98000,
     blockedPercent: 93,
+    league: 'saudi',
+  },
+  // Italian League Matches
+  {
+    id: 6,
+    description: 'Juventus vs AC Milan',
+    date: '2024-03-15',
+    time: '20:45',
+    week: 12,
+    venue: 'Allianz Stadium',
+    status: 'live',
+    violations: 76,
+    blocked: 70,
+    active: 6,
+    totalViews: 198000,
+    blockedPercent: 92,
+    league: 'italian',
+  },
+  {
+    id: 7,
+    description: 'Inter Milan vs AS Roma',
+    date: '2024-03-16',
+    time: '18:00',
+    week: 12,
+    venue: 'San Siro',
+    status: 'upcoming',
+    violations: 0,
+    blocked: 0,
+    active: 0,
+    totalViews: 0,
+    blockedPercent: 0,
+    league: 'italian',
+  },
+  {
+    id: 8,
+    description: 'Napoli vs Lazio',
+    date: '2024-03-14',
+    time: '20:00',
+    week: 12,
+    venue: 'Diego Armando Maradona Stadium',
+    status: 'completed',
+    violations: 58,
+    blocked: 54,
+    active: 0,
+    totalViews: 142000,
+    blockedPercent: 93,
+    league: 'italian',
+  },
+  // Spanish League Matches
+  {
+    id: 9,
+    description: 'Real Madrid vs Barcelona',
+    date: '2024-03-15',
+    time: '21:00',
+    week: 12,
+    venue: 'Santiago Bernabéu',
+    status: 'live',
+    violations: 112,
+    blocked: 105,
+    active: 7,
+    totalViews: 456000,
+    blockedPercent: 94,
+    league: 'spanish',
+  },
+  {
+    id: 10,
+    description: 'Atletico Madrid vs Sevilla',
+    date: '2024-03-16',
+    time: '19:30',
+    week: 12,
+    venue: 'Wanda Metropolitano',
+    status: 'upcoming',
+    violations: 0,
+    blocked: 0,
+    active: 0,
+    totalViews: 0,
+    blockedPercent: 0,
+    league: 'spanish',
+  },
+  {
+    id: 11,
+    description: 'Valencia vs Villarreal',
+    date: '2024-03-14',
+    time: '18:00',
+    week: 12,
+    venue: 'Mestalla Stadium',
+    status: 'completed',
+    violations: 52,
+    blocked: 48,
+    active: 0,
+    totalViews: 125000,
+    blockedPercent: 92,
+    league: 'spanish',
   },
 ];
 
