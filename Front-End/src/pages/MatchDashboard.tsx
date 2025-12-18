@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, Shield, Eye, Clock, Activity, FileText, AlertCircle, CheckCircle2, TrendingUp, Twitter, Youtube, Facebook, Instagram, Zap, RefreshCw, MessageSquare, ExternalLink, Maximize2, Edit, ShieldCheck, MoreHorizontal, Plus, X, ChevronDown, Minimize2, Lock, Copy, FileEdit, Trash2, Link as LinkIcon, Search, BarChart3 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from "recharts";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -44,75 +44,100 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { MatchReport } from "@/components/MatchReport";
 
-const contentSplitData = [{
+// Empty content split data - will be populated from real violations
+const getInitialContentSplitData = () => [{
   name: "Live",
-  value: 320000,
-  violations: 65,
+  value: 0,
+  violations: 0,
   color: "hsl(var(--chart-1))"
 }, {
   name: "Highlights",
-  value: 180000,
-  violations: 40,
+  value: 0,
+  violations: 0,
   color: "hsl(var(--chart-2))"
 }];
 
-const activityLog = [{
-  time: "20:45",
-  type: "match",
-  badge: "Match",
-  description: "Monitoring started",
-  badgeVariant: "secondary" as const,
-  platform: null
-}, {
-  time: "20:47",
-  type: "violation",
-  badge: "Violation",
-  description: "New violation added – Live • 23K views",
-  badgeVariant: "destructive" as const,
-  platform: "Twitter"
-}, {
-  time: "20:50",
-  type: "status",
-  badge: "Status",
-  description: "Status changed to Blocked – 56K views",
-  badgeVariant: "default" as const,
-  platform: "YouTube"
-}, {
-  time: "20:53",
-  type: "violation",
-  badge: "Violation",
-  description: "New violation added – Highlights • 12K views",
-  badgeVariant: "destructive" as const,
-  platform: "Facebook"
-}, {
-  time: "20:55",
-  type: "note",
-  badge: "Note",
-  description: "Note added by Operator A",
-  badgeVariant: "outline" as const,
-  platform: null
-}, {
-  time: "21:02",
-  type: "status",
-  badge: "Status",
-  description: "Status changed to Blocked – 34K views",
-  badgeVariant: "default" as const,
-  platform: "TikTok"
-}, {
-  time: "21:08",
-  type: "violation",
-  badge: "Violation",
-  description: "New violation added – Live • 18K views",
-  badgeVariant: "destructive" as const,
-  platform: "Instagram"
-}, {
-  time: "21:12",
-  type: "status",
-  badge: "Status",
-  description: "Status changed to Review – 8K views",
-  badgeVariant: "default" as const,
-  platform: "Telegram"
-}];
+// Empty activity log - will be populated from real data
+const getInitialActivityLog = () => [];
+
+// Empty platform operations - will be populated from real data
+const getInitialPlatformOperations = (): PlatformData[] => [
+  {
+    id: "twitter",
+    name: "X/Twitter",
+    icon: Twitter,
+    color: "hsl(203 89% 53%)",
+    totalViolations: 0,
+    activeViolations: 0,
+    blockedRate: 0,
+    blockedCount: 0,
+    totalViews: "0",
+    avgBlockTime: "0 min",
+    blockedSuccess: "0%",
+    stillActive: 0,
+    violations: []
+  },
+  {
+    id: "youtube",
+    name: "YouTube",
+    icon: Youtube,
+    color: "hsl(0 100% 50%)",
+    totalViolations: 0,
+    activeViolations: 0,
+    blockedRate: 0,
+    blockedCount: 0,
+    totalViews: "0",
+    avgBlockTime: "0 min",
+    blockedSuccess: "0%",
+    stillActive: 0,
+    violations: []
+  },
+  {
+    id: "facebook",
+    name: "Facebook",
+    icon: Facebook,
+    color: "hsl(221 44% 41%)",
+    totalViolations: 0,
+    activeViolations: 0,
+    blockedRate: 0,
+    blockedCount: 0,
+    totalViews: "0",
+    avgBlockTime: "0 min",
+    blockedSuccess: "0%",
+    stillActive: 0,
+    violations: []
+  },
+  {
+    id: "tiktok",
+    name: "TikTok",
+    icon: Activity,
+    color: "hsl(0 0% 0%)",
+    totalViolations: 0,
+    activeViolations: 0,
+    blockedRate: 0,
+    blockedCount: 0,
+    totalViews: "0",
+    avgBlockTime: "0 min",
+    blockedSuccess: "0%",
+    stillActive: 0,
+    violations: []
+  },
+  {
+    id: "instagram",
+    name: "Instagram",
+    icon: Instagram,
+    color: "hsl(329 100% 50%)",
+    totalViolations: 0,
+    activeViolations: 0,
+    blockedRate: 0,
+    blockedCount: 0,
+    totalViews: "0",
+    avgBlockTime: "0 min",
+    blockedSuccess: "0%",
+    stillActive: 0,
+    violations: []
+  },
+];
 
 const formatViews = (views: number) => {
   if (views >= 1000) return `${Math.round(views / 1000)}K`;
@@ -165,278 +190,85 @@ type PlatformData = {
   violations: Violation[];
 };
 
-const initialPlatformOperations: PlatformData[] = [
-  {
-    id: "twitter",
-    name: "X/Twitter",
-    icon: Twitter,
-    color: "hsl(203 89% 53%)",
-    totalViolations: 234,
-    activeViolations: 21,
-    blockedRate: 89,
-    blockedCount: 218,
-    totalViews: "56.7K",
-    avgBlockTime: "9.2 min",
-    blockedSuccess: "93%",
-    stillActive: 10,
-    violations: [
-      { 
-        id: 1, 
-        status: "active", 
-        time: "20:47", 
-        type: "Live", 
-        views: "23K", 
-        addedAgo: "15m ago", 
-        statusBadge: "active", 
-        url: "https://twitter.com/sports_live_hd/status/123456789", 
-        accountHandle: "@sports_live_hd",
-        timeAdded: "2026-05-21T20:47:00", 
-        statusHistory: [
-          { status: "reported", changedAt: "2026-05-21T20:47:00" }, 
-          { status: "active", changedAt: "2026-05-21T20:48:00" }
-        ] 
-      },
-      { 
-        id: 2, 
-        status: "blocked", 
-        time: "20:35", 
-        type: "Live", 
-        views: "18K", 
-        blockedIn: "6.1 min", 
-        statusBadge: "blocked", 
-        url: "https://twitter.com/live_sports_tv/status/987654", 
-        accountHandle: "@live_sports_tv",
-        timeAdded: "2026-05-21T20:35:00", 
-        blockedAt: "2026-05-21T20:41:00", 
-        statusHistory: [
-          { status: "reported", changedAt: "2026-05-21T20:35:00" }, 
-          { status: "active", changedAt: "2026-05-21T20:36:00" }, 
-          { status: "blocked", changedAt: "2026-05-21T20:41:00" }
-        ] 
-      },
-      { 
-        id: 3, 
-        status: "review", 
-        time: "20:28", 
-        type: "Highlights", 
-        views: "12K", 
-        addedAgo: "42m ago", 
-        statusBadge: "review", 
-        url: "https://twitter.com/match_highlights/status/456789", 
-        accountHandle: "@match_highlights",
-        timeAdded: "2026-05-21T20:28:00", 
-        statusHistory: [
-          { status: "reported", changedAt: "2026-05-21T20:28:00" }, 
-          { status: "review", changedAt: "2026-05-21T20:30:00" }
-        ] 
-      },
-      { 
-        id: 4, 
-        status: "active", 
-        time: "20:15", 
-        type: "Live", 
-        views: "8.5K", 
-        addedAgo: "55m ago", 
-        statusBadge: "active", 
-        url: "https://twitter.com/football_streams/status/111222", 
-        accountHandle: "@football_streams",
-        timeAdded: "2026-05-21T20:15:00", 
-        stillActive: true, 
-        statusHistory: [
-          { status: "reported", changedAt: "2026-05-21T20:15:00" }, 
-          { status: "active", changedAt: "2026-05-21T20:16:00" }
-        ] 
-      },
-      { 
-        id: 5, 
-        status: "blocked", 
-        time: "20:08", 
-        type: "Highlights", 
-        views: "14K", 
-        blockedIn: "8.3 min", 
-        statusBadge: "blocked", 
-        url: "https://twitter.com/soccer_clips/status/333444", 
-        timeAdded: "2026-05-21T20:08:00", 
-        blockedAt: "2026-05-21T20:16:00", 
-        statusHistory: [
-          { status: "reported", changedAt: "2026-05-21T20:08:00" }, 
-          { status: "active", changedAt: "2026-05-21T20:09:00" }, 
-          { status: "blocked", changedAt: "2026-05-21T20:16:00" }
-        ] 
-      },
-    ]
-  },
-  {
-    id: "youtube",
-    name: "YouTube",
-    icon: Youtube,
-    color: "hsl(0 100% 50%)",
-    totalViolations: 189,
-    activeViolations: 15,
-    blockedRate: 92,
-    blockedCount: 174,
-    totalViews: "78.2K",
-    avgBlockTime: "11.8 min",
-    blockedSuccess: "92%",
-    stillActive: 15,
-    violations: [
-      { 
-        id: 1, 
-        status: "active", 
-        time: "21:05", 
-        type: "Live", 
-        views: "34K", 
-        addedAgo: "5m ago", 
-        statusBadge: "active", 
-        url: "https://youtube.com/watch?v=abcdefg12345", 
-        accountHandle: "@LiveSportsHD",
-        timeAdded: "2026-05-21T21:05:00", 
-        statusHistory: [
-          { status: "reported", changedAt: "2026-05-21T21:05:00" }, 
-          { status: "active", changedAt: "2026-05-21T21:06:00" }
-        ] 
-      },
-      { 
-        id: 2, 
-        status: "blocked", 
-        time: "20:52", 
-        type: "Live", 
-        views: "21K", 
-        blockedIn: "9.2 min", 
-        statusBadge: "blocked", 
-        url: "https://youtube.com/watch?v=xyz789def456", 
-        accountHandle: "@FootballLive247",
-        timeAdded: "2026-05-21T20:52:00", 
-        blockedAt: "2026-05-21T21:01:00", 
-        statusHistory: [
-          { status: "reported", changedAt: "2026-05-21T20:52:00" }, 
-          { status: "active", changedAt: "2026-05-21T20:53:00" }, 
-          { status: "blocked", changedAt: "2026-05-21T21:01:00" }
-        ] 
-      },
-      { 
-        id: 3, 
-        status: "active", 
-        time: "20:40", 
-        type: "Highlights", 
-        views: "15K", 
-        addedAgo: "30m ago", 
-        statusBadge: "active", 
-        url: "https://youtube.com/watch?v=highlights999", 
-        accountHandle: "@SoccerHighlights",
-        timeAdded: "2026-05-21T20:40:00", 
-        statusHistory: [
-          { status: "reported", changedAt: "2026-05-21T20:40:00" }, 
-          { status: "active", changedAt: "2026-05-21T20:41:00" }
-        ] 
-      },
-    ]
-  },
-  {
-    id: "facebook",
-    name: "Facebook",
-    icon: Facebook,
-    color: "hsl(221 44% 41%)",
-    totalViolations: 156,
-    activeViolations: 12,
-    blockedRate: 85,
-    blockedCount: 133,
-    totalViews: "42.1K",
-    avgBlockTime: "13.5 min",
-    blockedSuccess: "85%",
-    stillActive: 12,
-    violations: [
-      { 
-        id: 1, 
-        status: "blocked", 
-        time: "21:00", 
-        type: "Highlights", 
-        views: "19K", 
-        blockedIn: "7.5 min", 
-        statusBadge: "blocked", 
-        url: "https://facebook.com/video/123456789", 
-        accountHandle: "Sports Live TV",
-        timeAdded: "2026-05-21T21:00:00", 
-        blockedAt: "2026-05-21T21:07:30", 
-        statusHistory: [
-          { status: "reported", changedAt: "2026-05-21T21:00:00" }, 
-          { status: "active", changedAt: "2026-05-21T21:01:00" }, 
-          { status: "blocked", changedAt: "2026-05-21T21:07:30" }
-        ] 
-      },
-      { 
-        id: 2, 
-        status: "review", 
-        time: "20:45", 
-        type: "Live", 
-        views: "11K", 
-        addedAgo: "25m ago", 
-        statusBadge: "review", 
-        url: "https://facebook.com/video/987654321", 
-        accountHandle: "Match Streaming",
-        timeAdded: "2026-05-21T20:45:00", 
-        statusHistory: [
-          { status: "reported", changedAt: "2026-05-21T20:45:00" }, 
-          { status: "review", changedAt: "2026-05-21T20:47:00" }
-        ] 
-      },
-    ]
-  },
-  {
-    id: "tiktok",
-    name: "TikTok",
-    icon: Activity,
-    color: "hsl(0 0% 0%)",
-    totalViolations: 98,
-    activeViolations: 8,
-    blockedRate: 88,
-    blockedCount: 86,
-    totalViews: "31.4K",
-    avgBlockTime: "10.1 min",
-    blockedSuccess: "88%",
-    stillActive: 8,
-    violations: []
-  },
-  {
-    id: "instagram",
-    name: "Instagram",
-    icon: Instagram,
-    color: "hsl(329 100% 50%)",
-    totalViolations: 67,
-    activeViolations: 5,
-    blockedRate: 90,
-    blockedCount: 60,
-    totalViews: "18.9K",
-    avgBlockTime: "12.3 min",
-    blockedSuccess: "90%",
-    stillActive: 5,
-    violations: [
-      { 
-        id: 1, 
-        status: "active", 
-        time: "21:08", 
-        type: "Live", 
-        views: "9K", 
-        addedAgo: "2m ago", 
-        statusBadge: "active", 
-        url: "https://instagram.com/p/abcd123efgh456", 
-        accountHandle: "@football_clips",
-        timeAdded: "2026-05-21T21:08:00", 
-        statusHistory: [
-          { status: "reported", changedAt: "2026-05-21T21:08:00" }, 
-          { status: "active", changedAt: "2026-05-21T21:09:00" }
-        ] 
-      },
-    ]
-  },
-];
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+interface Match {
+  _id?: string;
+  externalMatchId: string;
+  description: string;
+  team1: string;
+  team2: string;
+  date: string;
+  time: string;
+  week: string;
+  competition?: string;
+  stadium?: string;
+  status: "upcoming" | "live" | "finished" | "cancelled" | "postponed";
+  league: "saudi" | "italian" | "spanish";
+  winner?: "home" | "away" | "draw" | null;
+  scores?: {
+    home: number;
+    away: number;
+  } | null;
+}
 
 export default function MatchDashboard() {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const [logFilter, setLogFilter] = useState<"all" | "violations" | "status" | "notes">("all");
+  const [match, setMatch] = useState<Match | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [contentSplitData, setContentSplitData] = useState(getInitialContentSplitData());
+  const [activityLog, setActivityLog] = useState(getInitialActivityLog());
   
   // Platform operations state
-  const [platformOperations, setPlatformOperations] = useState<PlatformData[]>(initialPlatformOperations);
+  const [platformOperations, setPlatformOperations] = useState<PlatformData[]>(getInitialPlatformOperations());
+  
+  // Fetch match data
+  useEffect(() => {
+    const fetchMatch = async () => {
+      if (!id) return;
+      
+      setLoading(true);
+      try {
+        const response = await fetch(`${API_URL}/matches/${id}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch match");
+        }
+        const matchData = await response.json();
+        
+        // Format date if needed
+        const formattedMatch: Match = {
+          ...matchData,
+          date: matchData.date
+            ? typeof matchData.date === "string"
+              ? matchData.date
+              : new Date(matchData.date).toISOString().split("T")[0]
+            : "",
+        };
+        
+        setMatch(formattedMatch);
+        
+        // Fetch violations for this match
+        const violationsResponse = await fetch(`${API_URL}/violations?matchId=${matchData._id}`);
+        if (violationsResponse.ok) {
+          const violations = await violationsResponse.json();
+          // Process violations and update platform operations
+          // This will be implemented to populate real data
+        }
+      } catch (error) {
+        console.error("Error fetching match:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load match data",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchMatch();
+  }, [id]);
   
   // Platform slot system (max 2 platforms visible)
   const [selectedSlots, setSelectedSlots] = useState<string[]>(["twitter", "youtube"]);
@@ -888,6 +720,103 @@ export default function MatchDashboard() {
     }
   };
   
+  // Calculate KPIs from platform operations
+  const totalViolations = platformOperations.reduce((sum, p) => sum + p.totalViolations, 0);
+  const totalBlocked = platformOperations.reduce((sum, p) => sum + p.blockedCount, 0);
+  const totalActive = platformOperations.reduce((sum, p) => sum + p.stillActive, 0);
+  const blockedRate = totalViolations > 0 ? Math.round((totalBlocked / totalViolations) * 100) : 0;
+  
+  // Calculate total views
+  const totalViews = platformOperations.reduce((sum, p) => {
+    const viewsNum = parseInt(p.totalViews.replace(/[^0-9]/g, '')) || 0;
+    return sum + viewsNum;
+  }, 0);
+  const formattedTotalViews = totalViews >= 1000 ? `${Math.round(totalViews / 1000)}K` : totalViews.toString();
+  
+  // Find top platform
+  const topPlatform = platformOperations.reduce((top, p) => {
+    const pViews = parseInt(p.totalViews.replace(/[^0-9]/g, '')) || 0;
+    const topViews = parseInt((top?.totalViews || "0").replace(/[^0-9]/g, '')) || 0;
+    return pViews > topViews ? p : top;
+  }, platformOperations[0]);
+  
+  // Calculate average block time
+  const allBlockTimes = platformOperations.flatMap(p => 
+    p.violations
+      .filter(v => v.blockedAt)
+      .map(v => {
+        const blockInfo = calculateBlockDuration(v);
+        return blockInfo ? blockInfo.duration : 0;
+      })
+  );
+  const avgBlockTime = allBlockTimes.length > 0 
+    ? (allBlockTimes.reduce((sum, t) => sum + t, 0) / allBlockTimes.length).toFixed(1)
+    : "0";
+  
+  // Format match date and time
+  const formatMatchDateTime = () => {
+    if (!match) return "";
+    const dateStr = match.date;
+    const timeStr = match.time || "";
+    if (!dateStr) return "";
+    
+    try {
+      const date = new Date(dateStr);
+      const formattedDate = date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+      return timeStr ? `${formattedDate} – ${timeStr}` : formattedDate;
+    } catch {
+      return dateStr + (timeStr ? ` – ${timeStr}` : "");
+    }
+  };
+  
+  // Get competition name
+  const getCompetitionName = () => {
+    if (!match) return "";
+    if (typeof match.competition === "object" && match.competition !== null) {
+      return (match.competition as any).name || "";
+    }
+    return typeof match.competition === "string" ? match.competition : "";
+  };
+  
+  // Get status badge
+  const getStatusBadge = () => {
+    if (!match) return null;
+    const status = match.status;
+    if (status === "live") {
+      return <Badge variant="destructive" className="text-xs">LIVE</Badge>;
+    } else if (status === "finished") {
+      return <Badge variant="secondary" className="text-xs">COMPLETED</Badge>;
+    } else if (status === "postponed") {
+      return <Badge variant="outline" className="text-xs bg-yellow-500/10 text-yellow-600 border-yellow-500/30">POSTPONED</Badge>;
+    } else if (status === "cancelled") {
+      return <Badge variant="outline" className="text-xs">CANCELLED</Badge>;
+    } else {
+      return <Badge variant="outline" className="text-xs">UPCOMING</Badge>;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Loading match data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!match) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-sm text-muted-foreground">Match not found</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Match Overview - Single Unified Card */}
@@ -895,12 +824,14 @@ export default function MatchDashboard() {
         {/* Top Row: Title + Date/Status */}
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <h1 className="text-xl font-bold mb-1">NEOM vs Al Ettifaq</h1>
-            <p className="text-xs text-muted-foreground">Week 12 • Saudi Pro League • Prince Mohammed bin Fahd Stadium</p>
+            <h1 className="text-xl font-bold mb-1">{match.team1} vs {match.team2}</h1>
+            <p className="text-xs text-muted-foreground">
+              Week {match.week || "N/A"} • {getCompetitionName() || "N/A"} • {match.stadium || "N/A"}
+            </p>
           </div>
           <div className="text-right">
-            <p className="text-xs font-medium mb-1.5">21 May 2026 – 20:30</p>
-            <Badge variant="destructive" className="text-xs">LIVE</Badge>
+            <p className="text-xs font-medium mb-1.5">{formatMatchDateTime()}</p>
+            {getStatusBadge()}
           </div>
         </div>
 
@@ -911,7 +842,7 @@ export default function MatchDashboard() {
               <AlertTriangle className="h-3.5 w-3.5 text-chart-1" />
             </div>
             <div>
-              <p className="text-xl font-bold leading-none mb-1">105</p>
+              <p className="text-xl font-bold leading-none mb-1">{totalViolations}</p>
               <p className="text-xs text-muted-foreground">Total Violations</p>
               <p className="text-[10px] text-muted-foreground/70 mt-0.5">all platforms</p>
             </div>
@@ -922,9 +853,9 @@ export default function MatchDashboard() {
               <Shield className="h-3.5 w-3.5 text-success" />
             </div>
             <div>
-              <p className="text-xl font-bold leading-none mb-1">82</p>
+              <p className="text-xl font-bold leading-none mb-1">{totalBlocked}</p>
               <p className="text-xs text-muted-foreground">Blocked Successfully</p>
-              <p className="text-[10px] text-muted-foreground/70 mt-0.5">78% success rate</p>
+              <p className="text-[10px] text-muted-foreground/70 mt-0.5">{blockedRate}% success rate</p>
             </div>
           </div>
 
@@ -933,7 +864,7 @@ export default function MatchDashboard() {
               <Activity className="h-3.5 w-3.5 text-destructive" />
             </div>
             <div>
-              <p className="text-xl font-bold leading-none mb-1">23</p>
+              <p className="text-xl font-bold leading-none mb-1">{totalActive}</p>
               <p className="text-xs text-muted-foreground">Still Active</p>
               <p className="text-[10px] text-muted-foreground/70 mt-0.5">needs action</p>
             </div>
@@ -944,9 +875,9 @@ export default function MatchDashboard() {
               <TrendingUp className="h-3.5 w-3.5 text-chart-2" />
             </div>
             <div>
-              <p className="text-xl font-bold leading-none mb-1">50K</p>
+              <p className="text-xl font-bold leading-none mb-1">{topPlatform ? topPlatform.totalViews : "0"}</p>
               <p className="text-xs text-muted-foreground">Top Platform</p>
-              <p className="text-[10px] text-muted-foreground/70 mt-0.5">X/Twitter • biggest source</p>
+              <p className="text-[10px] text-muted-foreground/70 mt-0.5">{topPlatform ? `${topPlatform.name} • biggest source` : "N/A"}</p>
             </div>
           </div>
         </div>
@@ -957,9 +888,8 @@ export default function MatchDashboard() {
           <div className="p-4 rounded-lg bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-medium text-muted-foreground">Total Views (This Match)</p>
-              <Badge variant="secondary" className="text-xs bg-chart-4/20 text-chart-4 border-chart-4/30">↑ 8.6%</Badge>
             </div>
-            <p className="text-3xl font-bold text-foreground mb-1">456K</p>
+            <p className="text-3xl font-bold text-foreground mb-1">{formattedTotalViews}</p>
             <p className="text-xs text-muted-foreground">Across all platforms</p>
           </div>
 
@@ -967,9 +897,11 @@ export default function MatchDashboard() {
           <div className="p-4 rounded-lg bg-gradient-to-br from-success/5 to-success/10 border border-success/20">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-medium text-muted-foreground">Avg Block Time (This Match)</p>
-              <Badge className="text-xs bg-success/20 text-success border-success/30">Within target</Badge>
+              <Badge className="text-xs bg-success/20 text-success border-success/30">
+                {parseFloat(avgBlockTime) <= 15 ? "Within target" : "Over target"}
+              </Badge>
             </div>
-            <p className="text-3xl font-bold text-foreground mb-1">11.2<span className="text-base text-muted-foreground ml-1">min</span></p>
+            <p className="text-3xl font-bold text-foreground mb-1">{avgBlockTime}<span className="text-base text-muted-foreground ml-1">min</span></p>
             <p className="text-xs text-muted-foreground">Target: 15 min SLA</p>
           </div>
         </div>
@@ -2184,7 +2116,7 @@ export default function MatchDashboard() {
             {/* Match (Read-only) */}
             <div className="space-y-2">
               <Label>Match</Label>
-              <Input value="NEOM vs Al Ettifaq" disabled />
+              <Input value={match ? `${match.team1} vs ${match.team2}` : ""} disabled />
             </div>
 
             {/* Platform (Read-only) */}
@@ -2340,9 +2272,9 @@ export default function MatchDashboard() {
       <MatchReport
         open={isReportOpen}
         onClose={() => setIsReportOpen(false)}
-        matchName="NEOM vs Al Ettifaq"
-        week="Week 12"
-        competition="Saudi Pro League"
+        matchName={match ? `${match.team1} vs ${match.team2}` : ""}
+        week={match ? `Week ${match.week || "N/A"}` : "N/A"}
+        competition={match ? getCompetitionName() : "N/A"}
         stadium="Prince Mohammed bin Fahd Stadium"
         date="21 مايو 2026"
         time="20:30"
