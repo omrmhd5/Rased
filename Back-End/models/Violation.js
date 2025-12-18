@@ -158,3 +158,4 @@ violationSchema.pre("save", function (next) {
 const Violation = mongoose.model("Violation", violationSchema);
 
 export default Violation;
+

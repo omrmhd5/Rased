@@ -5,26 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 export function TopBar() {
   return <header className="sticky top-0 h-16 bg-card border-b border-border z-40 flex items-center px-3 sm:px-4 lg:px-6 gap-2 sm:gap-4 w-full">
-      {/* Logo & Mobile Menu */}
-      <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
-        <div className="lg:hidden">
-          <SidebarTrigger>
-            <Menu className="h-5 w-5" />
-          </SidebarTrigger>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-lg">A</span>
-          </div>
-          <span className="font-semibold text-base sm:text-lg hidden sm:inline">Anti-Piracy</span>
-        </div>
-      </div>
-
-      {/* Desktop Menu Toggle */}
-      <div className="hidden lg:flex items-center flex-shrink-0">
+      {/* Menu Toggle - First, always visible */}
+      <div className="flex items-center flex-shrink-0">
         <SidebarTrigger>
           <Menu className="h-5 w-5" />
         </SidebarTrigger>
+      </div>
+
+      {/* Logo & Brand Name - Behind the menu */}
+      <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-lg">R</span>
+          </div>
+          <span className="font-semibold text-base sm:text-lg hidden sm:inline">Rased</span>
+        </div>
       </div>
 
       {/* Search Bar - Responsive */}

@@ -41,20 +41,34 @@ const leagueNames = {
   spanish: "Spanish La Liga",
 };
 
+interface Competition {
+  _id?: string;
+  externalId: string;
+  name: string;
+  knownName?: string;
+  competitionCode?: string;
+  competitionFormat?: string;
+  league: "saudi" | "italian" | "spanish";
+  country?: {
+    id?: string;
+    name?: string;
+  };
+}
+
 interface Match {
-  _id: string;
+  _id?: string; // MongoDB _id (still present but not primary identifier)
+  externalMatchId: string; // Primary identifier
   description: string;
   team1: string;
   team2: string;
   date: string;
   time: string;
   week: string;
-  competition?: string;
-  competitionId?: string;
+  competition?: Competition | string; // Can be populated object or string
   stadium?: string;
   status: "upcoming" | "live" | "finished" | "cancelled" | "postponed";
   league: "saudi" | "italian" | "spanish";
-  winner?: string | null;
+  winner?: "home" | "away" | "draw" | null;
   scores?: {
     home: number;
     away: number;
@@ -70,16 +84,7 @@ interface Match {
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-const competitions = [
-  "Saudi Pro League",
-  "Italian Serie A",
-  "Spanish La Liga",
-  "Champions League",
-  "Europa League",
-  "Copa del Rey",
-  "Coppa Italia",
-  "King's Cup",
-];
+const competitions = ["Saudi Pro League", "Italian Serie A", "Spanish La Liga"];
 
 type MatchFilter = "all" | "live" | "upcoming" | "completed";
 
@@ -98,7 +103,6 @@ export default function Matches() {
   const [formTime, setFormTime] = useState("");
   const [formWeek, setFormWeek] = useState("");
   const [formCompetition, setFormCompetition] = useState("");
-  const [formCompetitionId, setFormCompetitionId] = useState("");
   const [formTeam1, setFormTeam1] = useState("");
   const [formTeam2, setFormTeam2] = useState("");
   const [formVenue, setFormVenue] = useState("");
@@ -133,52 +137,50 @@ export default function Matches() {
     }
   }, [selectedWeek]);
 
-  // Fetch matches from external API and database
+  // Fetch matches: sync from external API then get from database
   const fetchExternalMatches = useCallback(async () => {
     if (!selectedLeague) return;
 
     setLoading(true);
     try {
-      // Fetch external matches
-      const externalResponse = await fetch(
+      // Call external endpoint which syncs from API and returns from database
+      const response = await fetch(
         `${API_URL}/matches/external?league=${selectedLeague}&week=${selectedWeek}`
       );
-      let externalMatches: Match[] = [];
-      if (externalResponse.ok) {
-        const externalData = await externalResponse.json();
-        // Filter external matches by selected week if provided
-        externalMatches = selectedWeek
-          ? externalData.filter((match: Match) => match.week === selectedWeek)
-          : externalData;
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error ||
+            `Failed to sync and load matches: ${response.status}`
+        );
       }
 
-      // Fetch manually added matches from database
-      const dbResponse = await fetch(
-        `${API_URL}/matches?league=${selectedLeague}&week=${selectedWeek}`
-      );
-      let dbMatches: Match[] = [];
-      if (dbResponse.ok) {
-        const dbData = await dbResponse.json();
-        // Convert date to string format if needed
-        dbMatches = dbData.map((match: Match) => ({
+      const data = await response.json();
+
+      // Data is already formatted from database, but ensure dates are strings and handle competition
+      const formattedMatches = data.map((match: Match) => {
+        // Handle competition - it might be a populated object or just an ID
+        const competitionName =
+          typeof match.competition === "object" && match.competition !== null
+            ? (match.competition as Competition).name
+            : typeof match.competition === "string"
+            ? match.competition
+            : "";
+
+        return {
           ...match,
           date: match.date
             ? typeof match.date === "string"
               ? match.date
               : new Date(match.date).toISOString().split("T")[0]
             : "",
-        }));
-      }
+          competition: competitionName, // Keep as string for display
+        };
+      });
 
-      // Combine both sources and remove duplicates based on _id
-      const allMatches = [...externalMatches, ...dbMatches];
-      const uniqueMatches = allMatches.filter(
-        (match, index, self) =>
-          index === self.findIndex((m) => m._id === match._id)
-      );
-
-      // Set the matches to display
-      setMatches(uniqueMatches);
+      // Set the matches to display (all from database)
+      setMatches(formattedMatches);
     } catch (error) {
       console.error("Error fetching matches:", error);
       toast({
@@ -225,6 +227,7 @@ export default function Matches() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
+          description: formDescription || undefined,
           team1: formTeam1,
           team2: formTeam2,
           date: formDate,
@@ -232,8 +235,27 @@ export default function Matches() {
           week: formWeek,
           competition: formCompetition || undefined,
           stadium: formVenue || undefined,
-          league: selectedLeague,
-          status: "upcoming",
+          league: formCompetition
+            ? formCompetition === "Saudi Pro League"
+              ? "saudi"
+              : formCompetition === "Italian Serie A"
+              ? "italian"
+              : formCompetition === "Spanish La Liga"
+              ? "spanish"
+              : selectedLeague
+            : selectedLeague,
+          status: formStatus,
+          winner:
+            formStatus === "finished" && formWinner ? formWinner : undefined,
+          scores:
+            formStatus === "finished" &&
+            formScoreHome !== "" &&
+            formScoreAway !== ""
+              ? {
+                  home: Number(formScoreHome),
+                  away: Number(formScoreAway),
+                }
+              : undefined,
         }),
       });
 
@@ -258,6 +280,7 @@ export default function Matches() {
       });
 
       // Reset form
+      setFormDescription("");
       setFormDate("");
       setFormTime("");
       setFormWeek("");
@@ -265,6 +288,10 @@ export default function Matches() {
       setFormTeam1("");
       setFormTeam2("");
       setFormVenue("");
+      setFormStatus("upcoming");
+      setFormWinner("");
+      setFormScoreHome("");
+      setFormScoreAway("");
       setIsAddMatchOpen(false);
     } catch (error: unknown) {
       const errorMessage =
@@ -288,6 +315,67 @@ export default function Matches() {
     return true;
   });
 
+  // Group matches by day and sort days descending (most recent first)
+  const matchesByDay = filteredMatches.reduce((acc, match) => {
+    const matchDate = new Date(match.date);
+    const dateKey = matchDate.toISOString().split("T")[0]; // YYYY-MM-DD format
+
+    if (!acc[dateKey]) {
+      acc[dateKey] = [];
+    }
+    acc[dateKey].push(match);
+    return acc;
+  }, {} as Record<string, typeof filteredMatches>);
+
+  // Sort matches within each day by time (reversed - latest time first)
+  Object.keys(matchesByDay).forEach((dayKey) => {
+    matchesByDay[dayKey].sort((a, b) => {
+      // Parse time strings (format: "2:50 PM" or "14:50:00")
+      const parseTime = (timeStr: string) => {
+        if (!timeStr) return 0;
+        // Handle 12-hour format (e.g., "2:50 PM")
+        const pmMatch = timeStr.match(/(\d+):(\d+)\s*(PM|AM)/i);
+        if (pmMatch) {
+          let hours = parseInt(pmMatch[1]);
+          const minutes = parseInt(pmMatch[2]);
+          const isPM = pmMatch[3].toUpperCase() === "PM";
+          if (isPM && hours !== 12) hours += 12;
+          if (!isPM && hours === 12) hours = 0;
+          return hours * 60 + minutes;
+        }
+        // Handle 24-hour format (e.g., "14:50:00" or "14:50")
+        const timeMatch = timeStr.match(/(\d+):(\d+)/);
+        if (timeMatch) {
+          const hours = parseInt(timeMatch[1]);
+          const minutes = parseInt(timeMatch[2]);
+          return hours * 60 + minutes;
+        }
+        return 0;
+      };
+
+      const timeA = parseTime(a.time);
+      const timeB = parseTime(b.time);
+      // Earliest time first
+      return timeA - timeB;
+    });
+  });
+
+  // Sort days in ascending order (oldest first)
+  const sortedDays = Object.keys(matchesByDay).sort((a, b) => {
+    return new Date(a).getTime() - new Date(b).getTime();
+  });
+
+  // Format date for display
+  const formatDayHeader = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
   const handleLeagueSelect = (league: "saudi" | "italian" | "spanish") => {
     setSelectedLeague(league);
     localStorage.setItem("selectedLeague", league);
@@ -301,15 +389,38 @@ export default function Matches() {
   const getCountdownText = (dateStr: string | Date, timeStr: string) => {
     const date = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
     const dateOnly = date.toISOString().split("T")[0];
-    const matchDate = new Date(`${dateOnly}T${timeStr}`);
+
+    // Parse time string to handle 12-hour format
+    let time24Hour = timeStr;
+    if (timeStr.match(/(\d+):(\d+)\s*(PM|AM)/i)) {
+      const pmMatch = timeStr.match(/(\d+):(\d+)\s*(PM|AM)/i);
+      if (pmMatch) {
+        let hours = parseInt(pmMatch[1]);
+        const minutes = pmMatch[2];
+        const isPM = pmMatch[3].toUpperCase() === "PM";
+        if (isPM && hours !== 12) hours += 12;
+        if (!isPM && hours === 12) hours = 0;
+        time24Hour = `${hours.toString().padStart(2, "0")}:${minutes}`;
+      }
+    }
+
+    const matchDate = new Date(`${dateOnly}T${time24Hour}`);
     const now = new Date();
     const diff = matchDate.getTime() - now.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const totalMinutes = Math.floor(diff / (1000 * 60));
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
 
-    if (hours < 48 && hours >= 0) {
-      return `${hours}h ${minutes}m`;
+    // If within 1 hour (60 minutes) and in the future, show "Starting Soon"
+    if (totalMinutes <= 60 && totalMinutes >= 0) {
+      return { type: "starting-soon", minutes: totalMinutes };
     }
+
+    // If within 48 hours, show countdown
+    if (hours < 48 && hours >= 0) {
+      return { type: "countdown", text: `${hours}h ${minutes}m` };
+    }
+
     return null;
   };
 
@@ -358,85 +469,39 @@ export default function Matches() {
                   "Completed"}
               </Badge>
               <Badge variant="outline">Week {match.week}</Badge>
-              {countdown && (
+              {countdown && countdown.type === "starting-soon" && (
                 <Badge
                   variant="outline"
-                  className="bg-chart-1/10 text-chart-1 animate-pulse">
+                  className="bg-orange-500 text-white animate-pulse">
                   <Clock className="h-3 w-3 mr-1" />
-                  Starts in {countdown}
+                  Starting in {countdown.minutes}m
+                </Badge>
+              )}
+              {countdown && countdown.type === "countdown" && (
+                <Badge variant="outline" className="bg-chart-1/10 text-chart-1">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Starts in {countdown.text}
                 </Badge>
               )}
             </div>
             <h3 className="text-xl font-bold mb-2">
-              <span
-                className={
-                  match.status === "finished" && match.winner
-                    ? match.winner === "home"
-                      ? "text-green-600"
-                      : match.winner === "draw"
-                      ? "text-yellow-600"
-                      : match.winner === "away"
-                      ? "text-red-600"
-                      : "text-black"
-                    : match.status === "finished" && !match.winner
-                    ? "text-black"
-                    : "text-black"
-                }>
-                {match.team1}
-              </span>{" "}
-              vs{" "}
-              <span
-                className={
-                  match.status === "finished" && match.winner
-                    ? match.winner === "away"
-                      ? "text-green-600"
-                      : match.winner === "draw"
-                      ? "text-yellow-600"
-                      : match.winner === "home"
-                      ? "text-red-600"
-                      : "text-black"
-                    : match.status === "finished" && !match.winner
-                    ? "text-black"
-                    : "text-black"
-                }>
-                {match.team2}
-              </span>
+              {match.team1} vs {match.team2}
             </h3>
             {match.scores && (
               <div className="text-2xl font-bold mb-2">
-                <span
-                  className={
-                    match.winner === "home"
-                      ? "text-green-600"
-                      : match.winner === "draw"
-                      ? "text-yellow-600"
-                      : "text-red-600"
-                  }>
-                  {match.scores.home}
-                </span>{" "}
-                -{" "}
-                <span
-                  className={
-                    match.winner === "away"
-                      ? "text-green-600"
-                      : match.winner === "draw"
-                      ? "text-yellow-600"
-                      : "text-red-600"
-                  }>
-                  {match.scores.away}
-                </span>
+                {match.scores.home} - {match.scores.away}
               </div>
             )}
             {match.winner && match.winner !== "draw" && (
               <div className="text-sm text-muted-foreground mb-2">
                 Winner:{" "}
-                <span className="text-green-600 font-semibold">
+                <span className="font-semibold">
                   {match.winner === "home" ? match.team1 : match.team2}
                 </span>
               </div>
             )}
             {match.winner === "draw" && (
-              <div className="text-sm text-yellow-600 font-semibold mb-2">
+              <div className="text-sm text-muted-foreground font-semibold mb-2">
                 Draw
               </div>
             )}
@@ -455,7 +520,9 @@ export default function Matches() {
               )}
               {match.competition && (
                 <div className="text-xs text-muted-foreground/70">
-                  {match.competition}
+                  {typeof match.competition === "string"
+                    ? match.competition
+                    : (match.competition as Competition).name}
                 </div>
               )}
             </div>
@@ -466,7 +533,7 @@ export default function Matches() {
           <Button
             variant="outline"
             className="flex-1"
-            onClick={() => navigate(`/match/${match._id}`)}>
+            onClick={() => navigate(`/match/${match.externalMatchId}`)}>
             <TrendingUp className="h-4 w-4 mr-2" />
             Match Dashboard
           </Button>
@@ -649,11 +716,20 @@ export default function Matches() {
             </Button>
           </div>
 
-          {/* Filtered Matches */}
+          {/* Filtered Matches Grouped by Day */}
           {filteredMatches.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredMatches.map((match) => (
-                <MatchCard key={match._id} match={match} />
+            <div className="space-y-8">
+              {sortedDays.map((dayKey) => (
+                <div key={dayKey} className="space-y-4">
+                  <h2 className="text-xl font-semibold text-foreground border-b pb-2">
+                    {formatDayHeader(dayKey)}
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {matchesByDay[dayKey].map((match) => (
+                      <MatchCard key={match.externalMatchId} match={match} />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           ) : (
@@ -676,60 +752,26 @@ export default function Matches() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="date">Date *</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={formDate}
-                  onChange={(e) => setFormDate(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="time">Time *</Label>
-                <Input
-                  id="time"
-                  type="time"
-                  value={formTime}
-                  onChange={(e) => setFormTime(e.target.value)}
-                  required
-                />
-              </div>
+            {/* Competition */}
+            <div className="space-y-2">
+              <Label htmlFor="competition">Competition</Label>
+              <Select
+                value={formCompetition}
+                onValueChange={setFormCompetition}>
+                <SelectTrigger id="competition">
+                  <SelectValue placeholder="Select competition" />
+                </SelectTrigger>
+                <SelectContent>
+                  {competitions.map((comp) => (
+                    <SelectItem key={comp} value={comp}>
+                      {comp}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="week">Week *</Label>
-                <Input
-                  id="week"
-                  type="text"
-                  placeholder="e.g., 12"
-                  value={formWeek}
-                  onChange={(e) => setFormWeek(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="competition">Competition</Label>
-                <Select
-                  value={formCompetition}
-                  onValueChange={setFormCompetition}>
-                  <SelectTrigger id="competition">
-                    <SelectValue placeholder="Select competition" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {competitions.map((comp) => (
-                      <SelectItem key={comp} value={comp}>
-                        {comp}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
+            {/* Team 1 Name */}
             <div className="space-y-2">
               <Label htmlFor="team1">Team 1 Name *</Label>
               <Input
@@ -742,6 +784,7 @@ export default function Matches() {
               />
             </div>
 
+            {/* Team 2 Name */}
             <div className="space-y-2">
               <Label htmlFor="team2">Team 2 Name *</Label>
               <Input
@@ -754,39 +797,7 @@ export default function Matches() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="venue">Venue (Optional)</Label>
-              <Input
-                id="venue"
-                type="text"
-                placeholder="e.g., King Fahd International Stadium"
-                value={formVenue}
-                onChange={(e) => setFormVenue(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Input
-                id="description"
-                type="text"
-                placeholder="Auto-generated if left empty"
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="competitionId">Competition ID (Optional)</Label>
-              <Input
-                id="competitionId"
-                type="text"
-                placeholder="e.g., ea0h6cf3bhl698hkxhpulh2zz"
-                value={formCompetitionId}
-                onChange={(e) => setFormCompetitionId(e.target.value)}
-              />
-            </div>
-
+            {/* Status */}
             <div className="space-y-2">
               <Label htmlFor="status">Status *</Label>
               <Select
@@ -814,35 +825,11 @@ export default function Matches() {
               </Select>
             </div>
 
+            {/* Status-dependent fields (Winner and Scores) */}
             {formStatus === "finished" && (
               <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="scoreHome">Home Score *</Label>
-                    <Input
-                      id="scoreHome"
-                      type="number"
-                      min="0"
-                      placeholder="0"
-                      value={formScoreHome}
-                      onChange={(e) => setFormScoreHome(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="scoreAway">Away Score *</Label>
-                    <Input
-                      id="scoreAway"
-                      type="number"
-                      min="0"
-                      placeholder="0"
-                      value={formScoreAway}
-                      onChange={(e) => setFormScoreAway(e.target.value)}
-                    />
-                  </div>
-                </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="winner">Winner (Optional)</Label>
+                  <Label htmlFor="winner">Winner *</Label>
                   <Select
                     value={formWinner}
                     onValueChange={(value) =>
@@ -853,17 +840,104 @@ export default function Matches() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="home">
-                        {formTeam1 || "Home Team"}
+                        {formTeam1 || "Team 1"}
                       </SelectItem>
                       <SelectItem value="away">
-                        {formTeam2 || "Away Team"}
+                        {formTeam2 || "Team 2"}
                       </SelectItem>
                       <SelectItem value="draw">Draw</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="scoreHome">Team 1 Score *</Label>
+                    <Input
+                      id="scoreHome"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={formScoreHome}
+                      onChange={(e) => setFormScoreHome(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="scoreAway">Team 2 Score *</Label>
+                    <Input
+                      id="scoreAway"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={formScoreAway}
+                      onChange={(e) => setFormScoreAway(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
               </>
             )}
+
+            {/* Week */}
+            <div className="space-y-2">
+              <Label htmlFor="week">Week *</Label>
+              <Input
+                id="week"
+                type="text"
+                placeholder="e.g., 12"
+                value={formWeek}
+                onChange={(e) => setFormWeek(e.target.value)}
+                required
+              />
+            </div>
+
+            {/* Date and Time */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="date">Date *</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={formDate}
+                  onChange={(e) => setFormDate(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="time">Time *</Label>
+                <Input
+                  id="time"
+                  type="time"
+                  value={formTime}
+                  onChange={(e) => setFormTime(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Optional fields */}
+            <div className="space-y-2">
+              <Label htmlFor="venue">Venue (Optional)</Label>
+              <Input
+                id="venue"
+                type="text"
+                placeholder="e.g., King Fahd International Stadium"
+                value={formVenue}
+                onChange={(e) => setFormVenue(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description (Optional)</Label>
+              <Input
+                id="description"
+                type="text"
+                placeholder="Auto-generated if left empty"
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddMatchOpen(false)}>

@@ -4,7 +4,7 @@ const statusHistorySchema = new mongoose.Schema(
   {
     status: {
       type: String,
-      enum: ["reported", "active", "blocked", "removed", "review", "pending"],
+      enum: ["upcoming", "live", "finished", "cancelled", "postponed"],
       required: true,
     },
     changedAt: {
@@ -39,33 +39,36 @@ const matchSchema = new mongoose.Schema(
     },
     time: {
       type: String,
-      required: true,
+      default: "",
     },
-  status: {
-    type: String,
-    enum: ["upcoming", "live", "finished", "cancelled", "postponed"],
-    default: "upcoming",
-  },
+    status: {
+      type: String,
+      enum: ["upcoming", "live", "finished", "cancelled", "postponed"],
+      default: "upcoming",
+    },
     week: {
       type: String,
       trim: true,
     },
     competition: {
-      type: String,
-      trim: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Competition",
     },
-    competitionId: {
+    externalMatchId: {
       type: String,
+      required: true,
+      unique: true,
       trim: true,
+      index: true,
     },
     stadium: {
       type: String,
       trim: true,
     },
+    // League is now derived from competition, but kept for backward compatibility and filtering
     league: {
       type: String,
       enum: ["saudi", "italian", "spanish"],
-      required: true,
       index: true,
     },
     winner: {
