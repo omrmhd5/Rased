@@ -243,10 +243,11 @@ export default function Matches() {
   useEffect(() => {
     if (selectedLeague) {
       // First, fetch from DB immediately (shows loading)
-      fetchMatchesFromDB();
-
-      // Then, trigger API sync in background (doesn't block UI)
-      syncMatchesFromAPI();
+      fetchMatchesFromDB().then(() => {
+        // After DB fetch completes, trigger API sync in background (doesn't block UI)
+        // This runs asynchronously and updates the UI when new data arrives
+        syncMatchesFromAPI();
+      });
     }
   }, [selectedLeague, selectedWeek, fetchMatchesFromDB, syncMatchesFromAPI]);
 

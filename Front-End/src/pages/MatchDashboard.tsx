@@ -31,6 +31,7 @@ import {
   Link as LinkIcon,
   Search,
   BarChart3,
+  XCircle,
 } from "lucide-react";
 import {
   FaXTwitter,
@@ -192,44 +193,112 @@ const getInitialPlatformOperations = (): PlatformData[] => [
 ];
 
 const formatViews = (views: number) => {
-  if (views >= 1000) {
-    const kValue = views / 1000;
-    // If it's a whole number, don't show decimal
-    if (kValue % 1 === 0) {
-      return `${Math.round(kValue)}K`;
-    }
-    // Otherwise show one decimal place
-    return `${kValue.toFixed(1)}K`;
-  }
-  return views.toString();
+  return views.toLocaleString("en-US");
 };
 
-// Format views string (e.g., "20.0K" -> "20K", "2.5K" -> "2.5K")
+// Format views string - parse and return with comma formatting
 const formatViewsString = (viewsStr: string): string => {
   if (!viewsStr) return "0";
   if (viewsStr === "0") return "0";
 
-  // If it ends with K, format it
-  if (viewsStr.endsWith("K")) {
-    const numStr = viewsStr.replace("K", "");
-    const num = parseFloat(numStr);
-    if (isNaN(num)) return viewsStr;
-
-    // If it's a whole number, remove decimal
-    if (num % 1 === 0) {
-      return `${Math.round(num)}K`;
-    }
-    // Otherwise keep one decimal
-    return `${num.toFixed(1)}K`;
+  // Parse the string to a number (handles "K" notation if present)
+  let num = 0;
+  if (viewsStr.toUpperCase().includes("K")) {
+    const numStr = viewsStr.replace(/[^0-9.]/g, "");
+    num = parseFloat(numStr) * 1000;
+  } else {
+    num = parseFloat(viewsStr.replace(/[^0-9.]/g, ""));
   }
 
-  return viewsStr;
+  if (isNaN(num)) return viewsStr;
+
+  return Math.round(num).toLocaleString("en-US");
+};
+
+// Get current time in KSA timezone (UTC+3) formatted for datetime-local input
+const getKSATime = (): string => {
+  const now = new Date();
+  // Add 3 hours for KSA timezone (UTC+3)
+  const ksaTime = new Date(now.getTime() + 3 * 60 * 60 * 1000);
+  return ksaTime.toISOString().slice(0, 16);
 };
 
 // Calculate blocked count from violations
 const calculateBlockedCount = (violations: Violation[]): number => {
   return violations.filter(
-    (v) => v.status === "blocked" || v.status === "removed"
+    (v) => v.status === "Blocked" || v.status === "Removed"
+  ).length;
+};
+
+// Calculate total views from violations
+const calculateTotalViews = (violations: Violation[]): string => {
+  const totalViews = violations.reduce((sum, v) => {
+    if (!v.views) return sum;
+    // Parse views string (e.g., "20.5K" -> 20500)
+    const viewsStr = v.views.replace(/[^0-9.]/g, "");
+    const viewsNum = parseFloat(viewsStr) || 0;
+    const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
+    return sum + viewsNum * multiplier;
+  }, 0);
+
+  return formatViews(totalViews);
+};
+
+// Calculate average block time in minutes
+const calculateAvgBlockTime = (violations: Violation[]): string => {
+  const blockedViolations = violations.filter(
+    (v) => v.status === "Blocked" || v.status === "Removed"
+  );
+
+  if (blockedViolations.length === 0) return "0 min";
+
+  // For now, we'll calculate based on time since added
+  // In a real scenario, you'd use blockedAt - timeAdded
+  const totalMinutes = blockedViolations.reduce((sum, v) => {
+    const addedTime = new Date(v.timeAdded).getTime();
+    const now = new Date().getTime();
+    const diffMinutes = Math.floor((now - addedTime) / (1000 * 60));
+    return sum + diffMinutes;
+  }, 0);
+
+  const avgMinutes = Math.round(totalMinutes / blockedViolations.length);
+
+  if (avgMinutes < 60) {
+    return `${avgMinutes} min`;
+  } else if (avgMinutes < 1440) {
+    const hours = Math.round(avgMinutes / 60);
+    return `${hours}h`;
+  } else {
+    const days = Math.round(avgMinutes / 1440);
+    return `${days}d`;
+  }
+};
+
+// Calculate blocked success rate (blocked violations that are no longer active)
+const calculateBlockedSuccess = (violations: Violation[]): string => {
+  const blockedViolations = violations.filter(
+    (v) => v.status === "Blocked" || v.status === "Removed"
+  );
+
+  if (blockedViolations.length === 0) return "0%";
+
+  const successfullyBlocked = blockedViolations.filter(
+    (v) => !v.active && !v.stillActive
+  ).length;
+
+  const successRate = Math.round(
+    (successfullyBlocked / blockedViolations.length) * 100
+  );
+
+  return `${successRate}%`;
+};
+
+// Calculate still active count (blocked violations that are still active)
+const calculateStillActive = (violations: Violation[]): number => {
+  return violations.filter(
+    (v) =>
+      (v.status === "Blocked" || v.status === "Removed") &&
+      (v.active || v.stillActive)
   ).length;
 };
 
@@ -237,7 +306,15 @@ const calculateBlockedCount = (violations: Violation[]): number => {
 const convertBackendViolationToFrontend = (backendViolation: {
   _id?: string;
   id?: string | number;
-  status: "active" | "blocked" | "removed" | "under review";
+  status:
+    | "Active"
+    | "Blocked"
+    | "Removed"
+    | "Under Review"
+    | "active"
+    | "blocked"
+    | "removed"
+    | "under review";
   contentType: "Live" | "Highlights" | "Other";
   views?: string;
   violationUrl: string;
@@ -265,26 +342,55 @@ const convertBackendViolationToFrontend = (backendViolation: {
     }
   }
 
+  // Normalize status to capitalized format (handles old lowercase data)
+  let normalizedStatus: "Active" | "Blocked" | "Removed" | "Under Review" =
+    "Active";
+  const statusLower = backendViolation.status.toLowerCase();
+  if (statusLower === "active") {
+    normalizedStatus = "Active";
+  } else if (statusLower === "blocked") {
+    normalizedStatus = "Blocked";
+  } else if (statusLower === "removed") {
+    normalizedStatus = "Removed";
+  } else if (statusLower === "under review") {
+    normalizedStatus = "Under Review";
+  } else {
+    // If already capitalized, use as-is
+    normalizedStatus = backendViolation.status as
+      | "Active"
+      | "Blocked"
+      | "Removed"
+      | "Under Review";
+  }
+
   // Map status to statusBadge for UI
-  let statusBadge: "reported" | "active" | "blocked" | "review" | "pending" =
-    "active";
-  if (backendViolation.status === "removed") {
-    statusBadge = "blocked";
-  } else if (backendViolation.status === "under review") {
-    statusBadge = "review";
-  } else if (["active", "blocked"].includes(backendViolation.status)) {
-    statusBadge = backendViolation.status as "active" | "blocked";
+  let statusBadge:
+    | "Reported"
+    | "Active"
+    | "Blocked"
+    | "Removed"
+    | "Review"
+    | "Pending" = "Active";
+  if (normalizedStatus === "Removed") {
+    statusBadge = "Removed";
+  } else if (normalizedStatus === "Under Review") {
+    statusBadge = "Review";
+  } else if (normalizedStatus === "Active") {
+    statusBadge = "Active";
+  } else if (normalizedStatus === "Blocked") {
+    statusBadge = "Blocked";
   }
 
   return {
     id: backendViolation._id || backendViolation.id,
     _id: backendViolation._id,
-    status: backendViolation.status,
+    status: normalizedStatus,
     contentType: backendViolation.contentType,
     views: backendViolation.views || "0",
     violationUrl: backendViolation.violationUrl,
     accountChannel: backendViolation.accountChannel,
     timeAdded: backendViolation.timeAdded,
+    blockedAt: backendViolation.blockedAt,
     active:
       backendViolation.active !== undefined ? backendViolation.active : true,
     notes: Array.isArray(backendViolation.notes) ? backendViolation.notes : [],
@@ -307,19 +413,20 @@ const convertBackendViolationToFrontend = (backendViolation: {
 
 // Violation type
 type StatusHistoryEntry = {
-  status: "reported" | "active" | "blocked" | "removed" | "review" | "pending";
+  status: "Reported" | "Active" | "Blocked" | "Removed" | "Review" | "Pending";
   changedAt: string;
 };
 
 type Violation = {
   id: number | string;
   _id?: string; // MongoDB _id
-  status: "active" | "blocked" | "removed" | "under review";
+  status: "Active" | "Blocked" | "Removed" | "Under Review";
   contentType: "Live" | "Highlights" | "Other";
   views?: string;
   violationUrl: string;
   accountChannel: string;
   timeAdded: string;
+  blockedAt?: string;
   active: boolean;
   notes?: string[];
   // Computed/display fields (not from backend)
@@ -329,7 +436,13 @@ type Violation = {
   type?: "Live" | "Highlights" | "Other";
   url?: string;
   accountHandle?: string;
-  statusBadge?: "reported" | "active" | "blocked" | "review" | "pending";
+  statusBadge?:
+    | "Reported"
+    | "Active"
+    | "Blocked"
+    | "Removed"
+    | "Review"
+    | "Pending";
   stillActive?: boolean;
 };
 
@@ -375,6 +488,33 @@ interface Match {
   } | null;
 }
 
+interface BackendViolation {
+  _id?: string;
+  id?: string | number;
+  matchId: string;
+  matchName?: string;
+  platformId: string;
+  platformName?: string;
+  violationUrl: string;
+  accountChannel: string;
+  contentType: "Live" | "Highlights" | "Other";
+  status:
+    | "Active"
+    | "Blocked"
+    | "Removed"
+    | "Under Review"
+    | "active"
+    | "blocked"
+    | "removed"
+    | "under review";
+  views?: string;
+  timeAdded: string;
+  active?: boolean;
+  notes?: string[];
+  blockedAt?: string;
+  __v?: number;
+}
+
 export default function MatchDashboard() {
   const { id } = useParams<{ id: string }>();
   const [logFilter, setLogFilter] = useState<
@@ -417,14 +557,65 @@ export default function MatchDashboard() {
 
         setMatch(formattedMatch);
 
-        // Fetch violations for this match
+        // Fetch violations for this match using externalMatchId
         const violationsResponse = await fetch(
-          `${API_URL}/violations?matchId=${matchData._id}`
+          `${API_URL}/violations?matchId=${matchData.externalMatchId}`
         );
         if (violationsResponse.ok) {
           const violations = await violationsResponse.json();
-          // Process violations and update platform operations
-          // This will be implemented to populate real data
+
+          // Group violations by platform
+          const violationsByPlatform: { [key: string]: BackendViolation[] } =
+            {};
+          violations.forEach((violation: BackendViolation) => {
+            const platformId = violation.platformId;
+            if (!violationsByPlatform[platformId]) {
+              violationsByPlatform[platformId] = [];
+            }
+            violationsByPlatform[platformId].push(violation);
+          });
+
+          // Update platform operations with real violations
+          setPlatformOperations((prev) =>
+            prev.map((platform) => {
+              const platformViolations =
+                violationsByPlatform[platform.id] || [];
+
+              // Convert backend violations to frontend format
+              const convertedViolations = platformViolations.map((v) =>
+                convertBackendViolationToFrontend(v)
+              );
+
+              // Calculate metrics
+              const totalViolations = convertedViolations.length;
+              const activeViolations = convertedViolations.filter(
+                (v) => v.status === "Active" || v.status === "Under Review"
+              ).length;
+              const blockedCount = calculateBlockedCount(convertedViolations);
+              const blockedRate =
+                totalViolations > 0
+                  ? Math.round((blockedCount / totalViolations) * 100)
+                  : 0;
+              const totalViews = calculateTotalViews(convertedViolations);
+              const avgBlockTime = calculateAvgBlockTime(convertedViolations);
+              const blockedSuccess =
+                calculateBlockedSuccess(convertedViolations);
+              const stillActive = calculateStillActive(convertedViolations);
+
+              return {
+                ...platform,
+                violations: convertedViolations,
+                totalViolations,
+                activeViolations,
+                blockedCount,
+                blockedRate,
+                totalViews,
+                avgBlockTime,
+                blockedSuccess,
+                stillActive,
+              };
+            })
+          );
         }
       } catch (error) {
         console.error("Error fetching match:", error);
@@ -469,12 +660,10 @@ export default function MatchDashboard() {
   const [formAccountHandle, setFormAccountHandle] = useState("");
   const [formContentType, setFormContentType] = useState("live");
   const [formStatus, setFormStatus] = useState<
-    "active" | "blocked" | "removed" | "under review"
-  >("active");
+    "Active" | "Blocked" | "Removed" | "Under Review"
+  >("Active");
   const [formViews, setFormViews] = useState("");
-  const [formTimeAdded, setFormTimeAdded] = useState(
-    new Date().toISOString().slice(0, 16)
-  );
+  const [formTimeAdded, setFormTimeAdded] = useState(getKSATime());
   const [formBlockedAt, setFormBlockedAt] = useState("");
   const [formStillActive, setFormStillActive] = useState(false);
   const [formNotes, setFormNotes] = useState("");
@@ -489,9 +678,14 @@ export default function MatchDashboard() {
   const [blockTimeChoice, setBlockTimeChoice] = useState<"current" | "custom">(
     "current"
   );
-  const [customBlockTime, setCustomBlockTime] = useState(
-    new Date().toISOString().slice(0, 16)
-  );
+  const [customBlockTime, setCustomBlockTime] = useState(getKSATime());
+
+  // Delete confirmation dialog state
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [deleteConfirmViolation, setDeleteConfirmViolation] = useState<{
+    platformId: string;
+    violationId: number | string;
+  } | null>(null);
 
   // Platform comparison state
   const [comparisonMetric, setComparisonMetric] = useState<
@@ -552,7 +746,7 @@ export default function MatchDashboard() {
       }
     );
 
-    if (violation.status === "blocked" || violation.status === "removed") {
+    if (violation.status === "Blocked" || violation.status === "Removed") {
       return `${contentType} • added at ${addedTime} • ${violation.status}`;
     }
 
@@ -631,11 +825,11 @@ export default function MatchDashboard() {
       );
     }
 
-    // Apply card filter (All/Active/Blocked/Review)
+    // Apply card filter (All/Active/Blocked/Removed/Review)
     if (cardFilter !== "all") {
       if (cardFilter === "active") {
         filtered = filtered.filter((v) =>
-          ["reported", "active", "pending"].includes(v.statusBadge)
+          ["Reported", "Active", "Pending"].includes(v.statusBadge)
         );
       } else {
         filtered = filtered.filter((v) => v.statusBadge === cardFilter);
@@ -661,9 +855,9 @@ export default function MatchDashboard() {
     setFormUrl("");
     setFormAccountHandle("");
     setFormContentType("live");
-    setFormStatus("active");
+    setFormStatus("Active");
     setFormViews("");
-    setFormTimeAdded(new Date().toISOString().slice(0, 16));
+    setFormTimeAdded(getKSATime());
     setFormBlockedAt("");
     setFormStillActive(false);
     setFormNotes("");
@@ -689,19 +883,28 @@ export default function MatchDashboard() {
     // Map old status values to new ones
     const statusMap: Record<
       string,
-      "active" | "blocked" | "removed" | "under review"
+      "Active" | "Blocked" | "Removed" | "Under Review"
     > = {
-      reported: "active",
-      active: "active",
-      blocked: "blocked",
-      removed: "removed",
-      review: "under review",
-      pending: "active",
+      reported: "Active",
+      active: "Active",
+      Active: "Active",
+      blocked: "Blocked",
+      Blocked: "Blocked",
+      removed: "Removed",
+      Removed: "Removed",
+      review: "Under Review",
+      "under review": "Under Review",
+      "Under Review": "Under Review",
+      pending: "Active",
     };
-    setFormStatus(statusMap[violation.status] || "active");
+    setFormStatus(statusMap[violation.status] || "Active");
     setFormViews(violation.views.replace("K", "000").replace(".", ""));
     setFormTimeAdded(violation.timeAdded);
-    setFormBlockedAt("");
+    setFormBlockedAt(
+      violation.blockedAt
+        ? new Date(violation.blockedAt).toISOString().slice(0, 16)
+        : ""
+    );
     setFormStillActive(
       violation.active !== undefined
         ? violation.active
@@ -728,86 +931,189 @@ export default function MatchDashboard() {
     );
     if (!violation) return;
 
-    const isCurrentlyBlocked = violation.status === "blocked";
+    const isCurrentlyBlocked = violation.status === "Blocked";
 
     if (!isCurrentlyBlocked) {
       // Show confirmation dialog for Active -> Blocked
       setBlockConfirmViolation({ platformId, violationId, violation });
       setBlockTimeChoice("current");
-      setCustomBlockTime(new Date().toISOString().slice(0, 16));
+      setCustomBlockTime(getKSATime());
       setIsBlockConfirmOpen(true);
     } else {
       // Directly unblock (Blocked -> Active)
-      setPlatformOperations((prev) =>
-        prev.map((p) => {
-          if (p.id !== platformId) return p;
+      const unblockViolation = async () => {
+        try {
+          const violationDbId =
+            (violation as Violation & { _id?: string })._id ||
+            violation.id.toString();
 
-          const updatedViolations = p.violations.map((v) => {
-            if (v.id !== violationId) return v;
+          // Update status in backend
+          const response = await fetch(
+            `${API_URL}/violations/${violationDbId}/status`,
+            {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                status: "Active",
+              }),
+            }
+          );
 
-            toast({
-              title: "Status changed to Active",
-              description: "Violation is now active again",
-            });
+          if (!response.ok) {
+            throw new Error("Failed to update violation status");
+          }
 
-            return {
-              ...v,
-              status: "active" as const,
-              statusBadge: "active" as const,
-            };
+          // Update local state
+          setPlatformOperations((prev) =>
+            prev.map((p) => {
+              if (p.id !== platformId) return p;
+
+              const updatedViolations = p.violations.map((v) => {
+                if (v.id !== violationId) return v;
+
+                return {
+                  ...v,
+                  status: "Active" as const,
+                  statusBadge: "Active" as const,
+                };
+              });
+
+              const totalViolations = updatedViolations.length;
+              const activeViolations = updatedViolations.filter(
+                (v) => v.status === "Active" || v.status === "Under Review"
+              ).length;
+              const blockedCount = calculateBlockedCount(updatedViolations);
+              const blockedRate =
+                totalViolations > 0
+                  ? Math.round((blockedCount / totalViolations) * 100)
+                  : 0;
+
+              return {
+                ...p,
+                violations: updatedViolations,
+                totalViolations,
+                activeViolations,
+                blockedCount,
+                blockedRate,
+                totalViews: calculateTotalViews(updatedViolations),
+                avgBlockTime: calculateAvgBlockTime(updatedViolations),
+                blockedSuccess: calculateBlockedSuccess(updatedViolations),
+                stillActive: calculateStillActive(updatedViolations),
+              };
+            })
+          );
+
+          toast({
+            title: "Status changed to Active",
+            description: "Violation is now active again",
           });
+        } catch (error) {
+          console.error("Error unblocking violation:", error);
+          toast({
+            title: "Error",
+            description: "Failed to unblock violation",
+            variant: "destructive",
+          });
+        }
+      };
 
-          return {
-            ...p,
-            violations: updatedViolations,
-            blockedCount: calculateBlockedCount(updatedViolations),
-          };
-        })
-      );
+      unblockViolation();
     }
   };
 
   // Confirm block with chosen time
-  const confirmBlock = () => {
+  const confirmBlock = async () => {
     if (!blockConfirmViolation) return;
 
-    const { platformId, violationId } = blockConfirmViolation;
+    const { platformId, violationId, violation } = blockConfirmViolation;
     const blockTime =
       blockTimeChoice === "current"
         ? new Date().toISOString()
         : customBlockTime;
 
-    setPlatformOperations((prev) =>
-      prev.map((platform) => {
-        if (platform.id !== platformId) return platform;
+    try {
+      const violationDbId =
+        (violation as Violation & { _id?: string })._id ||
+        violation.id.toString();
 
-        const updatedViolations = platform.violations.map((v) => {
-          if (v.id !== violationId) return v;
+      // Update status in backend
+      const response = await fetch(
+        `${API_URL}/violations/${violationDbId}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status: "Blocked",
+            blockedAt: blockTime,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update violation status");
+      }
+
+      // Update local state
+      setPlatformOperations((prev) =>
+        prev.map((platform) => {
+          if (platform.id !== platformId) return platform;
+
+          const updatedViolations = platform.violations.map((v) => {
+            if (v.id !== violationId) return v;
+
+            return {
+              ...v,
+              status: "Blocked" as const,
+              statusBadge: "Blocked" as const,
+            };
+          });
+
+          const totalViolations = updatedViolations.length;
+          const activeViolations = updatedViolations.filter(
+            (v) => v.status === "Active" || v.status === "Under Review"
+          ).length;
+          const blockedCount = calculateBlockedCount(updatedViolations);
+          const blockedRate =
+            totalViolations > 0
+              ? Math.round((blockedCount / totalViolations) * 100)
+              : 0;
 
           return {
-            ...v,
-            status: "blocked" as const,
-            statusBadge: "blocked" as const,
+            ...platform,
+            violations: updatedViolations,
+            totalViolations,
+            activeViolations,
+            blockedCount,
+            blockedRate,
+            totalViews: calculateTotalViews(updatedViolations),
+            avgBlockTime: calculateAvgBlockTime(updatedViolations),
+            blockedSuccess: calculateBlockedSuccess(updatedViolations),
+            stillActive: calculateStillActive(updatedViolations),
           };
-        });
+        })
+      );
 
-        return {
-          ...platform,
-          violations: updatedViolations,
-          blockedCount: calculateBlockedCount(updatedViolations),
-        };
-      })
-    );
+      toast({
+        title: "Violation blocked",
+        description: `Violation marked as blocked at ${new Date(
+          blockTime
+        ).toLocaleString()}`,
+      });
 
-    toast({
-      title: "Violation blocked",
-      description: `Violation marked as blocked at ${new Date(
-        blockTime
-      ).toLocaleString()}`,
-    });
-
-    setIsBlockConfirmOpen(false);
-    setBlockConfirmViolation(null);
+      setIsBlockConfirmOpen(false);
+      setBlockConfirmViolation(null);
+    } catch (error) {
+      console.error("Error blocking violation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to block violation",
+        variant: "destructive",
+      });
+    }
   };
 
   // Save violation (add or edit)
@@ -845,21 +1151,34 @@ export default function MatchDashboard() {
     if (!platform) return;
 
     try {
+      // Map contentType to match backend schema exactly: "Live", "Highlights", or "Other"
+      let contentType: "Live" | "Highlights" | "Other" = "Other";
+      if (formContentType.toLowerCase() === "live") {
+        contentType = "Live";
+      } else if (formContentType.toLowerCase() === "highlights") {
+        contentType = "Highlights";
+      }
+
+      // Map status to match backend schema exactly: "Active", "Blocked", "Removed", "Under Review"
+      // formStatus is already capitalized, so we just use it directly or map if needed
+      const status: "Active" | "Blocked" | "Removed" | "Under Review" =
+        formStatus;
+
       const violationData = {
-        matchId: match._id,
+        matchId: match.externalMatchId,
         matchName: `${match.team1} vs ${match.team2}`,
         platformId: platform.id,
         platformName: platform.name,
         violationUrl: formUrl,
         accountChannel: formAccountHandle,
-        contentType:
-          formContentType.charAt(0).toUpperCase() + formContentType.slice(1),
-        status: formStatus,
+        contentType,
+        status,
         views: formViews
-          ? formatViewsString(`${(parseInt(formViews) / 1000).toFixed(1)}K`)
+          ? parseInt(formViews.replace(/,/g, "")).toLocaleString("en-US")
           : undefined,
         timeAdded: formTimeAdded,
-        active: formStillActive,
+        blockedAt:
+          formStatus === "Blocked" && formBlockedAt ? formBlockedAt : undefined,
         notes: formNotes ? [formNotes] : [],
       };
 
@@ -898,10 +1217,27 @@ export default function MatchDashboard() {
               return v;
             });
 
+            const totalViolations = updatedViolations.length;
+            const activeViolations = updatedViolations.filter(
+              (v) => v.status === "Active" || v.status === "Under Review"
+            ).length;
+            const blockedCount = calculateBlockedCount(updatedViolations);
+            const blockedRate =
+              totalViolations > 0
+                ? Math.round((blockedCount / totalViolations) * 100)
+                : 0;
+
             return {
               ...p,
               violations: updatedViolations,
-              blockedCount: calculateBlockedCount(updatedViolations),
+              totalViolations,
+              activeViolations,
+              blockedCount,
+              blockedRate,
+              totalViews: calculateTotalViews(updatedViolations),
+              avgBlockTime: calculateAvgBlockTime(updatedViolations),
+              blockedSuccess: calculateBlockedSuccess(updatedViolations),
+              stillActive: calculateStillActive(updatedViolations),
             };
           })
         );
@@ -937,11 +1273,27 @@ export default function MatchDashboard() {
 
             const updatedViolations = [frontendViolation, ...p.violations];
 
+            const totalViolations = updatedViolations.length;
+            const activeViolations = updatedViolations.filter(
+              (v) => v.status === "Active" || v.status === "Under Review"
+            ).length;
+            const blockedCount = calculateBlockedCount(updatedViolations);
+            const blockedRate =
+              totalViolations > 0
+                ? Math.round((blockedCount / totalViolations) * 100)
+                : 0;
+
             return {
               ...p,
               violations: updatedViolations,
-              totalViolations: p.totalViolations + 1,
-              blockedCount: calculateBlockedCount(updatedViolations),
+              totalViolations,
+              activeViolations,
+              blockedCount,
+              blockedRate,
+              totalViews: calculateTotalViews(updatedViolations),
+              avgBlockTime: calculateAvgBlockTime(updatedViolations),
+              blockedSuccess: calculateBlockedSuccess(updatedViolations),
+              stillActive: calculateStillActive(updatedViolations),
             };
           })
         );
@@ -964,32 +1316,90 @@ export default function MatchDashboard() {
     }
   };
 
-  // Delete violation (UI only)
+  // Delete violation - show confirmation dialog
   const deleteViolation = (
     platformId: string,
     violationId: number | string
   ) => {
-    setPlatformOperations((prev) =>
-      prev.map((p) => {
-        if (p.id !== platformId) return p;
+    setDeleteConfirmViolation({ platformId, violationId });
+    setIsDeleteConfirmOpen(true);
+  };
 
-        const updatedViolations = p.violations.filter(
-          (v) => v.id !== violationId && v._id !== violationId
-        );
+  // Confirm delete violation
+  const confirmDeleteViolation = async () => {
+    if (!deleteConfirmViolation) return;
 
-        return {
-          ...p,
-          violations: updatedViolations,
-          totalViolations: Math.max(0, p.totalViolations - 1),
-          blockedCount: calculateBlockedCount(updatedViolations),
-        };
-      })
+    const { platformId, violationId } = deleteConfirmViolation;
+    const platform = platformOperations.find((p) => p.id === platformId);
+    if (!platform) return;
+
+    const violation = platform.violations.find(
+      (v) => v.id === violationId || v._id === violationId
     );
+    if (!violation) return;
 
-    toast({
-      title: "Violation deleted",
-      description: "Violation removed from the list",
-    });
+    try {
+      const violationDbId =
+        (violation as Violation & { _id?: string })._id ||
+        violation.id.toString();
+
+      const response = await fetch(`${API_URL}/violations/${violationDbId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete violation");
+      }
+
+      // Update local state
+      setPlatformOperations((prev) =>
+        prev.map((p) => {
+          if (p.id !== platformId) return p;
+
+          const updatedViolations = p.violations.filter(
+            (v) => v.id !== violationId && v._id !== violationId
+          );
+
+          const totalViolations = updatedViolations.length;
+          const activeViolations = updatedViolations.filter(
+            (v) => v.status === "Active" || v.status === "Under Review"
+          ).length;
+          const blockedCount = calculateBlockedCount(updatedViolations);
+          const blockedRate =
+            totalViolations > 0
+              ? Math.round((blockedCount / totalViolations) * 100)
+              : 0;
+
+          return {
+            ...p,
+            violations: updatedViolations,
+            totalViolations,
+            activeViolations,
+            blockedCount,
+            blockedRate,
+            totalViews: calculateTotalViews(updatedViolations),
+            avgBlockTime: calculateAvgBlockTime(updatedViolations),
+            blockedSuccess: calculateBlockedSuccess(updatedViolations),
+            stillActive: calculateStillActive(updatedViolations),
+          };
+        })
+      );
+
+      toast({
+        title: "Violation deleted",
+        description: "Violation has been removed successfully",
+      });
+
+      setIsDeleteConfirmOpen(false);
+      setDeleteConfirmViolation(null);
+    } catch (error) {
+      console.error("Error deleting violation:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete violation",
+        variant: "destructive",
+      });
+    }
   };
 
   // Copy violation URL
@@ -1075,12 +1485,14 @@ export default function MatchDashboard() {
   // Helper to get status icon
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case "active":
-      case "reported":
+      case "Active":
+      case "Reported":
         return <AlertTriangle className="h-4 w-4 text-muted-foreground" />;
-      case "blocked":
+      case "Blocked":
         return <Shield className="h-4 w-4 text-muted-foreground" />;
-      case "review":
+      case "Removed":
+        return <XCircle className="h-4 w-4 text-muted-foreground" />;
+      case "Review":
         return <Clock className="h-4 w-4 text-muted-foreground" />;
       default:
         return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
@@ -1110,10 +1522,7 @@ export default function MatchDashboard() {
     const viewsNum = parseInt(p.totalViews.replace(/[^0-9]/g, "")) || 0;
     return sum + viewsNum;
   }, 0);
-  const formattedTotalViews =
-    totalViews >= 1000
-      ? `${Math.round(totalViews / 1000)}K`
-      : totalViews.toString();
+  const formattedTotalViews = totalViews.toLocaleString("en-US");
 
   // Find top platform
   const topPlatform = platformOperations.reduce((top, p) => {
@@ -1846,6 +2255,21 @@ export default function MatchDashboard() {
                       </Badge>
                       <Badge
                         variant={
+                          platformCardFilter[platform.id] === "removed"
+                            ? "default"
+                            : "outline"
+                        }
+                        className="cursor-pointer text-xs"
+                        onClick={() =>
+                          setPlatformCardFilter({
+                            ...platformCardFilter,
+                            [platform.id]: "removed",
+                          })
+                        }>
+                        Removed
+                      </Badge>
+                      <Badge
+                        variant={
                           platformCardFilter[platform.id] === "review"
                             ? "default"
                             : "outline"
@@ -1885,18 +2309,24 @@ export default function MatchDashboard() {
                                   </span>
                                   <Badge
                                     variant={
-                                      violation.statusBadge === "blocked"
+                                      violation.statusBadge === "Removed"
                                         ? "destructive"
-                                        : violation.statusBadge === "active" ||
-                                          violation.statusBadge === "reported"
+                                        : violation.statusBadge === "Active" ||
+                                          violation.statusBadge === "Reported"
                                         ? "default"
-                                        : "secondary"
+                                        : violation.statusBadge === "Review"
+                                        ? "secondary"
+                                        : "outline"
                                     }
                                     className={cn(
                                       "text-xs",
-                                      (violation.statusBadge === "active" ||
-                                        violation.statusBadge === "reported") &&
-                                        "bg-success text-success-foreground hover:bg-success/80"
+                                      (violation.statusBadge === "Active" ||
+                                        violation.statusBadge === "Reported") &&
+                                        "bg-success text-success-foreground hover:bg-success/80",
+                                      violation.statusBadge === "Blocked" &&
+                                        "bg-muted text-muted-foreground hover:bg-muted/80 border-muted-foreground/20",
+                                      violation.statusBadge === "Review" &&
+                                        "bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 hover:bg-yellow-500/20 border-yellow-500/20"
                                     )}>
                                     {violation.statusBadge}
                                   </Badge>
@@ -1956,7 +2386,7 @@ export default function MatchDashboard() {
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                      {violation.status === "blocked"
+                                      {violation.status === "Blocked"
                                         ? "Mark as active"
                                         : "Mark as blocked"}
                                     </TooltipContent>
@@ -2054,7 +2484,7 @@ export default function MatchDashboard() {
 
                               {/* Line 3: Meta text */}
                               <p className="text-xs text-muted-foreground mt-1">
-                                {violation.statusBadge === "blocked"
+                                {violation.statusBadge === "Blocked"
                                   ? formatBlockedViolationText(violation)
                                   : `${violation.type} • added ${violation.addedAgo}`}
                               </p>
@@ -2072,8 +2502,8 @@ export default function MatchDashboard() {
 
         <div
           className={
-            expandedPlatform
-              ? "hidden"
+            selectedSlots.length === 1
+              ? "grid grid-cols-1 gap-6"
               : "grid grid-cols-1 lg:grid-cols-2 gap-6"
           }>
           {platformOperations
@@ -2292,18 +2722,24 @@ export default function MatchDashboard() {
                                   </span>
                                   <Badge
                                     variant={
-                                      violation.statusBadge === "blocked"
+                                      violation.statusBadge === "Removed"
                                         ? "destructive"
-                                        : violation.statusBadge === "active" ||
-                                          violation.statusBadge === "reported"
+                                        : violation.statusBadge === "Active" ||
+                                          violation.statusBadge === "Reported"
                                         ? "default"
-                                        : "secondary"
+                                        : violation.statusBadge === "Review"
+                                        ? "secondary"
+                                        : "outline"
                                     }
                                     className={cn(
                                       "text-xs",
-                                      (violation.statusBadge === "active" ||
-                                        violation.statusBadge === "reported") &&
-                                        "bg-success text-success-foreground hover:bg-success/80"
+                                      (violation.statusBadge === "Active" ||
+                                        violation.statusBadge === "Reported") &&
+                                        "bg-success text-success-foreground hover:bg-success/80",
+                                      violation.statusBadge === "Blocked" &&
+                                        "bg-muted text-muted-foreground hover:bg-muted/80 border-muted-foreground/20",
+                                      violation.statusBadge === "Review" &&
+                                        "bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 hover:bg-yellow-500/20 border-yellow-500/20"
                                     )}>
                                     {violation.statusBadge}
                                   </Badge>
@@ -2363,7 +2799,7 @@ export default function MatchDashboard() {
                                       </Button>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                      {violation.status === "blocked"
+                                      {violation.status === "Blocked"
                                         ? "Mark as active"
                                         : "Mark as blocked"}
                                     </TooltipContent>
@@ -2461,7 +2897,7 @@ export default function MatchDashboard() {
 
                               {/* Line 3: Meta text */}
                               <p className="text-xs text-muted-foreground mt-1">
-                                {violation.statusBadge === "blocked"
+                                {violation.statusBadge === "Blocked"
                                   ? formatBlockedViolationText(violation)
                                   : `${violation.type} • added ${violation.addedAgo}`}
                               </p>
@@ -2703,7 +3139,7 @@ export default function MatchDashboard() {
 
                     const totalViolations = filteredViolations.length;
                     const blockedViolations = filteredViolations.filter(
-                      (v) => v.status === "blocked" || v.status === "removed"
+                      (v) => v.status === "Blocked" || v.status === "Removed"
                     );
                     const blockedCount = blockedViolations.length;
                     const blockedPercent =
@@ -3077,28 +3513,27 @@ export default function MatchDashboard() {
                 value={formStatus}
                 onValueChange={(value: string) => {
                   const validStatus = value as
-                    | "active"
-                    | "blocked"
-                    | "removed"
-                    | "under review";
+                    | "Active"
+                    | "Blocked"
+                    | "Removed"
+                    | "Under Review";
                   setFormStatus(validStatus);
                   // Auto-prefill blockedAt when status changes to blocked/removed
                   if (
-                    (value === "blocked" || value === "removed") &&
+                    (value === "Blocked" || value === "Removed") &&
                     !formBlockedAt
                   ) {
-                    setFormBlockedAt(new Date().toISOString().slice(0, 16));
+                    setFormBlockedAt(getKSATime());
                   }
                 }}>
                 <SelectTrigger id="status">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="reported">Reported</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="blocked">Blocked</SelectItem>
-                  <SelectItem value="removed">Removed</SelectItem>
-                  <SelectItem value="review">Review</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Blocked">Blocked</SelectItem>
+                  <SelectItem value="Removed">Removed</SelectItem>
+                  <SelectItem value="Under Review">Under Review</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -3108,10 +3543,19 @@ export default function MatchDashboard() {
               <Label htmlFor="views">Views (optional)</Label>
               <Input
                 id="views"
-                type="number"
+                type="text"
                 placeholder="0"
                 value={formViews}
-                onChange={(e) => setFormViews(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/,/g, "");
+                  if (value === "" || /^\d+$/.test(value)) {
+                    const formatted =
+                      value === ""
+                        ? ""
+                        : parseInt(value).toLocaleString("en-US");
+                    setFormViews(formatted);
+                  }
+                }}
               />
             </div>
 
@@ -3127,7 +3571,7 @@ export default function MatchDashboard() {
             </div>
 
             {/* Blocked at (conditional) */}
-            {(formStatus === "blocked" || formStatus === "removed") && (
+            {formStatus === "Blocked" && (
               <div className="space-y-2">
                 <Label htmlFor="blocked-at">Blocked at (optional)</Label>
                 <Input
@@ -3139,23 +3583,6 @@ export default function MatchDashboard() {
                 <p className="text-xs text-muted-foreground">
                   Leave empty or adjust the auto-filled time
                 </p>
-              </div>
-            )}
-
-            {/* Still active? (conditional) */}
-            {formStatus !== "blocked" && formStatus !== "removed" && (
-              <div className="flex items-center justify-between space-y-2">
-                <div className="space-y-0.5">
-                  <Label htmlFor="still-active">Still active?</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Mark if this violation is currently active
-                  </p>
-                </div>
-                <Switch
-                  id="still-active"
-                  checked={formStillActive}
-                  onCheckedChange={setFormStillActive}
-                />
               </div>
             )}
 
@@ -3185,6 +3612,32 @@ export default function MatchDashboard() {
         </SheetContent>
       </Sheet>
 
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Delete Violation</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this violation? This action cannot
+              be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteConfirmOpen(false);
+                setDeleteConfirmViolation(null);
+              }}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDeleteViolation}>
+              Delete
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Match Report */}
       <MatchReport
         open={isReportOpen}
@@ -3202,7 +3655,7 @@ export default function MatchDashboard() {
             (v) => v.type.toLowerCase() === "live"
           );
           const blockedLive = liveViolations.filter(
-            (v) => v.status === "blocked" || v.status === "removed"
+            (v) => v.status === "Blocked" || v.status === "Removed"
           );
           const totalViews = liveViolations.reduce((sum, v) => {
             const views = parseFloat(v.views.replace("K", "")) * 1000;
@@ -3253,7 +3706,7 @@ export default function MatchDashboard() {
             (v) => v.type.toLowerCase() === "highlights"
           );
           const blockedHighlights = highlightsViolations.filter(
-            (v) => v.status === "blocked" || v.status === "removed"
+            (v) => v.status === "Blocked" || v.status === "Removed"
           );
           const totalViews = highlightsViolations.reduce((sum, v) => {
             const views = parseFloat(v.views.replace("K", "")) * 1000;
