@@ -13,14 +13,6 @@ const platformSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
-    color: {
-      type: String,
-      required: true,
-    },
-    icon: {
-      type: String, // Store icon name (e.g., 'Twitter', 'Youtube')
-      required: true,
-    },
   },
   {
     timestamps: true,

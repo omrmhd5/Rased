@@ -137,22 +137,21 @@ export default function Matches() {
     }
   }, [selectedWeek]);
 
-  // Fetch matches: sync from external API then get from database
-  const fetchExternalMatches = useCallback(async () => {
+  // Fetch matches from database
+  const fetchMatchesFromDB = useCallback(async () => {
     if (!selectedLeague) return;
 
     setLoading(true);
     try {
-      // Call external endpoint which syncs from API and returns from database
+      // Fetch matches directly from database
       const response = await fetch(
-        `${API_URL}/matches/external?league=${selectedLeague}&week=${selectedWeek}`
+        `${API_URL}/matches?league=${selectedLeague}&week=${selectedWeek}`
       );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
-          errorData.error ||
-            `Failed to sync and load matches: ${response.status}`
+          errorData.error || `Failed to load matches: ${response.status}`
         );
       }
 
@@ -182,7 +181,7 @@ export default function Matches() {
       // Set the matches to display (all from database)
       setMatches(formattedMatches);
     } catch (error) {
-      console.error("Error fetching matches:", error);
+      console.error("Error fetching matches from DB:", error);
       toast({
         title: "Error",
         description: "Failed to load matches",
@@ -194,12 +193,62 @@ export default function Matches() {
     }
   }, [selectedLeague, selectedWeek]);
 
-  // Fetch matches when league is selected
+  // Sync matches from external API in the background (don't wait for it)
+  const syncMatchesFromAPI = useCallback(async () => {
+    if (!selectedLeague) return;
+
+    try {
+      // Trigger API sync - don't wait for it, don't show loading
+      const response = await fetch(
+        `${API_URL}/matches/external?league=${selectedLeague}&week=${selectedWeek}`
+      );
+
+      if (response.ok) {
+        // Sync completed successfully, refresh from DB
+        const refreshResponse = await fetch(
+          `${API_URL}/matches?league=${selectedLeague}&week=${selectedWeek}`
+        );
+
+        if (refreshResponse.ok) {
+          const data = await refreshResponse.json();
+          const formattedMatches = data.map((match: Match) => {
+            const competitionName =
+              typeof match.competition === "object" &&
+              match.competition !== null
+                ? (match.competition as Competition).name
+                : typeof match.competition === "string"
+                ? match.competition
+                : "";
+
+            return {
+              ...match,
+              date: match.date
+                ? typeof match.date === "string"
+                  ? match.date
+                  : new Date(match.date).toISOString().split("T")[0]
+                : "",
+              competition: competitionName,
+            };
+          });
+          setMatches(formattedMatches);
+        }
+      }
+    } catch (error) {
+      // Silently fail - API sync errors shouldn't affect UI
+      console.error("Error syncing matches from API:", error);
+    }
+  }, [selectedLeague, selectedWeek]);
+
+  // Fetch matches from DB when league/week changes
   useEffect(() => {
     if (selectedLeague) {
-      fetchExternalMatches();
+      // First, fetch from DB immediately (shows loading)
+      fetchMatchesFromDB();
+
+      // Then, trigger API sync in background (doesn't block UI)
+      syncMatchesFromAPI();
     }
-  }, [selectedLeague, selectedWeek, fetchExternalMatches]);
+  }, [selectedLeague, selectedWeek, fetchMatchesFromDB, syncMatchesFromAPI]);
 
   const handleAddMatch = async () => {
     if (!formDate || !formTime || !formTeam1 || !formTeam2 || !formWeek) {

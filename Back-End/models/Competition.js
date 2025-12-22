@@ -55,3 +55,5 @@ const Competition = mongoose.model("Competition", competitionSchema);
 
 export default Competition;
 
+
+

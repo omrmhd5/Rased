@@ -7,10 +7,10 @@ export function TopBar() {
   return <header className="sticky top-0 h-16 bg-card border-b border-border z-40 flex items-center px-3 sm:px-4 lg:px-6 gap-2 sm:gap-4 w-full">
       {/* Menu Toggle - First, always visible */}
       <div className="flex items-center flex-shrink-0">
-        <SidebarTrigger>
-          <Menu className="h-5 w-5" />
-        </SidebarTrigger>
-      </div>
+          <SidebarTrigger>
+            <Menu className="h-5 w-5" />
+          </SidebarTrigger>
+        </div>
 
       {/* Logo & Brand Name - Behind the menu */}
       <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">

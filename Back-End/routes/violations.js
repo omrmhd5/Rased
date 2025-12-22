@@ -32,13 +32,13 @@ router.get('/', async (req, res) => {
     }
     
     if (type) {
-      query.type = type;
+      query.contentType = type;
     }
     
     if (search) {
       query.$or = [
-        { url: { $regex: search, $options: 'i' } },
-        { accountHandle: { $regex: search, $options: 'i' } }
+        { violationUrl: { $regex: search, $options: 'i' } },
+        { accountChannel: { $regex: search, $options: 'i' } }
       ];
     }
     
@@ -46,7 +46,7 @@ router.get('/', async (req, res) => {
     const sortOrder = sort === 'asc' ? 1 : -1;
     
     const violations = await Violation.find(query)
-      .populate('matchId', 'team1 team2 date time')
+      .populate('matchId', 'team1 team2 date time week competition stadium')
       .sort({ timeAdded: sortOrder })
       .limit(limitNum)
       .lean();
@@ -81,21 +81,23 @@ router.post('/', async (req, res) => {
   try {
     const {
       matchId,
+      matchName,
       platformId,
+      platformName,
+      violationUrl,
+      accountChannel,
+      contentType,
       status,
-      type,
-      url,
-      accountHandle,
       views,
       timeAdded,
-      blockedAt,
-      stillActive,
+      active,
       notes
     } = req.body;
     
-    if (!matchId || !platformId || !type || !url) {
+    // Required fields validation
+    if (!matchId || !matchName || !platformId || !platformName || !violationUrl || !accountChannel || !contentType) {
       return res.status(400).json({ 
-        error: 'Missing required fields: matchId, platformId, type, url' 
+        error: 'Missing required fields: matchId, matchName, platformId, platformName, violationUrl, accountChannel, contentType' 
       });
     }
     
@@ -105,23 +107,29 @@ router.post('/', async (req, res) => {
       return res.status(404).json({ error: 'Match not found' });
     }
     
+    // Convert notes to array if it's a string
+    let notesArray = [];
+    if (notes) {
+      if (typeof notes === 'string') {
+        notesArray = notes.trim() ? [notes.trim()] : [];
+      } else if (Array.isArray(notes)) {
+        notesArray = notes.filter(n => n && n.trim());
+      }
+    }
+    
     const violation = new Violation({
       matchId,
+      matchName,
       platformId,
-      status: status || 'reported',
-      statusBadge: status === 'removed' ? 'blocked' : (status || 'reported'),
-      type,
-      url,
-      accountHandle,
-      views: views || '0',
+      platformName,
+      violationUrl,
+      accountChannel,
+      contentType,
+      status: status || 'active',
+      views: views || undefined,
       timeAdded: timeAdded ? new Date(timeAdded) : new Date(),
-      blockedAt: blockedAt ? new Date(blockedAt) : undefined,
-      stillActive: stillActive || false,
-      notes,
-      statusHistory: [{
-        status: status || 'reported',
-        changedAt: new Date()
-      }]
+      active: active !== undefined ? active : true,
+      notes: notesArray,
     });
     
     const savedViolation = await violation.save();
@@ -134,6 +142,9 @@ router.post('/', async (req, res) => {
     if (error.name === 'CastError') {
       return res.status(400).json({ error: 'Invalid match ID' });
     }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: error.message });
   }
 });
@@ -142,14 +153,15 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const {
+      matchName,
+      platformName,
+      violationUrl,
+      accountChannel,
+      contentType,
       status,
-      type,
-      url,
-      accountHandle,
       views,
       timeAdded,
-      blockedAt,
-      stillActive,
+      active,
       notes
     } = req.body;
     
@@ -160,25 +172,23 @@ router.put('/:id', async (req, res) => {
     }
     
     // Update fields
+    if (matchName !== undefined) violation.matchName = matchName;
+    if (platformName !== undefined) violation.platformName = platformName;
+    if (violationUrl !== undefined) violation.violationUrl = violationUrl;
+    if (accountChannel !== undefined) violation.accountChannel = accountChannel;
+    if (contentType !== undefined) violation.contentType = contentType;
     if (status !== undefined) violation.status = status;
-    if (type !== undefined) violation.type = type;
-    if (url !== undefined) violation.url = url;
-    if (accountHandle !== undefined) violation.accountHandle = accountHandle;
     if (views !== undefined) violation.views = views;
     if (timeAdded !== undefined) violation.timeAdded = new Date(timeAdded);
-    if (blockedAt !== undefined) violation.blockedAt = blockedAt ? new Date(blockedAt) : undefined;
-    if (stillActive !== undefined) violation.stillActive = stillActive;
-    if (notes !== undefined) violation.notes = notes;
+    if (active !== undefined) violation.active = active;
     
-    // Handle status change (status history is handled by pre-save middleware)
-    if (status !== undefined && status !== violation.status) {
-      if (!violation.statusHistory) {
-        violation.statusHistory = [];
+    // Handle notes - convert to array if string
+    if (notes !== undefined) {
+      if (typeof notes === 'string') {
+        violation.notes = notes.trim() ? [notes.trim()] : [];
+      } else if (Array.isArray(notes)) {
+        violation.notes = notes.filter(n => n && n.trim());
       }
-      violation.statusHistory.push({
-        status,
-        changedAt: new Date()
-      });
     }
     
     const updatedViolation = await violation.save();
@@ -190,6 +200,9 @@ router.put('/:id', async (req, res) => {
   } catch (error) {
     if (error.name === 'CastError') {
       return res.status(400).json({ error: 'Invalid violation ID' });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ error: error.message });
     }
     res.status(500).json({ error: error.message });
   }
@@ -264,5 +277,6 @@ router.delete('/:id', async (req, res) => {
 });
 
 export default router;
+
 
 
