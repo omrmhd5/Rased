@@ -1,87 +1,19 @@
 import { useParams } from "react-router-dom";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  AlertTriangle,
-  Shield,
-  Eye,
-  Clock,
-  Activity,
-  FileText,
-  AlertCircle,
-  CheckCircle2,
-  TrendingUp,
-  Zap,
-  RefreshCw,
-  MessageSquare,
-  ExternalLink,
-  Maximize2,
-  Edit,
-  ShieldCheck,
-  MoreHorizontal,
-  Plus,
-  X,
-  ChevronDown,
-  Minimize2,
-  Lock,
-  Copy,
-  FileEdit,
-  Trash2,
-  Link as LinkIcon,
-  Search,
-  BarChart3,
-  XCircle,
-} from "lucide-react";
+import { AlertCircle, RefreshCw, Activity } from "lucide-react";
 import { useState, useEffect } from "react";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 import { MatchReport } from "@/components/MatchReport";
 import {
   MatchOverview,
   ContentSplitChart,
   ActivityLog,
+  PlatformCard,
+  ExpandedPlatformDialog,
+  PlatformFilters,
+  PlatformComparison,
+  AddViolationSheet,
+  BlockConfirmDialog,
+  DeleteConfirmDialog,
   getInitialContentSplitData,
   getInitialActivityLog,
   getInitialPlatformOperations,
@@ -289,6 +221,15 @@ export default function MatchDashboard() {
 
   // Match report state
   const [isReportOpen, setIsReportOpen] = useState(false);
+
+  // Helper to get competition name
+  const getCompetitionName = () => {
+    if (!match) return "";
+    if (typeof match.competition === "object" && match.competition !== null) {
+      return (match.competition as { name?: string }).name || "";
+    }
+    return typeof match.competition === "string" ? match.competition : "";
+  };
 
   // Helper to get platform color
   const getPlatformColor = (platform: string | null) => {
@@ -958,23 +899,6 @@ export default function MatchDashboard() {
     });
   };
 
-  // Helper to get status icon
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case "Active":
-      case "Reported":
-        return <AlertTriangle className="h-4 w-4 text-muted-foreground" />;
-      case "Blocked":
-        return <Shield className="h-4 w-4 text-muted-foreground" />;
-      case "Removed":
-        return <XCircle className="h-4 w-4 text-muted-foreground" />;
-      case "Review":
-        return <Clock className="h-4 w-4 text-muted-foreground" />;
-      default:
-        return <AlertCircle className="h-4 w-4 text-muted-foreground" />;
-    }
-  };
-
   // Calculate KPIs from platform operations
   const totalViolations = platformOperations.reduce(
     (sum, p) => sum + p.totalViolations,
@@ -1062,101 +986,17 @@ export default function MatchDashboard() {
         />
       </div>
 
-      {/* Block Confirmation Dialog */}
-      <Dialog open={isBlockConfirmOpen} onOpenChange={setIsBlockConfirmOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Confirm block time</DialogTitle>
-            <DialogDescription>
-              You are marking this violation as blocked. Choose the exact block
-              time to record for this post.
-            </DialogDescription>
-          </DialogHeader>
-
-          {blockConfirmViolation && (
-            <div className="py-3 px-4 rounded-lg bg-muted/30 border border-border">
-              <div className="flex items-center gap-2 text-sm">
-                <Badge variant="secondary" className="text-xs">
-                  {
-                    platformOperations.find(
-                      (p) => p.id === blockConfirmViolation.platformId
-                    )?.name
-                  }
-                </Badge>
-                <span className="text-muted-foreground">•</span>
-                <span>{blockConfirmViolation.violation.type}</span>
-                <span className="text-muted-foreground">•</span>
-                <span className="font-medium">
-                  {formatViewsString(blockConfirmViolation.violation.views)}{" "}
-                  views
-                </span>
-                <span className="text-muted-foreground">•</span>
-                <span className="text-xs text-muted-foreground">
-                  added {blockConfirmViolation.violation.addedAgo}
-                </span>
-              </div>
-            </div>
-          )}
-
-          <div className="space-y-4 py-4">
-            <RadioGroup
-              value={blockTimeChoice}
-              onValueChange={(value) =>
-                setBlockTimeChoice(value as "current" | "custom")
-              }>
-              <div
-                className="flex items-start space-x-3 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors cursor-pointer"
-                onClick={() => setBlockTimeChoice("current")}>
-                <RadioGroupItem
-                  value="current"
-                  id="current"
-                  className="mt-0.5"
-                />
-                <div className="flex-1">
-                  <Label
-                    htmlFor="current"
-                    className="font-medium cursor-pointer">
-                    Use current time
-                  </Label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Block time = now
-                  </p>
-                </div>
-              </div>
-
-              <div
-                className="flex items-start space-x-3 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors cursor-pointer"
-                onClick={() => setBlockTimeChoice("custom")}>
-                <RadioGroupItem value="custom" id="custom" className="mt-0.5" />
-                <div className="flex-1">
-                  <Label
-                    htmlFor="custom"
-                    className="font-medium cursor-pointer">
-                    Set custom block time
-                  </Label>
-                  {blockTimeChoice === "custom" && (
-                    <Input
-                      type="datetime-local"
-                      value={customBlockTime}
-                      onChange={(e) => setCustomBlockTime(e.target.value)}
-                      className="mt-2"
-                    />
-                  )}
-                </div>
-              </div>
-            </RadioGroup>
-          </div>
-
-          <DialogFooter className="gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setIsBlockConfirmOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={confirmBlock}>Confirm block</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <BlockConfirmDialog
+        open={isBlockConfirmOpen}
+        onOpenChange={setIsBlockConfirmOpen}
+        blockConfirmViolation={blockConfirmViolation}
+        platformOperations={platformOperations}
+        blockTimeChoice={blockTimeChoice}
+        onBlockTimeChoiceChange={setBlockTimeChoice}
+        customBlockTime={customBlockTime}
+        onCustomBlockTimeChange={setCustomBlockTime}
+        onConfirm={confirmBlock}
+      />
 
       {/* Platform Operations Section */}
       <div className="space-y-4">
@@ -1166,483 +1006,62 @@ export default function MatchDashboard() {
           </h2>
         </div>
 
-        {/* Platform Slot Selector + Content Type Filter */}
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          {/* Platform Slots (Left) */}
-          <div className="flex gap-2 items-center">
-            <TooltipProvider>
-              {selectedSlots.map((platformId) => {
-                const platform = platformOperations.find(
-                  (p) => p.id === platformId
-                );
-                if (!platform) return null;
+        <PlatformFilters
+          selectedSlots={selectedSlots}
+          allPlatforms={platformOperations}
+          contentTypeFilter={contentTypeFilter}
+          onRemovePlatform={removePlatformFromSlot}
+          onAddPlatform={addPlatformToSlot}
+          onContentTypeFilterChange={setContentTypeFilter}
+        />
 
-                return (
-                  <Badge
-                    key={platformId}
-                    variant="default"
-                    className="cursor-pointer px-3 py-1.5 flex items-center gap-2">
-                    <platform.icon
-                      className="h-3.5 w-3.5"
-                      style={{ color: platform.color }}
-                    />
-                    <span>{platform.name}</span>
-                    <X
-                      className="h-3 w-3 ml-1 hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removePlatformFromSlot(platformId);
-                      }}
-                    />
-                  </Badge>
-                );
-              })}
-            </TooltipProvider>
-
-            {/* Add Platform Dropdown */}
-            {availablePlatforms.length > 0 && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1.5">
-                    <Plus className="h-3.5 w-3.5" />
-                    Add platform
-                    <ChevronDown className="h-3 w-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  {availablePlatforms.map((platform) => (
-                    <DropdownMenuItem
-                      key={platform.id}
-                      onClick={() => addPlatformToSlot(platform.id)}
-                      className="gap-2">
-                      <platform.icon
-                        className="h-4 w-4"
-                        style={{ color: platform.color }}
-                      />
-                      {platform.name}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-
-          {/* Content Type Filter (Right) */}
-          <div className="flex gap-2">
-            <Badge
-              variant={contentTypeFilter === "all" ? "default" : "outline"}
-              className="cursor-pointer text-xs"
-              onClick={() => setContentTypeFilter("all")}>
-              All types
-            </Badge>
-            <Badge
-              variant={contentTypeFilter === "live" ? "default" : "outline"}
-              className="cursor-pointer text-xs"
-              onClick={() => setContentTypeFilter("live")}>
-              Live
-            </Badge>
-            <Badge
-              variant={
-                contentTypeFilter === "highlights" ? "default" : "outline"
-              }
-              className="cursor-pointer text-xs"
-              onClick={() => setContentTypeFilter("highlights")}>
-              Highlights
-            </Badge>
-            <Badge
-              variant={contentTypeFilter === "other" ? "default" : "outline"}
-              className="cursor-pointer text-xs"
-              onClick={() => setContentTypeFilter("other")}>
-              Other
-            </Badge>
-          </div>
-        </div>
-
-        {/* Platform Cards Grid */}
-        {expandedPlatform && (
-          <Dialog
-            open={!!expandedPlatform}
-            onOpenChange={() => setExpandedPlatform(null)}>
-            <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-              <DialogHeader>
-                <div className="flex items-center justify-between gap-4">
-                  <DialogTitle>
-                    {
-                      platformOperations.find((p) => p.id === expandedPlatform)
-                        ?.name
-                    }{" "}
-                    - All Violations
-                  </DialogTitle>
-                  <div className="relative w-64">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                    <Input
-                      placeholder="Search URLs or accounts..."
-                      value={platformSearchQuery[expandedPlatform] || ""}
-                      onChange={(e) =>
-                        setPlatformSearchQuery({
-                          ...platformSearchQuery,
-                          [expandedPlatform]: e.target.value,
-                        })
-                      }
-                      className="h-8 pl-8 text-xs"
-                    />
-                  </div>
-                </div>
-                <DialogDescription>
-                  Viewing all violations for this platform in this match
-                </DialogDescription>
-              </DialogHeader>
-
-              {/* Expanded view content */}
-              {(() => {
-                const platform = platformOperations.find(
-                  (p) => p.id === expandedPlatform
-                );
-                if (!platform) return null;
-
-                const filteredViolations = getFilteredViolations(
-                  platform.id,
-                  platform.violations
-                );
-
-                return (
-                  <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
-                    {/* KPI Strip */}
-                    <div className="flex items-center justify-between gap-4 py-3 px-4 bg-muted/30 rounded-lg">
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Total views
-                        </p>
-                        <p className="text-sm font-bold">
-                          {platform.totalViews}
-                        </p>
-                      </div>
-                      <div className="h-8 w-px bg-border" />
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Avg block time
-                        </p>
-                        <p className="text-sm font-bold">
-                          {platform.avgBlockTime}
-                        </p>
-                      </div>
-                      <div className="h-8 w-px bg-border" />
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Blocked
-                        </p>
-                        <p className="text-sm font-bold">
-                          {platform.blockedCount ?? 0}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                          {platform.blockedSuccess} success rate
-                        </p>
-                      </div>
-                      <div className="h-8 w-px bg-border" />
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground mb-1">
-                          Still active
-                        </p>
-                        <p className="text-sm font-bold">
-                          {platform.stillActive}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Filters */}
-                    <div className="flex gap-2">
-                      <Badge
-                        variant={
-                          platformCardFilter[platform.id] === "all" ||
-                          !platformCardFilter[platform.id]
-                            ? "default"
-                            : "outline"
-                        }
-                        className="cursor-pointer text-xs"
-                        onClick={() =>
-                          setPlatformCardFilter({
-                            ...platformCardFilter,
-                            [platform.id]: "all",
-                          })
-                        }>
-                        All
-                      </Badge>
-                      <Badge
-                        variant={
-                          platformCardFilter[platform.id] === "active"
-                            ? "default"
-                            : "outline"
-                        }
-                        className="cursor-pointer text-xs"
-                        onClick={() =>
-                          setPlatformCardFilter({
-                            ...platformCardFilter,
-                            [platform.id]: "active",
-                          })
-                        }>
-                        Active
-                      </Badge>
-                      <Badge
-                        variant={
-                          platformCardFilter[platform.id] === "blocked"
-                            ? "default"
-                            : "outline"
-                        }
-                        className="cursor-pointer text-xs"
-                        onClick={() =>
-                          setPlatformCardFilter({
-                            ...platformCardFilter,
-                            [platform.id]: "blocked",
-                          })
-                        }>
-                        Blocked
-                      </Badge>
-                      <Badge
-                        variant={
-                          platformCardFilter[platform.id] === "removed"
-                            ? "default"
-                            : "outline"
-                        }
-                        className="cursor-pointer text-xs"
-                        onClick={() =>
-                          setPlatformCardFilter({
-                            ...platformCardFilter,
-                            [platform.id]: "removed",
-                          })
-                        }>
-                        Removed
-                      </Badge>
-                      <Badge
-                        variant={
-                          platformCardFilter[platform.id] === "review"
-                            ? "default"
-                            : "outline"
-                        }
-                        className="cursor-pointer text-xs"
-                        onClick={() =>
-                          setPlatformCardFilter({
-                            ...platformCardFilter,
-                            [platform.id]: "review",
-                          })
-                        }>
-                        Review
-                      </Badge>
-                    </div>
-
-                    {/* Violations table */}
-                    <ScrollArea className="flex-1">
-                      <div className="space-y-2 pr-4">
-                        {filteredViolations.map((violation) => {
-                          const truncatedUrl =
-                            violation.url.length > 45
-                              ? violation.url.slice(0, 42) + "..."
-                              : violation.url;
-
-                          return (
-                            <div
-                              key={violation.id}
-                              className="group rounded-md border bg-card p-3 hover:bg-accent/50 transition-colors">
-                              {/* Line 1: Status icon + time + status pill + actions */}
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <div className="text-muted-foreground">
-                                    {getStatusIcon(violation.statusBadge)}
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">
-                                    {violation.time}
-                                  </span>
-                                  <Badge
-                                    variant={
-                                      violation.statusBadge === "Removed"
-                                        ? "destructive"
-                                        : violation.statusBadge === "Active" ||
-                                          violation.statusBadge === "Reported"
-                                        ? "default"
-                                        : violation.statusBadge === "Review"
-                                        ? "secondary"
-                                        : "outline"
-                                    }
-                                    className={cn(
-                                      "text-xs",
-                                      (violation.statusBadge === "Active" ||
-                                        violation.statusBadge === "Reported") &&
-                                        "bg-success text-success-foreground hover:bg-success/80",
-                                      violation.statusBadge === "Blocked" &&
-                                        "bg-muted text-muted-foreground hover:bg-muted/80 border-muted-foreground/20",
-                                      violation.statusBadge === "Review" &&
-                                        "bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 hover:bg-yellow-500/20 border-yellow-500/20"
-                                    )}>
-                                    {violation.statusBadge}
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        onClick={() =>
-                                          window.open(
-                                            violation.violationUrl ||
-                                              violation.url ||
-                                              "",
-                                            "_blank"
-                                          )
-                                        }>
-                                        <ExternalLink className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Open link</TooltipContent>
-                                  </Tooltip>
-
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        onClick={() =>
-                                          openEditViolationDrawer(
-                                            platform.id,
-                                            violation
-                                          )
-                                        }>
-                                        <Edit className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Edit</TooltipContent>
-                                  </Tooltip>
-
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        onClick={() =>
-                                          toggleViolationStatus(
-                                            platform.id,
-                                            violation.id
-                                          )
-                                        }>
-                                        <Lock className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {violation.status === "Blocked"
-                                        ? "Mark as active"
-                                        : "Mark as blocked"}
-                                    </TooltipContent>
-                                  </Tooltip>
-
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7">
-                                        <MoreHorizontal className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          copyViolationUrl(violation.url)
-                                        }>
-                                        <Copy className="mr-2 h-4 w-4" />
-                                        Copy link
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          openEditViolationDrawer(
-                                            platform.id,
-                                            violation
-                                          )
-                                        }>
-                                        <FileEdit className="mr-2 h-4 w-4" />
-                                        Add note
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        className="text-destructive"
-                                        onClick={() =>
-                                          deleteViolation(
-                                            platform.id,
-                                            violation.id
-                                          )
-                                        }>
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Delete
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-                              </div>
-
-                              {/* Line 2: Platform icon + account handle + URL + views */}
-                              <div className="flex items-center justify-between gap-2 mt-1.5">
-                                <div className="flex items-center gap-2 min-w-0 flex-1 text-xs text-muted-foreground">
-                                  <span className="shrink-0">
-                                    {getPlatformIcon(platform.name)}
-                                  </span>
-                                  {violation.accountHandle && (
-                                    <>
-                                      <span className="font-medium shrink-0">
-                                        {violation.accountHandle}
-                                      </span>
-                                      <span className="shrink-0">•</span>
-                                    </>
-                                  )}
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <button
-                                        onClick={() =>
-                                          window.open(
-                                            violation.violationUrl ||
-                                              violation.url ||
-                                              "",
-                                            "_blank"
-                                          )
-                                        }
-                                        className="flex items-center gap-1.5 min-w-0 hover:text-foreground transition-colors rounded px-1.5 py-0.5 hover:bg-accent">
-                                        <LinkIcon className="h-3 w-3 shrink-0" />
-                                        <span className="truncate">
-                                          {truncatedUrl}
-                                        </span>
-                                        <ExternalLink className="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-100" />
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {violation.url}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </div>
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                                  <Eye className="h-3.5 w-3.5" />
-                                  <span className="font-medium">
-                                    {formatViewsString(violation.views)}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Line 3: Meta text */}
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {violation.statusBadge === "Blocked"
-                                  ? formatBlockedViolationText(violation)
-                                  : `${violation.type} • added ${violation.addedAgo}`}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                );
-              })()}
-            </DialogContent>
-          </Dialog>
-        )}
+        <ExpandedPlatformDialog
+          open={!!expandedPlatform}
+          onOpenChange={(open) =>
+            setExpandedPlatform(open ? expandedPlatform : null)
+          }
+          platform={
+            platformOperations.find((p) => p.id === expandedPlatform) || null
+          }
+          filteredViolations={
+            expandedPlatform
+              ? getFilteredViolations(
+                  expandedPlatform,
+                  platformOperations.find((p) => p.id === expandedPlatform)
+                    ?.violations || []
+                )
+              : []
+          }
+          cardFilter={
+            expandedPlatform
+              ? platformCardFilter[expandedPlatform] || "all"
+              : "all"
+          }
+          searchQuery={
+            expandedPlatform ? platformSearchQuery[expandedPlatform] || "" : ""
+          }
+          onFilterChange={(filter) => {
+            if (expandedPlatform) {
+              setPlatformCardFilter({
+                ...platformCardFilter,
+                [expandedPlatform]: filter,
+              });
+            }
+          }}
+          onSearchChange={(query) => {
+            if (expandedPlatform) {
+              setPlatformSearchQuery({
+                ...platformSearchQuery,
+                [expandedPlatform]: query,
+              });
+            }
+          }}
+          onEdit={openEditViolationDrawer}
+          onToggleStatus={toggleViolationStatus}
+          onDelete={deleteViolation}
+          onCopyUrl={copyViolationUrl}
+          getPlatformIcon={getPlatformIcon}
+        />
 
         <div
           className={
@@ -1653,10 +1072,6 @@ export default function MatchDashboard() {
           {platformOperations
             .filter((platform) => selectedSlots.includes(platform.id))
             .map((platform) => {
-              console.log(
-                `Platform ${platform.name} blockedCount:`,
-                platform.blockedCount
-              );
               const cardFilter = platformCardFilter[platform.id] || "all";
               const filteredViolations = getFilteredViolations(
                 platform.id,
@@ -1664,1125 +1079,89 @@ export default function MatchDashboard() {
               );
 
               return (
-                <Card
-                  id={`platform-card-${platform.id}`}
+                <PlatformCard
                   key={platform.id}
-                  className="p-5 transition-all">
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <platform.icon
-                          className="h-5 w-5"
-                          style={{ color: platform.color }}
-                        />
-                        <h3 className="font-semibold">{platform.name}</h3>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {platform.totalViolations} violations •{" "}
-                        {platform.activeViolations} active •{" "}
-                        {platform.blockedCount || 0} blocked (
-                        {platform.blockedRate}% success)
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() =>
-                                setExpandedPlatform(
-                                  expandedPlatform === platform.id
-                                    ? null
-                                    : platform.id
-                                )
-                              }>
-                              <Maximize2 className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Expand to full width</TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <Button
-                        size="sm"
-                        className="text-xs"
-                        onClick={() => openAddViolationDrawer(platform.id)}>
-                        <Plus className="h-3 w-3 mr-1.5" />
-                        Add violation
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Stats */}
-                  <div className="flex items-center justify-between gap-3 mb-4 py-2.5 px-3 bg-muted/30 rounded-lg">
-                    <div className="text-center flex-1">
-                      <p className="text-xs text-muted-foreground mb-0.5">
-                        Total views
-                      </p>
-                      <p className="text-sm font-bold">{platform.totalViews}</p>
-                    </div>
-                    <div className="h-6 w-px bg-border" />
-                    <div className="text-center flex-1">
-                      <p className="text-xs text-muted-foreground mb-0.5">
-                        Avg block time
-                      </p>
-                      <p className="text-sm font-bold">
-                        {platform.avgBlockTime}
-                      </p>
-                    </div>
-                    <div className="h-6 w-px bg-border" />
-                    <div className="text-center flex-1">
-                      <p className="text-xs text-muted-foreground mb-0.5">
-                        Blocked
-                      </p>
-                      <p className="text-sm font-bold">
-                        {platform.blockedCount ?? 0}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                        {platform.blockedSuccess} success rate
-                      </p>
-                    </div>
-                    <div className="h-6 w-px bg-border" />
-                    <div className="text-center flex-1">
-                      <p className="text-xs text-muted-foreground mb-0.5">
-                        Still active
-                      </p>
-                      <p className="text-sm font-bold">
-                        {platform.stillActive}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Filters and Search */}
-                  <div className="space-y-2 mb-3">
-                    <div className="flex gap-1">
-                      <Badge
-                        variant={cardFilter === "all" ? "default" : "outline"}
-                        className="cursor-pointer text-xs"
-                        onClick={() =>
-                          setPlatformCardFilter({
-                            ...platformCardFilter,
-                            [platform.id]: "all",
-                          })
-                        }>
-                        All
-                      </Badge>
-                      <Badge
-                        variant={
-                          cardFilter === "active" ? "default" : "outline"
-                        }
-                        className="cursor-pointer text-xs"
-                        onClick={() =>
-                          setPlatformCardFilter({
-                            ...platformCardFilter,
-                            [platform.id]: "active",
-                          })
-                        }>
-                        Active
-                      </Badge>
-                      <Badge
-                        variant={
-                          cardFilter === "blocked" ? "default" : "outline"
-                        }
-                        className="cursor-pointer text-xs"
-                        onClick={() =>
-                          setPlatformCardFilter({
-                            ...platformCardFilter,
-                            [platform.id]: "blocked",
-                          })
-                        }>
-                        Blocked
-                      </Badge>
-                      <Badge
-                        variant={
-                          cardFilter === "review" ? "default" : "outline"
-                        }
-                        className="cursor-pointer text-xs"
-                        onClick={() =>
-                          setPlatformCardFilter({
-                            ...platformCardFilter,
-                            [platform.id]: "review",
-                          })
-                        }>
-                        Review
-                      </Badge>
-                    </div>
-
-                    <div className="relative">
-                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      <Input
-                        placeholder="Search URLs or accounts..."
-                        value={platformSearchQuery[platform.id] || ""}
-                        onChange={(e) =>
-                          setPlatformSearchQuery({
-                            ...platformSearchQuery,
-                            [platform.id]: e.target.value,
-                          })
-                        }
-                        className="h-8 pl-8 text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Violation List */}
-                  <ScrollArea className="h-[280px]">
-                    {filteredViolations.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                        <AlertCircle className="h-8 w-8 text-muted-foreground mb-2" />
-                        <p className="text-sm text-muted-foreground mb-4">
-                          No violations found matching your filters.
-                        </p>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => openAddViolationDrawer(platform.id)}>
-                          <Plus className="h-3 w-3 mr-1.5" />
-                          Add violation
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {filteredViolations.map((violation) => {
-                          const truncatedUrl =
-                            violation.url.length > 45
-                              ? violation.url.slice(0, 42) + "..."
-                              : violation.url;
-
-                          return (
-                            <div
-                              key={violation.id}
-                              className="group rounded-md border bg-card p-2.5 hover:bg-accent/50 transition-colors">
-                              {/* Line 1: Status icon + time + status pill + actions */}
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <div className="text-muted-foreground">
-                                    {getStatusIcon(violation.statusBadge)}
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">
-                                    {violation.time}
-                                  </span>
-                                  <Badge
-                                    variant={
-                                      violation.statusBadge === "Removed"
-                                        ? "destructive"
-                                        : violation.statusBadge === "Active" ||
-                                          violation.statusBadge === "Reported"
-                                        ? "default"
-                                        : violation.statusBadge === "Review"
-                                        ? "secondary"
-                                        : "outline"
-                                    }
-                                    className={cn(
-                                      "text-xs",
-                                      (violation.statusBadge === "Active" ||
-                                        violation.statusBadge === "Reported") &&
-                                        "bg-success text-success-foreground hover:bg-success/80",
-                                      violation.statusBadge === "Blocked" &&
-                                        "bg-muted text-muted-foreground hover:bg-muted/80 border-muted-foreground/20",
-                                      violation.statusBadge === "Review" &&
-                                        "bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 hover:bg-yellow-500/20 border-yellow-500/20"
-                                    )}>
-                                    {violation.statusBadge}
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        onClick={() =>
-                                          window.open(
-                                            violation.violationUrl ||
-                                              violation.url ||
-                                              "",
-                                            "_blank"
-                                          )
-                                        }>
-                                        <ExternalLink className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Open link</TooltipContent>
-                                  </Tooltip>
-
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        onClick={() =>
-                                          openEditViolationDrawer(
-                                            platform.id,
-                                            violation
-                                          )
-                                        }>
-                                        <Edit className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>Edit</TooltipContent>
-                                  </Tooltip>
-
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7"
-                                        onClick={() =>
-                                          toggleViolationStatus(
-                                            platform.id,
-                                            violation.id
-                                          )
-                                        }>
-                                        <Lock className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {violation.status === "Blocked"
-                                        ? "Mark as active"
-                                        : "Mark as blocked"}
-                                    </TooltipContent>
-                                  </Tooltip>
-
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-7 w-7">
-                                        <MoreHorizontal className="h-3.5 w-3.5" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          copyViolationUrl(violation.url)
-                                        }>
-                                        <Copy className="mr-2 h-4 w-4" />
-                                        Copy link
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem
-                                        onClick={() =>
-                                          openEditViolationDrawer(
-                                            platform.id,
-                                            violation
-                                          )
-                                        }>
-                                        <FileEdit className="mr-2 h-4 w-4" />
-                                        Add note
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        className="text-destructive"
-                                        onClick={() =>
-                                          deleteViolation(
-                                            platform.id,
-                                            violation.id
-                                          )
-                                        }>
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        Delete
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-                              </div>
-
-                              {/* Line 2: Platform icon + account handle + URL + views */}
-                              <div className="flex items-center justify-between gap-2 mt-1.5">
-                                <div className="flex items-center gap-2 min-w-0 flex-1 text-xs text-muted-foreground">
-                                  <span className="shrink-0">
-                                    {getPlatformIcon(platform.name)}
-                                  </span>
-                                  {violation.accountHandle && (
-                                    <>
-                                      <span className="font-medium shrink-0">
-                                        {violation.accountHandle}
-                                      </span>
-                                      <span className="shrink-0">•</span>
-                                    </>
-                                  )}
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <button
-                                        onClick={() =>
-                                          window.open(
-                                            violation.violationUrl ||
-                                              violation.url ||
-                                              "",
-                                            "_blank"
-                                          )
-                                        }
-                                        className="flex items-center gap-1.5 min-w-0 hover:text-foreground transition-colors rounded px-1.5 py-0.5 hover:bg-accent">
-                                        <LinkIcon className="h-3 w-3 shrink-0" />
-                                        <span className="truncate">
-                                          {truncatedUrl}
-                                        </span>
-                                        <ExternalLink className="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-100" />
-                                      </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      {violation.url}
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </div>
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                                  <Eye className="h-3.5 w-3.5" />
-                                  <span className="font-medium">
-                                    {formatViewsString(violation.views)}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Line 3: Meta text */}
-                              <p className="text-xs text-muted-foreground mt-1">
-                                {violation.statusBadge === "Blocked"
-                                  ? formatBlockedViolationText(violation)
-                                  : `${violation.type} • added ${violation.addedAgo}`}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </ScrollArea>
-                </Card>
+                  platform={platform}
+                  filteredViolations={filteredViolations}
+                  cardFilter={cardFilter}
+                  searchQuery={platformSearchQuery[platform.id] || ""}
+                  onFilterChange={(filter) =>
+                    setPlatformCardFilter({
+                      ...platformCardFilter,
+                      [platform.id]: filter,
+                    })
+                  }
+                  onSearchChange={(query) =>
+                    setPlatformSearchQuery({
+                      ...platformSearchQuery,
+                      [platform.id]: query,
+                    })
+                  }
+                  onExpand={() =>
+                    setExpandedPlatform(
+                      expandedPlatform === platform.id ? null : platform.id
+                    )
+                  }
+                  onAddViolation={() => openAddViolationDrawer(platform.id)}
+                  onEdit={openEditViolationDrawer}
+                  onToggleStatus={toggleViolationStatus}
+                  onDelete={deleteViolation}
+                  onCopyUrl={copyViolationUrl}
+                  getPlatformIcon={getPlatformIcon}
+                />
               );
             })}
         </div>
       </div>
 
-      {/* Platform Comparison (This Match) */}
-      <div className="mt-6">
-        <Card className="p-6">
-          {/* Header */}
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3 className="text-lg font-semibold mb-1">
-                Platform Comparison (This Match)
-              </h3>
-              <p className="text-sm text-muted-foreground">
-                Compare platforms for this match
-              </p>
-              <p className="text-xs text-muted-foreground/70 mt-2">
-                Metrics respect the current content filter (
-                {contentTypeFilter === "all"
-                  ? "All types"
-                  : contentTypeFilter === "live"
-                  ? "Live"
-                  : contentTypeFilter === "highlights"
-                  ? "Highlights"
-                  : "Other"}
-                )
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              {/* Report Button */}
-              <Button
-                onClick={() => setIsReportOpen(true)}
-                size="sm"
-                variant="default"
-                className="gap-2">
-                <BarChart3 className="h-4 w-4" />
-                تقرير المباراة
-              </Button>
+      <PlatformComparison
+        platformOperations={platformOperations}
+        contentTypeFilter={contentTypeFilter}
+        comparisonMetric={comparisonMetric}
+        comparisonSort={comparisonSort}
+        comparisonSortDirection={comparisonSortDirection}
+        selectedSlots={selectedSlots}
+        onMetricChange={setComparisonMetric}
+        onSortChange={setComparisonSort}
+        onSortDirectionChange={setComparisonSortDirection}
+        onSelectedSlotsChange={setSelectedSlots}
+        onReportOpen={() => setIsReportOpen(true)}
+      />
 
-              {/* Sort dropdown */}
-              <Select
-                value={comparisonSort}
-                onValueChange={(v: string) => {
-                  const validSort = v as
-                    | "violations"
-                    | "views"
-                    | "response"
-                    | "active";
-                  setComparisonSort(validSort);
-                  // Sync metric tab with sort selection
-                  if (v === "violations") setComparisonMetric("violations");
-                  else if (v === "views") setComparisonMetric("views");
-                  else if (v === "response") setComparisonMetric("response");
-                  else if (v === "active") setComparisonMetric("active");
-                  setComparisonSortDirection("desc");
-                }}>
-                <SelectTrigger className="w-[180px] h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="violations">Most violations</SelectItem>
-                  <SelectItem value="views">Highest views</SelectItem>
-                  <SelectItem value="response">Slowest response</SelectItem>
-                  <SelectItem value="active">Most active</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+      <AddViolationSheet
+        open={isAddViolationOpen}
+        onOpenChange={setIsAddViolationOpen}
+        isEditMode={isEditMode}
+        match={match}
+        platformOperations={platformOperations}
+        selectedPlatformForAdd={selectedPlatformForAdd}
+        formUrl={formUrl}
+        onFormUrlChange={setFormUrl}
+        formAccountHandle={formAccountHandle}
+        onFormAccountHandleChange={setFormAccountHandle}
+        formContentType={formContentType}
+        onFormContentTypeChange={setFormContentType}
+        formStatus={formStatus}
+        onFormStatusChange={setFormStatus}
+        formViews={formViews}
+        onFormViewsChange={setFormViews}
+        formTimeAdded={formTimeAdded}
+        onFormTimeAddedChange={setFormTimeAdded}
+        formBlockedAt={formBlockedAt}
+        onFormBlockedAtChange={setFormBlockedAt}
+        formNotes={formNotes}
+        onFormNotesChange={setFormNotes}
+        onSave={saveViolation}
+      />
 
-          {/* Comparison Table */}
-          <div className="mt-6 border rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-muted/30 border-b">
-                <tr>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">
-                    Platform
-                  </th>
-                  <th
-                    onClick={() => {
-                      if (comparisonMetric === "violations") {
-                        setComparisonSortDirection(
-                          comparisonSortDirection === "desc" ? "asc" : "desc"
-                        );
-                      } else {
-                        setComparisonMetric("violations");
-                        setComparisonSort("violations");
-                        setComparisonSortDirection("desc");
-                      }
-                    }}
-                    className={cn(
-                      "text-left text-xs px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors select-none",
-                      comparisonMetric === "violations"
-                        ? "font-semibold text-foreground border-b-2 border-primary"
-                        : "font-medium text-muted-foreground"
-                    )}>
-                    <div className="flex items-center gap-1">
-                      Violations
-                      {comparisonMetric === "violations" && (
-                        <span className="text-[10px]">
-                          {comparisonSortDirection === "desc" ? "↓" : "↑"}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => {
-                      if (comparisonMetric === "blocked") {
-                        setComparisonSortDirection(
-                          comparisonSortDirection === "desc" ? "asc" : "desc"
-                        );
-                      } else {
-                        setComparisonMetric("blocked");
-                        setComparisonSort("violations");
-                        setComparisonSortDirection("desc");
-                      }
-                    }}
-                    className={cn(
-                      "text-left text-xs px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors select-none",
-                      comparisonMetric === "blocked"
-                        ? "font-semibold text-foreground border-b-2 border-primary"
-                        : "font-medium text-muted-foreground"
-                    )}>
-                    <div className="flex items-center gap-1">
-                      Blocked
-                      {comparisonMetric === "blocked" && (
-                        <span className="text-[10px]">
-                          {comparisonSortDirection === "desc" ? "↓" : "↑"}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => {
-                      if (comparisonMetric === "views") {
-                        setComparisonSortDirection(
-                          comparisonSortDirection === "desc" ? "asc" : "desc"
-                        );
-                      } else {
-                        setComparisonMetric("views");
-                        setComparisonSort("views");
-                        setComparisonSortDirection("desc");
-                      }
-                    }}
-                    className={cn(
-                      "text-left text-xs px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors select-none",
-                      comparisonMetric === "views"
-                        ? "font-semibold text-foreground border-b-2 border-primary"
-                        : "font-medium text-muted-foreground"
-                    )}>
-                    <div className="flex items-center gap-1">
-                      Views
-                      {comparisonMetric === "views" && (
-                        <span className="text-[10px]">
-                          {comparisonSortDirection === "desc" ? "↓" : "↑"}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => {
-                      if (comparisonMetric === "active") {
-                        setComparisonSortDirection(
-                          comparisonSortDirection === "desc" ? "asc" : "desc"
-                        );
-                      } else {
-                        setComparisonMetric("active");
-                        setComparisonSort("active");
-                        setComparisonSortDirection("desc");
-                      }
-                    }}
-                    className={cn(
-                      "text-left text-xs px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors select-none",
-                      comparisonMetric === "active"
-                        ? "font-semibold text-foreground border-b-2 border-primary"
-                        : "font-medium text-muted-foreground"
-                    )}>
-                    <div className="flex items-center gap-1">
-                      Still active
-                      {comparisonMetric === "active" && (
-                        <span className="text-[10px]">
-                          {comparisonSortDirection === "desc" ? "↓" : "↑"}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => {
-                      if (comparisonMetric === "response") {
-                        setComparisonSortDirection(
-                          comparisonSortDirection === "desc" ? "asc" : "desc"
-                        );
-                      } else {
-                        setComparisonMetric("response");
-                        setComparisonSort("response");
-                        setComparisonSortDirection("desc");
-                      }
-                    }}
-                    className={cn(
-                      "text-left text-xs px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors select-none",
-                      comparisonMetric === "response"
-                        ? "font-semibold text-foreground border-b-2 border-primary"
-                        : "font-medium text-muted-foreground"
-                    )}>
-                    <div className="flex items-center gap-1">
-                      Avg block time
-                      {comparisonMetric === "response" && (
-                        <span className="text-[10px]">
-                          {comparisonSortDirection === "desc" ? "↓" : "↑"}
-                        </span>
-                      )}
-                    </div>
-                  </th>
-                  <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {(() => {
-                  // Calculate metrics per platform respecting contentTypeFilter
-                  const platformMetrics = platformOperations.map((platform) => {
-                    const filteredViolations =
-                      contentTypeFilter === "all"
-                        ? platform.violations
-                        : platform.violations.filter(
-                            (v) => v.type.toLowerCase() === contentTypeFilter
-                          );
-
-                    const totalViolations = filteredViolations.length;
-                    const blockedViolations = filteredViolations.filter(
-                      (v) => v.status === "Blocked" || v.status === "Removed"
-                    );
-                    const blockedCount = blockedViolations.length;
-                    const blockedPercent =
-                      totalViolations > 0
-                        ? Math.round((blockedCount / totalViolations) * 100)
-                        : 0;
-
-                    const totalViews = filteredViolations.reduce((sum, v) => {
-                      const views = parseFloat(v.views.replace("K", "")) * 1000;
-                      return sum + views;
-                    }, 0);
-
-                    const activeCount = filteredViolations.filter((v) =>
-                      ["reported", "active", "pending", "review"].includes(
-                        v.status
-                      )
-                    ).length;
-
-                    // Calculate avg block time
-                    const avgBlockTimeMinutes =
-                      blockedViolations.length > 0
-                        ? blockedViolations.reduce((sum, v) => {
-                            const blockInfo = calculateBlockDuration(v);
-                            return sum + (blockInfo?.duration ?? 0);
-                          }, 0) / blockedViolations.length
-                        : 0;
-
-                    return {
-                      platform,
-                      totalViolations,
-                      blockedCount,
-                      blockedPercent,
-                      totalViews,
-                      activeCount,
-                      avgBlockTimeMinutes,
-                    };
-                  });
-
-                  // Get max values for progress bars
-                  const maxViolations = Math.max(
-                    ...platformMetrics.map((p) => p.totalViolations),
-                    1
-                  );
-                  const maxViews = Math.max(
-                    ...platformMetrics.map((p) => p.totalViews),
-                    1
-                  );
-                  const maxBlocked = Math.max(
-                    ...platformMetrics.map((p) => p.blockedCount),
-                    1
-                  );
-                  const maxResponse = Math.max(
-                    ...platformMetrics.map((p) => p.avgBlockTimeMinutes),
-                    1
-                  );
-                  const maxActive = Math.max(
-                    ...platformMetrics.map((p) => p.activeCount),
-                    1
-                  );
-
-                  // Sort platforms
-                  const sortedMetrics = [...platformMetrics].sort((a, b) => {
-                    let compareResult = 0;
-                    switch (comparisonSort) {
-                      case "violations":
-                        compareResult = b.totalViolations - a.totalViolations;
-                        break;
-                      case "views":
-                        compareResult = b.totalViews - a.totalViews;
-                        break;
-                      case "response":
-                        compareResult =
-                          b.avgBlockTimeMinutes - a.avgBlockTimeMinutes;
-                        break;
-                      case "active":
-                        compareResult = b.activeCount - a.activeCount;
-                        break;
-                      default:
-                        compareResult = 0;
-                    }
-                    return comparisonSortDirection === "desc"
-                      ? compareResult
-                      : -compareResult;
-                  });
-
-                  // SLA threshold (example: 10 min)
-                  const slaThreshold = 10;
-
-                  return sortedMetrics.map((metrics, index) => {
-                    const { platform } = metrics;
-                    const IconComponent = platform.icon;
-
-                    // Calculate progress percentages
-                    const violationsProgress =
-                      (metrics.totalViolations / maxViolations) * 100;
-                    const viewsProgress = (metrics.totalViews / maxViews) * 100;
-                    const blockedProgress =
-                      (metrics.blockedCount / maxBlocked) * 100;
-                    const responseProgress =
-                      (metrics.avgBlockTimeMinutes / maxResponse) * 100;
-                    const activeProgress =
-                      (metrics.activeCount / maxActive) * 100;
-
-                    // Status pill
-                    let statusVariant: "default" | "secondary" | "destructive" =
-                      "default";
-                    let statusText = "Within target";
-                    if (metrics.avgBlockTimeMinutes > slaThreshold * 1.5) {
-                      statusVariant = "destructive";
-                      statusText = "Slow";
-                    } else if (metrics.avgBlockTimeMinutes > slaThreshold) {
-                      statusVariant = "secondary";
-                      statusText = "Slightly slow";
-                    }
-
-                    return (
-                      <tr
-                        key={platform.id}
-                        onClick={() => {
-                          // Update P2 platform selection
-                          if (selectedSlots.includes(platform.id)) {
-                            // Platform is already visible, just highlight it
-                            const element = document.getElementById(
-                              `platform-card-${platform.id}`
-                            );
-                            if (element) {
-                              element.scrollIntoView({
-                                behavior: "smooth",
-                                block: "center",
-                              });
-                              element.classList.add(
-                                "ring-2",
-                                "ring-primary",
-                                "ring-offset-2"
-                              );
-                              setTimeout(() => {
-                                element.classList.remove(
-                                  "ring-2",
-                                  "ring-primary",
-                                  "ring-offset-2"
-                                );
-                              }, 2000);
-                            }
-                          } else {
-                            // Platform is not visible: keep left card, replace right card
-                            if (selectedSlots.length === 0) {
-                              // No platforms visible, add as first
-                              setSelectedSlots([platform.id]);
-                            } else if (selectedSlots.length === 1) {
-                              // One platform visible, add as second
-                              setSelectedSlots([selectedSlots[0], platform.id]);
-                            } else {
-                              // Two platforms visible, replace the right one
-                              setSelectedSlots([selectedSlots[0], platform.id]);
-                            }
-
-                            // Scroll to the platform operations section
-                            setTimeout(() => {
-                              const element = document.getElementById(
-                                `platform-card-${platform.id}`
-                              );
-                              if (element) {
-                                element.scrollIntoView({
-                                  behavior: "smooth",
-                                  block: "center",
-                                });
-                                element.classList.add(
-                                  "ring-2",
-                                  "ring-primary",
-                                  "ring-offset-2"
-                                );
-                                setTimeout(() => {
-                                  element.classList.remove(
-                                    "ring-2",
-                                    "ring-primary",
-                                    "ring-offset-2"
-                                  );
-                                }, 2000);
-                              }
-                            }, 100);
-                          }
-                        }}
-                        className="border-b last:border-b-0 hover:bg-muted/50 cursor-pointer transition-colors">
-                        {/* Platform */}
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-2">
-                            <IconComponent
-                              className="h-4 w-4"
-                              style={{ color: platform.color }}
-                            />
-                            <span className="text-sm font-medium">
-                              {platform.name}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Violations */}
-                        <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              "text-sm",
-                              comparisonMetric === "violations"
-                                ? "font-semibold"
-                                : "font-medium"
-                            )}>
-                            {metrics.totalViolations}
-                          </span>
-                        </td>
-
-                        {/* Blocked */}
-                        <td className="px-4 py-3">
-                          <div>
-                            <p
-                              className={cn(
-                                "text-sm",
-                                comparisonMetric === "blocked"
-                                  ? "font-semibold"
-                                  : "font-medium"
-                              )}>
-                              {metrics.blockedCount} blocked
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {metrics.blockedPercent}% success
-                            </p>
-                          </div>
-                        </td>
-
-                        {/* Views */}
-                        <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              "text-sm",
-                              comparisonMetric === "views"
-                                ? "font-semibold"
-                                : "font-medium"
-                            )}>
-                            {formatViews(metrics.totalViews)}
-                          </span>
-                        </td>
-
-                        {/* Still active */}
-                        <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              "text-sm",
-                              comparisonMetric === "active"
-                                ? "font-semibold"
-                                : "font-medium"
-                            )}>
-                            {metrics.activeCount}
-                          </span>
-                        </td>
-
-                        {/* Avg block time */}
-                        <td className="px-4 py-3">
-                          <span
-                            className={cn(
-                              "text-sm",
-                              comparisonMetric === "response"
-                                ? "font-semibold"
-                                : "font-medium"
-                            )}>
-                            {metrics.avgBlockTimeMinutes.toFixed(1)} min
-                          </span>
-                        </td>
-
-                        {/* Status */}
-                        <td className="px-4 py-3">
-                          <Badge variant={statusVariant} className="text-xs">
-                            {statusText}
-                          </Badge>
-                        </td>
-                      </tr>
-                    );
-                  });
-                })()}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
-
-      {/* Add/Edit Violation Drawer */}
-      <Sheet open={isAddViolationOpen} onOpenChange={setIsAddViolationOpen}>
-        <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>
-              {isEditMode ? "Edit Violation" : "Add Violation"}
-            </SheetTitle>
-            <SheetDescription>
-              {isEditMode
-                ? "Update violation details"
-                : "Add a new violation for this match and platform"}
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="space-y-6 py-6">
-            {/* Match (Read-only) */}
-            <div className="space-y-2">
-              <Label>Match</Label>
-              <Input
-                value={match ? `${match.team1} vs ${match.team2}` : ""}
-                disabled
-              />
-            </div>
-
-            {/* Platform (Read-only) */}
-            <div className="space-y-2">
-              <Label>Platform</Label>
-              <Input
-                value={
-                  platformOperations.find(
-                    (p) => p.id === selectedPlatformForAdd
-                  )?.name || ""
-                }
-                disabled
-              />
-            </div>
-
-            {/* Violation URL */}
-            <div className="space-y-2">
-              <Label htmlFor="violation-url">Violation URL *</Label>
-              <Input
-                id="violation-url"
-                placeholder="https://x.com/..."
-                value={formUrl}
-                onChange={(e) => {
-                  const url = e.target.value;
-                  setFormUrl(url);
-                  // Auto-extract account handle from URL
-                  const extractedHandle = extractAccountHandleFromUrl(url);
-                  if (extractedHandle) {
-                    setFormAccountHandle(extractedHandle);
-                  }
-                }}
-              />
-            </div>
-
-            {/* Account / Channel */}
-            <div className="space-y-2">
-              <Label htmlFor="account-handle">Account / Channel *</Label>
-              <Input
-                id="account-handle"
-                placeholder="@username or channel name"
-                value={formAccountHandle}
-                onChange={(e) => setFormAccountHandle(e.target.value)}
-              />
-            </div>
-
-            {/* Content Type */}
-            <div className="space-y-2">
-              <Label htmlFor="content-type">Content Type *</Label>
-              <Select
-                value={formContentType}
-                onValueChange={setFormContentType}>
-                <SelectTrigger id="content-type">
-                  <SelectValue placeholder="Select content type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="live">Live</SelectItem>
-                  <SelectItem value="highlights">Highlights</SelectItem>
-                  <SelectItem value="other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Status */}
-            <div className="space-y-2">
-              <Label htmlFor="status">Status *</Label>
-              <Select
-                value={formStatus}
-                onValueChange={(value: string) => {
-                  const validStatus = value as
-                    | "Active"
-                    | "Blocked"
-                    | "Removed"
-                    | "Under Review";
-                  setFormStatus(validStatus);
-                  // Auto-prefill blockedAt when status changes to blocked/removed
-                  if (
-                    (value === "Blocked" || value === "Removed") &&
-                    !formBlockedAt
-                  ) {
-                    setFormBlockedAt(getKSATime());
-                  }
-                }}>
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Blocked">Blocked</SelectItem>
-                  <SelectItem value="Removed">Removed</SelectItem>
-                  <SelectItem value="Under Review">Under Review</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Views (Optional) */}
-            <div className="space-y-2">
-              <Label htmlFor="views">Views (optional)</Label>
-              <Input
-                id="views"
-                type="text"
-                placeholder="0"
-                value={formViews}
-                onChange={(e) => {
-                  const value = e.target.value.replace(/,/g, "");
-                  if (value === "" || /^\d+$/.test(value)) {
-                    const formatted =
-                      value === ""
-                        ? ""
-                        : parseInt(value).toLocaleString("en-US");
-                    setFormViews(formatted);
-                  }
-                }}
-              />
-            </div>
-
-            {/* Time Added */}
-            <div className="space-y-2">
-              <Label htmlFor="time-added">Time Added *</Label>
-              <Input
-                id="time-added"
-                type="datetime-local"
-                value={formTimeAdded}
-                onChange={(e) => setFormTimeAdded(e.target.value)}
-              />
-            </div>
-
-            {/* Blocked at (conditional) */}
-            {(formStatus === "Blocked" ||
-              formStatus === "Removed" ||
-              (isEditMode && formBlockedAt)) && (
-              <div className="space-y-2">
-                <Label htmlFor="blocked-at">Blocked at (optional)</Label>
-                <Input
-                  id="blocked-at"
-                  type="datetime-local"
-                  value={formBlockedAt}
-                  onChange={(e) => setFormBlockedAt(e.target.value)}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Leave empty or adjust the auto-filled time
-                </p>
-              </div>
-            )}
-
-            {/* Notes (Optional) */}
-            <div className="space-y-2">
-              <Label htmlFor="notes">Notes (optional)</Label>
-              <Textarea
-                id="notes"
-                placeholder="Add operator comments or notes..."
-                rows={4}
-                value={formNotes}
-                onChange={(e) => setFormNotes(e.target.value)}
-              />
-            </div>
-          </div>
-
-          <SheetFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsAddViolationOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={saveViolation}>
-              {isEditMode ? "Save changes" : "Save Violation"}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Delete Violation</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this violation? This action cannot
-              be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-3 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsDeleteConfirmOpen(false);
-                setDeleteConfirmViolation(null);
-              }}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={confirmDeleteViolation}>
-              Delete
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <DeleteConfirmDialog
+        open={isDeleteConfirmOpen}
+        onOpenChange={(open) => {
+          setIsDeleteConfirmOpen(open);
+          if (!open) setDeleteConfirmViolation(null);
+        }}
+        onConfirm={confirmDeleteViolation}
+      />
 
       {/* Match Report */}
       <MatchReport
