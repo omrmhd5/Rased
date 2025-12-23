@@ -1,0 +1,104 @@
+import { FaXTwitter, FaYoutube, FaFacebook, FaTiktok, FaInstagram } from "react-icons/fa6";
+
+export type StatusHistoryEntry = {
+  status: "Reported" | "Active" | "Blocked" | "Removed" | "Review" | "Pending";
+  changedAt: string;
+};
+
+export type Violation = {
+  id: number | string;
+  _id?: string; // MongoDB _id
+  status: "Active" | "Blocked" | "Removed" | "Under Review";
+  contentType: "Live" | "Highlights" | "Other";
+  views?: string;
+  violationUrl: string;
+  accountChannel: string;
+  timeAdded: string;
+  blockedAt?: string;
+  active: boolean;
+  notes?: string[];
+  // Computed/display fields (not from backend)
+  time?: string;
+  addedAgo?: string;
+  // Legacy fields for backward compatibility in UI
+  type?: "Live" | "Highlights" | "Other";
+  url?: string;
+  accountHandle?: string;
+  statusBadge?:
+    | "Reported"
+    | "Active"
+    | "Blocked"
+    | "Removed"
+    | "Review"
+    | "Pending";
+  stillActive?: boolean;
+};
+
+export type PlatformData = {
+  id: string;
+  name: string;
+  icon: React.ComponentType<{
+    className?: string;
+    style?: React.CSSProperties;
+  }>;
+  color: string;
+  totalViolations: number;
+  activeViolations: number;
+  blockedRate: number;
+  blockedCount: number;
+  totalViews: string;
+  avgBlockTime: string;
+  blockedSuccess: string;
+  stillActive: number;
+  violations: Violation[];
+};
+
+export interface Match {
+  _id?: string;
+  externalMatchId: string;
+  description: string;
+  team1: string;
+  team2: string;
+  date: string;
+  time: string;
+  week: string;
+  competition?: string;
+  stadium?: string;
+  status: "upcoming" | "live" | "finished" | "cancelled" | "postponed";
+  league: "saudi" | "italian" | "spanish";
+  winner?: "home" | "away" | "draw" | null;
+  scores?: {
+    home: number;
+    away: number;
+  } | null;
+}
+
+export interface BackendViolation {
+  _id?: string;
+  id?: string | number;
+  matchId: string;
+  matchName?: string;
+  platformId: string;
+  platformName?: string;
+  violationUrl: string;
+  accountChannel: string;
+  contentType: "Live" | "Highlights" | "Other";
+  status:
+    | "Active"
+    | "Blocked"
+    | "Removed"
+    | "Under Review"
+    | "active"
+    | "blocked"
+    | "removed"
+    | "under review";
+  views?: string;
+  timeAdded: string;
+  active?: boolean;
+  notes?: string[];
+  blockedAt?: string | Date;
+  __v?: number;
+}
+
+export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+

@@ -461,14 +461,12 @@ export default function Matches() {
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
 
-    // If within 1 hour (60 minutes) and in the future, show "Starting Soon"
-    if (totalMinutes <= 60 && totalMinutes >= 0) {
-      return { type: "starting-soon", minutes: totalMinutes };
-    }
-
-    // If within 48 hours, show countdown
-    if (hours < 48 && hours >= 0) {
-      return { type: "countdown", text: `${hours}h ${minutes}m` };
+    // Only show countdown if within 1 hour (60 minutes) and in the future
+    if (totalMinutes > 0 && totalMinutes <= 60) {
+      if (hours > 0) {
+        return { type: "countdown", text: `${hours}h ${minutes}m` };
+      }
+      return { type: "countdown", text: `${minutes}m` };
     }
 
     return null;
@@ -519,16 +517,8 @@ export default function Matches() {
                   "Completed"}
               </Badge>
               <Badge variant="outline">Week {match.week}</Badge>
-              {countdown && countdown.type === "starting-soon" && (
-                <Badge
-                  variant="outline"
-                  className="bg-orange-500 text-white animate-pulse">
-                  <Clock className="h-3 w-3 mr-1" />
-                  Starting in {countdown.minutes}m
-                </Badge>
-              )}
               {countdown && countdown.type === "countdown" && (
-                <Badge variant="outline" className="bg-chart-1/10 text-chart-1">
+                <Badge variant="outline" className="bg-chart-1/10 text-chart-1 animate-pulse">
                   <Clock className="h-3 w-3 mr-1" />
                   Starts in {countdown.text}
                 </Badge>

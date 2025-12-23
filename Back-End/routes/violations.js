@@ -181,6 +181,7 @@ router.put("/:id", async (req, res) => {
       status,
       views,
       timeAdded,
+      blockedAt,
       active,
       notes,
     } = req.body;
@@ -200,6 +201,25 @@ router.put("/:id", async (req, res) => {
     if (status !== undefined) violation.status = status;
     if (views !== undefined) violation.views = views;
     if (timeAdded !== undefined) violation.timeAdded = new Date(timeAdded);
+    
+    // Handle blockedAt - set it if provided, or clear it if status is Active
+    if (blockedAt !== undefined) {
+      if (blockedAt) {
+        violation.blockedAt = new Date(blockedAt);
+      } else {
+        violation.blockedAt = undefined;
+      }
+    } else if (status !== undefined) {
+      // If status is being updated but blockedAt is not provided, handle it based on status
+      const statusLower = status.toLowerCase();
+      if (statusLower === "active") {
+        violation.blockedAt = undefined;
+      } else if ((statusLower === "blocked" || statusLower === "removed") && !violation.blockedAt) {
+        // If setting to blocked/removed and no blockedAt exists, set to now
+        violation.blockedAt = new Date();
+      }
+    }
+    
     if (active !== undefined) violation.active = active;
 
     // Handle notes - convert to array if string
@@ -243,24 +263,22 @@ router.patch("/:id/status", async (req, res) => {
       return res.status(404).json({ error: "Violation not found" });
     }
 
-    const oldStatus = violation.status;
-    violation.status = status;
-
-    if (status === "blocked" || status === "removed") {
-      violation.blockedAt = blockedAt ? new Date(blockedAt) : new Date();
-    } else if (status === "active") {
-      violation.blockedAt = undefined;
+    // Normalize status to match schema enum (capitalized)
+    const normalizedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+    const validStatuses = ["Active", "Blocked", "Removed", "Under Review"];
+    
+    if (!validStatuses.includes(normalizedStatus)) {
+      return res.status(400).json({ error: "Invalid status value" });
     }
 
-    // Add to status history if changed
-    if (status !== oldStatus) {
-      if (!violation.statusHistory) {
-        violation.statusHistory = [];
-      }
-      violation.statusHistory.push({
-        status,
-        changedAt: new Date(),
-      });
+    violation.status = normalizedStatus;
+
+    // Set blockedAt when status is Blocked or Removed
+    const statusLower = normalizedStatus.toLowerCase();
+    if (statusLower === "blocked" || statusLower === "removed") {
+      violation.blockedAt = blockedAt ? new Date(blockedAt) : new Date();
+    } else if (statusLower === "active") {
+      violation.blockedAt = undefined;
     }
 
     const updatedViolation = await violation.save();

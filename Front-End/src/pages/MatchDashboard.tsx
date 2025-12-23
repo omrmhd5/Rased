@@ -33,21 +33,6 @@ import {
   BarChart3,
   XCircle,
 } from "lucide-react";
-import {
-  FaXTwitter,
-  FaYoutube,
-  FaFacebook,
-  FaTiktok,
-  FaInstagram,
-} from "react-icons/fa6";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip as RechartsTooltip,
-} from "recharts";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useState, useEffect } from "react";
 import {
   Sheet,
@@ -93,427 +78,31 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { MatchReport } from "@/components/MatchReport";
-
-// Empty content split data - will be populated from real violations
-const getInitialContentSplitData = () => [
-  {
-    name: "Live",
-    value: 0,
-    violations: 0,
-    color: "hsl(var(--chart-1))",
-  },
-  {
-    name: "Highlights",
-    value: 0,
-    violations: 0,
-    color: "hsl(var(--chart-2))",
-  },
-];
-
-// Empty activity log - will be populated from real data
-const getInitialActivityLog = () => [];
-
-// Empty platform operations - will be populated from real data
-const getInitialPlatformOperations = (): PlatformData[] => [
-  {
-    id: "twitter",
-    name: "X/Twitter",
-    icon: FaXTwitter,
-    color: "hsl(203 89% 53%)",
-    totalViolations: 0,
-    activeViolations: 0,
-    blockedRate: 0,
-    blockedCount: 0,
-    totalViews: "0",
-    avgBlockTime: "0 min",
-    blockedSuccess: "0%",
-    stillActive: 0,
-    violations: [],
-  },
-  {
-    id: "youtube",
-    name: "YouTube",
-    icon: FaYoutube,
-    color: "hsl(0 100% 50%)",
-    totalViolations: 0,
-    activeViolations: 0,
-    blockedRate: 0,
-    blockedCount: 0,
-    totalViews: "0",
-    avgBlockTime: "0 min",
-    blockedSuccess: "0%",
-    stillActive: 0,
-    violations: [],
-  },
-  {
-    id: "facebook",
-    name: "Facebook",
-    icon: FaFacebook,
-    color: "hsl(221 44% 41%)",
-    totalViolations: 0,
-    activeViolations: 0,
-    blockedRate: 0,
-    blockedCount: 0,
-    totalViews: "0",
-    avgBlockTime: "0 min",
-    blockedSuccess: "0%",
-    stillActive: 0,
-    violations: [],
-  },
-  {
-    id: "tiktok",
-    name: "TikTok",
-    icon: FaTiktok,
-    color: "hsl(0 0% 0%)",
-    totalViolations: 0,
-    activeViolations: 0,
-    blockedRate: 0,
-    blockedCount: 0,
-    totalViews: "0",
-    avgBlockTime: "0 min",
-    blockedSuccess: "0%",
-    stillActive: 0,
-    violations: [],
-  },
-  {
-    id: "instagram",
-    name: "Instagram",
-    icon: FaInstagram,
-    color: "hsl(329 100% 50%)",
-    totalViolations: 0,
-    activeViolations: 0,
-    blockedRate: 0,
-    blockedCount: 0,
-    totalViews: "0",
-    avgBlockTime: "0 min",
-    blockedSuccess: "0%",
-    stillActive: 0,
-    violations: [],
-  },
-];
-
-const formatViews = (views: number) => {
-  return views.toLocaleString("en-US");
-};
-
-// Format views string - parse and return with comma formatting
-const formatViewsString = (viewsStr: string): string => {
-  if (!viewsStr) return "0";
-  if (viewsStr === "0") return "0";
-
-  // Parse the string to a number (handles "K" notation if present)
-  let num = 0;
-  if (viewsStr.toUpperCase().includes("K")) {
-    const numStr = viewsStr.replace(/[^0-9.]/g, "");
-    num = parseFloat(numStr) * 1000;
-  } else {
-    num = parseFloat(viewsStr.replace(/[^0-9.]/g, ""));
-  }
-
-  if (isNaN(num)) return viewsStr;
-
-  return Math.round(num).toLocaleString("en-US");
-};
-
-// Get current time in KSA timezone (UTC+3) formatted for datetime-local input
-const getKSATime = (): string => {
-  const now = new Date();
-  // Add 3 hours for KSA timezone (UTC+3)
-  const ksaTime = new Date(now.getTime() + 3 * 60 * 60 * 1000);
-  return ksaTime.toISOString().slice(0, 16);
-};
-
-// Calculate blocked count from violations
-const calculateBlockedCount = (violations: Violation[]): number => {
-  return violations.filter(
-    (v) => v.status === "Blocked" || v.status === "Removed"
-  ).length;
-};
-
-// Calculate total views from violations
-const calculateTotalViews = (violations: Violation[]): string => {
-  const totalViews = violations.reduce((sum, v) => {
-    if (!v.views) return sum;
-    // Parse views string (e.g., "20.5K" -> 20500)
-    const viewsStr = v.views.replace(/[^0-9.]/g, "");
-    const viewsNum = parseFloat(viewsStr) || 0;
-    const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
-    return sum + viewsNum * multiplier;
-  }, 0);
-
-  return formatViews(totalViews);
-};
-
-// Calculate average block time in minutes
-const calculateAvgBlockTime = (violations: Violation[]): string => {
-  const blockedViolations = violations.filter(
-    (v) => v.status === "Blocked" || v.status === "Removed"
-  );
-
-  if (blockedViolations.length === 0) return "0 min";
-
-  // For now, we'll calculate based on time since added
-  // In a real scenario, you'd use blockedAt - timeAdded
-  const totalMinutes = blockedViolations.reduce((sum, v) => {
-    const addedTime = new Date(v.timeAdded).getTime();
-    const now = new Date().getTime();
-    const diffMinutes = Math.floor((now - addedTime) / (1000 * 60));
-    return sum + diffMinutes;
-  }, 0);
-
-  const avgMinutes = Math.round(totalMinutes / blockedViolations.length);
-
-  if (avgMinutes < 60) {
-    return `${avgMinutes} min`;
-  } else if (avgMinutes < 1440) {
-    const hours = Math.round(avgMinutes / 60);
-    return `${hours}h`;
-  } else {
-    const days = Math.round(avgMinutes / 1440);
-    return `${days}d`;
-  }
-};
-
-// Calculate blocked success rate (blocked violations that are no longer active)
-const calculateBlockedSuccess = (violations: Violation[]): string => {
-  const blockedViolations = violations.filter(
-    (v) => v.status === "Blocked" || v.status === "Removed"
-  );
-
-  if (blockedViolations.length === 0) return "0%";
-
-  const successfullyBlocked = blockedViolations.filter(
-    (v) => !v.active && !v.stillActive
-  ).length;
-
-  const successRate = Math.round(
-    (successfullyBlocked / blockedViolations.length) * 100
-  );
-
-  return `${successRate}%`;
-};
-
-// Calculate still active count (blocked violations that are still active)
-const calculateStillActive = (violations: Violation[]): number => {
-  return violations.filter(
-    (v) =>
-      (v.status === "Blocked" || v.status === "Removed") &&
-      (v.active || v.stillActive)
-  ).length;
-};
-
-// Convert backend violation format to frontend display format
-const convertBackendViolationToFrontend = (backendViolation: {
-  _id?: string;
-  id?: string | number;
-  status:
-    | "Active"
-    | "Blocked"
-    | "Removed"
-    | "Under Review"
-    | "active"
-    | "blocked"
-    | "removed"
-    | "under review";
-  contentType: "Live" | "Highlights" | "Other";
-  views?: string;
-  violationUrl: string;
-  accountChannel: string;
-  timeAdded: string;
-  active?: boolean;
-  notes?: string[];
-}): Violation => {
-  const timeAdded = backendViolation.timeAdded;
-  const now = new Date();
-  const added = new Date(timeAdded);
-  const diffMs = now.getTime() - added.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-
-  let addedAgo = "just now";
-  if (diffMins >= 1 && diffMins < 60) {
-    addedAgo = `${diffMins}m ago`;
-  } else if (diffMins >= 60) {
-    const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) {
-      addedAgo = `${diffHours}h ago`;
-    } else {
-      const diffDays = Math.floor(diffHours / 24);
-      addedAgo = `${diffDays}d ago`;
-    }
-  }
-
-  // Normalize status to capitalized format (handles old lowercase data)
-  let normalizedStatus: "Active" | "Blocked" | "Removed" | "Under Review" =
-    "Active";
-  const statusLower = backendViolation.status.toLowerCase();
-  if (statusLower === "active") {
-    normalizedStatus = "Active";
-  } else if (statusLower === "blocked") {
-    normalizedStatus = "Blocked";
-  } else if (statusLower === "removed") {
-    normalizedStatus = "Removed";
-  } else if (statusLower === "under review") {
-    normalizedStatus = "Under Review";
-  } else {
-    // If already capitalized, use as-is
-    normalizedStatus = backendViolation.status as
-      | "Active"
-      | "Blocked"
-      | "Removed"
-      | "Under Review";
-  }
-
-  // Map status to statusBadge for UI
-  let statusBadge:
-    | "Reported"
-    | "Active"
-    | "Blocked"
-    | "Removed"
-    | "Review"
-    | "Pending" = "Active";
-  if (normalizedStatus === "Removed") {
-    statusBadge = "Removed";
-  } else if (normalizedStatus === "Under Review") {
-    statusBadge = "Review";
-  } else if (normalizedStatus === "Active") {
-    statusBadge = "Active";
-  } else if (normalizedStatus === "Blocked") {
-    statusBadge = "Blocked";
-  }
-
-  return {
-    id: backendViolation._id || backendViolation.id,
-    _id: backendViolation._id,
-    status: normalizedStatus,
-    contentType: backendViolation.contentType,
-    views: backendViolation.views || "0",
-    violationUrl: backendViolation.violationUrl,
-    accountChannel: backendViolation.accountChannel,
-    timeAdded: backendViolation.timeAdded,
-    blockedAt: backendViolation.blockedAt,
-    active:
-      backendViolation.active !== undefined ? backendViolation.active : true,
-    notes: Array.isArray(backendViolation.notes) ? backendViolation.notes : [],
-    // Computed display fields
-    time: new Date(timeAdded).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }),
-    addedAgo,
-    // Legacy fields for UI compatibility
-    type: backendViolation.contentType,
-    url: backendViolation.violationUrl,
-    accountHandle: backendViolation.accountChannel,
-    statusBadge,
-    stillActive:
-      backendViolation.active !== undefined ? backendViolation.active : true,
-  };
-};
-
-// Violation type
-type StatusHistoryEntry = {
-  status: "Reported" | "Active" | "Blocked" | "Removed" | "Review" | "Pending";
-  changedAt: string;
-};
-
-type Violation = {
-  id: number | string;
-  _id?: string; // MongoDB _id
-  status: "Active" | "Blocked" | "Removed" | "Under Review";
-  contentType: "Live" | "Highlights" | "Other";
-  views?: string;
-  violationUrl: string;
-  accountChannel: string;
-  timeAdded: string;
-  blockedAt?: string;
-  active: boolean;
-  notes?: string[];
-  // Computed/display fields (not from backend)
-  time?: string;
-  addedAgo?: string;
-  // Legacy fields for backward compatibility in UI
-  type?: "Live" | "Highlights" | "Other";
-  url?: string;
-  accountHandle?: string;
-  statusBadge?:
-    | "Reported"
-    | "Active"
-    | "Blocked"
-    | "Removed"
-    | "Review"
-    | "Pending";
-  stillActive?: boolean;
-};
-
-// Platform operations data type
-type PlatformData = {
-  id: string;
-  name: string;
-  icon: React.ComponentType<{
-    className?: string;
-    style?: React.CSSProperties;
-  }>;
-  color: string;
-  totalViolations: number;
-  activeViolations: number;
-  blockedRate: number;
-  blockedCount: number;
-  totalViews: string;
-  avgBlockTime: string;
-  blockedSuccess: string;
-  stillActive: number;
-  violations: Violation[];
-};
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-
-interface Match {
-  _id?: string;
-  externalMatchId: string;
-  description: string;
-  team1: string;
-  team2: string;
-  date: string;
-  time: string;
-  week: string;
-  competition?: string;
-  stadium?: string;
-  status: "upcoming" | "live" | "finished" | "cancelled" | "postponed";
-  league: "saudi" | "italian" | "spanish";
-  winner?: "home" | "away" | "draw" | null;
-  scores?: {
-    home: number;
-    away: number;
-  } | null;
-}
-
-interface BackendViolation {
-  _id?: string;
-  id?: string | number;
-  matchId: string;
-  matchName?: string;
-  platformId: string;
-  platformName?: string;
-  violationUrl: string;
-  accountChannel: string;
-  contentType: "Live" | "Highlights" | "Other";
-  status:
-    | "Active"
-    | "Blocked"
-    | "Removed"
-    | "Under Review"
-    | "active"
-    | "blocked"
-    | "removed"
-    | "under review";
-  views?: string;
-  timeAdded: string;
-  active?: boolean;
-  notes?: string[];
-  blockedAt?: string;
-  __v?: number;
-}
+import {
+  MatchOverview,
+  ContentSplitChart,
+  ActivityLog,
+  getInitialContentSplitData,
+  getInitialActivityLog,
+  getInitialPlatformOperations,
+  formatViews,
+  formatViewsString,
+  getKSATime,
+  calculateBlockedCount,
+  calculateTotalViews,
+  calculateAvgBlockTime,
+  calculateBlockedSuccess,
+  calculateStillActive,
+  convertBackendViolationToFrontend,
+  extractAccountHandleFromUrl,
+  calculateBlockDuration,
+  formatBlockedViolationText,
+  type Violation,
+  type PlatformData,
+  type Match,
+  type BackendViolation,
+  API_URL,
+} from "@/components/MatchDashboard";
 
 export default function MatchDashboard() {
   const { id } = useParams<{ id: string }>();
@@ -701,58 +290,6 @@ export default function MatchDashboard() {
   // Match report state
   const [isReportOpen, setIsReportOpen] = useState(false);
 
-  const filteredLog = activityLog.filter((item) => {
-    if (logFilter === "all") return true;
-    if (logFilter === "violations") return item.type === "violation";
-    if (logFilter === "status") return item.type === "status";
-    if (logFilter === "notes") return item.type === "note";
-    return true;
-  });
-
-  // Helper to get icon for event type
-  const getEventIcon = (type: string) => {
-    switch (type) {
-      case "match":
-        return Zap;
-      case "violation":
-        return AlertTriangle;
-      case "status":
-        return RefreshCw;
-      case "note":
-        return MessageSquare;
-      default:
-        return Activity;
-    }
-  };
-
-  // Helper to calculate block duration (simplified - no status history)
-  const calculateBlockDuration = (
-    violation: Violation
-  ): { duration: number; lastOpenTime: string } | null => {
-    // Since we don't have blockedAt or statusHistory, return null
-    // This function is kept for compatibility but won't calculate duration
-    return null;
-  };
-
-  // Helper to format the blocked violation text
-  const formatBlockedViolationText = (violation: Violation): string => {
-    const contentType = violation.contentType || violation.type || "Other";
-    const addedTime = new Date(violation.timeAdded).toLocaleTimeString(
-      "en-US",
-      {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: false,
-      }
-    );
-
-    if (violation.status === "Blocked" || violation.status === "Removed") {
-      return `${contentType} • added at ${addedTime} • ${violation.status}`;
-    }
-
-    return `${contentType} • added ${violation.addedAgo || "just now"}`;
-  };
-
   // Helper to get platform color
   const getPlatformColor = (platform: string | null) => {
     switch (platform) {
@@ -899,7 +436,12 @@ export default function MatchDashboard() {
     };
     setFormStatus(statusMap[violation.status] || "Active");
     setFormViews(violation.views.replace("K", "000").replace(".", ""));
-    setFormTimeAdded(violation.timeAdded);
+    // Convert timeAdded to datetime-local format (YYYY-MM-DDTHH:mm)
+    setFormTimeAdded(
+      violation.timeAdded
+        ? new Date(violation.timeAdded).toISOString().slice(0, 16)
+        : getKSATime()
+    );
     setFormBlockedAt(
       violation.blockedAt
         ? new Date(violation.blockedAt).toISOString().slice(0, 16)
@@ -1178,7 +720,12 @@ export default function MatchDashboard() {
           : undefined,
         timeAdded: formTimeAdded,
         blockedAt:
-          formStatus === "Blocked" && formBlockedAt ? formBlockedAt : undefined,
+          (formStatus === "Blocked" || formStatus === "Removed") &&
+          formBlockedAt
+            ? formBlockedAt
+            : formStatus === "Active"
+            ? null
+            : undefined,
         notes: formNotes ? [formNotes] : [],
       };
 
@@ -1411,77 +958,6 @@ export default function MatchDashboard() {
     });
   };
 
-  // Extract account handle from URL
-  const extractAccountHandleFromUrl = (url: string): string => {
-    if (!url) return "";
-
-    try {
-      const urlObj = new URL(url);
-      const hostname = urlObj.hostname.toLowerCase();
-      const pathname = urlObj.pathname;
-
-      // X/Twitter: https://x.com/username/status/... or https://twitter.com/username/status/...
-      if (hostname.includes("x.com") || hostname.includes("twitter.com")) {
-        const match = pathname.match(/^\/([^/]+)\//);
-        if (match && match[1] && match[1] !== "i" && match[1] !== "intent") {
-          return match[1];
-        }
-      }
-
-      // TikTok: https://www.tiktok.com/@username/video/...
-      if (hostname.includes("tiktok.com")) {
-        const match = pathname.match(/^\/@([^/]+)\//);
-        if (match && match[1]) {
-          return `@${match[1]}`;
-        }
-      }
-
-      // YouTube: https://www.youtube.com/@channelname or https://youtube.com/channel/... or https://youtube.com/user/... or https://youtube.com/c/...
-      if (hostname.includes("youtube.com") || hostname.includes("youtu.be")) {
-        // @channelname format
-        const atMatch = pathname.match(/^\/@([^/?]+)/);
-        if (atMatch && atMatch[1]) {
-          return `@${atMatch[1]}`;
-        }
-        // /channel/... or /user/... or /c/... format
-        const channelMatch = pathname.match(/\/(?:channel|user|c)\/([^/?]+)/);
-        if (channelMatch && channelMatch[1]) {
-          return channelMatch[1];
-        }
-      }
-
-      // Facebook: https://www.facebook.com/username or https://facebook.com/username
-      if (hostname.includes("facebook.com")) {
-        const match = pathname.match(/^\/([^/?]+)/);
-        if (
-          match &&
-          match[1] &&
-          !["profile.php", "pages", "groups", "events"].includes(match[1])
-        ) {
-          return match[1];
-        }
-      }
-
-      // Instagram: https://www.instagram.com/username/ or https://instagram.com/username/
-      if (hostname.includes("instagram.com")) {
-        const match = pathname.match(/^\/([^/?]+)/);
-        if (
-          match &&
-          match[1] &&
-          match[1] !== "p" &&
-          match[1] !== "reel" &&
-          match[1] !== "tv"
-        ) {
-          return `@${match[1]}`;
-        }
-      }
-
-      return "";
-    } catch {
-      return "";
-    }
-  };
-
   // Helper to get status icon
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -1541,74 +1017,6 @@ export default function MatchDashboard() {
         ).toFixed(1)
       : "0";
 
-  // Format match date and time
-  const formatMatchDateTime = () => {
-    if (!match) return "";
-    const dateStr = match.date;
-    const timeStr = match.time || "";
-    if (!dateStr) return "";
-
-    try {
-      const date = new Date(dateStr);
-      const formattedDate = date.toLocaleDateString("en-US", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      });
-      return timeStr ? `${formattedDate} – ${timeStr}` : formattedDate;
-    } catch {
-      return dateStr + (timeStr ? ` – ${timeStr}` : "");
-    }
-  };
-
-  // Get competition name
-  const getCompetitionName = () => {
-    if (!match) return "";
-    if (typeof match.competition === "object" && match.competition !== null) {
-      return (match.competition as { name?: string }).name || "";
-    }
-    return typeof match.competition === "string" ? match.competition : "";
-  };
-
-  // Get status badge
-  const getStatusBadge = () => {
-    if (!match) return null;
-    const status = match.status;
-    if (status === "live") {
-      return (
-        <Badge variant="destructive" className="text-xs">
-          LIVE
-        </Badge>
-      );
-    } else if (status === "finished") {
-      return (
-        <Badge variant="secondary" className="text-xs">
-          COMPLETED
-        </Badge>
-      );
-    } else if (status === "postponed") {
-      return (
-        <Badge
-          variant="outline"
-          className="text-xs bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
-          POSTPONED
-        </Badge>
-      );
-    } else if (status === "cancelled") {
-      return (
-        <Badge variant="outline" className="text-xs">
-          CANCELLED
-        </Badge>
-      );
-    } else {
-      return (
-        <Badge variant="outline" className="text-xs">
-          UPCOMING
-        </Badge>
-      );
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -1633,289 +1041,25 @@ export default function MatchDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Match Overview - Single Unified Card */}
-      <Card className="p-5">
-        {/* Top Row: Title + Date/Status */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <h1 className="text-xl font-bold mb-1">
-              {match.team1} vs {match.team2}
-            </h1>
-            <p className="text-xs text-muted-foreground">
-              Week {match.week || "N/A"} • {getCompetitionName() || "N/A"} •{" "}
-              {match.stadium || "N/A"}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-xs font-medium mb-1.5">
-              {formatMatchDateTime()}
-            </p>
-            {getStatusBadge()}
-          </div>
-        </div>
+      <MatchOverview
+        match={match}
+        totalViolations={totalViolations}
+        totalBlocked={totalBlocked}
+        totalActive={totalActive}
+        blockedRate={blockedRate}
+        formattedTotalViews={formattedTotalViews}
+        avgBlockTime={avgBlockTime}
+        topPlatform={topPlatform}
+      />
 
-        {/* Middle Row: Primary KPIs */}
-        <div className="flex gap-4 mb-4">
-          <div className="flex items-center gap-2.5 flex-1">
-            <div className="p-2 rounded-full bg-chart-1/10 shrink-0">
-              <AlertTriangle className="h-3.5 w-3.5 text-chart-1" />
-            </div>
-            <div>
-              <p className="text-xl font-bold leading-none mb-1">
-                {totalViolations}
-              </p>
-              <p className="text-xs text-muted-foreground">Total Violations</p>
-              <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                all platforms
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 flex-1">
-            <div className="p-2 rounded-full bg-success/10 shrink-0">
-              <Shield className="h-3.5 w-3.5 text-success" />
-            </div>
-            <div>
-              <p className="text-xl font-bold leading-none mb-1">
-                {totalBlocked}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Blocked Successfully
-              </p>
-              <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                {blockedRate}% success rate
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 flex-1">
-            <div className="p-2 rounded-full bg-destructive/10 shrink-0">
-              <Activity className="h-3.5 w-3.5 text-destructive" />
-            </div>
-            <div>
-              <p className="text-xl font-bold leading-none mb-1">
-                {totalActive}
-              </p>
-              <p className="text-xs text-muted-foreground">Still Active</p>
-              <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                needs action
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2.5 flex-1">
-            <div className="p-2 rounded-full bg-chart-2/10 shrink-0">
-              <TrendingUp className="h-3.5 w-3.5 text-chart-2" />
-            </div>
-            <div>
-              <p className="text-xl font-bold leading-none mb-1">
-                {topPlatform ? topPlatform.totalViews : "0"}
-              </p>
-              <p className="text-xs text-muted-foreground">Top Platform</p>
-              <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                {topPlatform ? `${topPlatform.name} • biggest source` : "N/A"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Bottom Row: Match-Level Performance Tiles */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {/* Total Views Tile */}
-          <div className="p-4 rounded-lg bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                Total Views (This Match)
-              </p>
-            </div>
-            <p className="text-3xl font-bold text-foreground mb-1">
-              {formattedTotalViews}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Across all platforms
-            </p>
-          </div>
-
-          {/* Average Block Time Tile */}
-          <div className="p-4 rounded-lg bg-gradient-to-br from-success/5 to-success/10 border border-success/20">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-muted-foreground">
-                Avg Block Time (This Match)
-              </p>
-              <Badge className="text-xs bg-success/20 text-success border-success/30">
-                {parseFloat(avgBlockTime) <= 15
-                  ? "Within target"
-                  : "Over target"}
-              </Badge>
-            </div>
-            <p className="text-3xl font-bold text-foreground mb-1">
-              {avgBlockTime}
-              <span className="text-base text-muted-foreground ml-1">min</span>
-            </p>
-            <p className="text-xs text-muted-foreground">Target: 15 min SLA</p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Row 3: Content Split & Activity Log */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Live Stream vs Highlights - Left Card (60-65%) */}
-        <Card className="p-6 lg:col-span-3">
-          <h3 className="font-semibold mb-6">Live Stream vs Highlights</h3>
-
-          <div className="flex items-center justify-center mb-6">
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie
-                  data={contentSplitData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={2}
-                  dataKey="value">
-                  {contentSplitData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <RechartsTooltip
-                  formatter={(value: number) => formatViews(value)}
-                  contentStyle={{
-                    background: "hsl(var(--popover))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "8px",
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{
-                    backgroundColor: contentSplitData[0].color,
-                  }}
-                />
-                <span className="font-medium">Live</span>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-lg">
-                  {formatViews(contentSplitData[0].value)} views
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {contentSplitData[0].violations} violations
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-              <div className="flex items-center gap-3">
-                <div
-                  className="w-3 h-3 rounded-full"
-                  style={{
-                    backgroundColor: contentSplitData[1].color,
-                  }}
-                />
-                <span className="font-medium">Highlights</span>
-              </div>
-              <div className="text-right">
-                <p className="font-bold text-lg">
-                  {formatViews(contentSplitData[1].value)} views
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {contentSplitData[1].violations} violations
-                </p>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Match Activity Log - Right Card (35-40%) */}
-        <Card className="p-6 lg:col-span-2">
-          <h3 className="font-semibold mb-4">Match Activity Log</h3>
-
-          {/* Filter Tabs */}
-          <div className="flex gap-2 mb-4 flex-wrap">
-            <Badge
-              variant={logFilter === "all" ? "default" : "outline"}
-              className="cursor-pointer text-xs"
-              onClick={() => setLogFilter("all")}>
-              All
-            </Badge>
-            <Badge
-              variant={logFilter === "violations" ? "default" : "outline"}
-              className="cursor-pointer text-xs"
-              onClick={() => setLogFilter("violations")}>
-              Violations
-            </Badge>
-            <Badge
-              variant={logFilter === "status" ? "default" : "outline"}
-              className="cursor-pointer text-xs"
-              onClick={() => setLogFilter("status")}>
-              Status changes
-            </Badge>
-            <Badge
-              variant={logFilter === "notes" ? "default" : "outline"}
-              className="cursor-pointer text-xs"
-              onClick={() => setLogFilter("notes")}>
-              Notes
-            </Badge>
-          </div>
-
-          {/* Log List */}
-          <ScrollArea className="h-[320px]">
-            <div className="space-y-2">
-              {filteredLog.map((item, i) => {
-                const EventIcon = getEventIcon(item.type);
-                return (
-                  <div
-                    key={i}
-                    className="flex items-start gap-2 p-2.5 rounded hover:bg-muted/50 transition-colors group">
-                    {/* Icon */}
-                    <div className="shrink-0 mt-0.5">
-                      <div className="w-6 h-6 rounded-full bg-muted/50 flex items-center justify-center">
-                        <EventIcon className="h-3 w-3 text-muted-foreground" />
-                      </div>
-                    </div>
-
-                    {/* Time & Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <p className="text-xs text-muted-foreground font-mono">
-                          {item.time}
-                        </p>
-                        <Badge variant={item.badgeVariant} className="text-xs">
-                          {item.badge}
-                        </Badge>
-                      </div>
-                      <p className="text-xs leading-relaxed">
-                        {item.description}
-                      </p>
-                    </div>
-
-                    {/* Platform Pill */}
-                    {item.platform && (
-                      <div className="shrink-0">
-                        <Badge
-                          variant="outline"
-                          className="text-xs"
-                          style={{
-                            borderColor: getPlatformColor(item.platform),
-                            color: getPlatformColor(item.platform),
-                          }}>
-                          {item.platform}
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </ScrollArea>
-        </Card>
+        <ContentSplitChart data={contentSplitData} />
+        <ActivityLog
+          log={activityLog}
+          filter={logFilter}
+          onFilterChange={setLogFilter}
+          getPlatformColor={getPlatformColor}
+        />
       </div>
 
       {/* Block Confirmation Dialog */}
@@ -3571,7 +2715,9 @@ export default function MatchDashboard() {
             </div>
 
             {/* Blocked at (conditional) */}
-            {formStatus === "Blocked" && (
+            {(formStatus === "Blocked" ||
+              formStatus === "Removed" ||
+              (isEditMode && formBlockedAt)) && (
               <div className="space-y-2">
                 <Label htmlFor="blocked-at">Blocked at (optional)</Label>
                 <Input
