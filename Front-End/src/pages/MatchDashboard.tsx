@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom";
 import { AlertCircle, RefreshCw, Activity } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 import {
   MatchOverview,
@@ -54,6 +54,120 @@ export default function MatchDashboard() {
   const [platformOperations, setPlatformOperations] = useState<PlatformData[]>(
     getInitialPlatformOperations()
   );
+
+  // Helper function to update content split chart data
+  const updateContentSplitChart = useCallback((
+    matchData: Match | null,
+    allViolations: Violation[]
+  ) => {
+    // Calculate views for Live, Highlights, and Others from violations
+    const liveViews = allViolations
+      .filter((v) => (v.contentType || v.type) === "Live")
+      .reduce((sum, v) => {
+        if (!v.views || v.views === "0") return sum;
+        const viewsStr = v.views.replace(/[^0-9.]/g, "");
+        const viewsNum = parseFloat(viewsStr) || 0;
+        const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
+        return sum + viewsNum * multiplier;
+      }, 0);
+
+    const highlightsViews = allViolations
+      .filter((v) => (v.contentType || v.type) === "Highlights")
+      .reduce((sum, v) => {
+        if (!v.views || v.views === "0") return sum;
+        const viewsStr = v.views.replace(/[^0-9.]/g, "");
+        const viewsNum = parseFloat(viewsStr) || 0;
+        const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
+        return sum + viewsNum * multiplier;
+      }, 0);
+
+    const othersViews = allViolations
+      .filter((v) => (v.contentType || v.type) === "Other")
+      .reduce((sum, v) => {
+        if (!v.views || v.views === "0") return sum;
+        const viewsStr = v.views.replace(/[^0-9.]/g, "");
+        const viewsNum = parseFloat(viewsStr) || 0;
+        const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
+        return sum + viewsNum * multiplier;
+      }, 0);
+
+    // Calculate total views
+    const totalViews = liveViews + highlightsViews + othersViews;
+
+    // Use match aggregated counts for violations (from match attributes)
+    const totalViolations = matchData?.totalViolations || 0;
+    const liveCount = matchData?.liveCount || 0;
+    const highlightsCount = matchData?.highlightsCount || 0;
+    const othersCount = matchData?.othersCount || 0;
+
+    setContentSplitData([
+      {
+        name: "Total Violations",
+        value: totalViews,
+        violations: totalViolations,
+        color: "hsl(var(--chart-4))",
+      },
+      {
+        name: "Live",
+        value: liveViews,
+        violations: liveCount,
+        color: "hsl(var(--chart-1))",
+      },
+      {
+        name: "Highlights",
+        value: highlightsViews,
+        violations: highlightsCount,
+        color: "hsl(var(--chart-2))",
+      },
+      {
+        name: "Others",
+        value: othersViews,
+        violations: othersCount,
+        color: "hsl(var(--chart-3))",
+      },
+    ]);
+  }, []);
+
+  // Helper function to update chart immediately from current state
+  const updateChartFromCurrentState = () => {
+    // Get all violations from current platformOperations state
+    const allViolations = platformOperations.flatMap((p) => p.violations);
+    // Update chart immediately with current match data and violations
+    updateContentSplitChart(match, allViolations);
+  };
+
+  // Helper function to refetch match data and update chart
+  const refetchMatchAndUpdateChart = async () => {
+    if (!id || !match?.externalMatchId) return;
+
+    try {
+      // First, update chart immediately from current state
+      updateChartFromCurrentState();
+
+      // Then refetch match to get updated counts in the background
+      const matchResponse = await fetch(`${API_URL}/matches/${id}`);
+      if (matchResponse.ok) {
+        const matchData = await matchResponse.json();
+        const formattedMatch: Match = {
+          ...matchData,
+          date: matchData.date
+            ? typeof matchData.date === "string"
+              ? matchData.date
+              : new Date(matchData.date).toISOString().split("T")[0]
+            : "",
+        };
+        setMatch(formattedMatch);
+
+        // Update chart again with fresh match data
+        const allViolations = platformOperations.flatMap((p) => p.violations);
+        updateContentSplitChart(formattedMatch, allViolations);
+      }
+    } catch (error) {
+      console.error("Error refetching match:", error);
+      // Even if refetch fails, update chart from current state
+      updateChartFromCurrentState();
+    }
+  };
 
   // Fetch match data
   useEffect(() => {
@@ -160,6 +274,13 @@ export default function MatchDashboard() {
               );
             });
           }
+
+          // Update content split chart data using match aggregated data
+          const allConvertedViolations = violations.map((v: BackendViolation) =>
+            convertBackendViolationToFrontend(v)
+          );
+
+          updateContentSplitChart(formattedMatch, allConvertedViolations);
         }
       } catch (error) {
         console.error("Error fetching match:", error);
@@ -175,6 +296,14 @@ export default function MatchDashboard() {
 
     fetchMatch();
   }, [id]);
+
+  // Auto-update chart whenever platformOperations or match changes
+  useEffect(() => {
+    if (match && platformOperations.length > 0) {
+      const allViolations = platformOperations.flatMap((p) => p.violations);
+      updateContentSplitChart(match, allViolations);
+    }
+  }, [platformOperations, match, updateContentSplitChart]);
 
   // Platform slot system (max 2 platforms visible)
   const [selectedSlots, setSelectedSlots] = useState<string[]>([
@@ -531,6 +660,20 @@ export default function MatchDashboard() {
             })
           );
 
+          // Save stats to PlatformByMatch
+          if (match?.externalMatchId) {
+            calculateAndSavePlatformStats(
+              platformId,
+              match.externalMatchId,
+              updatedViolations
+            );
+          }
+
+          // Update chart immediately after state update
+          setTimeout(() => {
+            refetchMatchAndUpdateChart();
+          }, 100);
+
           toast({
             title: "Status changed to Active",
             description: "Violation is now active again",
@@ -649,6 +792,11 @@ export default function MatchDashboard() {
           updatedViolations
         );
       }
+
+      // Update chart immediately after state update
+      setTimeout(() => {
+        refetchMatchAndUpdateChart();
+      }, 100);
 
       toast({
         title: "Violation blocked",
@@ -830,6 +978,9 @@ export default function MatchDashboard() {
           }
         }
 
+        // Refetch match data and update chart
+        await refetchMatchAndUpdateChart();
+
         toast({
           title: "Violation updated",
           description: "Changes saved successfully",
@@ -903,6 +1054,11 @@ export default function MatchDashboard() {
             );
           }
         }
+
+        // Update chart immediately after state update
+        setTimeout(() => {
+          refetchMatchAndUpdateChart();
+        }, 100);
 
         toast({
           title: "Violation added",
@@ -1007,6 +1163,11 @@ export default function MatchDashboard() {
           );
         }
       }
+
+      // Update chart immediately after state update
+      setTimeout(() => {
+        refetchMatchAndUpdateChart();
+      }, 100);
 
       toast({
         title: "Violation deleted",

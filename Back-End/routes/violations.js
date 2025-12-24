@@ -4,6 +4,46 @@ import Match from "../models/Match.js";
 
 const router = express.Router();
 
+// Helper function to update match content type counts
+const updateMatchContentTypeCounts = async (matchId) => {
+  try {
+    // Find match by _id or externalMatchId
+    let match = await Match.findById(matchId);
+    if (!match) {
+      match = await Match.findOne({ externalMatchId: matchId });
+    }
+    if (!match) {
+      console.error("Match not found for updating content type counts");
+      return;
+    }
+
+    // Get all violations for this match
+    const violations = await Violation.find({ matchId: match._id }).lean();
+
+    // Count content types
+    const liveCount = violations.filter(
+      (v) => (v.contentType || v.type) === "Live"
+    ).length;
+    const highlightsCount = violations.filter(
+      (v) => (v.contentType || v.type) === "Highlights"
+    ).length;
+    const othersCount = violations.filter(
+      (v) => (v.contentType || v.type) === "Other"
+    ).length;
+    const totalViolations = violations.length;
+
+    // Update match with new counts
+    await Match.findByIdAndUpdate(match._id, {
+      liveCount,
+      highlightsCount,
+      othersCount,
+      totalViolations,
+    });
+  } catch (error) {
+    console.error("Error updating match content type counts:", error);
+  }
+};
+
 // GET /api/violations - Get all violations with filters
 router.get("/", async (req, res) => {
   try {
@@ -178,6 +218,9 @@ router.post("/", async (req, res) => {
       .populate("matchId", "team1 team2 date time week competition stadium externalMatchId")
       .lean();
 
+    // Update match content type counts
+    await updateMatchContentTypeCounts(internalMatchId);
+
     res.status(201).json(populated);
   } catch (error) {
     if (error.name === "CastError") {
@@ -268,6 +311,9 @@ router.put("/:id", async (req, res) => {
       .populate("matchId")
       .lean();
 
+    // Update match content type counts
+    await updateMatchContentTypeCounts(violation.matchId);
+
     res.json(populated);
   } catch (error) {
     if (error.name === "CastError") {
@@ -318,6 +364,9 @@ router.patch("/:id/status", async (req, res) => {
       .populate("matchId")
       .lean();
 
+    // Update match content type counts
+    await updateMatchContentTypeCounts(violation.matchId);
+
     res.json(populated);
   } catch (error) {
     if (error.name === "CastError") {
@@ -336,7 +385,12 @@ router.delete("/:id", async (req, res) => {
       return res.status(404).json({ error: "Violation not found" });
     }
 
+    const matchId = violation.matchId;
     await Violation.findByIdAndDelete(req.params.id);
+
+    // Update match content type counts
+    await updateMatchContentTypeCounts(matchId);
+
     res.json({ message: "Violation deleted" });
   } catch (error) {
     if (error.name === "CastError") {

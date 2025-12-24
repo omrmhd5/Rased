@@ -89,6 +89,22 @@ const matchSchema = new mongoose.Schema(
       },
     },
     statusHistory: [statusHistorySchema],
+    liveCount: {
+      type: Number,
+      default: 0,
+    },
+    totalViolations: {
+      type: Number,
+      default: 0,
+    },
+    highlightsCount: {
+      type: Number,
+      default: 0,
+    },
+    othersCount: {
+      type: Number,
+      default: 0,
+    },
   },
   {
     timestamps: true,

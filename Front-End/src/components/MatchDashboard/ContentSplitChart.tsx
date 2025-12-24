@@ -1,12 +1,6 @@
 import { Card } from "@/components/ui/card";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip as RechartsTooltip,
-} from "recharts";
 import { formatViews } from "./utils";
+import { Play, Film, MoreHorizontal, BarChart3 } from "lucide-react";
 
 interface ContentSplitData {
   name: string;
@@ -19,81 +13,84 @@ interface ContentSplitChartProps {
   data: ContentSplitData[];
 }
 
+// Icon mapping for each content type
+const getIcon = (name: string) => {
+  switch (name.toLowerCase()) {
+    case "total violations":
+      return <BarChart3 className="h-4 w-4" />;
+    case "live":
+      return <Play className="h-4 w-4" />;
+    case "highlights":
+      return <Film className="h-4 w-4" />;
+    case "others":
+      return <MoreHorizontal className="h-4 w-4" />;
+    default:
+      return <MoreHorizontal className="h-4 w-4" />;
+  }
+};
+
 export function ContentSplitChart({ data }: ContentSplitChartProps) {
+  // Calculate max value for percentage calculation
+  const maxValue = Math.max(...data.map((d) => d.value), 1);
+
   return (
     <Card className="p-6 lg:col-span-3">
-      <h3 className="font-semibold mb-6">Live Stream vs Highlights</h3>
+      <h3 className="font-semibold mb-6 text-lg">Live Stream vs Highlights vs Others</h3>
 
-      <div className="flex items-center justify-center mb-6">
-        <ResponsiveContainer width="100%" height={200}>
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={60}
-              outerRadius={90}
-              paddingAngle={2}
-              dataKey="value">
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.color} />
-              ))}
-            </Pie>
-            <RechartsTooltip
-              formatter={(value: number) => formatViews(value)}
-              contentStyle={{
-                background: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "8px",
-              }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-          <div className="flex items-center gap-3">
+      <div className="space-y-4">
+        {data.map((entry, index) => {
+          const percentage = maxValue > 0 ? (entry.value / maxValue) * 100 : 0;
+          
+          return (
             <div
-              className="w-3 h-3 rounded-full"
-              style={{
-                backgroundColor: data[0].color,
-              }}
-            />
-            <span className="font-medium">Live</span>
-          </div>
-          <div className="text-right">
-            <p className="font-bold text-lg">
-              {formatViews(data[0].value)} views
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {data[0].violations} violations
-            </p>
-          </div>
-        </div>
+              key={index}
+              className="flex items-center gap-4 group">
+              {/* Icon */}
+              <div
+                className="flex items-center justify-center w-10 h-10 rounded-full shrink-0 transition-all"
+                style={{
+                  backgroundColor: `${entry.color}20`,
+                  border: `2px solid ${entry.color}`,
+                }}>
+                <div style={{ color: entry.color }}>
+                  {getIcon(entry.name)}
+                </div>
+              </div>
 
-        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-3 h-3 rounded-full"
-              style={{
-                backgroundColor: data[1].color,
-              }}
-            />
-            <span className="font-medium">Highlights</span>
-          </div>
-          <div className="text-right">
-            <p className="font-bold text-lg">
-              {formatViews(data[1].value)} views
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {data[1].violations} violations
-            </p>
-          </div>
-        </div>
+              {/* Name and Bar Container */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-sm uppercase tracking-wide">
+                    {entry.name}
+                  </span>
+                  <div className="text-right ml-4">
+                    <p className="font-bold text-base leading-tight">
+                      {formatViews(entry.value)} <span className="text-xs font-normal text-muted-foreground">views</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground leading-tight">
+                      {entry.violations} violations
+                    </p>
+                  </div>
+                </div>
+
+                {/* Horizontal Progress Bar */}
+                <div className="relative w-full h-3 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-500 ease-out"
+                    style={{
+                      width: `${percentage}%`,
+                      backgroundColor: entry.color,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </Card>
   );
 }
+
 
 

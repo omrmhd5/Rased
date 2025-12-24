@@ -72,6 +72,10 @@ export interface Match {
     home: number;
     away: number;
   } | null;
+  liveCount?: number;
+  highlightsCount?: number;
+  othersCount?: number;
+  totalViolations?: number;
 }
 
 export interface BackendViolation {

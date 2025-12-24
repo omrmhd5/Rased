@@ -3,6 +3,12 @@ import { PlatformData } from "./types";
 
 export const getInitialContentSplitData = () => [
   {
+    name: "Total Violations",
+    value: 0,
+    violations: 0,
+    color: "hsl(var(--chart-4))",
+  },
+  {
     name: "Live",
     value: 0,
     violations: 0,
@@ -13,6 +19,12 @@ export const getInitialContentSplitData = () => [
     value: 0,
     violations: 0,
     color: "hsl(var(--chart-2))",
+  },
+  {
+    name: "Others",
+    value: 0,
+    violations: 0,
+    color: "hsl(var(--chart-3))",
   },
 ];
 
@@ -95,5 +107,6 @@ export const getInitialPlatformOperations = (): PlatformData[] => [
     violations: [],
   },
 ];
+
 
 
