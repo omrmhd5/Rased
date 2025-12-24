@@ -31,6 +31,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Violation, PlatformData } from "./types";
 import { formatViewsString, formatBlockedViolationText } from "./utils";
+import { useState, useEffect } from "react";
 
 interface ViolationItemProps {
   violation: Violation;
@@ -69,6 +70,17 @@ export function ViolationItem({
   onAddNote,
   getPlatformIcon,
 }: ViolationItemProps) {
+  // Force re-render every minute to update time displays
+  const [, setRefresh] = useState(0);
+  
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setRefresh((prev) => prev + 1);
+    }, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, []);
+
   const truncatedUrl =
     (violation.violationUrl || violation.url) &&
     (violation.violationUrl || violation.url)!.length > 45

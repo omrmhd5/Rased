@@ -17,6 +17,7 @@ export type Violation = {
   blockedAt?: string;
   active: boolean;
   notes?: string[];
+  externalMatchId?: string; // Match external ID
   // Computed/display fields (not from backend)
   time?: string;
   addedAgo?: string;
@@ -78,6 +79,7 @@ export interface BackendViolation {
   id?: string | number;
   matchId: string;
   matchName?: string;
+  externalMatchId?: string; // Match external ID
   platformId: string;
   platformName?: string;
   violationUrl: string;
@@ -101,4 +103,5 @@ export interface BackendViolation {
 }
 
 export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
 

@@ -368,12 +368,14 @@ async function saveMatchesToDatabase(transformedMatches) {
 
       // Find or create competition reference
       let competitionRef = null;
+      let externalCompetitionId = null;
       if (matchData.competitionData?.externalId) {
         const competition = await Competition.findOne({
           externalId: matchData.competitionData.externalId,
         });
         if (competition) {
           competitionRef = competition._id;
+          externalCompetitionId = competition.externalId;
         }
       }
 
@@ -386,6 +388,7 @@ async function saveMatchesToDatabase(transformedMatches) {
         time: matchData.time || "", // Use empty string if time is missing
         week: matchData.week,
         competition: competitionRef,
+        externalCompetitionId: externalCompetitionId,
         externalMatchId: matchData.externalMatchId,
         stadium: matchData.stadium,
         status: matchData.status,
@@ -608,6 +611,7 @@ router.post("/", async (req, res) => {
 
     // Find or create competition reference if competition name is provided
     let competitionRef = null;
+    let externalCompetitionId = null;
     if (competition) {
       // Try to find existing competition by name
       let comp = await Competition.findOne({ name: competition });
@@ -623,11 +627,13 @@ router.post("/", async (req, res) => {
         });
       }
       competitionRef = comp._id;
+      externalCompetitionId = comp.externalId;
     } else if (competitionId) {
       // Fallback to competitionId if provided
       const comp = await Competition.findOne({ externalId: competitionId });
       if (comp) {
         competitionRef = comp._id;
+        externalCompetitionId = comp.externalId;
       }
     }
 
@@ -645,6 +651,7 @@ router.post("/", async (req, res) => {
       status: status || "upcoming",
       week,
       competition: competitionRef,
+      externalCompetitionId: externalCompetitionId,
       stadium,
       league: finalLeague,
       externalMatchId, // Required field - will be same as _id for manual matches
@@ -711,7 +718,33 @@ router.put("/:externalMatchId", async (req, res) => {
     if (date !== undefined) match.date = new Date(date);
     if (time !== undefined) match.time = time;
     if (week !== undefined) match.week = week;
-    if (competition !== undefined) match.competition = competition;
+    if (competition !== undefined) {
+      let competitionRef = null;
+      let externalCompetitionId = null;
+      
+      if (competition) {
+        // Try to find competition by ObjectId first
+        let comp = await Competition.findById(competition);
+        
+        // If not found by ObjectId, try by externalId
+        if (!comp) {
+          comp = await Competition.findOne({ externalId: competition });
+        }
+        
+        // If still not found, try by name
+        if (!comp) {
+          comp = await Competition.findOne({ name: competition });
+        }
+        
+        if (comp) {
+          competitionRef = comp._id;
+          externalCompetitionId = comp.externalId;
+        }
+      }
+      
+      match.competition = competitionRef;
+      match.externalCompetitionId = externalCompetitionId;
+    }
     if (stadium !== undefined) match.stadium = stadium;
     if (league !== undefined) {
       if (!["saudi", "italian", "spanish"].includes(league)) {

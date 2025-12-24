@@ -61,6 +61,17 @@ export function PlatformCard({
       ? Math.round((blockedOrRemovedCount / totalViolations) * 100)
       : 0;
 
+  // Calculate content type counts
+  const highlightsCount = violations.filter(
+    (v) => (v.contentType || v.type) === "Highlights"
+  ).length;
+  const liveCount = violations.filter(
+    (v) => (v.contentType || v.type) === "Live"
+  ).length;
+  const othersCount = violations.filter(
+    (v) => (v.contentType || v.type) === "Other"
+  ).length;
+
   return (
     <Card
       id={`platform-card-${platform.id}`}
@@ -74,6 +85,9 @@ export function PlatformCard({
             />
             <h3 className="font-semibold">{platform.name}</h3>
           </div>
+          <p className="text-xs text-muted-foreground ml-7">
+            Live: {liveCount} • Highlights: {highlightsCount} • Others: {othersCount}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button size="sm" className="text-xs" onClick={onAddViolation}>
@@ -98,12 +112,12 @@ export function PlatformCard({
           <p className="text-sm font-bold">{activeCount}</p>
         </div>
         <div className="p-2 rounded-lg bg-muted/30 border border-border">
-          <p className="text-[10px] text-muted-foreground mb-0.5">Removed</p>
-          <p className="text-sm font-bold">{removedCount}</p>
-        </div>
-        <div className="p-2 rounded-lg bg-muted/30 border border-border">
           <p className="text-[10px] text-muted-foreground mb-0.5">Blocked</p>
           <p className="text-sm font-bold">{blockedCount}</p>
+        </div>
+        <div className="p-2 rounded-lg bg-muted/30 border border-border">
+          <p className="text-[10px] text-muted-foreground mb-0.5">Removed</p>
+          <p className="text-sm font-bold">{removedCount}</p>
         </div>
         <div className="p-2 rounded-lg bg-muted/30 border border-border">
           <p className="text-[10px] text-muted-foreground mb-0.5">Avg block time</p>

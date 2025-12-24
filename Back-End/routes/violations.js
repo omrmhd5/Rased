@@ -47,7 +47,7 @@ router.get("/", async (req, res) => {
     const sortOrder = sort === "asc" ? 1 : -1;
 
     const violations = await Violation.find(query)
-      .populate("matchId", "team1 team2 date time week competition stadium")
+      .populate("matchId", "team1 team2 date time week competition stadium externalMatchId")
       .sort({ timeAdded: sortOrder })
       .limit(limitNum)
       .lean();
@@ -62,7 +62,8 @@ router.get("/", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const violation = await Violation.findById(req.params.id).populate(
-      "matchId"
+      "matchId",
+      "team1 team2 date time week competition stadium externalMatchId"
     );
 
     if (!violation) {
@@ -127,6 +128,7 @@ router.post("/", async (req, res) => {
 
     // Use the match's internal _id for the violation
     const internalMatchId = match._id;
+    const externalMatchId = match.externalMatchId || null;
 
     // Convert notes to array if it's a string
     let notesArray = [];
@@ -157,6 +159,7 @@ router.post("/", async (req, res) => {
     const violation = new Violation({
       matchId: internalMatchId,
       matchName,
+      externalMatchId: externalMatchId,
       platformId,
       platformName,
       violationUrl,
@@ -172,7 +175,7 @@ router.post("/", async (req, res) => {
 
     const savedViolation = await violation.save();
     const populated = await Violation.findById(savedViolation._id)
-      .populate("matchId")
+      .populate("matchId", "team1 team2 date time week competition stadium externalMatchId")
       .lean();
 
     res.status(201).json(populated);
@@ -204,10 +207,21 @@ router.put("/:id", async (req, res) => {
       notes,
     } = req.body;
 
-    const violation = await Violation.findById(req.params.id);
+    const violation = await Violation.findById(req.params.id).populate("matchId");
 
     if (!violation) {
       return res.status(404).json({ error: "Violation not found" });
+    }
+
+    // Update externalMatchId from the match if matchId is populated
+    if (violation.matchId && typeof violation.matchId === 'object' && violation.matchId.externalMatchId) {
+      violation.externalMatchId = violation.matchId.externalMatchId;
+    } else if (violation.matchId) {
+      // If matchId is not populated, fetch the match to get externalMatchId
+      const match = await Match.findById(violation.matchId);
+      if (match && match.externalMatchId) {
+        violation.externalMatchId = match.externalMatchId;
+      }
     }
 
     // Update fields

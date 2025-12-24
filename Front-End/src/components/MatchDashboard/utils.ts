@@ -321,11 +321,30 @@ export const calculateBlockDuration = (
 
 export const formatBlockedViolationText = (violation: Violation): string => {
   const contentType = violation.contentType || violation.type || "Other";
-  let text = `${contentType} • added ${violation.addedAgo || "just now"}`;
+  
+  // Calculate "added X ago" dynamically based on current time
+  const now = new Date();
+  const addedTime = new Date(violation.timeAdded).getTime();
+  const addedDiffMs = now.getTime() - addedTime;
+  const addedDiffMins = Math.floor(addedDiffMs / 60000);
+  
+  let addedAgo = "just now";
+  if (addedDiffMins >= 1 && addedDiffMins < 60) {
+    addedAgo = `${addedDiffMins}m ago`;
+  } else if (addedDiffMins >= 60) {
+    const addedDiffHours = Math.floor(addedDiffMins / 60);
+    if (addedDiffHours < 24) {
+      addedAgo = `${addedDiffHours}h ago`;
+    } else {
+      const addedDiffDays = Math.floor(addedDiffHours / 24);
+      addedAgo = `${addedDiffDays}d ago`;
+    }
+  }
+  
+  let text = `${contentType} • added ${addedAgo}`;
   
   // If blocked and has blockedAt, show block time (time from added to blocked)
   if ((violation.status === "Blocked" || violation.status === "Removed") && violation.blockedAt) {
-    const addedTime = new Date(violation.timeAdded).getTime();
     const blockedTime = new Date(violation.blockedAt).getTime();
     // Block time = blockedAt - timeAdded (time it took to block)
     const diffMs = blockedTime - addedTime;

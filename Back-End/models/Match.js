@@ -54,6 +54,11 @@ const matchSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Competition",
     },
+    externalCompetitionId: {
+      type: String,
+      trim: true,
+      index: true,
+    },
     externalMatchId: {
       type: String,
       required: true,

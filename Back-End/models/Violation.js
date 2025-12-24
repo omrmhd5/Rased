@@ -13,6 +13,11 @@ const violationSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    externalMatchId: {
+      type: String,
+      trim: true,
+      index: true,
+    },
     platformId: {
       type: String,
       required: true,

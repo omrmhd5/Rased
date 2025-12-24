@@ -465,6 +465,10 @@ export default function MatchDashboard() {
             throw new Error("Failed to update violation status");
           }
 
+          // Get the updated violation from the response
+          const updatedViolationData = await response.json();
+          const convertedViolation = convertBackendViolationToFrontend(updatedViolationData);
+
           // Update local state
           setPlatformOperations((prev) =>
             prev.map((p) => {
@@ -477,6 +481,7 @@ export default function MatchDashboard() {
             ...v,
                   status: "Active" as const,
                   statusBadge: "Active" as const,
+                  blockedAt: undefined, // Clear blockedAt when unblocking
           };
         });
         
@@ -560,18 +565,23 @@ export default function MatchDashboard() {
         throw new Error("Failed to update violation status");
       }
 
+      // Get the updated violation from the response
+      const updatedViolationData = await response.json();
+      const convertedViolation = convertBackendViolationToFrontend(updatedViolationData);
+
       // Update local state
       setPlatformOperations((prev) =>
         prev.map((platform) => {
       if (platform.id !== platformId) return platform;
       
           const updatedViolations = platform.violations.map((v) => {
-        if (v.id !== violationId) return v;
+        if (v.id !== violationId && v._id !== violationId) return v;
         
         return {
           ...v,
               status: "Blocked" as const,
               statusBadge: "Blocked" as const,
+              blockedAt: convertedViolation.blockedAt || blockTime,
         };
       });
       
