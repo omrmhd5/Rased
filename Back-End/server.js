@@ -5,6 +5,7 @@ import dotenv from "dotenv";
 import matchRoutes from "./routes/matches.js";
 import violationRoutes from "./routes/violations.js";
 import platformRoutes from "./routes/platforms.js";
+import platformByMatchRoutes from "./routes/platformByMatch.js";
 
 // Load environment variables
 dotenv.config();
@@ -55,6 +56,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api/matches", matchRoutes);
 app.use("/api/violations", violationRoutes);
 app.use("/api/platforms", platformRoutes);
+app.use("/api/platform-by-match", platformByMatchRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

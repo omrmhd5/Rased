@@ -1,4 +1,4 @@
-import { Violation, BackendViolation } from "./types";
+import { Violation, BackendViolation, API_URL } from "./types";
 
 export const formatViews = (views: number) => {
   return views.toLocaleString("en-US");
@@ -29,8 +29,8 @@ export const getKSATime = (): string => {
   // Get current UTC time in milliseconds
   const utcTime = now.getTime();
   // Convert to KSA time (UTC+3) by adding 3 hours
-  const ksaTime = new Date(utcTime + (3 * 60 * 60 * 1000));
-  
+  const ksaTime = new Date(utcTime + 3 * 60 * 60 * 1000);
+
   // Format as YYYY-MM-DDTHH:mm for datetime-local input
   // Use UTC methods since we've already converted to UTC+3
   const year = ksaTime.getUTCFullYear();
@@ -38,7 +38,7 @@ export const getKSATime = (): string => {
   const day = String(ksaTime.getUTCDate()).padStart(2, "0");
   const hours = String(ksaTime.getUTCHours()).padStart(2, "0");
   const minutes = String(ksaTime.getUTCMinutes()).padStart(2, "0");
-  
+
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
@@ -49,20 +49,20 @@ export const getKSATime = (): string => {
  */
 export const convertKSATimeToUTC = (datetimeLocal: string): string => {
   if (!datetimeLocal) return "";
-  
+
   // Parse the datetime-local string as KSA time (UTC+3)
   const [datePart, timePart] = datetimeLocal.split("T");
   if (!datePart || !timePart) return datetimeLocal;
-  
+
   const [year, month, day] = datePart.split("-").map(Number);
   const [hours, minutes] = timePart.split(":").map(Number);
-  
+
   // Create a date object treating the input as KSA time (UTC+3)
   // We do this by creating a UTC date and then subtracting 3 hours
   const ksaDate = new Date(Date.UTC(year, month - 1, day, hours, minutes));
   // Convert KSA time to UTC by subtracting 3 hours
   const utcDate = new Date(ksaDate.getTime() - 3 * 60 * 60 * 1000);
-  
+
   return utcDate.toISOString();
 };
 
@@ -73,18 +73,18 @@ export const convertKSATimeToUTC = (datetimeLocal: string): string => {
  */
 export const convertUTCToKSATime = (utcISOString: string): string => {
   if (!utcISOString) return "";
-  
+
   const utcDate = new Date(utcISOString);
   // Convert UTC to KSA by adding 3 hours
   const ksaDate = new Date(utcDate.getTime() + 3 * 60 * 60 * 1000);
-  
+
   // Format as YYYY-MM-DDTHH:mm for datetime-local input
   const year = ksaDate.getUTCFullYear();
   const month = String(ksaDate.getUTCMonth() + 1).padStart(2, "0");
   const day = String(ksaDate.getUTCDate()).padStart(2, "0");
   const hours = String(ksaDate.getUTCHours()).padStart(2, "0");
   const minutes = String(ksaDate.getUTCMinutes()).padStart(2, "0");
-  
+
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
@@ -132,6 +132,26 @@ export const calculateAvgBlockTime = (violations: Violation[]): string => {
     const days = Math.round(avgMinutes / 1440);
     return `${days}d`;
   }
+};
+
+// Calculate avg block time as number (in minutes) for database storage
+export const calculateAvgBlockTimeNumber = (
+  violations: Violation[]
+): number => {
+  const blockedViolations = violations.filter(
+    (v) => (v.status === "Blocked" || v.status === "Removed") && v.blockedAt
+  );
+
+  if (blockedViolations.length === 0) return 0;
+
+  const totalMinutes = blockedViolations.reduce((sum, v) => {
+    const addedTime = new Date(v.timeAdded).getTime();
+    const blockedTime = new Date(v.blockedAt!).getTime();
+    const diffMinutes = Math.floor((blockedTime - addedTime) / (1000 * 60));
+    return sum + diffMinutes;
+  }, 0);
+
+  return Math.round(totalMinutes / blockedViolations.length);
 };
 
 export const calculateBlockedSuccess = (violations: Violation[]): string => {
@@ -321,13 +341,13 @@ export const calculateBlockDuration = (
 
 export const formatBlockedViolationText = (violation: Violation): string => {
   const contentType = violation.contentType || violation.type || "Other";
-  
+
   // Calculate "added X ago" dynamically based on current time
   const now = new Date();
   const addedTime = new Date(violation.timeAdded).getTime();
   const addedDiffMs = now.getTime() - addedTime;
   const addedDiffMins = Math.floor(addedDiffMs / 60000);
-  
+
   let addedAgo = "just now";
   if (addedDiffMins >= 1 && addedDiffMins < 60) {
     addedAgo = `${addedDiffMins}m ago`;
@@ -340,16 +360,19 @@ export const formatBlockedViolationText = (violation: Violation): string => {
       addedAgo = `${addedDiffDays}d ago`;
     }
   }
-  
+
   let text = `${contentType} • added ${addedAgo}`;
-  
+
   // If blocked and has blockedAt, show block time (time from added to blocked)
-  if ((violation.status === "Blocked" || violation.status === "Removed") && violation.blockedAt) {
+  if (
+    (violation.status === "Blocked" || violation.status === "Removed") &&
+    violation.blockedAt
+  ) {
     const blockedTime = new Date(violation.blockedAt).getTime();
     // Block time = blockedAt - timeAdded (time it took to block)
     const diffMs = blockedTime - addedTime;
     const diffMins = Math.floor(diffMs / 60000);
-    
+
     let blockTimeText = "0 min";
     if (diffMins < 0) {
       blockTimeText = "0 min"; // Invalid time (blocked before added)
@@ -362,10 +385,92 @@ export const formatBlockedViolationText = (violation: Violation): string => {
       const days = Math.floor(diffMins / 1440);
       blockTimeText = `${days}d`;
     }
-    
+
     text += ` • blocked in ${blockTimeText}`;
   }
-  
+
   return text;
 };
 
+/**
+ * Calculate all platform stats from violations and save to PlatformByMatch collection
+ */
+export const calculateAndSavePlatformStats = async (
+  platformId: string,
+  externalMatchId: string,
+  violations: Violation[]
+): Promise<void> => {
+  try {
+    // Calculate content type counts
+    const liveCount = violations.filter(
+      (v) => (v.contentType || v.type) === "Live"
+    ).length;
+    const highlightsCount = violations.filter(
+      (v) => (v.contentType || v.type) === "Highlights"
+    ).length;
+    const othersCount = violations.filter(
+      (v) => (v.contentType || v.type) === "Other"
+    ).length;
+
+    // Calculate total views (as number)
+    const totalViews = violations.reduce((sum, v) => {
+      if (!v.views || v.views === "0") return sum;
+      const viewsStr = v.views.replace(/[^0-9.]/g, "");
+      const viewsNum = parseFloat(viewsStr) || 0;
+      const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
+      return sum + viewsNum * multiplier;
+    }, 0);
+
+    // Calculate status counts
+    const totalViolations = violations.length;
+    const activeCount = violations.filter((v) => v.status === "Active").length;
+    const blockedCount = violations.filter(
+      (v) => v.status === "Blocked"
+    ).length;
+    const removedCount = violations.filter(
+      (v) => v.status === "Removed"
+    ).length;
+    const underReviewCount = violations.filter(
+      (v) => v.status === "Under Review"
+    ).length;
+
+    // Calculate avg block time (in minutes)
+    const avgBlockTime = calculateAvgBlockTimeNumber(violations);
+
+    // Calculate block/removal success rate (percentage)
+    const blockedOrRemovedCount = blockedCount + removedCount;
+    const blockRemovalSuccessRate =
+      totalViolations > 0
+        ? Math.round((blockedOrRemovedCount / totalViolations) * 100)
+        : 0;
+
+    // Save to database
+    const response = await fetch(`${API_URL}/platform-by-match`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        platformId,
+        externalMatchId,
+        liveCount,
+        highlightsCount,
+        othersCount,
+        totalViews: Math.round(totalViews),
+        totalViolations,
+        activeCount,
+        blockedCount,
+        removedCount,
+        underReviewCount,
+        avgBlockTime,
+        blockRemovalSuccessRate,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Failed to save platform stats:", await response.text());
+    }
+  } catch (error) {
+    console.error("Error calculating and saving platform stats:", error);
+  }
+};
