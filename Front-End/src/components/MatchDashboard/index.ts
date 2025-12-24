@@ -12,3 +12,4 @@ export { PlatformComparison } from "./PlatformComparison";
 export { AddViolationSheet } from "./AddViolationSheet";
 export { BlockConfirmDialog } from "./BlockConfirmDialog";
 export { DeleteConfirmDialog } from "./DeleteConfirmDialog";
+export { AddNoteDialog } from "./AddNoteDialog";

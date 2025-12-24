@@ -39,6 +39,7 @@ interface ViolationItemProps {
   onToggleStatus: (platformId: string, violationId: number | string) => void;
   onDelete: (platformId: string, violationId: number | string) => void;
   onCopyUrl: (url: string) => void;
+  onAddNote: (platformId: string, violation: Violation) => void;
   getPlatformIcon: (platformName: string) => React.ReactNode;
 }
 
@@ -65,12 +66,14 @@ export function ViolationItem({
   onToggleStatus,
   onDelete,
   onCopyUrl,
+  onAddNote,
   getPlatformIcon,
 }: ViolationItemProps) {
   const truncatedUrl =
-    violation.url && violation.url.length > 45
-      ? violation.url.slice(0, 42) + "..."
-      : violation.url || "";
+    (violation.violationUrl || violation.url) &&
+    (violation.violationUrl || violation.url)!.length > 45
+      ? (violation.violationUrl || violation.url)!.slice(0, 42) + "..."
+      : violation.violationUrl || violation.url || "";
 
   return (
     <div className="group rounded-md border bg-card p-2.5 hover:bg-accent/50 transition-colors">
@@ -114,16 +117,11 @@ export function ViolationItem({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                onClick={() =>
-                  window.open(
-                    violation.violationUrl || violation.url || "",
-                    "_blank"
-                  )
-                }>
-                <ExternalLink className="h-3.5 w-3.5" />
+                onClick={() => onCopyUrl(violation.violationUrl || violation.url || "")}>
+                <Copy className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Open link</TooltipContent>
+            <TooltipContent>Copy link</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -163,11 +161,7 @@ export function ViolationItem({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onCopyUrl(violation.url || "")}>
-                <Copy className="mr-2 h-4 w-4" />
-                Copy link
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onEdit(platform.id, violation)}>
+              <DropdownMenuItem onClick={() => onAddNote(platform.id, violation)}>
                 <FileEdit className="mr-2 h-4 w-4" />
                 Add note
               </DropdownMenuItem>
@@ -187,10 +181,10 @@ export function ViolationItem({
       <div className="flex items-center justify-between gap-2 mt-1.5">
         <div className="flex items-center gap-2 min-w-0 flex-1 text-xs text-muted-foreground">
           <span className="shrink-0">{getPlatformIcon(platform.name)}</span>
-          {violation.accountHandle && (
+          {(violation.accountChannel || violation.accountHandle) && (
             <>
               <span className="font-medium shrink-0">
-                {violation.accountHandle}
+                {violation.accountChannel || violation.accountHandle}
               </span>
               <span className="shrink-0">•</span>
             </>
@@ -223,10 +217,24 @@ export function ViolationItem({
 
       {/* Line 3: Meta text */}
       <p className="text-xs text-muted-foreground mt-1">
-        {violation.statusBadge === "Blocked"
-          ? formatBlockedViolationText(violation)
-          : `${violation.type} • added ${violation.addedAgo}`}
+        {formatBlockedViolationText(violation)}
       </p>
+
+      {/* Line 4: Notes */}
+      {violation.notes && violation.notes.length > 0 && (
+        <div className="mt-2 pt-2 border-t border-border/50">
+          <div className="space-y-1">
+            {violation.notes.map((note, index) => (
+              <p
+                key={index}
+                className="text-xs text-muted-foreground flex items-start gap-1.5">
+                <span className="text-muted-foreground/50 shrink-0">•</span>
+                <span className="flex-1">{note}</span>
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -9,7 +9,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Maximize2, Plus, Search, AlertCircle } from "lucide-react";
+import { Plus, Search, AlertCircle } from "lucide-react";
 import { PlatformData, Violation } from "./types";
 import { ViolationItem } from "./ViolationItem";
 
@@ -20,12 +20,12 @@ interface PlatformCardProps {
   searchQuery: string;
   onFilterChange: (filter: string) => void;
   onSearchChange: (query: string) => void;
-  onExpand: () => void;
   onAddViolation: () => void;
   onEdit: (platformId: string, violation: Violation) => void;
   onToggleStatus: (platformId: string, violationId: number | string) => void;
   onDelete: (platformId: string, violationId: number | string) => void;
   onCopyUrl: (url: string) => void;
+  onAddNote: (platformId: string, violation: Violation) => void;
   getPlatformIcon: (platformName: string) => React.ReactNode;
 }
 
@@ -36,15 +36,30 @@ export function PlatformCard({
   searchQuery,
   onFilterChange,
   onSearchChange,
-  onExpand,
   onAddViolation,
   onEdit,
   onToggleStatus,
   onDelete,
   onCopyUrl,
+  onAddNote,
   getPlatformIcon,
 }: PlatformCardProps) {
   const IconComponent = platform.icon;
+
+  // Calculate metrics from violations
+  const violations = platform.violations;
+  const totalViolations = violations.length;
+  const activeCount = violations.filter((v) => v.status === "Active").length;
+  const blockedCount = violations.filter((v) => v.status === "Blocked").length;
+  const removedCount = violations.filter((v) => v.status === "Removed").length;
+  const underReviewCount = violations.filter(
+    (v) => v.status === "Under Review"
+  ).length;
+  const blockedOrRemovedCount = blockedCount + removedCount;
+  const blockRemovalSuccessRate =
+    totalViolations > 0
+      ? Math.round((blockedOrRemovedCount / totalViolations) * 100)
+      : 0;
 
   return (
     <Card
@@ -59,28 +74,8 @@ export function PlatformCard({
             />
             <h3 className="font-semibold">{platform.name}</h3>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {platform.totalViolations} violations •{" "}
-            {platform.activeViolations} active •{" "}
-            {platform.blockedCount || 0} blocked (
-            {platform.blockedRate}% success)
-          </p>
         </div>
         <div className="flex items-center gap-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={onExpand}>
-                  <Maximize2 className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Expand to full width</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
           <Button size="sm" className="text-xs" onClick={onAddViolation}>
             <Plus className="h-3 w-3 mr-1.5" />
             Add violation
@@ -88,30 +83,44 @@ export function PlatformCard({
         </div>
       </div>
 
-      <div className="flex items-center justify-between gap-3 mb-4 py-2.5 px-3 bg-muted/30 rounded-lg">
-        <div className="text-center flex-1">
-          <p className="text-xs text-muted-foreground mb-0.5">Total views</p>
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+        <div className="p-2 rounded-lg bg-muted/30 border border-border">
+          <p className="text-[10px] text-muted-foreground mb-0.5">Total views</p>
           <p className="text-sm font-bold">{platform.totalViews}</p>
         </div>
-        <div className="h-6 w-px bg-border" />
-        <div className="text-center flex-1">
-          <p className="text-xs text-muted-foreground mb-0.5">
-            Avg block time
-          </p>
+        <div className="p-2 rounded-lg bg-muted/30 border border-border">
+          <p className="text-[10px] text-muted-foreground mb-0.5">Total violations</p>
+          <p className="text-sm font-bold">{totalViolations}</p>
+        </div>
+        <div className="p-2 rounded-lg bg-muted/30 border border-border">
+          <p className="text-[10px] text-muted-foreground mb-0.5">Active</p>
+          <p className="text-sm font-bold">{activeCount}</p>
+        </div>
+        <div className="p-2 rounded-lg bg-muted/30 border border-border">
+          <p className="text-[10px] text-muted-foreground mb-0.5">Removed</p>
+          <p className="text-sm font-bold">{removedCount}</p>
+        </div>
+        <div className="p-2 rounded-lg bg-muted/30 border border-border">
+          <p className="text-[10px] text-muted-foreground mb-0.5">Blocked</p>
+          <p className="text-sm font-bold">{blockedCount}</p>
+        </div>
+        <div className="p-2 rounded-lg bg-muted/30 border border-border">
+          <p className="text-[10px] text-muted-foreground mb-0.5">Avg block time</p>
           <p className="text-sm font-bold">{platform.avgBlockTime}</p>
         </div>
-        <div className="h-6 w-px bg-border" />
-        <div className="text-center flex-1">
-          <p className="text-xs text-muted-foreground mb-0.5">Blocked</p>
-          <p className="text-sm font-bold">{platform.blockedCount ?? 0}</p>
-          <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-            {platform.blockedSuccess} success rate
+        <div className="p-2 rounded-lg bg-muted/30 border border-border">
+          <p className="text-[10px] text-muted-foreground mb-0.5">
+            Block/removal success rate
+          </p>
+          <p className="text-sm font-bold">{blockRemovalSuccessRate}%</p>
+          <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+            {blockedOrRemovedCount} of {totalViolations}
           </p>
         </div>
-        <div className="h-6 w-px bg-border" />
-        <div className="text-center flex-1">
-          <p className="text-xs text-muted-foreground mb-0.5">Still active</p>
-          <p className="text-sm font-bold">{platform.stillActive}</p>
+        <div className="p-2 rounded-lg bg-muted/30 border border-border">
+          <p className="text-[10px] text-muted-foreground mb-0.5">Under review</p>
+          <p className="text-sm font-bold">{underReviewCount}</p>
         </div>
       </div>
 
@@ -134,6 +143,12 @@ export function PlatformCard({
             className="cursor-pointer text-xs"
             onClick={() => onFilterChange("blocked")}>
             Blocked
+          </Badge>
+          <Badge
+            variant={cardFilter === "removed" ? "default" : "outline"}
+            className="cursor-pointer text-xs"
+            onClick={() => onFilterChange("removed")}>
+            Removed
           </Badge>
           <Badge
             variant={cardFilter === "review" ? "default" : "outline"}
@@ -177,6 +192,7 @@ export function PlatformCard({
                 onToggleStatus={onToggleStatus}
                 onDelete={onDelete}
                 onCopyUrl={onCopyUrl}
+                onAddNote={onAddNote}
                 getPlatformIcon={getPlatformIcon}
               />
             ))}

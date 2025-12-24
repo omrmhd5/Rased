@@ -21,10 +21,71 @@ export const formatViewsString = (viewsStr: string): string => {
   return Math.round(num).toLocaleString("en-US");
 };
 
+/**
+ * Get current time in KSA timezone (UTC+3) formatted for datetime-local input
+ */
 export const getKSATime = (): string => {
   const now = new Date();
-  const ksaTime = new Date(now.getTime() + 3 * 60 * 60 * 1000);
-  return ksaTime.toISOString().slice(0, 16);
+  // Get current UTC time in milliseconds
+  const utcTime = now.getTime();
+  // Convert to KSA time (UTC+3) by adding 3 hours
+  const ksaTime = new Date(utcTime + (3 * 60 * 60 * 1000));
+  
+  // Format as YYYY-MM-DDTHH:mm for datetime-local input
+  // Use UTC methods since we've already converted to UTC+3
+  const year = ksaTime.getUTCFullYear();
+  const month = String(ksaTime.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(ksaTime.getUTCDate()).padStart(2, "0");
+  const hours = String(ksaTime.getUTCHours()).padStart(2, "0");
+  const minutes = String(ksaTime.getUTCMinutes()).padStart(2, "0");
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
+/**
+ * Convert a datetime-local string (interpreted as KSA time) to ISO string in UTC
+ * @param datetimeLocal - String in format "YYYY-MM-DDTHH:mm" (interpreted as KSA time)
+ * @returns ISO string in UTC format
+ */
+export const convertKSATimeToUTC = (datetimeLocal: string): string => {
+  if (!datetimeLocal) return "";
+  
+  // Parse the datetime-local string as KSA time (UTC+3)
+  const [datePart, timePart] = datetimeLocal.split("T");
+  if (!datePart || !timePart) return datetimeLocal;
+  
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hours, minutes] = timePart.split(":").map(Number);
+  
+  // Create a date object treating the input as KSA time (UTC+3)
+  // We do this by creating a UTC date and then subtracting 3 hours
+  const ksaDate = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+  // Convert KSA time to UTC by subtracting 3 hours
+  const utcDate = new Date(ksaDate.getTime() - 3 * 60 * 60 * 1000);
+  
+  return utcDate.toISOString();
+};
+
+/**
+ * Convert a UTC ISO string to KSA time formatted for datetime-local input
+ * @param utcISOString - ISO string in UTC format
+ * @returns String in format "YYYY-MM-DDTHH:mm" (KSA time)
+ */
+export const convertUTCToKSATime = (utcISOString: string): string => {
+  if (!utcISOString) return "";
+  
+  const utcDate = new Date(utcISOString);
+  // Convert UTC to KSA by adding 3 hours
+  const ksaDate = new Date(utcDate.getTime() + 3 * 60 * 60 * 1000);
+  
+  // Format as YYYY-MM-DDTHH:mm for datetime-local input
+  const year = ksaDate.getUTCFullYear();
+  const month = String(ksaDate.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(ksaDate.getUTCDate()).padStart(2, "0");
+  const hours = String(ksaDate.getUTCHours()).padStart(2, "0");
+  const minutes = String(ksaDate.getUTCMinutes()).padStart(2, "0");
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
 export const calculateBlockedCount = (violations: Violation[]): number => {
@@ -47,15 +108,16 @@ export const calculateTotalViews = (violations: Violation[]): string => {
 
 export const calculateAvgBlockTime = (violations: Violation[]): string => {
   const blockedViolations = violations.filter(
-    (v) => v.status === "Blocked" || v.status === "Removed"
+    (v) => (v.status === "Blocked" || v.status === "Removed") && v.blockedAt
   );
 
   if (blockedViolations.length === 0) return "0 min";
 
   const totalMinutes = blockedViolations.reduce((sum, v) => {
     const addedTime = new Date(v.timeAdded).getTime();
-    const now = new Date().getTime();
-    const diffMinutes = Math.floor((now - addedTime) / (1000 * 60));
+    const blockedTime = new Date(v.blockedAt!).getTime();
+    // Block time = blockedAt - timeAdded (time it took to block)
+    const diffMinutes = Math.floor((blockedTime - addedTime) / (1000 * 60));
     return sum + diffMinutes;
   }, 0);
 
@@ -259,19 +321,32 @@ export const calculateBlockDuration = (
 
 export const formatBlockedViolationText = (violation: Violation): string => {
   const contentType = violation.contentType || violation.type || "Other";
-  const addedTime = new Date(violation.timeAdded).toLocaleTimeString(
-    "en-US",
-    {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
+  let text = `${contentType} • added ${violation.addedAgo || "just now"}`;
+  
+  // If blocked and has blockedAt, show block time (time from added to blocked)
+  if ((violation.status === "Blocked" || violation.status === "Removed") && violation.blockedAt) {
+    const addedTime = new Date(violation.timeAdded).getTime();
+    const blockedTime = new Date(violation.blockedAt).getTime();
+    // Block time = blockedAt - timeAdded (time it took to block)
+    const diffMs = blockedTime - addedTime;
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    let blockTimeText = "0 min";
+    if (diffMins < 0) {
+      blockTimeText = "0 min"; // Invalid time (blocked before added)
+    } else if (diffMins < 60) {
+      blockTimeText = `${diffMins} min`;
+    } else if (diffMins < 1440) {
+      const hours = Math.floor(diffMins / 60);
+      blockTimeText = `${hours}h`;
+    } else {
+      const days = Math.floor(diffMins / 1440);
+      blockTimeText = `${days}d`;
     }
-  );
-
-  if (violation.status === "Blocked" || violation.status === "Removed") {
-    return `${contentType} • added at ${addedTime} • ${violation.status}`;
+    
+    text += ` • blocked in ${blockTimeText}`;
   }
-
-  return `${contentType} • added ${violation.addedAgo || "just now"}`;
+  
+  return text;
 };
 

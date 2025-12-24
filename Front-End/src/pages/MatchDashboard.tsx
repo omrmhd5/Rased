@@ -2,24 +2,25 @@ import { useParams } from "react-router-dom";
 import { AlertCircle, RefreshCw, Activity } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
-import { MatchReport } from "@/components/MatchReport";
 import {
   MatchOverview,
   ContentSplitChart,
   ActivityLog,
   PlatformCard,
-  ExpandedPlatformDialog,
   PlatformFilters,
   PlatformComparison,
   AddViolationSheet,
   BlockConfirmDialog,
   DeleteConfirmDialog,
+  AddNoteDialog,
   getInitialContentSplitData,
   getInitialActivityLog,
   getInitialPlatformOperations,
   formatViews,
   formatViewsString,
   getKSATime,
+  convertKSATimeToUTC,
+  convertUTCToKSATime,
   calculateBlockedCount,
   calculateTotalViews,
   calculateAvgBlockTime,
@@ -152,13 +153,12 @@ export default function MatchDashboard() {
 
     fetchMatch();
   }, [id]);
-
+  
   // Platform slot system (max 2 platforms visible)
   const [selectedSlots, setSelectedSlots] = useState<string[]>([
     "twitter",
     "youtube",
   ]);
-  const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
   const [contentTypeFilter, setContentTypeFilter] = useState<string>("all");
   const [platformCardFilter, setPlatformCardFilter] = useState<{
     [key: string]: string;
@@ -166,7 +166,7 @@ export default function MatchDashboard() {
   const [platformSearchQuery, setPlatformSearchQuery] = useState<{
     [key: string]: string;
   }>({});
-
+  
   // Add/Edit violation state
   const [isAddViolationOpen, setIsAddViolationOpen] = useState(false);
   const [selectedPlatformForAdd, setSelectedPlatformForAdd] =
@@ -175,7 +175,7 @@ export default function MatchDashboard() {
     null
   );
   const [isEditMode, setIsEditMode] = useState(false);
-
+  
   // Form state
   const [formUrl, setFormUrl] = useState("");
   const [formAccountHandle, setFormAccountHandle] = useState("");
@@ -187,8 +187,8 @@ export default function MatchDashboard() {
   const [formTimeAdded, setFormTimeAdded] = useState(getKSATime());
   const [formBlockedAt, setFormBlockedAt] = useState("");
   const [formStillActive, setFormStillActive] = useState(false);
-  const [formNotes, setFormNotes] = useState("");
-
+  const [formNotes, setFormNotes] = useState<string[]>([]);
+  
   // Block confirmation dialog state
   const [isBlockConfirmOpen, setIsBlockConfirmOpen] = useState(false);
   const [blockConfirmViolation, setBlockConfirmViolation] = useState<{
@@ -208,6 +208,13 @@ export default function MatchDashboard() {
     violationId: number | string;
   } | null>(null);
 
+  // Add note dialog state
+  const [isAddNoteOpen, setIsAddNoteOpen] = useState(false);
+  const [noteViolation, setNoteViolation] = useState<{
+    platformId: string;
+    violation: Violation;
+  } | null>(null);
+  
   // Platform comparison state
   const [comparisonMetric, setComparisonMetric] = useState<
     "violations" | "views" | "blocked" | "response" | "active"
@@ -218,10 +225,9 @@ export default function MatchDashboard() {
   const [comparisonSortDirection, setComparisonSortDirection] = useState<
     "desc" | "asc"
   >("desc");
-
+  
   // Match report state
-  const [isReportOpen, setIsReportOpen] = useState(false);
-
+  
   // Helper to get competition name
   const getCompetitionName = () => {
     if (!match) return "";
@@ -292,38 +298,46 @@ export default function MatchDashboard() {
     const cardFilter = platformCardFilter[platformId] || "all";
     const searchQuery = platformSearchQuery[platformId] || "";
     let filtered = violations;
-
+    
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (v) =>
-          v.url.toLowerCase().includes(query) ||
-          (v.accountHandle && v.accountHandle.toLowerCase().includes(query))
+        v.url.toLowerCase().includes(query) ||
+        (v.accountHandle && v.accountHandle.toLowerCase().includes(query))
       );
     }
-
+    
     // Apply card filter (All/Active/Blocked/Removed/Review)
     if (cardFilter !== "all") {
       if (cardFilter === "active") {
         filtered = filtered.filter((v) =>
           ["Reported", "Active", "Pending"].includes(v.statusBadge)
         );
+      } else if (cardFilter === "removed") {
+        filtered = filtered.filter((v) => v.statusBadge === "Removed");
       } else {
-        filtered = filtered.filter((v) => v.statusBadge === cardFilter);
+        // Map lowercase filter to capitalized statusBadge
+        const statusMap: Record<string, string> = {
+          blocked: "Blocked",
+          review: "Review",
+        };
+        const statusBadge = statusMap[cardFilter] || cardFilter;
+        filtered = filtered.filter((v) => v.statusBadge === statusBadge);
       }
     }
-
+    
     // Apply content type filter
     if (contentTypeFilter !== "all") {
       filtered = filtered.filter(
         (v) => v.type.toLowerCase() === contentTypeFilter
       );
     }
-
+    
     return filtered;
   };
-
+  
   // Open add violation drawer
   const openAddViolationDrawer = (platformId: string) => {
     setSelectedPlatformForAdd(platformId);
@@ -338,10 +352,10 @@ export default function MatchDashboard() {
     setFormTimeAdded(getKSATime());
     setFormBlockedAt("");
     setFormStillActive(false);
-    setFormNotes("");
+    setFormNotes([]);
     setIsAddViolationOpen(true);
   };
-
+  
   // Open edit violation drawer
   const openEditViolationDrawer = (
     platformId: string,
@@ -377,15 +391,16 @@ export default function MatchDashboard() {
     };
     setFormStatus(statusMap[violation.status] || "Active");
     setFormViews(violation.views.replace("K", "000").replace(".", ""));
-    // Convert timeAdded to datetime-local format (YYYY-MM-DDTHH:mm)
+    // Convert timeAdded from UTC to KSA time for datetime-local input
     setFormTimeAdded(
       violation.timeAdded
-        ? new Date(violation.timeAdded).toISOString().slice(0, 16)
+        ? convertUTCToKSATime(violation.timeAdded)
         : getKSATime()
     );
+    // Convert blockedAt from UTC to KSA time for datetime-local input
     setFormBlockedAt(
       violation.blockedAt
-        ? new Date(violation.blockedAt).toISOString().slice(0, 16)
+        ? convertUTCToKSATime(violation.blockedAt)
         : ""
     );
     setFormStillActive(
@@ -395,12 +410,14 @@ export default function MatchDashboard() {
     );
     setFormNotes(
       Array.isArray(violation.notes)
-        ? violation.notes.join(", ")
-        : violation.notes || ""
+        ? violation.notes
+        : violation.notes
+        ? [violation.notes]
+        : []
     );
     setIsAddViolationOpen(true);
   };
-
+  
   // Toggle violation status (quick block/unblock)
   const toggleViolationStatus = (
     platformId: string,
@@ -408,14 +425,14 @@ export default function MatchDashboard() {
   ) => {
     const platform = platformOperations.find((p) => p.id === platformId);
     if (!platform) return;
-
+    
     const violation = platform.violations.find(
       (v) => v.id === violationId || v._id === violationId
     );
     if (!violation) return;
-
+    
     const isCurrentlyBlocked = violation.status === "Blocked";
-
+    
     if (!isCurrentlyBlocked) {
       // Show confirmation dialog for Active -> Blocked
       setBlockConfirmViolation({ platformId, violationId, violation });
@@ -451,18 +468,18 @@ export default function MatchDashboard() {
           // Update local state
           setPlatformOperations((prev) =>
             prev.map((p) => {
-              if (p.id !== platformId) return p;
-
+        if (p.id !== platformId) return p;
+        
               const updatedViolations = p.violations.map((v) => {
-                if (v.id !== violationId) return v;
-
-                return {
-                  ...v,
+          if (v.id !== violationId) return v;
+          
+          return {
+            ...v,
                   status: "Active" as const,
                   statusBadge: "Active" as const,
-                };
-              });
-
+          };
+        });
+        
               const totalViolations = updatedViolations.length;
               const activeViolations = updatedViolations.filter(
                 (v) => v.status === "Active" || v.status === "Under Review"
@@ -473,9 +490,9 @@ export default function MatchDashboard() {
                   ? Math.round((blockedCount / totalViolations) * 100)
                   : 0;
 
-              return {
-                ...p,
-                violations: updatedViolations,
+        return { 
+          ...p, 
+          violations: updatedViolations,
                 totalViolations,
                 activeViolations,
                 blockedCount,
@@ -505,16 +522,19 @@ export default function MatchDashboard() {
       unblockViolation();
     }
   };
-
+  
   // Confirm block with chosen time
   const confirmBlock = async () => {
     if (!blockConfirmViolation) return;
-
+    
     const { platformId, violationId, violation } = blockConfirmViolation;
+    // Convert block time to UTC (customBlockTime is in KSA time from datetime-local input)
     const blockTime =
       blockTimeChoice === "current"
-        ? new Date().toISOString()
-        : customBlockTime;
+        ? new Date().toISOString() // Current time is already in UTC
+        : customBlockTime
+        ? convertKSATimeToUTC(customBlockTime) // Convert KSA time to UTC
+        : new Date().toISOString();
 
     try {
       const violationDbId =
@@ -543,18 +563,18 @@ export default function MatchDashboard() {
       // Update local state
       setPlatformOperations((prev) =>
         prev.map((platform) => {
-          if (platform.id !== platformId) return platform;
-
+      if (platform.id !== platformId) return platform;
+      
           const updatedViolations = platform.violations.map((v) => {
-            if (v.id !== violationId) return v;
-
-            return {
-              ...v,
+        if (v.id !== violationId) return v;
+        
+        return {
+          ...v,
               status: "Blocked" as const,
               statusBadge: "Blocked" as const,
-            };
-          });
-
+        };
+      });
+      
           const totalViolations = updatedViolations.length;
           const activeViolations = updatedViolations.filter(
             (v) => v.status === "Active" || v.status === "Under Review"
@@ -565,9 +585,9 @@ export default function MatchDashboard() {
               ? Math.round((blockedCount / totalViolations) * 100)
               : 0;
 
-          return {
-            ...platform,
-            violations: updatedViolations,
+      return {
+        ...platform,
+        violations: updatedViolations,
             totalViolations,
             activeViolations,
             blockedCount,
@@ -579,16 +599,16 @@ export default function MatchDashboard() {
           };
         })
       );
-
-      toast({
-        title: "Violation blocked",
+    
+    toast({
+      title: "Violation blocked",
         description: `Violation marked as blocked at ${new Date(
           blockTime
         ).toLocaleString()}`,
-      });
-
-      setIsBlockConfirmOpen(false);
-      setBlockConfirmViolation(null);
+    });
+    
+    setIsBlockConfirmOpen(false);
+    setBlockConfirmViolation(null);
     } catch (error) {
       console.error("Error blocking violation:", error);
       toast({
@@ -598,7 +618,7 @@ export default function MatchDashboard() {
       });
     }
   };
-
+  
   // Save violation (add or edit)
   const saveViolation = async () => {
     if (!formUrl) {
@@ -609,7 +629,7 @@ export default function MatchDashboard() {
       });
       return;
     }
-
+    
     if (!formAccountHandle) {
       toast({
         title: "Validation Error",
@@ -632,7 +652,7 @@ export default function MatchDashboard() {
       (p) => p.id === selectedPlatformForAdd
     );
     if (!platform) return;
-
+    
     try {
       // Map contentType to match backend schema exactly: "Live", "Highlights", or "Other"
       let contentType: "Live" | "Highlights" | "Other" = "Other";
@@ -647,6 +667,16 @@ export default function MatchDashboard() {
       const status: "Active" | "Blocked" | "Removed" | "Under Review" =
         formStatus;
 
+      // Handle blockedAt: send it if status is Blocked/Removed, otherwise don't send it
+      let blockedAtValue: string | null | undefined = undefined;
+      if (formStatus === "Blocked" || formStatus === "Removed") {
+        // If blockedAt is provided, convert from KSA time to UTC; otherwise backend will set it to current time
+        blockedAtValue = formBlockedAt ? convertKSATimeToUTC(formBlockedAt) : undefined;
+      } else if (formStatus === "Active") {
+        // For Active status, explicitly set to null to clear any existing blockedAt
+        blockedAtValue = null;
+      }
+
       const violationData = {
         matchId: match.externalMatchId,
         matchName: `${match.team1} vs ${match.team2}`,
@@ -659,15 +689,10 @@ export default function MatchDashboard() {
         views: formViews
           ? parseInt(formViews.replace(/,/g, "")).toLocaleString("en-US")
           : undefined,
-        timeAdded: formTimeAdded,
-        blockedAt:
-          (formStatus === "Blocked" || formStatus === "Removed") &&
-          formBlockedAt
-            ? formBlockedAt
-            : formStatus === "Active"
-            ? null
-            : undefined,
-        notes: formNotes ? [formNotes] : [],
+        // Convert timeAdded from KSA time (datetime-local) to UTC ISO string
+        timeAdded: convertKSATimeToUTC(formTimeAdded),
+        blockedAt: blockedAtValue,
+        notes: formNotes.filter((note) => note.trim() !== ""),
       };
 
       if (isEditMode && editingViolation) {
@@ -715,9 +740,9 @@ export default function MatchDashboard() {
                 ? Math.round((blockedCount / totalViolations) * 100)
                 : 0;
 
-            return {
-              ...p,
-              violations: updatedViolations,
+        return {
+          ...p,
+          violations: updatedViolations,
               totalViolations,
               activeViolations,
               blockedCount,
@@ -729,13 +754,13 @@ export default function MatchDashboard() {
             };
           })
         );
-
-        toast({
-          title: "Violation updated",
-          description: "Changes saved successfully",
-        });
-      } else {
-        // Add new violation
+      
+      toast({
+        title: "Violation updated",
+        description: "Changes saved successfully",
+      });
+    } else {
+      // Add new violation
         const response = await fetch(`${API_URL}/violations`, {
           method: "POST",
           headers: {
@@ -757,8 +782,8 @@ export default function MatchDashboard() {
 
         setPlatformOperations((prev) =>
           prev.map((p) => {
-            if (p.id !== selectedPlatformForAdd) return p;
-
+        if (p.id !== selectedPlatformForAdd) return p;
+        
             const updatedViolations = [frontendViolation, ...p.violations];
 
             const totalViolations = updatedViolations.length;
@@ -770,10 +795,10 @@ export default function MatchDashboard() {
               totalViolations > 0
                 ? Math.round((blockedCount / totalViolations) * 100)
                 : 0;
-
-            return {
-              ...p,
-              violations: updatedViolations,
+        
+        return {
+          ...p,
+          violations: updatedViolations,
               totalViolations,
               activeViolations,
               blockedCount,
@@ -785,14 +810,14 @@ export default function MatchDashboard() {
             };
           })
         );
-
-        toast({
-          title: "Violation added",
-          description: `New violation added to ${platform.name}`,
-        });
-      }
-
-      setIsAddViolationOpen(false);
+      
+      toast({
+        title: "Violation added",
+        description: `New violation added to ${platform.name}`,
+      });
+    }
+    
+    setIsAddViolationOpen(false);
     } catch (error) {
       console.error("Error saving violation:", error);
       toast({
@@ -842,8 +867,8 @@ export default function MatchDashboard() {
       // Update local state
       setPlatformOperations((prev) =>
         prev.map((p) => {
-          if (p.id !== platformId) return p;
-
+      if (p.id !== platformId) return p;
+      
           const updatedViolations = p.violations.filter(
             (v) => v.id !== violationId && v._id !== violationId
           );
@@ -857,10 +882,10 @@ export default function MatchDashboard() {
             totalViolations > 0
               ? Math.round((blockedCount / totalViolations) * 100)
               : 0;
-
-          return {
-            ...p,
-            violations: updatedViolations,
+      
+      return {
+        ...p,
+        violations: updatedViolations,
             totalViolations,
             activeViolations,
             blockedCount,
@@ -872,9 +897,9 @@ export default function MatchDashboard() {
           };
         })
       );
-
-      toast({
-        title: "Violation deleted",
+    
+    toast({
+      title: "Violation deleted",
         description: "Violation has been removed successfully",
       });
 
@@ -889,7 +914,7 @@ export default function MatchDashboard() {
       });
     }
   };
-
+  
   // Copy violation URL
   const copyViolationUrl = (url: string) => {
     navigator.clipboard.writeText(url);
@@ -899,23 +924,128 @@ export default function MatchDashboard() {
     });
   };
 
+  // Open add note dialog
+  const openAddNoteDialog = (platformId: string, violation: Violation) => {
+    setNoteViolation({ platformId, violation });
+    setIsAddNoteOpen(true);
+  };
+
+  // Save note to violation
+  const saveNote = async (note: string) => {
+    if (!noteViolation) return;
+
+    const { platformId, violation } = noteViolation;
+    const platform = platformOperations.find((p) => p.id === platformId);
+    if (!platform) return;
+
+    try {
+      const violationDbId =
+        (violation as Violation & { _id?: string })._id ||
+        violation.id.toString();
+
+      // Get current notes and add the new one
+      const currentNotes = Array.isArray(violation.notes) ? violation.notes : [];
+      const updatedNotes = [...currentNotes, note];
+
+      // Update violation with new note
+      const response = await fetch(`${API_URL}/violations/${violationDbId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          notes: updatedNotes,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to add note");
+      }
+
+      const updatedViolation = await response.json();
+
+      // Update local state
+      setPlatformOperations((prev) =>
+        prev.map((p) => {
+          if (p.id !== platformId) return p;
+
+          const updatedViolations = p.violations.map((v) => {
+            if (v.id === violation.id || v._id === violation._id) {
+              return convertBackendViolationToFrontend(updatedViolation);
+            }
+            return v;
+          });
+
+          return {
+            ...p,
+            violations: updatedViolations,
+            totalViolations: updatedViolations.length,
+            activeViolations: updatedViolations.filter(
+              (v) => v.status === "Active" || v.status === "Under Review"
+            ).length,
+            blockedCount: calculateBlockedCount(updatedViolations),
+            blockedRate:
+              updatedViolations.length > 0
+                ? Math.round(
+                    (calculateBlockedCount(updatedViolations) /
+                      updatedViolations.length) *
+                      100
+                  )
+                : 0,
+            totalViews: calculateTotalViews(updatedViolations),
+            avgBlockTime: calculateAvgBlockTime(updatedViolations),
+            blockedSuccess: calculateBlockedSuccess(updatedViolations),
+            stillActive: calculateStillActive(updatedViolations),
+          };
+        })
+      );
+
+      toast({
+        title: "Note added",
+        description: "Note has been added successfully",
+      });
+
+      setIsAddNoteOpen(false);
+      setNoteViolation(null);
+    } catch (error) {
+      console.error("Error adding note:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add note",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Calculate KPIs from platform operations
   const totalViolations = platformOperations.reduce(
     (sum, p) => sum + p.totalViolations,
     0
   );
-  const totalBlocked = platformOperations.reduce(
-    (sum, p) => sum + p.blockedCount,
-    0
-  );
-  const totalActive = platformOperations.reduce(
-    (sum, p) => sum + p.stillActive,
-    0
-  );
-  const blockedRate =
+  
+  // Calculate status-specific counts
+  const allViolations = platformOperations.flatMap((p) => p.violations);
+  const totalActive = allViolations.filter(
+    (v) => v.status === "Active"
+  ).length;
+  const totalBlocked = allViolations.filter(
+    (v) => v.status === "Blocked"
+  ).length;
+  const totalRemoved = allViolations.filter(
+    (v) => v.status === "Removed"
+  ).length;
+  const totalUnderReview = allViolations.filter(
+    (v) => v.status === "Under Review"
+  ).length;
+  
+  // Block/removal success rate = (Blocked + Removed) / Total violations * 100
+  const blockRemovalSuccessRate =
     totalViolations > 0
-      ? Math.round((totalBlocked / totalViolations) * 100)
+      ? Math.round(((totalBlocked + totalRemoved) / totalViolations) * 100)
       : 0;
+  
+  // Blocked rate (for MatchOverview - same as block/removal success rate)
+  const blockedRate = blockRemovalSuccessRate;
 
   // Calculate total views
   const totalViews = platformOperations.reduce((sum, p) => {
@@ -942,28 +1072,28 @@ export default function MatchDashboard() {
       : "0";
 
   if (loading) {
-    return (
+                return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">Loading match data...</p>
-        </div>
-      </div>
+          </div>
+          </div>
     );
   }
 
   if (!match) {
-    return (
+                return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-center">
+                      <div className="text-center">
           <AlertCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">Match not found</p>
-        </div>
-      </div>
-    );
+                      </div>
+                            </div>
+                          );
   }
 
-  return (
+              return (
     <div className="space-y-6">
       <MatchOverview
         match={match}
@@ -984,7 +1114,7 @@ export default function MatchDashboard() {
           onFilterChange={setLogFilter}
           getPlatformColor={getPlatformColor}
         />
-      </div>
+                  </div>
 
       <BlockConfirmDialog
         open={isBlockConfirmOpen}
@@ -1004,7 +1134,7 @@ export default function MatchDashboard() {
           <h2 className="text-lg font-semibold">
             Platform Operations (This Match)
           </h2>
-        </div>
+                      </div>
 
         <PlatformFilters
           selectedSlots={selectedSlots}
@@ -1013,54 +1143,6 @@ export default function MatchDashboard() {
           onRemovePlatform={removePlatformFromSlot}
           onAddPlatform={addPlatformToSlot}
           onContentTypeFilterChange={setContentTypeFilter}
-        />
-
-        <ExpandedPlatformDialog
-          open={!!expandedPlatform}
-          onOpenChange={(open) =>
-            setExpandedPlatform(open ? expandedPlatform : null)
-          }
-          platform={
-            platformOperations.find((p) => p.id === expandedPlatform) || null
-          }
-          filteredViolations={
-            expandedPlatform
-              ? getFilteredViolations(
-                  expandedPlatform,
-                  platformOperations.find((p) => p.id === expandedPlatform)
-                    ?.violations || []
-                )
-              : []
-          }
-          cardFilter={
-            expandedPlatform
-              ? platformCardFilter[expandedPlatform] || "all"
-              : "all"
-          }
-          searchQuery={
-            expandedPlatform ? platformSearchQuery[expandedPlatform] || "" : ""
-          }
-          onFilterChange={(filter) => {
-            if (expandedPlatform) {
-              setPlatformCardFilter({
-                ...platformCardFilter,
-                [expandedPlatform]: filter,
-              });
-            }
-          }}
-          onSearchChange={(query) => {
-            if (expandedPlatform) {
-              setPlatformSearchQuery({
-                ...platformSearchQuery,
-                [expandedPlatform]: query,
-              });
-            }
-          }}
-          onEdit={openEditViolationDrawer}
-          onToggleStatus={toggleViolationStatus}
-          onDelete={deleteViolation}
-          onCopyUrl={copyViolationUrl}
-          getPlatformIcon={getPlatformIcon}
         />
 
         <div
@@ -1078,9 +1160,9 @@ export default function MatchDashboard() {
                 platform.violations
               );
 
-              return (
+                    return (
                 <PlatformCard
-                  key={platform.id}
+                        key={platform.id}
                   platform={platform}
                   filteredViolations={filteredViolations}
                   cardFilter={cardFilter}
@@ -1097,21 +1179,17 @@ export default function MatchDashboard() {
                       [platform.id]: query,
                     })
                   }
-                  onExpand={() =>
-                    setExpandedPlatform(
-                      expandedPlatform === platform.id ? null : platform.id
-                    )
-                  }
                   onAddViolation={() => openAddViolationDrawer(platform.id)}
                   onEdit={openEditViolationDrawer}
                   onToggleStatus={toggleViolationStatus}
                   onDelete={deleteViolation}
                   onCopyUrl={copyViolationUrl}
+                  onAddNote={openAddNoteDialog}
                   getPlatformIcon={getPlatformIcon}
                 />
               );
             })}
-        </div>
+          </div>
       </div>
 
       <PlatformComparison
@@ -1125,7 +1203,6 @@ export default function MatchDashboard() {
         onSortChange={setComparisonSort}
         onSortDirectionChange={setComparisonSortDirection}
         onSelectedSlotsChange={setSelectedSlots}
-        onReportOpen={() => setIsReportOpen(true)}
       />
 
       <AddViolationSheet
@@ -1151,6 +1228,17 @@ export default function MatchDashboard() {
         onFormBlockedAtChange={setFormBlockedAt}
         formNotes={formNotes}
         onFormNotesChange={setFormNotes}
+        onNoteChange={(index, note) => {
+          const updated = [...formNotes];
+          updated[index] = note;
+          setFormNotes(updated);
+        }}
+        onAddNote={() => {
+          setFormNotes([...formNotes, ""]);
+        }}
+        onDeleteNote={(index) => {
+          setFormNotes(formNotes.filter((_, i) => i !== index));
+        }}
         onSave={saveViolation}
       />
 
@@ -1163,123 +1251,14 @@ export default function MatchDashboard() {
         onConfirm={confirmDeleteViolation}
       />
 
-      {/* Match Report */}
-      <MatchReport
-        open={isReportOpen}
-        onClose={() => setIsReportOpen(false)}
-        matchName={match ? `${match.team1} vs ${match.team2}` : ""}
-        week={match ? `Week ${match.week || "N/A"}` : "N/A"}
-        competition={match ? getCompetitionName() : "N/A"}
-        stadium="Prince Mohammed bin Fahd Stadium"
-        date="21 مايو 2026"
-        time="20:30"
-        status="live"
-        matchId={id || "match-1"}
-        liveMetrics={platformOperations.map((platform) => {
-          const liveViolations = platform.violations.filter(
-            (v) => v.type.toLowerCase() === "live"
-          );
-          const blockedLive = liveViolations.filter(
-            (v) => v.status === "Blocked" || v.status === "Removed"
-          );
-          const totalViews = liveViolations.reduce((sum, v) => {
-            const views = parseFloat(v.views.replace("K", "")) * 1000;
-            return sum + views;
-          }, 0);
-          const avgBlockTime =
-            blockedLive.length > 0
-              ? blockedLive.reduce((sum, v) => {
-                  const blockInfo = calculateBlockDuration(v);
-                  return sum + (blockInfo?.duration ?? 0);
-                }, 0) / blockedLive.length
-              : 0;
-
-          const platformArabicNames: { [key: string]: string } = {
-            "X/Twitter": "تويتر",
-            YouTube: "يوتيوب",
-            Facebook: "فيسبوك",
-            TikTok: "تيك توك",
-            Instagram: "إنستغرام",
-            Telegram: "تيليجرام",
-            IPTV: "IPTV",
-            Websites: "مواقع",
-          };
-
-          const IconComponent = platform.icon;
-
-          return {
-            platform: platform.name,
-            platformArabic: platformArabicNames[platform.name] || platform.name,
-            icon: (
-              <IconComponent
-                className="h-4 w-4"
-                style={{ color: platform.color }}
-              />
-            ),
-            detected: liveViolations.length,
-            blocked: blockedLive.length,
-            successRate:
-              liveViolations.length > 0
-                ? Math.round((blockedLive.length / liveViolations.length) * 100)
-                : 0,
-            avgBlockTime,
-            views: totalViews,
-          };
-        })}
-        highlightsMetrics={platformOperations.map((platform) => {
-          const highlightsViolations = platform.violations.filter(
-            (v) => v.type.toLowerCase() === "highlights"
-          );
-          const blockedHighlights = highlightsViolations.filter(
-            (v) => v.status === "Blocked" || v.status === "Removed"
-          );
-          const totalViews = highlightsViolations.reduce((sum, v) => {
-            const views = parseFloat(v.views.replace("K", "")) * 1000;
-            return sum + views;
-          }, 0);
-          const avgBlockTime =
-            blockedHighlights.length > 0
-              ? blockedHighlights.reduce((sum, v) => {
-                  const blockInfo = calculateBlockDuration(v);
-                  return sum + (blockInfo?.duration ?? 0);
-                }, 0) / blockedHighlights.length
-              : 0;
-
-          const platformArabicNames: { [key: string]: string } = {
-            "X/Twitter": "تويتر",
-            YouTube: "يوتيوب",
-            Facebook: "فيسبوك",
-            TikTok: "تيك توك",
-            Instagram: "إنستغرام",
-            Telegram: "تيليجرام",
-            IPTV: "IPTV",
-            Websites: "مواقع",
-          };
-
-          const IconComponent = platform.icon;
-
-          return {
-            platform: platform.name,
-            platformArabic: platformArabicNames[platform.name] || platform.name,
-            icon: (
-              <IconComponent
-                className="h-4 w-4"
-                style={{ color: platform.color }}
-              />
-            ),
-            detected: highlightsViolations.length,
-            blocked: blockedHighlights.length,
-            successRate:
-              highlightsViolations.length > 0
-                ? Math.round(
-                    (blockedHighlights.length / highlightsViolations.length) *
-                      100
-                  )
-                : 0,
-            avgBlockTime,
-            views: totalViews,
-          };
-        })}
+      <AddNoteDialog
+        open={isAddNoteOpen}
+        onOpenChange={(open) => {
+          setIsAddNoteOpen(open);
+          if (!open) setNoteViolation(null);
+        }}
+        violation={noteViolation?.violation || null}
+        onSave={saveNote}
       />
     </div>
   );

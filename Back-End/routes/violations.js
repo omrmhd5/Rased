@@ -92,6 +92,7 @@ router.post("/", async (req, res) => {
       status,
       views,
       timeAdded,
+      blockedAt,
       active,
       notes,
     } = req.body;
@@ -137,6 +138,22 @@ router.post("/", async (req, res) => {
       }
     }
 
+    // Handle blockedAt - set it if provided, or based on status
+    let blockedAtValue = undefined;
+    const finalStatus = status || "Active";
+    const statusLower = finalStatus.toLowerCase();
+    
+    if (blockedAt !== undefined && blockedAt !== null && blockedAt !== "") {
+      // If blockedAt is explicitly provided, use it
+      blockedAtValue = new Date(blockedAt);
+    } else if (statusLower === "blocked" || statusLower === "removed") {
+      // If status is blocked/removed and no blockedAt provided, set to now
+      blockedAtValue = new Date();
+    } else if (statusLower === "active") {
+      // If status is active, don't set blockedAt
+      blockedAtValue = undefined;
+    }
+
     const violation = new Violation({
       matchId: internalMatchId,
       matchName,
@@ -145,9 +162,10 @@ router.post("/", async (req, res) => {
       violationUrl,
       accountChannel,
       contentType,
-      status: status || "Active",
+      status: finalStatus,
       views: views || undefined,
       timeAdded: timeAdded ? new Date(timeAdded) : new Date(),
+      blockedAt: blockedAtValue,
       active: active !== undefined ? active : true,
       notes: notesArray,
     });

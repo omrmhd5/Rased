@@ -25,6 +25,7 @@ interface ExpandedPlatformDialogProps {
   onToggleStatus: (platformId: string, violationId: number | string) => void;
   onDelete: (platformId: string, violationId: number | string) => void;
   onCopyUrl: (url: string) => void;
+  onAddNote: (platformId: string, violation: Violation) => void;
   getPlatformIcon: (platformName: string) => React.ReactNode;
 }
 
@@ -41,6 +42,7 @@ export function ExpandedPlatformDialog({
   onToggleStatus,
   onDelete,
   onCopyUrl,
+  onAddNote,
   getPlatformIcon,
 }: ExpandedPlatformDialogProps) {
   if (!platform) return null;
@@ -138,6 +140,7 @@ export function ExpandedPlatformDialog({
                   onToggleStatus={onToggleStatus}
                   onDelete={onDelete}
                   onCopyUrl={onCopyUrl}
+                  onAddNote={onAddNote}
                   getPlatformIcon={getPlatformIcon}
                 />
               ))}

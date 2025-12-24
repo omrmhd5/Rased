@@ -17,8 +17,10 @@ import {
   SheetTitle,
   SheetFooter,
 } from "@/components/ui/sheet";
+import React from "react";
 import { Match, PlatformData } from "./types";
 import { getKSATime, extractAccountHandleFromUrl } from "./utils";
+import { Plus, X } from "lucide-react";
 
 interface AddViolationSheetProps {
   open: boolean;
@@ -41,8 +43,11 @@ interface AddViolationSheetProps {
   onFormTimeAddedChange: (time: string) => void;
   formBlockedAt: string;
   onFormBlockedAtChange: (time: string) => void;
-  formNotes: string;
-  onFormNotesChange: (notes: string) => void;
+  formNotes: string[];
+  onFormNotesChange: (notes: string[]) => void;
+  onNoteChange: (index: number, note: string) => void;
+  onAddNote: () => void;
+  onDeleteNote: (index: number) => void;
   onSave: () => void;
 }
 
@@ -69,6 +74,9 @@ export function AddViolationSheet({
   onFormBlockedAtChange,
   formNotes,
   onFormNotesChange,
+  onNoteChange,
+  onAddNote,
+  onDeleteNote,
   onSave,
 }: AddViolationSheetProps) {
   const handleUrlChange = (url: string) => {
@@ -225,15 +233,47 @@ export function AddViolationSheet({
             </div>
           )}
 
+          {/* Notes Section */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Notes (optional)</Label>
-            <Textarea
-              id="notes"
-              placeholder="Add operator comments or notes..."
-              rows={4}
-              value={formNotes}
-              onChange={(e) => onFormNotesChange(e.target.value)}
-            />
+            <div className="flex items-center justify-between">
+              <Label>Notes (optional)</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={onAddNote}>
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                Add note
+              </Button>
+            </div>
+            <div className="space-y-2">
+              {formNotes.map((note, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-2 p-2.5 rounded-lg border bg-card hover:bg-accent/50 transition-colors">
+                  <Input
+                    value={note}
+                    onChange={(e) => onNoteChange(index, e.target.value)}
+                    placeholder="Enter note..."
+                    className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => onDeleteNote(index)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              {formNotes.length === 0 && (
+                <div className="text-sm text-muted-foreground text-center py-4 border border-dashed rounded-lg">
+                  No notes yet. Click "Add note" to add one.
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

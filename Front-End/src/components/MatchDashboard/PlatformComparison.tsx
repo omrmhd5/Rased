@@ -1,14 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { BarChart3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlatformData } from "./types";
 import { formatViews, calculateBlockDuration } from "./utils";
@@ -22,16 +14,15 @@ interface PlatformComparisonProps {
     | "blocked"
     | "response"
     | "active";
-  comparisonSort: "violations" | "views" | "response" | "active";
+  comparisonSort: "views" | "response" | "active";
   comparisonSortDirection: "desc" | "asc";
   selectedSlots: string[];
   onMetricChange: (
     metric: "violations" | "views" | "blocked" | "response" | "active"
   ) => void;
-  onSortChange: (sort: "violations" | "views" | "response" | "active") => void;
+  onSortChange: (sort: "views" | "response" | "active") => void;
   onSortDirectionChange: (direction: "desc" | "asc") => void;
   onSelectedSlotsChange: (slots: string[]) => void;
-  onReportOpen: () => void;
 }
 
 export function PlatformComparison({
@@ -45,7 +36,6 @@ export function PlatformComparison({
   onSortChange,
   onSortDirectionChange,
   onSelectedSlotsChange,
-  onReportOpen,
 }: PlatformComparisonProps) {
   const platformMetrics = platformOperations.map((platform) => {
     const filteredViolations =
@@ -99,9 +89,6 @@ export function PlatformComparison({
   const sortedMetrics = [...platformMetrics].sort((a, b) => {
     let compareResult = 0;
     switch (comparisonSort) {
-      case "violations":
-        compareResult = b.totalViolations - a.totalViolations;
-        break;
       case "views":
         compareResult = b.totalViews - a.totalViews;
         break;
@@ -159,15 +146,6 @@ export function PlatformComparison({
     }
   };
 
-  const handleSortChange = (v: string) => {
-    const validSort = v as "violations" | "views" | "response" | "active";
-    onSortChange(validSort);
-    if (v === "violations") onMetricChange("violations");
-    else if (v === "views") onMetricChange("views");
-    else if (v === "response") onMetricChange("response");
-    else if (v === "active") onMetricChange("active");
-    onSortDirectionChange("desc");
-  };
 
   return (
     <div className="mt-6">
@@ -191,28 +169,6 @@ export function PlatformComparison({
                 : "Other"}
               )
             </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button
-              onClick={onReportOpen}
-              size="sm"
-              variant="default"
-              className="gap-2">
-              <BarChart3 className="h-4 w-4" />
-              تقرير المباراة
-            </Button>
-
-            <Select value={comparisonSort} onValueChange={handleSortChange}>
-              <SelectTrigger className="w-[180px] h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="violations">Most violations</SelectItem>
-                <SelectItem value="views">Highest views</SelectItem>
-                <SelectItem value="response">Slowest response</SelectItem>
-                <SelectItem value="active">Most active</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
