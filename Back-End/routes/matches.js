@@ -154,7 +154,8 @@ function transformApiMatches(apiData) {
         scores = liveData.matchDetails.scores?.total || null;
       } else if (
         normalizedStatus === "Live" ||
-        normalizedStatus === "InProgress"
+        normalizedStatus === "InProgress" ||
+        normalizedStatus === "Playing"
       ) {
         status = "live";
       } else if (normalizedStatus === "Postponed") {
