@@ -15,11 +15,11 @@ import {
   AlertCircle,
   Eye,
   AlertTriangle,
-  Activity,
   Shield,
   Clock,
   TrendingUp,
   FileQuestion,
+  XCircle,
 } from "lucide-react";
 import { PlatformData, Violation } from "./types";
 import { ViolationItem } from "./ViolationItem";
@@ -106,76 +106,76 @@ export function PlatformCard({
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {/* Total views */}
-        <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20 cursor-pointer group">
+        <div className="p-3 rounded-xl bg-gradient-to-br from-chart-4/10 to-chart-4/5 border border-chart-4/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-4/20 cursor-pointer group">
           <div className="flex items-center gap-1.5 mb-2">
-            <div className="p-0.5 rounded bg-blue-500/20 group-hover:bg-blue-500/30 transition-colors">
-              <Eye className="h-2.5 w-2.5 text-blue-500" />
+            <div className="p-0.5 rounded bg-chart-4/20 group-hover:bg-chart-4/30 transition-colors">
+              <Eye className="h-2.5 w-2.5 text-chart-4" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
               Total views
             </p>
           </div>
-          <p className="text-lg font-bold text-blue-600 dark:text-blue-400 transition-transform duration-300 group-hover:scale-110">
+          <p className="text-lg font-bold text-chart-4 transition-transform duration-300 group-hover:scale-110">
             {platform.totalViews}
           </p>
         </div>
 
         {/* Total violations */}
-        <div className="p-3 rounded-xl bg-gradient-to-br from-red-500/10 to-red-500/5 border border-red-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-red-500/20 cursor-pointer group">
+        <div className="p-3 rounded-xl bg-gradient-to-br from-chart-1/10 to-chart-1/5 border border-chart-1/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-1/20 cursor-pointer group">
           <div className="flex items-center gap-1.5 mb-2">
-            <div className="p-0.5 rounded bg-red-500/20 group-hover:bg-red-500/30 transition-colors">
-              <AlertTriangle className="h-2.5 w-2.5 text-red-500" />
+            <div className="p-0.5 rounded bg-chart-1/20 group-hover:bg-chart-1/30 transition-colors">
+              <AlertTriangle className="h-2.5 w-2.5 text-chart-1" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
               Total violations
             </p>
           </div>
-          <p className="text-lg font-bold text-red-600 dark:text-red-400 transition-transform duration-300 group-hover:scale-110">
+          <p className="text-lg font-bold text-chart-1 transition-transform duration-300 group-hover:scale-110">
             {totalViolations}
           </p>
         </div>
 
         {/* Active */}
-        <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer group">
+        <div className="p-3 rounded-xl bg-gradient-to-br from-destructive/10 to-destructive/5 border border-destructive/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-destructive/20 cursor-pointer group">
           <div className="flex items-center gap-1.5 mb-2">
-            <div className="p-0.5 rounded bg-orange-500/20 group-hover:bg-orange-500/30 transition-colors">
-              <Activity className="h-2.5 w-2.5 text-orange-500" />
+            <div className="p-0.5 rounded bg-destructive/20 group-hover:bg-destructive/30 transition-colors">
+              <AlertTriangle className="h-2.5 w-2.5 text-destructive" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
               Active
             </p>
           </div>
-          <p className="text-lg font-bold text-orange-600 dark:text-orange-400 transition-transform duration-300 group-hover:scale-110">
+          <p className="text-lg font-bold text-destructive transition-transform duration-300 group-hover:scale-110">
             {activeCount}
           </p>
         </div>
 
         {/* Blocked */}
-        <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500/10 to-indigo-500/5 border border-indigo-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/20 cursor-pointer group">
+        <div className="p-3 rounded-xl bg-gradient-to-br from-success/10 to-success/5 border border-success/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-success/20 cursor-pointer group">
           <div className="flex items-center gap-1.5 mb-2">
-            <div className="p-0.5 rounded bg-indigo-500/20 group-hover:bg-indigo-500/30 transition-colors">
-              <Shield className="h-2.5 w-2.5 text-indigo-500" />
+            <div className="p-0.5 rounded bg-success/20 group-hover:bg-success/30 transition-colors">
+              <Shield className="h-2.5 w-2.5 text-success" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
               Blocked
             </p>
           </div>
-          <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400 transition-transform duration-300 group-hover:scale-110">
+          <p className="text-lg font-bold text-success transition-transform duration-300 group-hover:scale-110">
             {blockedCount}
           </p>
         </div>
 
         {/* Removed */}
-        <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-amber-500/20 cursor-pointer group">
+        <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer group">
           <div className="flex items-center gap-1.5 mb-2">
-            <div className="p-0.5 rounded bg-amber-500/20 group-hover:bg-amber-500/30 transition-colors">
-              <Shield className="h-2.5 w-2.5 text-amber-500" />
+            <div className="p-0.5 rounded bg-orange-500/20 group-hover:bg-orange-500/30 transition-colors">
+              <XCircle className="h-2.5 w-2.5 text-orange-500" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
               Removed
             </p>
           </div>
-          <p className="text-lg font-bold text-amber-600 dark:text-amber-400 transition-transform duration-300 group-hover:scale-110">
+          <p className="text-lg font-bold text-orange-500 transition-transform duration-300 group-hover:scale-110">
             {removedCount}
           </p>
         </div>
@@ -206,7 +206,10 @@ export function PlatformCard({
             </p>
           </div>
           <p className="text-lg font-bold text-green-600 dark:text-green-400 transition-transform duration-300 group-hover:scale-110">
-            {totalViolations > 0 ? Math.round((blockedCount / totalViolations) * 100) : 0}%
+            {totalViolations > 0
+              ? Math.round((blockedCount / totalViolations) * 100)
+              : 0}
+            %
           </p>
           <p className="text-[9px] text-muted-foreground/70 mt-1">
             {blockedCount} of {totalViolations}

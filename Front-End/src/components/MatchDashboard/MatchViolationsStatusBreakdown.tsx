@@ -1,8 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
-import { Activity, Shield, FileQuestion } from "lucide-react";
+import { AlertTriangle, Shield, FileQuestion, XCircle } from "lucide-react";
 
-interface MatchActivityLogChartProps {
+interface MatchViolationsStatusBreakdownProps {
   totalViolations: number;
   activeCount: number;
   blockedCount: number;
@@ -18,13 +18,13 @@ interface ChartData {
   icon: React.ReactNode;
 }
 
-export function MatchActivityLogChart({
+export function MatchViolationsStatusBreakdown({
   totalViolations,
   activeCount,
   blockedCount,
   removedCount,
   underReviewCount,
-}: MatchActivityLogChartProps) {
+}: MatchViolationsStatusBreakdownProps) {
   // Calculate percentages
   const calculatePercentage = (value: number) => {
     if (totalViolations === 0) return 0;
@@ -38,7 +38,7 @@ export function MatchActivityLogChart({
       value: activeCount,
       percentage: calculatePercentage(activeCount),
       color: "hsl(var(--destructive))", // Matches MatchOverview Active (destructive)
-      icon: <Activity className="h-3 w-3" />,
+      icon: <AlertTriangle className="h-3 w-3" />,
     },
     {
       name: "Blocked",
@@ -52,7 +52,7 @@ export function MatchActivityLogChart({
       value: removedCount,
       percentage: calculatePercentage(removedCount),
       color: "hsl(24.6 95% 53.1%)", // Matches MatchOverview Removed (orange-500)
-      icon: <Shield className="h-3 w-3" />,
+      icon: <XCircle className="h-3 w-3" />,
     },
     {
       name: "Under Review",
@@ -122,7 +122,7 @@ export function MatchActivityLogChart({
   if (totalViolations === 0) {
     return (
       <Card className="p-6 lg:col-span-3">
-        <h3 className="font-semibold mb-6 text-lg">Match Activity Log</h3>
+        <h3 className="font-semibold mb-6 text-lg">Match Violations Status Breakdown</h3>
         <div className="flex items-center justify-center h-64">
           <p className="text-sm text-muted-foreground">No violations to display</p>
         </div>
@@ -132,7 +132,7 @@ export function MatchActivityLogChart({
 
   return (
     <Card className="p-6 lg:col-span-3 transition-all duration-300 hover:shadow-lg">
-      <h3 className="font-semibold mb-6 text-lg">Match Activity Log</h3>
+      <h3 className="font-semibold mb-6 text-lg">Match Violations Status Breakdown</h3>
       
       <div className="flex flex-col lg:flex-row items-center gap-6">
         {/* Pie Chart */}

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 import {
   MatchOverview,
-  MatchActivityLogChart,
+  MatchViolationsStatusBreakdown,
   ContentSplitChart,
   ActivityLog,
   PlatformCard,
@@ -1541,7 +1541,7 @@ export default function MatchDashboard() {
         blockSuccessRate={blockSuccessRate}
       />
 
-      <MatchActivityLogChart
+      <MatchViolationsStatusBreakdown
         totalViolations={totalViolations}
         activeCount={totalActive}
         blockedCount={totalBlocked}

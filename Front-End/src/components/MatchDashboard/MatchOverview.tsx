@@ -3,11 +3,12 @@ import { Badge } from "@/components/ui/badge";
 import {
   AlertTriangle,
   Shield,
-  Activity,
   TrendingUp,
   Eye,
   Clock,
   Award,
+  XCircle,
+  FileQuestion,
 } from "lucide-react";
 import { Match, PlatformData } from "./types";
 
@@ -134,7 +135,7 @@ export function MatchOverview({
         {/* Active */}
         <div className="flex items-center gap-2.5 transition-all duration-300 hover:scale-105 hover:bg-destructive/5 rounded-lg p-2 -m-2 cursor-pointer">
           <div className="p-2 rounded-full bg-destructive/10 shrink-0 transition-transform duration-300 hover:scale-110">
-            <Activity className="h-3.5 w-3.5 text-destructive" />
+            <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
           </div>
           <div>
             <p className="text-xl font-bold leading-none mb-1 transition-transform duration-300 hover:scale-105">
@@ -179,7 +180,7 @@ export function MatchOverview({
         {/* Removed */}
         <div className="flex items-center gap-2.5 transition-all duration-300 hover:scale-105 hover:bg-orange-500/5 rounded-lg p-2 -m-2 cursor-pointer">
           <div className="p-2 rounded-full bg-orange-500/10 shrink-0 transition-transform duration-300 hover:scale-110">
-            <Shield className="h-3.5 w-3.5 text-orange-500" />
+            <XCircle className="h-3.5 w-3.5 text-orange-500" />
           </div>
           <div>
             <p className="text-xl font-bold leading-none mb-1 transition-transform duration-300 hover:scale-105">
@@ -197,7 +198,7 @@ export function MatchOverview({
         {/* Under Review */}
         <div className="flex items-center gap-2.5 transition-all duration-300 hover:scale-105 hover:bg-yellow-500/5 rounded-lg p-2 -m-2 cursor-pointer">
           <div className="p-2 rounded-full bg-yellow-500/10 shrink-0 transition-transform duration-300 hover:scale-110">
-            <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />
+            <FileQuestion className="h-3.5 w-3.5 text-yellow-500" />
           </div>
           <div>
             <p className="text-xl font-bold leading-none mb-1 transition-transform duration-300 hover:scale-105">

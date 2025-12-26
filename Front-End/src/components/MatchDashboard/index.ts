@@ -2,7 +2,7 @@ export * from "./types";
 export * from "./utils";
 export * from "./constants";
 export { MatchOverview } from "./MatchOverview";
-export { MatchActivityLogChart } from "./MatchActivityLogChart";
+export { MatchViolationsStatusBreakdown } from "./MatchViolationsStatusBreakdown";
 export { ContentSplitChart } from "./ContentSplitChart";
 export { ActivityLog } from "./ActivityLog";
 export { ViolationItem } from "./ViolationItem";
