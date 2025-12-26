@@ -9,7 +9,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Plus, Search, AlertCircle } from "lucide-react";
+import {
+  Plus,
+  Search,
+  AlertCircle,
+  Eye,
+  AlertTriangle,
+  Activity,
+  Shield,
+  Clock,
+  TrendingUp,
+  FileQuestion,
+} from "lucide-react";
 import { PlatformData, Violation } from "./types";
 import { ViolationItem } from "./ViolationItem";
 
@@ -73,9 +84,7 @@ export function PlatformCard({
   ).length;
 
   return (
-    <Card
-      id={`platform-card-${platform.id}`}
-      className="p-5 transition-all">
+    <Card id={`platform-card-${platform.id}`} className="p-5 transition-all">
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1.5">
@@ -86,7 +95,8 @@ export function PlatformCard({
             <h3 className="font-semibold">{platform.name}</h3>
           </div>
           <p className="text-xs text-muted-foreground ml-7">
-            Live: {liveCount} • Highlights: {highlightsCount} • Others: {othersCount}
+            Live: {liveCount} • Highlights: {highlightsCount} • Others:{" "}
+            {othersCount}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -98,43 +108,128 @@ export function PlatformCard({
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
-        <div className="p-2 rounded-lg bg-muted/30 border border-border">
-          <p className="text-[10px] text-muted-foreground mb-0.5">Total views</p>
-          <p className="text-sm font-bold">{platform.totalViews}</p>
-        </div>
-        <div className="p-2 rounded-lg bg-muted/30 border border-border">
-          <p className="text-[10px] text-muted-foreground mb-0.5">Total violations</p>
-          <p className="text-sm font-bold">{totalViolations}</p>
-        </div>
-        <div className="p-2 rounded-lg bg-muted/30 border border-border">
-          <p className="text-[10px] text-muted-foreground mb-0.5">Active</p>
-          <p className="text-sm font-bold">{activeCount}</p>
-        </div>
-        <div className="p-2 rounded-lg bg-muted/30 border border-border">
-          <p className="text-[10px] text-muted-foreground mb-0.5">Blocked</p>
-          <p className="text-sm font-bold">{blockedCount}</p>
-        </div>
-        <div className="p-2 rounded-lg bg-muted/30 border border-border">
-          <p className="text-[10px] text-muted-foreground mb-0.5">Removed</p>
-          <p className="text-sm font-bold">{removedCount}</p>
-        </div>
-        <div className="p-2 rounded-lg bg-muted/30 border border-border">
-          <p className="text-[10px] text-muted-foreground mb-0.5">Avg block time</p>
-          <p className="text-sm font-bold">{platform.avgBlockTime}</p>
-        </div>
-        <div className="p-2 rounded-lg bg-muted/30 border border-border">
-          <p className="text-[10px] text-muted-foreground mb-0.5">
-            Block/removal success rate
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        {/* Total views */}
+        <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20 cursor-pointer group">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="p-0.5 rounded bg-blue-500/20 group-hover:bg-blue-500/30 transition-colors">
+              <Eye className="h-2.5 w-2.5 text-blue-500" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">
+              Total views
+            </p>
+          </div>
+          <p className="text-lg font-bold text-blue-600 dark:text-blue-400 transition-transform duration-300 group-hover:scale-110">
+            {platform.totalViews}
           </p>
-          <p className="text-sm font-bold">{blockRemovalSuccessRate}%</p>
-          <p className="text-[9px] text-muted-foreground/70 mt-0.5">
+        </div>
+
+        {/* Total violations */}
+        <div className="p-3 rounded-xl bg-gradient-to-br from-red-500/10 to-red-500/5 border border-red-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-red-500/20 cursor-pointer group">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="p-0.5 rounded bg-red-500/20 group-hover:bg-red-500/30 transition-colors">
+              <AlertTriangle className="h-2.5 w-2.5 text-red-500" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">
+              Total violations
+            </p>
+          </div>
+          <p className="text-lg font-bold text-red-600 dark:text-red-400 transition-transform duration-300 group-hover:scale-110">
+            {totalViolations}
+          </p>
+        </div>
+
+        {/* Active */}
+        <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer group">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="p-0.5 rounded bg-orange-500/20 group-hover:bg-orange-500/30 transition-colors">
+              <Activity className="h-2.5 w-2.5 text-orange-500" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">
+              Active
+            </p>
+          </div>
+          <p className="text-lg font-bold text-orange-600 dark:text-orange-400 transition-transform duration-300 group-hover:scale-110">
+            {activeCount}
+          </p>
+        </div>
+
+        {/* Blocked */}
+        <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500/10 to-indigo-500/5 border border-indigo-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-indigo-500/20 cursor-pointer group">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="p-0.5 rounded bg-indigo-500/20 group-hover:bg-indigo-500/30 transition-colors">
+              <Shield className="h-2.5 w-2.5 text-indigo-500" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">
+              Blocked
+            </p>
+          </div>
+          <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400 transition-transform duration-300 group-hover:scale-110">
+            {blockedCount}
+          </p>
+        </div>
+
+        {/* Removed */}
+        <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 border border-amber-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-amber-500/20 cursor-pointer group">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="p-0.5 rounded bg-amber-500/20 group-hover:bg-amber-500/30 transition-colors">
+              <Shield className="h-2.5 w-2.5 text-amber-500" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">
+              Removed
+            </p>
+          </div>
+          <p className="text-lg font-bold text-amber-600 dark:text-amber-400 transition-transform duration-300 group-hover:scale-110">
+            {removedCount}
+          </p>
+        </div>
+
+        {/* Avg block time */}
+        <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20 cursor-pointer group">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="p-0.5 rounded bg-purple-500/20 group-hover:bg-purple-500/30 transition-colors">
+              <Clock className="h-2.5 w-2.5 text-purple-500" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">
+              Avg block time
+            </p>
+          </div>
+          <p className="text-lg font-bold text-purple-600 dark:text-purple-400 transition-transform duration-300 group-hover:scale-110">
+            {platform.avgBlockTime}
+          </p>
+        </div>
+
+        {/* Block/removal success rate */}
+        <div className="p-3 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-green-500/20 cursor-pointer group">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="p-0.5 rounded bg-green-500/20 group-hover:bg-green-500/30 transition-colors">
+              <TrendingUp className="h-2.5 w-2.5 text-green-500" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">
+              Block/removal success rate
+            </p>
+          </div>
+          <p className="text-lg font-bold text-green-600 dark:text-green-400 transition-transform duration-300 group-hover:scale-110">
+            {blockRemovalSuccessRate}%
+          </p>
+          <p className="text-[9px] text-muted-foreground/70 mt-1">
             {blockedOrRemovedCount} of {totalViolations}
           </p>
         </div>
-        <div className="p-2 rounded-lg bg-muted/30 border border-border">
-          <p className="text-[10px] text-muted-foreground mb-0.5">Under review</p>
-          <p className="text-sm font-bold">{underReviewCount}</p>
+
+        {/* Under review */}
+        <div className="p-3 rounded-xl bg-gradient-to-br from-yellow-500/10 to-yellow-500/5 border border-yellow-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-yellow-500/20 cursor-pointer group">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="p-0.5 rounded bg-yellow-500/20 group-hover:bg-yellow-500/30 transition-colors">
+              <FileQuestion className="h-2.5 w-2.5 text-yellow-500" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">
+              Under review
+            </p>
+          </div>
+          <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400 transition-transform duration-300 group-hover:scale-110">
+            {underReviewCount}
+          </p>
         </div>
       </div>
 
@@ -216,4 +311,3 @@ export function PlatformCard({
     </Card>
   );
 }
-

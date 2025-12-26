@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Shield, Activity, TrendingUp } from "lucide-react";
+import { AlertTriangle, Shield, Activity, TrendingUp, Eye, Clock, Award } from "lucide-react";
 import { Match, PlatformData } from "./types";
 
 interface MatchOverviewProps {
@@ -12,6 +12,14 @@ interface MatchOverviewProps {
   formattedTotalViews: string;
   avgBlockTime: string;
   topPlatform: PlatformData | null;
+  // Additional stats from match object
+  totalViews?: number;
+  activeCount?: number;
+  blockedCount?: number;
+  removedCount?: number;
+  underReviewCount?: number;
+  avgBlockTimeNumber?: number;
+  blockRemovalSuccessRate?: number;
 }
 
 export function MatchOverview({
@@ -23,6 +31,13 @@ export function MatchOverview({
   formattedTotalViews,
   avgBlockTime,
   topPlatform,
+  totalViews,
+  activeCount,
+  blockedCount,
+  removedCount,
+  underReviewCount,
+  avgBlockTimeNumber,
+  blockRemovalSuccessRate,
 }: MatchOverviewProps) {
   const formatMatchDateTime = () => {
     const dateStr = match.date;
@@ -53,33 +68,31 @@ export function MatchOverview({
     const status = match.status;
     if (status === "live") {
       return (
-        <Badge variant="destructive" className="text-xs">
-          LIVE
+        <Badge className="bg-red-500 text-white text-xs">
+          ● LIVE
         </Badge>
       );
     } else if (status === "finished") {
       return (
-        <Badge variant="secondary" className="text-xs">
+        <Badge className="bg-green-500 text-white text-xs">
           COMPLETED
         </Badge>
       );
     } else if (status === "postponed") {
       return (
-        <Badge
-          variant="outline"
-          className="text-xs bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+        <Badge className="bg-yellow-500 text-white text-xs">
           POSTPONED
         </Badge>
       );
     } else if (status === "cancelled") {
       return (
-        <Badge variant="outline" className="text-xs">
+        <Badge className="bg-gray-500 text-white text-xs">
           CANCELLED
         </Badge>
       );
     } else {
       return (
-        <Badge variant="outline" className="text-xs">
+        <Badge className="bg-blue-500 text-white text-xs">
           UPCOMING
         </Badge>
       );
@@ -106,14 +119,17 @@ export function MatchOverview({
         </div>
       </div>
 
-      <div className="flex gap-4 mb-4">
-        <div className="flex items-center gap-2.5 flex-1">
-          <div className="p-2 rounded-full bg-chart-1/10 shrink-0">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-4">
+        {/* Total Violations */}
+        <div className="flex items-center gap-2.5 transition-all duration-300 hover:scale-105 hover:bg-chart-1/5 rounded-lg p-2 -m-2 cursor-pointer">
+          <div className="p-2 rounded-full bg-chart-1/10 shrink-0 transition-transform duration-300 hover:scale-110">
             <AlertTriangle className="h-3.5 w-3.5 text-chart-1" />
           </div>
           <div>
-            <p className="text-xl font-bold leading-none mb-1">
-              {totalViolations}
+            <p className="text-xl font-bold leading-none mb-1 transition-transform duration-300 hover:scale-105">
+              {match.totalViolations !== undefined && match.totalViolations !== null
+                ? match.totalViolations
+                : totalViolations}
             </p>
             <p className="text-xs text-muted-foreground">Total Violations</p>
             <p className="text-[10px] text-muted-foreground/70 mt-0.5">
@@ -122,85 +138,152 @@ export function MatchOverview({
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-1">
-          <div className="p-2 rounded-full bg-success/10 shrink-0">
-            <Shield className="h-3.5 w-3.5 text-success" />
-          </div>
-          <div>
-            <p className="text-xl font-bold leading-none mb-1">
-              {totalBlocked}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              Blocked Successfully
-            </p>
-            <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-              {blockedRate}% success rate
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2.5 flex-1">
-          <div className="p-2 rounded-full bg-destructive/10 shrink-0">
+        {/* Active */}
+        <div className="flex items-center gap-2.5 transition-all duration-300 hover:scale-105 hover:bg-destructive/5 rounded-lg p-2 -m-2 cursor-pointer">
+          <div className="p-2 rounded-full bg-destructive/10 shrink-0 transition-transform duration-300 hover:scale-110">
             <Activity className="h-3.5 w-3.5 text-destructive" />
           </div>
           <div>
-            <p className="text-xl font-bold leading-none mb-1">
-              {totalActive}
+            <p className="text-xl font-bold leading-none mb-1 transition-transform duration-300 hover:scale-105">
+              {activeCount !== undefined && activeCount !== null
+                ? activeCount
+                : totalActive}
             </p>
-            <p className="text-xs text-muted-foreground">Still Active</p>
+            <p className="text-xs text-muted-foreground">Active</p>
             <p className="text-[10px] text-muted-foreground/70 mt-0.5">
               needs action
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5 flex-1">
-          <div className="p-2 rounded-full bg-chart-2/10 shrink-0">
-            <TrendingUp className="h-3.5 w-3.5 text-chart-2" />
+        {/* Blocked Successfully */}
+        <div className="flex items-center gap-2.5 transition-all duration-300 hover:scale-105 hover:bg-success/5 rounded-lg p-2 -m-2 cursor-pointer">
+          <div className="p-2 rounded-full bg-success/10 shrink-0 transition-transform duration-300 hover:scale-110">
+            <Shield className="h-3.5 w-3.5 text-success" />
           </div>
           <div>
-            <p className="text-xl font-bold leading-none mb-1">
-              {topPlatform ? topPlatform.totalViews : "0"}
+            <p className="text-xl font-bold leading-none mb-1 transition-transform duration-300 hover:scale-105">
+              {(() => {
+                const blocked = blockedCount !== undefined && blockedCount !== null ? blockedCount : 0;
+                const removed = removedCount !== undefined && removedCount !== null ? removedCount : 0;
+                return blocked + removed;
+              })()}
             </p>
-            <p className="text-xs text-muted-foreground">Top Platform</p>
+            <p className="text-xs text-muted-foreground">
+              {blockRemovalSuccessRate !== undefined && blockRemovalSuccessRate !== null
+                ? `${blockRemovalSuccessRate}%`
+                : `${blockedRate}%`} success rate
+            </p>
             <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-              {topPlatform ? `${topPlatform.name} • biggest source` : "N/A"}
+              Blocked Successfully
             </p>
           </div>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div className="p-4 rounded-lg bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-medium text-muted-foreground">
-              Total Views (This Match)
+        {/* Removed */}
+        <div className="flex items-center gap-2.5 transition-all duration-300 hover:scale-105 hover:bg-orange-500/5 rounded-lg p-2 -m-2 cursor-pointer">
+          <div className="p-2 rounded-full bg-orange-500/10 shrink-0 transition-transform duration-300 hover:scale-110">
+            <Shield className="h-3.5 w-3.5 text-orange-500" />
+          </div>
+          <div>
+            <p className="text-xl font-bold leading-none mb-1 transition-transform duration-300 hover:scale-105">
+              {removedCount !== undefined && removedCount !== null
+                ? removedCount
+                : 0}
+            </p>
+            <p className="text-xs text-muted-foreground">Removed</p>
+            <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+              removed violations
             </p>
           </div>
-          <p className="text-3xl font-bold text-foreground mb-1">
-            {formattedTotalViews}
+        </div>
+
+        {/* Under Review */}
+        <div className="flex items-center gap-2.5 transition-all duration-300 hover:scale-105 hover:bg-yellow-500/5 rounded-lg p-2 -m-2 cursor-pointer">
+          <div className="p-2 rounded-full bg-yellow-500/10 shrink-0 transition-transform duration-300 hover:scale-110">
+            <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />
+          </div>
+          <div>
+            <p className="text-xl font-bold leading-none mb-1 transition-transform duration-300 hover:scale-105">
+              {underReviewCount !== undefined && underReviewCount !== null
+                ? underReviewCount
+                : 0}
+            </p>
+            <p className="text-xs text-muted-foreground">Under Review</p>
+            <p className="text-[10px] text-muted-foreground/70 mt-0.5">
+              pending review
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="p-4 rounded-lg bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-4/20 cursor-pointer">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Eye className="h-4 w-4 text-chart-4 transition-transform duration-300 hover:scale-110" />
+              <p className="text-xs font-medium text-muted-foreground">
+                Total Views (This Match)
+              </p>
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-foreground mb-1 transition-transform duration-300 hover:scale-105">
+            {(totalViews !== undefined && totalViews !== null)
+              ? totalViews.toLocaleString("en-US")
+              : formattedTotalViews}
           </p>
           <p className="text-xs text-muted-foreground">
             Across all platforms
           </p>
         </div>
 
-        <div className="p-4 rounded-lg bg-gradient-to-br from-success/5 to-success/10 border border-success/20">
+        <div className="p-4 rounded-lg bg-gradient-to-br from-success/5 to-success/10 border border-success/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-success/20 cursor-pointer">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-medium text-muted-foreground">
-              Avg Block Time (This Match)
-            </p>
-            <Badge className="text-xs bg-success/20 text-success border-success/30">
-              {parseFloat(avgBlockTime) <= 15
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-success transition-transform duration-300 hover:scale-110" />
+              <p className="text-xs font-medium text-muted-foreground">
+                Avg Block Time (This Match)
+              </p>
+            </div>
+            <Badge className={`text-xs transition-all duration-300 ${
+              (avgBlockTimeNumber !== undefined && avgBlockTimeNumber !== null
+                ? avgBlockTimeNumber
+                : parseFloat(avgBlockTime)) <= 15
+                ? "bg-success/20 text-success border-success/30"
+                : "bg-destructive/20 text-destructive border-destructive/30"
+            }`}>
+              {(avgBlockTimeNumber !== undefined && avgBlockTimeNumber !== null
+                ? avgBlockTimeNumber
+                : parseFloat(avgBlockTime)) <= 15
                 ? "Within target"
                 : "Over target"}
             </Badge>
           </div>
-          <p className="text-3xl font-bold text-foreground mb-1">
-            {avgBlockTime}
+          <p className="text-3xl font-bold text-foreground mb-1 transition-transform duration-300 hover:scale-105">
+            {avgBlockTimeNumber !== undefined && avgBlockTimeNumber !== null
+              ? avgBlockTimeNumber
+              : avgBlockTime}
             <span className="text-base text-muted-foreground ml-1">min</span>
           </p>
           <p className="text-xs text-muted-foreground">Target: 15 min SLA</p>
+        </div>
+
+        {/* Top Platform */}
+        <div className="p-4 rounded-lg bg-gradient-to-br from-chart-2/5 to-chart-2/10 border border-chart-2/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-2/20 cursor-pointer">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Award className="h-4 w-4 text-chart-2 transition-transform duration-300 hover:scale-110" />
+              <p className="text-xs font-medium text-muted-foreground">Top Platform</p>
+            </div>
+          </div>
+          <p className="text-3xl font-bold text-foreground mb-1 transition-transform duration-300 hover:scale-105">
+            {topPlatform ? topPlatform.totalViews : "0"}
+            <span className="text-base text-muted-foreground ml-1">views</span>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {topPlatform ? `${topPlatform.name} • biggest source` : "N/A"}
+          </p>
         </div>
       </div>
     </Card>

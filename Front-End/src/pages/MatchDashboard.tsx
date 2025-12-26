@@ -1296,58 +1296,6 @@ export default function MatchDashboard() {
     }
   };
 
-  // Calculate KPIs from platform operations
-  const totalViolations = platformOperations.reduce(
-    (sum, p) => sum + p.totalViolations,
-    0
-  );
-
-  // Calculate status-specific counts
-  const allViolations = platformOperations.flatMap((p) => p.violations);
-  const totalActive = allViolations.filter((v) => v.status === "Active").length;
-  const totalBlocked = allViolations.filter(
-    (v) => v.status === "Blocked"
-  ).length;
-  const totalRemoved = allViolations.filter(
-    (v) => v.status === "Removed"
-  ).length;
-  const totalUnderReview = allViolations.filter(
-    (v) => v.status === "Under Review"
-  ).length;
-
-  // Block/removal success rate = (Blocked + Removed) / Total violations * 100
-  const blockRemovalSuccessRate =
-    totalViolations > 0
-      ? Math.round(((totalBlocked + totalRemoved) / totalViolations) * 100)
-      : 0;
-
-  // Blocked rate (for MatchOverview - same as block/removal success rate)
-  const blockedRate = blockRemovalSuccessRate;
-
-  // Calculate total views
-  const totalViews = platformOperations.reduce((sum, p) => {
-    const viewsNum = parseInt(p.totalViews.replace(/[^0-9]/g, "")) || 0;
-    return sum + viewsNum;
-  }, 0);
-  const formattedTotalViews = totalViews.toLocaleString("en-US");
-
-  // Find top platform
-  const topPlatform = platformOperations.reduce((top, p) => {
-    const pViews = parseInt(p.totalViews.replace(/[^0-9]/g, "")) || 0;
-    const topViews =
-      parseInt((top?.totalViews || "0").replace(/[^0-9]/g, "")) || 0;
-    return pViews > topViews ? p : top;
-  }, platformOperations[0]);
-
-  // Calculate average block time (simplified - no blockedAt field)
-  const allBlockTimes: number[] = [];
-  const avgBlockTime =
-    allBlockTimes.length > 0
-      ? (
-          allBlockTimes.reduce((sum, t) => sum + t, 0) / allBlockTimes.length
-        ).toFixed(1)
-      : "0";
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -1370,6 +1318,28 @@ export default function MatchDashboard() {
     );
   }
 
+  // Calculate KPIs from platform operations
+  // Use stats directly from match object (aggregated from backend)
+  const totalViolations = match.totalViolations || 0;
+  const totalActive = match.activeCount || 0;
+  const totalBlocked = match.blockedCount || 0;
+  const totalRemoved = match.removedCount || 0;
+  const totalUnderReview = match.underReviewCount || 0;
+  const blockRemovalSuccessRate = match.blockRemovalSuccessRate || 0;
+  const blockedRate = blockRemovalSuccessRate;
+  const totalViews = match.totalViews || 0;
+  const formattedTotalViews = totalViews.toLocaleString("en-US");
+  const avgBlockTimeNumber = match.avgBlockTime || 0;
+  const avgBlockTime = avgBlockTimeNumber > 0 ? avgBlockTimeNumber.toFixed(1) : "0";
+
+  // Find top platform (still calculated from platformOperations as it's platform-specific)
+  const topPlatform = platformOperations.reduce((top, p) => {
+    const pViews = parseInt(p.totalViews.replace(/[^0-9]/g, "")) || 0;
+    const topViews =
+      parseInt((top?.totalViews || "0").replace(/[^0-9]/g, "")) || 0;
+    return pViews > topViews ? p : top;
+  }, platformOperations[0] || null);
+
   return (
     <div className="space-y-6">
       <MatchOverview
@@ -1381,6 +1351,13 @@ export default function MatchDashboard() {
         formattedTotalViews={formattedTotalViews}
         avgBlockTime={avgBlockTime}
         topPlatform={topPlatform}
+        totalViews={totalViews}
+        activeCount={totalActive}
+        blockedCount={totalBlocked}
+        removedCount={totalRemoved}
+        underReviewCount={totalUnderReview}
+        avgBlockTimeNumber={avgBlockTimeNumber}
+        blockRemovalSuccessRate={blockRemovalSuccessRate}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

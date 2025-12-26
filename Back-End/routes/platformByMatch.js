@@ -5,6 +5,111 @@ import Platform from "../models/Platform.js";
 
 const router = express.Router();
 
+// Helper function to aggregate PlatformByMatch stats and update Match
+async function updateMatchAggregatedStats(externalMatchId) {
+  try {
+    const match = await Match.findOne({ externalMatchId });
+    if (!match) {
+      console.warn(`Match not found for externalMatchId: ${externalMatchId}`);
+      return;
+    }
+
+    // Aggregate all PlatformByMatch documents for this match
+    const platformStats = await PlatformByMatch.find({
+      matchId: match._id,
+      externalMatchId,
+    }).lean();
+
+    if (platformStats.length === 0) {
+      // If no platform stats, reset all to 0
+      await Match.findByIdAndUpdate(match._id, {
+        liveCount: 0,
+        highlightsCount: 0,
+        othersCount: 0,
+        totalViews: 0,
+        totalViolations: 0,
+        activeCount: 0,
+        blockedCount: 0,
+        removedCount: 0,
+        underReviewCount: 0,
+        avgBlockTime: 0,
+        blockRemovalSuccessRate: 0,
+      });
+      return;
+    }
+
+    // Sum all counts
+    const aggregated = {
+      liveCount: platformStats.reduce((sum, s) => sum + (s.liveCount || 0), 0),
+      highlightsCount: platformStats.reduce(
+        (sum, s) => sum + (s.highlightsCount || 0),
+        0
+      ),
+      othersCount: platformStats.reduce(
+        (sum, s) => sum + (s.othersCount || 0),
+        0
+      ),
+      totalViews: platformStats.reduce(
+        (sum, s) => sum + (s.totalViews || 0),
+        0
+      ),
+      totalViolations: platformStats.reduce(
+        (sum, s) => sum + (s.totalViolations || 0),
+        0
+      ),
+      activeCount: platformStats.reduce(
+        (sum, s) => sum + (s.activeCount || 0),
+        0
+      ),
+      blockedCount: platformStats.reduce(
+        (sum, s) => sum + (s.blockedCount || 0),
+        0
+      ),
+      removedCount: platformStats.reduce(
+        (sum, s) => sum + (s.removedCount || 0),
+        0
+      ),
+      underReviewCount: platformStats.reduce(
+        (sum, s) => sum + (s.underReviewCount || 0),
+        0
+      ),
+    };
+
+    // Calculate weighted average for avgBlockTime
+    const totalBlockedOrRemoved = aggregated.blockedCount + aggregated.removedCount;
+    let avgBlockTime = 0;
+    if (totalBlockedOrRemoved > 0) {
+      const totalBlockTime = platformStats.reduce((sum, s) => {
+        const platformBlockedOrRemoved = (s.blockedCount || 0) + (s.removedCount || 0);
+        if (platformBlockedOrRemoved > 0) {
+          return sum + (s.avgBlockTime || 0) * platformBlockedOrRemoved;
+        }
+        return sum;
+      }, 0);
+      avgBlockTime = Math.round(totalBlockTime / totalBlockedOrRemoved);
+    }
+
+    // Calculate overall block/removal success rate
+    const blockRemovalSuccessRate =
+      aggregated.totalViolations > 0
+        ? Math.round(
+            ((aggregated.blockedCount + aggregated.removedCount) /
+              aggregated.totalViolations) *
+              100
+          )
+        : 0;
+
+    // Update Match document
+    await Match.findByIdAndUpdate(match._id, {
+      ...aggregated,
+      avgBlockTime,
+      blockRemovalSuccessRate,
+    });
+  } catch (error) {
+    console.error("Error updating match aggregated stats:", error);
+  }
+}
+
 // GET /api/platform-by-match - Get platform stats for a match
 // Query params: matchId (externalMatchId) and optionally platformId
 router.get("/", async (req, res) => {
@@ -123,6 +228,9 @@ router.post("/", async (req, res) => {
       }
     );
 
+    // Update aggregated stats on Match
+    await updateMatchAggregatedStats(externalMatchId);
+
     res.json(stats);
   } catch (error) {
     if (error.name === "ValidationError") {
@@ -170,7 +278,36 @@ router.put("/:id", async (req, res) => {
       stats.blockRemovalSuccessRate = blockRemovalSuccessRate;
 
     const updatedStats = await stats.save();
+
+    // Update aggregated stats on Match
+    await updateMatchAggregatedStats(updatedStats.externalMatchId);
+
     res.json(updatedStats);
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(400).json({ error: "Invalid stats ID" });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/platform-by-match/:id - Delete platform stats
+router.delete("/:id", async (req, res) => {
+  try {
+    const stats = await PlatformByMatch.findById(req.params.id);
+
+    if (!stats) {
+      return res.status(404).json({ error: "Platform stats not found" });
+    }
+
+    const externalMatchId = stats.externalMatchId;
+
+    await PlatformByMatch.findByIdAndDelete(req.params.id);
+
+    // Update aggregated stats on Match
+    await updateMatchAggregatedStats(externalMatchId);
+
+    res.json({ message: "Platform stats deleted successfully" });
   } catch (error) {
     if (error.name === "CastError") {
       return res.status(400).json({ error: "Invalid stats ID" });

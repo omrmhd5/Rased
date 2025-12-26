@@ -89,11 +89,8 @@ const matchSchema = new mongoose.Schema(
       },
     },
     statusHistory: [statusHistorySchema],
+    // Aggregated stats from PlatformByMatch
     liveCount: {
-      type: Number,
-      default: 0,
-    },
-    totalViolations: {
       type: Number,
       default: 0,
     },
@@ -104,6 +101,38 @@ const matchSchema = new mongoose.Schema(
     othersCount: {
       type: Number,
       default: 0,
+    },
+    totalViews: {
+      type: Number,
+      default: 0,
+    },
+    totalViolations: {
+      type: Number,
+      default: 0,
+    },
+    activeCount: {
+      type: Number,
+      default: 0,
+    },
+    blockedCount: {
+      type: Number,
+      default: 0,
+    },
+    removedCount: {
+      type: Number,
+      default: 0,
+    },
+    underReviewCount: {
+      type: Number,
+      default: 0,
+    },
+    avgBlockTime: {
+      type: Number,
+      default: 0, // in minutes
+    },
+    blockRemovalSuccessRate: {
+      type: Number,
+      default: 0, // percentage (0-100)
     },
   },
   {

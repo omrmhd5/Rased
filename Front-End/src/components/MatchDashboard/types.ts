@@ -75,7 +75,14 @@ export interface Match {
   liveCount?: number;
   highlightsCount?: number;
   othersCount?: number;
+  totalViews?: number;
   totalViolations?: number;
+  activeCount?: number;
+  blockedCount?: number;
+  removedCount?: number;
+  underReviewCount?: number;
+  avgBlockTime?: number;
+  blockRemovalSuccessRate?: number;
 }
 
 export interface BackendViolation {
