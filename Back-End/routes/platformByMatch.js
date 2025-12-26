@@ -33,7 +33,7 @@ async function updateMatchAggregatedStats(externalMatchId) {
         removedCount: 0,
         underReviewCount: 0,
         avgBlockTime: 0,
-        blockRemovalSuccessRate: 0,
+        blockSuccessRate: 0,
       });
       return;
     }
@@ -76,26 +76,25 @@ async function updateMatchAggregatedStats(externalMatchId) {
     };
 
     // Calculate weighted average for avgBlockTime
-    const totalBlockedOrRemoved = aggregated.blockedCount + aggregated.removedCount;
+    // Only use blockedCount (Removed doesn't have blockedAt, so it shouldn't be included)
+    const totalBlocked = aggregated.blockedCount;
     let avgBlockTime = 0;
-    if (totalBlockedOrRemoved > 0) {
+    if (totalBlocked > 0) {
       const totalBlockTime = platformStats.reduce((sum, s) => {
-        const platformBlockedOrRemoved = (s.blockedCount || 0) + (s.removedCount || 0);
-        if (platformBlockedOrRemoved > 0) {
-          return sum + (s.avgBlockTime || 0) * platformBlockedOrRemoved;
+        const platformBlocked = s.blockedCount || 0;
+        if (platformBlocked > 0) {
+          return sum + (s.avgBlockTime || 0) * platformBlocked;
         }
         return sum;
       }, 0);
-      avgBlockTime = Math.round(totalBlockTime / totalBlockedOrRemoved);
+      avgBlockTime = Math.round(totalBlockTime / totalBlocked);
     }
 
-    // Calculate overall block/removal success rate
-    const blockRemovalSuccessRate =
+    // Calculate overall block success rate (only blocked, NOT removed)
+    const blockSuccessRate =
       aggregated.totalViolations > 0
         ? Math.round(
-            ((aggregated.blockedCount + aggregated.removedCount) /
-              aggregated.totalViolations) *
-              100
+            (aggregated.blockedCount / aggregated.totalViolations) * 100
           )
         : 0;
 
@@ -103,7 +102,7 @@ async function updateMatchAggregatedStats(externalMatchId) {
     await Match.findByIdAndUpdate(match._id, {
       ...aggregated,
       avgBlockTime,
-      blockRemovalSuccessRate,
+      blockSuccessRate,
     });
   } catch (error) {
     console.error("Error updating match aggregated stats:", error);
@@ -180,7 +179,7 @@ router.post("/", async (req, res) => {
       removedCount,
       underReviewCount,
       avgBlockTime,
-      blockRemovalSuccessRate,
+      blockSuccessRate,
     } = req.body;
 
     if (!platformId || !externalMatchId) {
@@ -220,7 +219,7 @@ router.post("/", async (req, res) => {
         removedCount: removedCount ?? 0,
         underReviewCount: underReviewCount ?? 0,
         avgBlockTime: avgBlockTime ?? 0,
-        blockRemovalSuccessRate: blockRemovalSuccessRate ?? 0,
+        blockSuccessRate: blockSuccessRate ?? 0,
       },
       {
         new: true,
@@ -254,7 +253,7 @@ router.put("/:id", async (req, res) => {
       removedCount,
       underReviewCount,
       avgBlockTime,
-      blockRemovalSuccessRate,
+      blockSuccessRate,
     } = req.body;
 
     const stats = await PlatformByMatch.findById(req.params.id);
@@ -274,8 +273,8 @@ router.put("/:id", async (req, res) => {
     if (removedCount !== undefined) stats.removedCount = removedCount;
     if (underReviewCount !== undefined) stats.underReviewCount = underReviewCount;
     if (avgBlockTime !== undefined) stats.avgBlockTime = avgBlockTime;
-    if (blockRemovalSuccessRate !== undefined)
-      stats.blockRemovalSuccessRate = blockRemovalSuccessRate;
+    if (blockSuccessRate !== undefined)
+      stats.blockSuccessRate = blockSuccessRate;
 
     const updatedStats = await stats.save();
 

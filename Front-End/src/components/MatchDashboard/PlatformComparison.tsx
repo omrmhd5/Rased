@@ -46,8 +46,9 @@ export function PlatformComparison({
           );
 
     const totalViolations = filteredViolations.length;
+    // Only count "Blocked" status, NOT "Removed" (they are different statuses)
     const blockedViolations = filteredViolations.filter(
-      (v) => v.status === "Blocked" || v.status === "Removed"
+      (v) => v.status === "Blocked"
     );
     const blockedCount = blockedViolations.length;
     const blockedPercent =

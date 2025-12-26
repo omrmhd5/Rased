@@ -188,11 +188,11 @@ router.post("/", async (req, res) => {
     if (blockedAt !== undefined && blockedAt !== null && blockedAt !== "") {
       // If blockedAt is explicitly provided, use it
       blockedAtValue = new Date(blockedAt);
-    } else if (statusLower === "blocked" || statusLower === "removed") {
-      // If status is blocked/removed and no blockedAt provided, set to now
+    } else if (statusLower === "blocked") {
+      // If status is blocked and no blockedAt provided, set to now
       blockedAtValue = new Date();
-    } else if (statusLower === "active") {
-      // If status is active, don't set blockedAt
+    } else if (statusLower === "active" || statusLower === "under review" || statusLower === "removed") {
+      // If status is active, under review, or removed, don't set blockedAt
       blockedAtValue = undefined;
     }
 
@@ -277,21 +277,29 @@ router.put("/:id", async (req, res) => {
     if (views !== undefined) violation.views = views;
     if (timeAdded !== undefined) violation.timeAdded = new Date(timeAdded);
     
-    // Handle blockedAt - set it if provided, or clear it if status is Active
+    // Handle blockedAt - set it if provided, or handle it based on status
     if (blockedAt !== undefined) {
       if (blockedAt) {
         violation.blockedAt = new Date(blockedAt);
       } else {
-        violation.blockedAt = undefined;
+        // Explicitly delete the field to ensure it's removed from the document
+        delete violation.blockedAt;
       }
     } else if (status !== undefined) {
       // If status is being updated but blockedAt is not provided, handle it based on status
       const statusLower = status.toLowerCase();
-      if (statusLower === "active") {
-        violation.blockedAt = undefined;
-      } else if ((statusLower === "blocked" || statusLower === "removed") && !violation.blockedAt) {
-        // If setting to blocked/removed and no blockedAt exists, set to now
-        violation.blockedAt = new Date();
+      const oldStatusLower = violation.status.toLowerCase();
+      
+      if (statusLower === "active" || statusLower === "under review" || statusLower === "removed") {
+        // If changing TO active, under review, or removed, clear blockedAt
+        // Explicitly delete the field to ensure it's removed from the document
+        delete violation.blockedAt;
+      } else if (statusLower === "blocked") {
+        // If changing TO blocked from any other status, set blockedAt to now
+        // Only set if it doesn't already exist (preserve existing blockedAt if already set)
+        if (!violation.blockedAt || oldStatusLower === "active" || oldStatusLower === "under review" || oldStatusLower === "removed") {
+          violation.blockedAt = new Date();
+        }
       }
     }
     
@@ -351,12 +359,18 @@ router.patch("/:id/status", async (req, res) => {
 
     violation.status = normalizedStatus;
 
-    // Set blockedAt when status is Blocked or Removed
+    // Handle blockedAt based on status:
+    // - Set blockedAt ONLY when status changes TO Blocked (from any other status)
+    // - Clear blockedAt when status changes TO Active, Removed, or Under Review
+    // - Removed is a different status and should NOT have blockedAt
     const statusLower = normalizedStatus.toLowerCase();
-    if (statusLower === "blocked" || statusLower === "removed") {
+    if (statusLower === "blocked") {
+      // If changing TO blocked, set blockedAt (use provided time or current time)
       violation.blockedAt = blockedAt ? new Date(blockedAt) : new Date();
-    } else if (statusLower === "active") {
-      violation.blockedAt = undefined;
+    } else if (statusLower === "active" || statusLower === "under review" || statusLower === "removed") {
+      // If changing TO active, under review, or removed, clear blockedAt
+      // Explicitly delete the field to ensure it's removed from the document
+      delete violation.blockedAt;
     }
 
     const updatedViolation = await violation.save();

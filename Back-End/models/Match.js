@@ -130,7 +130,7 @@ const matchSchema = new mongoose.Schema(
       type: Number,
       default: 0, // in minutes
     },
-    blockRemovalSuccessRate: {
+    blockSuccessRate: {
       type: Number,
       default: 0, // percentage (0-100)
     },

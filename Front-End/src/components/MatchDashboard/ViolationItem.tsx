@@ -160,8 +160,8 @@ export function ViolationItem({
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              {violation.status === "Blocked"
-                ? "Mark as active"
+              {violation.status === "Blocked" || violation.status === "Removed"
+                ? "Set to Active"
                 : "Mark as blocked"}
             </TooltipContent>
           </Tooltip>

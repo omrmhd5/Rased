@@ -1,6 +1,14 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Shield, Activity, TrendingUp, Eye, Clock, Award } from "lucide-react";
+import {
+  AlertTriangle,
+  Shield,
+  Activity,
+  TrendingUp,
+  Eye,
+  Clock,
+  Award,
+} from "lucide-react";
 import { Match, PlatformData } from "./types";
 
 interface MatchOverviewProps {
@@ -19,7 +27,7 @@ interface MatchOverviewProps {
   removedCount?: number;
   underReviewCount?: number;
   avgBlockTimeNumber?: number;
-  blockRemovalSuccessRate?: number;
+  blockSuccessRate?: number;
 }
 
 export function MatchOverview({
@@ -37,7 +45,7 @@ export function MatchOverview({
   removedCount,
   underReviewCount,
   avgBlockTimeNumber,
-  blockRemovalSuccessRate,
+  blockSuccessRate,
 }: MatchOverviewProps) {
   const formatMatchDateTime = () => {
     const dateStr = match.date;
@@ -67,35 +75,21 @@ export function MatchOverview({
   const getStatusBadge = () => {
     const status = match.status;
     if (status === "live") {
-      return (
-        <Badge className="bg-red-500 text-white text-xs">
-          ● LIVE
-        </Badge>
-      );
+      return <Badge className="bg-red-500 text-white text-xs">● LIVE</Badge>;
     } else if (status === "finished") {
       return (
-        <Badge className="bg-green-500 text-white text-xs">
-          COMPLETED
-        </Badge>
+        <Badge className="bg-green-500 text-white text-xs">COMPLETED</Badge>
       );
     } else if (status === "postponed") {
       return (
-        <Badge className="bg-yellow-500 text-white text-xs">
-          POSTPONED
-        </Badge>
+        <Badge className="bg-yellow-500 text-white text-xs">POSTPONED</Badge>
       );
     } else if (status === "cancelled") {
       return (
-        <Badge className="bg-gray-500 text-white text-xs">
-          CANCELLED
-        </Badge>
+        <Badge className="bg-gray-500 text-white text-xs">CANCELLED</Badge>
       );
     } else {
-      return (
-        <Badge className="bg-blue-500 text-white text-xs">
-          UPCOMING
-        </Badge>
-      );
+      return <Badge className="bg-blue-500 text-white text-xs">UPCOMING</Badge>;
     }
   };
 
@@ -112,9 +106,7 @@ export function MatchOverview({
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xs font-medium mb-1.5">
-            {formatMatchDateTime()}
-          </p>
+          <p className="text-xs font-medium mb-1.5">{formatMatchDateTime()}</p>
           {getStatusBadge()}
         </div>
       </div>
@@ -127,7 +119,8 @@ export function MatchOverview({
           </div>
           <div>
             <p className="text-xl font-bold leading-none mb-1 transition-transform duration-300 hover:scale-105">
-              {match.totalViolations !== undefined && match.totalViolations !== null
+              {match.totalViolations !== undefined &&
+              match.totalViolations !== null
                 ? match.totalViolations
                 : totalViolations}
             </p>
@@ -164,15 +157,18 @@ export function MatchOverview({
           <div>
             <p className="text-xl font-bold leading-none mb-1 transition-transform duration-300 hover:scale-105">
               {(() => {
-                const blocked = blockedCount !== undefined && blockedCount !== null ? blockedCount : 0;
-                const removed = removedCount !== undefined && removedCount !== null ? removedCount : 0;
-                return blocked + removed;
+                const blocked =
+                  blockedCount !== undefined && blockedCount !== null
+                    ? blockedCount
+                    : 0;
+                return blocked;
               })()}
             </p>
             <p className="text-xs text-muted-foreground">
-              {blockRemovalSuccessRate !== undefined && blockRemovalSuccessRate !== null
-                ? `${blockRemovalSuccessRate}%`
-                : `${blockedRate}%`} success rate
+              {blockSuccessRate !== undefined && blockSuccessRate !== null
+                ? `${blockSuccessRate}%`
+                : `${blockedRate}%`}{" "}
+              success rate
             </p>
             <p className="text-[10px] text-muted-foreground/70 mt-0.5">
               Blocked Successfully
@@ -215,7 +211,6 @@ export function MatchOverview({
             </p>
           </div>
         </div>
-
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -229,13 +224,11 @@ export function MatchOverview({
             </div>
           </div>
           <p className="text-3xl font-bold text-foreground mb-1 transition-transform duration-300 hover:scale-105">
-            {(totalViews !== undefined && totalViews !== null)
+            {totalViews !== undefined && totalViews !== null
               ? totalViews.toLocaleString("en-US")
               : formattedTotalViews}
           </p>
-          <p className="text-xs text-muted-foreground">
-            Across all platforms
-          </p>
+          <p className="text-xs text-muted-foreground">Across all platforms</p>
         </div>
 
         <div className="p-4 rounded-lg bg-gradient-to-br from-success/5 to-success/10 border border-success/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-success/20 cursor-pointer">
@@ -246,13 +239,14 @@ export function MatchOverview({
                 Avg Block Time (This Match)
               </p>
             </div>
-            <Badge className={`text-xs transition-all duration-300 ${
-              (avgBlockTimeNumber !== undefined && avgBlockTimeNumber !== null
-                ? avgBlockTimeNumber
-                : parseFloat(avgBlockTime)) <= 15
-                ? "bg-success/20 text-success border-success/30"
-                : "bg-destructive/20 text-destructive border-destructive/30"
-            }`}>
+            <Badge
+              className={`text-xs transition-all duration-300 ${
+                (avgBlockTimeNumber !== undefined && avgBlockTimeNumber !== null
+                  ? avgBlockTimeNumber
+                  : parseFloat(avgBlockTime)) <= 15
+                  ? "bg-success/20 text-success border-success/30"
+                  : "bg-destructive/20 text-destructive border-destructive/30"
+              }`}>
               {(avgBlockTimeNumber !== undefined && avgBlockTimeNumber !== null
                 ? avgBlockTimeNumber
                 : parseFloat(avgBlockTime)) <= 15
@@ -274,7 +268,9 @@ export function MatchOverview({
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Award className="h-4 w-4 text-chart-2 transition-transform duration-300 hover:scale-110" />
-              <p className="text-xs font-medium text-muted-foreground">Top Platform</p>
+              <p className="text-xs font-medium text-muted-foreground">
+                Top Platform
+              </p>
             </div>
           </div>
           <p className="text-3xl font-bold text-foreground mb-1 transition-transform duration-300 hover:scale-105">
@@ -289,6 +285,3 @@ export function MatchOverview({
     </Card>
   );
 }
-
-
-

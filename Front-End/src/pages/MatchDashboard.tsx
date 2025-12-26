@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "@/hooks/use-toast";
 import {
   MatchOverview,
+  MatchActivityLogChart,
   ContentSplitChart,
   ActivityLog,
   PlatformCard,
@@ -55,99 +56,33 @@ export default function MatchDashboard() {
     getInitialPlatformOperations()
   );
 
-  // Helper function to update content split chart data
-  const updateContentSplitChart = useCallback((
-    matchData: Match | null,
-    allViolations: Violation[]
-  ) => {
-    // Calculate views for Live, Highlights, and Others from violations
-    const liveViews = allViolations
-      .filter((v) => (v.contentType || v.type) === "Live")
-      .reduce((sum, v) => {
-        if (!v.views || v.views === "0") return sum;
-        const viewsStr = v.views.replace(/[^0-9.]/g, "");
-        const viewsNum = parseFloat(viewsStr) || 0;
-        const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
-        return sum + viewsNum * multiplier;
-      }, 0);
+  // Refetch trigger - increment this to trigger a full data refetch
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
 
-    const highlightsViews = allViolations
-      .filter((v) => (v.contentType || v.type) === "Highlights")
-      .reduce((sum, v) => {
-        if (!v.views || v.views === "0") return sum;
-        const viewsStr = v.views.replace(/[^0-9.]/g, "");
-        const viewsNum = parseFloat(viewsStr) || 0;
-        const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
-        return sum + viewsNum * multiplier;
-      }, 0);
+  // Comprehensive function to refetch ALL data (match + violations + platform stats)
+  // silent: if true, refetch without showing loading animation
+  const refetchAllData = useCallback(
+    async (silent: boolean = true) => {
+      if (!id) return;
 
-    const othersViews = allViolations
-      .filter((v) => (v.contentType || v.type) === "Other")
-      .reduce((sum, v) => {
-        if (!v.views || v.views === "0") return sum;
-        const viewsStr = v.views.replace(/[^0-9.]/g, "");
-        const viewsNum = parseFloat(viewsStr) || 0;
-        const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
-        return sum + viewsNum * multiplier;
-      }, 0);
+      // Save current scroll position
+      const scrollPosition =
+        window.scrollY || document.documentElement.scrollTop;
 
-    // Calculate total views
-    const totalViews = liveViews + highlightsViews + othersViews;
+      try {
+        // Only show loading animation on initial load, not on silent refetches
+        if (!silent) {
+          setLoading(true);
+        }
 
-    // Use match aggregated counts for violations (from match attributes)
-    const totalViolations = matchData?.totalViolations || 0;
-    const liveCount = matchData?.liveCount || 0;
-    const highlightsCount = matchData?.highlightsCount || 0;
-    const othersCount = matchData?.othersCount || 0;
-
-    setContentSplitData([
-      {
-        name: "Total Violations",
-        value: totalViews,
-        violations: totalViolations,
-        color: "hsl(var(--chart-4))",
-      },
-      {
-        name: "Live",
-        value: liveViews,
-        violations: liveCount,
-        color: "hsl(var(--chart-1))",
-      },
-      {
-        name: "Highlights",
-        value: highlightsViews,
-        violations: highlightsCount,
-        color: "hsl(var(--chart-2))",
-      },
-      {
-        name: "Others",
-        value: othersViews,
-        violations: othersCount,
-        color: "hsl(var(--chart-3))",
-      },
-    ]);
-  }, []);
-
-  // Helper function to update chart immediately from current state
-  const updateChartFromCurrentState = () => {
-    // Get all violations from current platformOperations state
-    const allViolations = platformOperations.flatMap((p) => p.violations);
-    // Update chart immediately with current match data and violations
-    updateContentSplitChart(match, allViolations);
-  };
-
-  // Helper function to refetch match data and update chart
-  const refetchMatchAndUpdateChart = async () => {
-    if (!id || !match?.externalMatchId) return;
-
-    try {
-      // First, update chart immediately from current state
-      updateChartFromCurrentState();
-
-      // Then refetch match to get updated counts in the background
-      const matchResponse = await fetch(`${API_URL}/matches/${id}`);
-      if (matchResponse.ok) {
+        // Fetch match data
+        const matchResponse = await fetch(`${API_URL}/matches/${id}`);
+        if (!matchResponse.ok) {
+          throw new Error("Failed to fetch match");
+        }
         const matchData = await matchResponse.json();
+
+        // Format date if needed
         const formattedMatch: Match = {
           ...matchData,
           date: matchData.date
@@ -156,18 +91,203 @@ export default function MatchDashboard() {
               : new Date(matchData.date).toISOString().split("T")[0]
             : "",
         };
+
         setMatch(formattedMatch);
 
-        // Update chart again with fresh match data
-        const allViolations = platformOperations.flatMap((p) => p.violations);
-        updateContentSplitChart(formattedMatch, allViolations);
+        // Fetch violations for this match using externalMatchId
+        const violationsResponse = await fetch(
+          `${API_URL}/violations?matchId=${matchData.externalMatchId}`
+        );
+        if (violationsResponse.ok) {
+          const violations = await violationsResponse.json();
+
+          // Group violations by platform
+          const violationsByPlatform: { [key: string]: BackendViolation[] } =
+            {};
+          violations.forEach((violation: BackendViolation) => {
+            const platformId = violation.platformId;
+            if (!violationsByPlatform[platformId]) {
+              violationsByPlatform[platformId] = [];
+            }
+            violationsByPlatform[platformId].push(violation);
+          });
+
+          // Fetch PlatformByMatch data for all platforms (backend aggregated stats)
+          const platformStatsResponse = await fetch(
+            `${API_URL}/platform-by-match?matchId=${matchData.externalMatchId}`
+          );
+          const platformStatsMap: {
+            [key: string]: {
+              totalViolations?: number;
+              activeCount?: number;
+              blockedCount?: number;
+              removedCount?: number;
+              underReviewCount?: number;
+              totalViews?: number;
+              avgBlockTime?: number;
+              blockSuccessRate?: number;
+            };
+          } = {};
+          if (platformStatsResponse.ok) {
+            const platformStats = await platformStatsResponse.json();
+            platformStats.forEach(
+              (stat: {
+                platformId: string;
+                totalViolations?: number;
+                activeCount?: number;
+                blockedCount?: number;
+                removedCount?: number;
+                underReviewCount?: number;
+                totalViews?: number;
+                avgBlockTime?: number;
+                blockSuccessRate?: number;
+              }) => {
+                platformStatsMap[stat.platformId] = stat;
+              }
+            );
+          }
+
+          // Update platform operations with violations and backend stats
+          setPlatformOperations((prev) =>
+            prev.map((platform) => {
+              const platformViolations =
+                violationsByPlatform[platform.id] || [];
+
+              // Convert backend violations to frontend format
+              const convertedViolations = platformViolations.map((v) =>
+                convertBackendViolationToFrontend(v)
+              );
+
+              // Get backend aggregated stats from PlatformByMatch
+              const backendStats = platformStatsMap[platform.id] || {};
+
+              // Use backend stats (from PlatformByMatch) instead of calculating
+              const totalViolations =
+                backendStats.totalViolations ?? convertedViolations.length;
+              const activeViolations =
+                backendStats.activeCount ??
+                convertedViolations.filter(
+                  (v) => v.status === "Active" || v.status === "Under Review"
+                ).length;
+              const blockedCount = backendStats.blockedCount ?? 0;
+              const blockedRate =
+                totalViolations > 0
+                  ? Math.round((blockedCount / totalViolations) * 100)
+                  : 0;
+              // Format totalViews from backend (it's a number, convert to string format)
+              const totalViewsNumber = backendStats.totalViews ?? 0;
+              const totalViews = formatViews(totalViewsNumber);
+              // Format avgBlockTime from backend (it's in minutes)
+              const avgBlockTimeMinutes = backendStats.avgBlockTime ?? 0;
+              const avgBlockTime =
+                avgBlockTimeMinutes > 0
+                  ? avgBlockTimeMinutes < 60
+                    ? `${avgBlockTimeMinutes} min`
+                    : avgBlockTimeMinutes < 1440
+                    ? `${Math.round(avgBlockTimeMinutes / 60)}h`
+                    : `${Math.round(avgBlockTimeMinutes / 1440)}d`
+                  : "0 min";
+              // Use blockSuccessRate directly from backend (0-100)
+              const blockSuccessRate = backendStats.blockSuccessRate ?? 0;
+              const blockedSuccess = `${blockSuccessRate}%`;
+              // Still active count from backend
+              const stillActive = backendStats.activeCount ?? 0;
+              // Get removed and under review counts from backend
+              const removedCount = backendStats.removedCount ?? 0;
+              const underReviewCount = backendStats.underReviewCount ?? 0;
+
+              return {
+                ...platform,
+                violations: convertedViolations,
+                totalViolations,
+                activeViolations,
+                blockedCount,
+                removedCount,
+                underReviewCount,
+                blockedRate,
+                totalViews,
+                avgBlockTime,
+                blockedSuccess,
+                blockSuccessRate,
+                stillActive,
+              };
+            })
+          );
+
+          // Save/update stats to PlatformByMatch for all platforms (calculate and save)
+          if (matchData.externalMatchId) {
+            // Get initial platform operations to save stats for all platforms
+            const initialPlatforms = getInitialPlatformOperations();
+            initialPlatforms.forEach((platform) => {
+              const platformViolations =
+                violationsByPlatform[platform.id] || [];
+              const convertedViolations = platformViolations.map((v) =>
+                convertBackendViolationToFrontend(v)
+              );
+              // Calculate and save stats for each platform (this updates the DB)
+              calculateAndSavePlatformStats(
+                platform.id,
+                matchData.externalMatchId,
+                convertedViolations
+              );
+            });
+          }
+
+          // Chart will update automatically via useEffect when match/platformOperations change
+        }
+
+        // Restore scroll position after state updates are complete
+        // Use requestAnimationFrame to ensure DOM has updated
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            window.scrollTo({
+              top: scrollPosition,
+              behavior: "instant" as ScrollBehavior,
+            });
+          }, 50);
+        });
+      } catch (error) {
+        console.error("Error refetching all data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to refetch data",
+          variant: "destructive",
+        });
+        // Restore scroll position even on error
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            window.scrollTo({
+              top: scrollPosition,
+              behavior: "instant" as ScrollBehavior,
+            });
+          }, 50);
+        });
+      } finally {
+        // Only hide loading animation if it was shown
+        if (!silent) {
+          setLoading(false);
+        }
       }
-    } catch (error) {
-      console.error("Error refetching match:", error);
-      // Even if refetch fails, update chart from current state
-      updateChartFromCurrentState();
+    },
+    [id]
+  );
+
+  // General listener: refetch all data when refetchTrigger changes
+  useEffect(() => {
+    if (refetchTrigger > 0 && id) {
+      // Add a small delay to ensure backend operations are complete
+      const timeoutId = setTimeout(() => {
+        refetchAllData(true); // Silent refetch (no loading animation)
+      }, 500); // 500ms delay to ensure all writes are done
+
+      return () => clearTimeout(timeoutId);
     }
-  };
+  }, [refetchTrigger, id, refetchAllData]);
+
+  // Helper function to trigger refetch (call this after any violation change)
+  const triggerRefetch = useCallback(() => {
+    setRefetchTrigger((prev) => prev + 1);
+  }, []);
 
   // Fetch match data
   useEffect(() => {
@@ -212,7 +332,42 @@ export default function MatchDashboard() {
             violationsByPlatform[platformId].push(violation);
           });
 
-          // Update platform operations with real violations
+          // Fetch PlatformByMatch data for all platforms (backend aggregated stats)
+          const platformStatsResponse = await fetch(
+            `${API_URL}/platform-by-match?matchId=${matchData.externalMatchId}`
+          );
+          const platformStatsMap: {
+            [key: string]: {
+              totalViolations?: number;
+              activeCount?: number;
+              blockedCount?: number;
+              removedCount?: number;
+              underReviewCount?: number;
+              totalViews?: number;
+              avgBlockTime?: number;
+              blockSuccessRate?: number;
+            };
+          } = {};
+          if (platformStatsResponse.ok) {
+            const platformStats = await platformStatsResponse.json();
+            platformStats.forEach(
+              (stat: {
+                platformId: string;
+                totalViolations?: number;
+                activeCount?: number;
+                blockedCount?: number;
+                removedCount?: number;
+                underReviewCount?: number;
+                totalViews?: number;
+                avgBlockTime?: number;
+                blockSuccessRate?: number;
+              }) => {
+                platformStatsMap[stat.platformId] = stat;
+              }
+            );
+          }
+
+          // Update platform operations with violations and backend stats
           setPlatformOperations((prev) =>
             prev.map((platform) => {
               const platformViolations =
@@ -223,21 +378,43 @@ export default function MatchDashboard() {
                 convertBackendViolationToFrontend(v)
               );
 
-              // Calculate metrics
-              const totalViolations = convertedViolations.length;
-              const activeViolations = convertedViolations.filter(
-                (v) => v.status === "Active" || v.status === "Under Review"
-              ).length;
-              const blockedCount = calculateBlockedCount(convertedViolations);
+              // Get backend aggregated stats from PlatformByMatch
+              const backendStats = platformStatsMap[platform.id] || {};
+
+              // Use backend stats (from PlatformByMatch) instead of calculating
+              const totalViolations =
+                backendStats.totalViolations ?? convertedViolations.length;
+              const activeViolations =
+                backendStats.activeCount ??
+                convertedViolations.filter(
+                  (v) => v.status === "Active" || v.status === "Under Review"
+                ).length;
+              const blockedCount = backendStats.blockedCount ?? 0;
               const blockedRate =
                 totalViolations > 0
                   ? Math.round((blockedCount / totalViolations) * 100)
                   : 0;
-              const totalViews = calculateTotalViews(convertedViolations);
-              const avgBlockTime = calculateAvgBlockTime(convertedViolations);
-              const blockedSuccess =
-                calculateBlockedSuccess(convertedViolations);
-              const stillActive = calculateStillActive(convertedViolations);
+              // Format totalViews from backend (it's a number, convert to string format)
+              const totalViewsNumber = backendStats.totalViews ?? 0;
+              const totalViews = formatViews(totalViewsNumber);
+              // Format avgBlockTime from backend (it's in minutes)
+              const avgBlockTimeMinutes = backendStats.avgBlockTime ?? 0;
+              const avgBlockTime =
+                avgBlockTimeMinutes > 0
+                  ? avgBlockTimeMinutes < 60
+                    ? `${avgBlockTimeMinutes} min`
+                    : avgBlockTimeMinutes < 1440
+                    ? `${Math.round(avgBlockTimeMinutes / 60)}h`
+                    : `${Math.round(avgBlockTimeMinutes / 1440)}d`
+                  : "0 min";
+              // Use blockSuccessRate directly from backend (0-100)
+              const blockSuccessRate = backendStats.blockSuccessRate ?? 0;
+              const blockedSuccess = `${blockSuccessRate}%`;
+              // Still active count from backend
+              const stillActive = backendStats.activeCount ?? 0;
+              // Get removed and under review counts from backend
+              const removedCount = backendStats.removedCount ?? 0;
+              const underReviewCount = backendStats.underReviewCount ?? 0;
 
               return {
                 ...platform,
@@ -245,10 +422,13 @@ export default function MatchDashboard() {
                 totalViolations,
                 activeViolations,
                 blockedCount,
+                removedCount,
+                underReviewCount,
                 blockedRate,
                 totalViews,
                 avgBlockTime,
                 blockedSuccess,
+                blockSuccessRate,
                 stillActive,
               };
             })
@@ -275,12 +455,7 @@ export default function MatchDashboard() {
             });
           }
 
-          // Update content split chart data using match aggregated data
-          const allConvertedViolations = violations.map((v: BackendViolation) =>
-            convertBackendViolationToFrontend(v)
-          );
-
-          updateContentSplitChart(formattedMatch, allConvertedViolations);
+          // Chart will update automatically via useEffect when match/platformOperations change
         }
       } catch (error) {
         console.error("Error fetching match:", error);
@@ -297,13 +472,78 @@ export default function MatchDashboard() {
     fetchMatch();
   }, [id]);
 
-  // Auto-update chart whenever platformOperations or match changes
+  // Update chart when match data changes (using backend aggregated data)
   useEffect(() => {
-    if (match && platformOperations.length > 0) {
+    if (match) {
+      // Use backend aggregated counts for violations
+      const totalViolations = match.totalViolations || 0;
+      const liveCount = match.liveCount || 0;
+      const highlightsCount = match.highlightsCount || 0;
+      const othersCount = match.othersCount || 0;
+
+      // Calculate views from violations (backend doesn't store views per content type)
+      // This is the only frontend calculation needed for the chart
       const allViolations = platformOperations.flatMap((p) => p.violations);
-      updateContentSplitChart(match, allViolations);
+      const liveViews = allViolations
+        .filter((v) => (v.contentType || v.type) === "Live")
+        .reduce((sum, v) => {
+          if (!v.views || v.views === "0") return sum;
+          const viewsStr = v.views.replace(/[^0-9.]/g, "");
+          const viewsNum = parseFloat(viewsStr) || 0;
+          const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
+          return sum + viewsNum * multiplier;
+        }, 0);
+
+      const highlightsViews = allViolations
+        .filter((v) => (v.contentType || v.type) === "Highlights")
+        .reduce((sum, v) => {
+          if (!v.views || v.views === "0") return sum;
+          const viewsStr = v.views.replace(/[^0-9.]/g, "");
+          const viewsNum = parseFloat(viewsStr) || 0;
+          const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
+          return sum + viewsNum * multiplier;
+        }, 0);
+
+      const othersViews = allViolations
+        .filter((v) => (v.contentType || v.type) === "Other")
+        .reduce((sum, v) => {
+          if (!v.views || v.views === "0") return sum;
+          const viewsStr = v.views.replace(/[^0-9.]/g, "");
+          const viewsNum = parseFloat(viewsStr) || 0;
+          const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
+          return sum + viewsNum * multiplier;
+        }, 0);
+
+      const totalViews = liveViews + highlightsViews + othersViews;
+
+      setContentSplitData([
+        {
+          name: "Total Violations",
+          value: totalViews,
+          violations: totalViolations, // From backend
+          color: "hsl(var(--chart-4))",
+        },
+        {
+          name: "Live",
+          value: liveViews,
+          violations: liveCount, // From backend
+          color: "hsl(var(--chart-1))",
+        },
+        {
+          name: "Highlights",
+          value: highlightsViews,
+          violations: highlightsCount, // From backend
+          color: "hsl(var(--chart-2))",
+        },
+        {
+          name: "Others",
+          value: othersViews,
+          violations: othersCount, // From backend
+          color: "hsl(var(--chart-3))",
+        },
+      ]);
     }
-  }, [platformOperations, match, updateContentSplitChart]);
+  }, [match, platformOperations]);
 
   // Platform slot system (max 2 platforms visible)
   const [selectedSlots, setSelectedSlots] = useState<string[]>([
@@ -581,16 +821,11 @@ export default function MatchDashboard() {
     if (!violation) return;
 
     const isCurrentlyBlocked = violation.status === "Blocked";
+    const isCurrentlyRemoved = violation.status === "Removed";
 
-    if (!isCurrentlyBlocked) {
-      // Show confirmation dialog for Active -> Blocked
-      setBlockConfirmViolation({ platformId, violationId, violation });
-      setBlockTimeChoice("current");
-      setCustomBlockTime(getKSATime());
-      setIsBlockConfirmOpen(true);
-    } else {
-      // Directly unblock (Blocked -> Active)
-      const unblockViolation = async () => {
+    if (isCurrentlyBlocked || isCurrentlyRemoved) {
+      // Directly set to Active (Blocked -> Active or Removed -> Active)
+      const setToActive = async () => {
         try {
           const violationDbId =
             (violation as Violation & { _id?: string })._id ||
@@ -620,7 +855,9 @@ export default function MatchDashboard() {
             convertBackendViolationToFrontend(updatedViolationData);
 
           // Find current platform and calculate updated violations
-          const currentPlatform = platformOperations.find((p) => p.id === platformId);
+          const currentPlatform = platformOperations.find(
+            (p) => p.id === platformId
+          );
           if (!currentPlatform) {
             throw new Error("Platform not found");
           }
@@ -636,32 +873,14 @@ export default function MatchDashboard() {
             };
           });
 
-          // Update local state
+          // Update local state - only update violations list, metrics will come from backend refetch
           setPlatformOperations((prev) =>
             prev.map((p) => {
               if (p.id !== platformId) return p;
-
-              const totalViolations = updatedViolations.length;
-              const activeViolations = updatedViolations.filter(
-                (v) => v.status === "Active" || v.status === "Under Review"
-              ).length;
-              const blockedCount = calculateBlockedCount(updatedViolations);
-              const blockedRate =
-                totalViolations > 0
-                  ? Math.round((blockedCount / totalViolations) * 100)
-                  : 0;
-
+              // Just update violations, keep existing metrics (will be updated by refetch)
               return {
                 ...p,
                 violations: updatedViolations,
-                totalViolations,
-                activeViolations,
-                blockedCount,
-                blockedRate,
-                totalViews: calculateTotalViews(updatedViolations),
-                avgBlockTime: calculateAvgBlockTime(updatedViolations),
-                blockedSuccess: calculateBlockedSuccess(updatedViolations),
-                stillActive: calculateStillActive(updatedViolations),
               };
             })
           );
@@ -675,26 +894,30 @@ export default function MatchDashboard() {
             );
           }
 
-          // Update chart immediately after state update
-          setTimeout(() => {
-            refetchMatchAndUpdateChart();
-          }, 100);
+          // Trigger refetch of all data
+          triggerRefetch();
 
           toast({
             title: "Status changed to Active",
             description: "Violation is now active again",
           });
         } catch (error) {
-          console.error("Error unblocking violation:", error);
+          console.error("Error setting violation to active:", error);
           toast({
             title: "Error",
-            description: "Failed to unblock violation",
+            description: "Failed to change violation status",
             variant: "destructive",
           });
         }
       };
 
-      unblockViolation();
+      setToActive();
+    } else {
+      // Show confirmation dialog for Active/Under Review -> Blocked
+      setBlockConfirmViolation({ platformId, violationId, violation });
+      setBlockTimeChoice("current");
+      setCustomBlockTime(getKSATime());
+      setIsBlockConfirmOpen(true);
     }
   };
 
@@ -760,32 +983,14 @@ export default function MatchDashboard() {
         };
       });
 
-      // Update local state
+      // Update local state - only update violations list, metrics will come from backend refetch
       setPlatformOperations((prev) =>
         prev.map((platform) => {
           if (platform.id !== platformId) return platform;
-
-          const totalViolations = updatedViolations.length;
-          const activeViolations = updatedViolations.filter(
-            (v) => v.status === "Active" || v.status === "Under Review"
-          ).length;
-          const blockedCount = calculateBlockedCount(updatedViolations);
-          const blockedRate =
-            totalViolations > 0
-              ? Math.round((blockedCount / totalViolations) * 100)
-              : 0;
-
+          // Just update violations, keep existing metrics (will be updated by refetch)
           return {
             ...platform,
             violations: updatedViolations,
-            totalViolations,
-            activeViolations,
-            blockedCount,
-            blockedRate,
-            totalViews: calculateTotalViews(updatedViolations),
-            avgBlockTime: calculateAvgBlockTime(updatedViolations),
-            blockedSuccess: calculateBlockedSuccess(updatedViolations),
-            stillActive: calculateStillActive(updatedViolations),
           };
         })
       );
@@ -799,10 +1004,8 @@ export default function MatchDashboard() {
         );
       }
 
-      // Update chart immediately after state update
-      setTimeout(() => {
-        refetchMatchAndUpdateChart();
-      }, 100);
+      // Trigger refetch of all data
+      triggerRefetch();
 
       toast({
         title: "Violation blocked",
@@ -871,15 +1074,22 @@ export default function MatchDashboard() {
       const status: "Active" | "Blocked" | "Removed" | "Under Review" =
         formStatus;
 
-      // Handle blockedAt: send it if status is Blocked/Removed, otherwise don't send it
+      // Handle blockedAt:
+      // - Set it ONLY if status is Blocked (when changing TO Blocked)
+      // - Clear it if status is Active, Removed, or Under Review (when changing FROM Blocked to these)
+      // - Removed is a different status and should NOT have blockedAt
       let blockedAtValue: string | null | undefined = undefined;
-      if (formStatus === "Blocked" || formStatus === "Removed") {
+      if (formStatus === "Blocked") {
         // If blockedAt is provided, convert from KSA time to UTC; otherwise backend will set it to current time
         blockedAtValue = formBlockedAt
           ? convertKSATimeToUTC(formBlockedAt)
           : undefined;
-      } else if (formStatus === "Active") {
-        // For Active status, explicitly set to null to clear any existing blockedAt
+      } else if (
+        formStatus === "Active" ||
+        formStatus === "Removed" ||
+        formStatus === "Under Review"
+      ) {
+        // For Active, Removed, or Under Review status, explicitly set to null to clear any existing blockedAt
         blockedAtValue = null;
       }
 
@@ -936,27 +1146,10 @@ export default function MatchDashboard() {
               return v;
             });
 
-            const totalViolations = updatedViolations.length;
-            const activeViolations = updatedViolations.filter(
-              (v) => v.status === "Active" || v.status === "Under Review"
-            ).length;
-            const blockedCount = calculateBlockedCount(updatedViolations);
-            const blockedRate =
-              totalViolations > 0
-                ? Math.round((blockedCount / totalViolations) * 100)
-                : 0;
-
+            // Just update violations, keep existing metrics (will be updated by refetch)
             return {
               ...p,
               violations: updatedViolations,
-              totalViolations,
-              activeViolations,
-              blockedCount,
-              blockedRate,
-              totalViews: calculateTotalViews(updatedViolations),
-              avgBlockTime: calculateAvgBlockTime(updatedViolations),
-              blockedSuccess: calculateBlockedSuccess(updatedViolations),
-              stillActive: calculateStillActive(updatedViolations),
             };
           })
         );
@@ -984,8 +1177,8 @@ export default function MatchDashboard() {
           }
         }
 
-        // Refetch match data and update chart
-        await refetchMatchAndUpdateChart();
+        // Trigger refetch of all data
+        triggerRefetch();
 
         toast({
           title: "Violation updated",
@@ -1018,27 +1211,10 @@ export default function MatchDashboard() {
 
             const updatedViolations = [frontendViolation, ...p.violations];
 
-            const totalViolations = updatedViolations.length;
-            const activeViolations = updatedViolations.filter(
-              (v) => v.status === "Active" || v.status === "Under Review"
-            ).length;
-            const blockedCount = calculateBlockedCount(updatedViolations);
-            const blockedRate =
-              totalViolations > 0
-                ? Math.round((blockedCount / totalViolations) * 100)
-                : 0;
-
+            // Just update violations, keep existing metrics (will be updated by refetch)
             return {
               ...p,
               violations: updatedViolations,
-              totalViolations,
-              activeViolations,
-              blockedCount,
-              blockedRate,
-              totalViews: calculateTotalViews(updatedViolations),
-              avgBlockTime: calculateAvgBlockTime(updatedViolations),
-              blockedSuccess: calculateBlockedSuccess(updatedViolations),
-              stillActive: calculateStillActive(updatedViolations),
             };
           })
         );
@@ -1061,10 +1237,8 @@ export default function MatchDashboard() {
           }
         }
 
-        // Update chart immediately after state update
-        setTimeout(() => {
-          refetchMatchAndUpdateChart();
-        }, 100);
+        // Trigger refetch of all data
+        triggerRefetch();
 
         toast({
           title: "Violation added",
@@ -1128,27 +1302,10 @@ export default function MatchDashboard() {
             (v) => v.id !== violationId && v._id !== violationId
           );
 
-          const totalViolations = updatedViolations.length;
-          const activeViolations = updatedViolations.filter(
-            (v) => v.status === "Active" || v.status === "Under Review"
-          ).length;
-          const blockedCount = calculateBlockedCount(updatedViolations);
-          const blockedRate =
-            totalViolations > 0
-              ? Math.round((blockedCount / totalViolations) * 100)
-              : 0;
-
+          // Just update violations, keep existing metrics (will be updated by refetch)
           return {
             ...p,
             violations: updatedViolations,
-            totalViolations,
-            activeViolations,
-            blockedCount,
-            blockedRate,
-            totalViews: calculateTotalViews(updatedViolations),
-            avgBlockTime: calculateAvgBlockTime(updatedViolations),
-            blockedSuccess: calculateBlockedSuccess(updatedViolations),
-            stillActive: calculateStillActive(updatedViolations),
           };
         })
       );
@@ -1170,10 +1327,8 @@ export default function MatchDashboard() {
         }
       }
 
-      // Update chart immediately after state update
-      setTimeout(() => {
-        refetchMatchAndUpdateChart();
-      }, 100);
+      // Trigger refetch of all data
+      triggerRefetch();
 
       toast({
         title: "Violation deleted",
@@ -1258,26 +1413,13 @@ export default function MatchDashboard() {
           return {
             ...p,
             violations: updatedViolations,
-            totalViolations: updatedViolations.length,
-            activeViolations: updatedViolations.filter(
-              (v) => v.status === "Active" || v.status === "Under Review"
-            ).length,
-            blockedCount: calculateBlockedCount(updatedViolations),
-            blockedRate:
-              updatedViolations.length > 0
-                ? Math.round(
-                    (calculateBlockedCount(updatedViolations) /
-                      updatedViolations.length) *
-                      100
-                  )
-                : 0,
-            totalViews: calculateTotalViews(updatedViolations),
-            avgBlockTime: calculateAvgBlockTime(updatedViolations),
-            blockedSuccess: calculateBlockedSuccess(updatedViolations),
-            stillActive: calculateStillActive(updatedViolations),
+            // Metrics will be updated by refetch from backend
           };
         })
       );
+
+      // Trigger refetch of all data
+      triggerRefetch();
 
       toast({
         title: "Note added",
@@ -1325,12 +1467,13 @@ export default function MatchDashboard() {
   const totalBlocked = match.blockedCount || 0;
   const totalRemoved = match.removedCount || 0;
   const totalUnderReview = match.underReviewCount || 0;
-  const blockRemovalSuccessRate = match.blockRemovalSuccessRate || 0;
-  const blockedRate = blockRemovalSuccessRate;
+  const blockSuccessRate = match.blockSuccessRate || 0;
+  const blockedRate = blockSuccessRate;
   const totalViews = match.totalViews || 0;
   const formattedTotalViews = totalViews.toLocaleString("en-US");
   const avgBlockTimeNumber = match.avgBlockTime || 0;
-  const avgBlockTime = avgBlockTimeNumber > 0 ? avgBlockTimeNumber.toFixed(1) : "0";
+  const avgBlockTime =
+    avgBlockTimeNumber > 0 ? avgBlockTimeNumber.toFixed(1) : "0";
 
   // Find top platform (still calculated from platformOperations as it's platform-specific)
   const topPlatform = platformOperations.reduce((top, p) => {
@@ -1357,7 +1500,15 @@ export default function MatchDashboard() {
         removedCount={totalRemoved}
         underReviewCount={totalUnderReview}
         avgBlockTimeNumber={avgBlockTimeNumber}
-        blockRemovalSuccessRate={blockRemovalSuccessRate}
+        blockSuccessRate={blockSuccessRate}
+      />
+
+      <MatchActivityLogChart
+        totalViolations={totalViolations}
+        activeCount={totalActive}
+        blockedCount={totalBlocked}
+        removedCount={totalRemoved}
+        underReviewCount={totalUnderReview}
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

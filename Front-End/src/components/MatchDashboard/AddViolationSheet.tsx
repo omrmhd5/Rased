@@ -94,11 +94,12 @@ export function AddViolationSheet({
       | "Removed"
       | "Under Review";
     onFormStatusChange(validStatus);
-    if (
-      (value === "Blocked" || value === "Removed") &&
-      !formBlockedAt
-    ) {
+    // Only set blockedAt for "Blocked" status, NOT "Removed" (they are different statuses)
+    if (value === "Blocked" && !formBlockedAt) {
       onFormBlockedAtChange(getKSATime());
+    } else if (value === "Removed" || value === "Active" || value === "Under Review") {
+      // Clear blockedAt when changing to Removed, Active, or Under Review
+      onFormBlockedAtChange("");
     }
   };
 
@@ -216,9 +217,7 @@ export function AddViolationSheet({
             />
           </div>
 
-          {(formStatus === "Blocked" ||
-            formStatus === "Removed" ||
-            (isEditMode && formBlockedAt)) && (
+          {formStatus === "Blocked" && (
             <div className="space-y-2">
               <Label htmlFor="blocked-at">Blocked at (optional)</Label>
               <Input

@@ -57,22 +57,18 @@ export function PlatformCard({
 }: PlatformCardProps) {
   const IconComponent = platform.icon;
 
-  // Calculate metrics from violations
+  // Use backend metrics from platform object (no local calculations)
   const violations = platform.violations;
-  const totalViolations = violations.length;
-  const activeCount = violations.filter((v) => v.status === "Active").length;
-  const blockedCount = violations.filter((v) => v.status === "Blocked").length;
-  const removedCount = violations.filter((v) => v.status === "Removed").length;
-  const underReviewCount = violations.filter(
-    (v) => v.status === "Under Review"
-  ).length;
+  const totalViolations = platform.totalViolations; // From backend
+  const activeCount = platform.activeViolations; // From backend
+  const blockedCount = platform.blockedCount; // From backend (ONLY blocked, NOT removed)
+  const removedCount = platform.removedCount ?? 0; // From backend (ONLY removed, separate from blocked)
+  const underReviewCount = platform.underReviewCount ?? 0; // From backend
+  const blockSuccessRate = platform.blockSuccessRate ?? 0; // From backend (0-100)
+  // Calculate blockedOrRemovedCount from backend values (for display only)
   const blockedOrRemovedCount = blockedCount + removedCount;
-  const blockRemovalSuccessRate =
-    totalViolations > 0
-      ? Math.round((blockedOrRemovedCount / totalViolations) * 100)
-      : 0;
 
-  // Calculate content type counts
+  // Calculate content type counts (only for display under platform name)
   const highlightsCount = violations.filter(
     (v) => (v.contentType || v.type) === "Highlights"
   ).length;
@@ -199,21 +195,21 @@ export function PlatformCard({
           </p>
         </div>
 
-        {/* Block/removal success rate */}
+        {/* Block success rate */}
         <div className="p-3 rounded-xl bg-gradient-to-br from-green-500/10 to-green-500/5 border border-green-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-green-500/20 cursor-pointer group">
           <div className="flex items-center gap-1.5 mb-2">
             <div className="p-0.5 rounded bg-green-500/20 group-hover:bg-green-500/30 transition-colors">
               <TrendingUp className="h-2.5 w-2.5 text-green-500" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
-              Block/removal success rate
+              Block success rate
             </p>
           </div>
           <p className="text-lg font-bold text-green-600 dark:text-green-400 transition-transform duration-300 group-hover:scale-110">
-            {blockRemovalSuccessRate}%
+            {totalViolations > 0 ? Math.round((blockedCount / totalViolations) * 100) : 0}%
           </p>
           <p className="text-[9px] text-muted-foreground/70 mt-1">
-            {blockedOrRemovedCount} of {totalViolations}
+            {blockedCount} of {totalViolations}
           </p>
         </div>
 

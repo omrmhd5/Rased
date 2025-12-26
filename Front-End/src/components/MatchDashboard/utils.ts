@@ -89,9 +89,8 @@ export const convertUTCToKSATime = (utcISOString: string): string => {
 };
 
 export const calculateBlockedCount = (violations: Violation[]): number => {
-  return violations.filter(
-    (v) => v.status === "Blocked" || v.status === "Removed"
-  ).length;
+  // Only count "Blocked" status, NOT "Removed" (they are different statuses)
+  return violations.filter((v) => v.status === "Blocked").length;
 };
 
 export const calculateTotalViews = (violations: Violation[]): string => {
@@ -107,8 +106,9 @@ export const calculateTotalViews = (violations: Violation[]): string => {
 };
 
 export const calculateAvgBlockTime = (violations: Violation[]): string => {
+  // Only calculate for "Blocked" status (Removed doesn't have blockedAt)
   const blockedViolations = violations.filter(
-    (v) => (v.status === "Blocked" || v.status === "Removed") && v.blockedAt
+    (v) => v.status === "Blocked" && v.blockedAt
   );
 
   if (blockedViolations.length === 0) return "0 min";
@@ -138,8 +138,9 @@ export const calculateAvgBlockTime = (violations: Violation[]): string => {
 export const calculateAvgBlockTimeNumber = (
   violations: Violation[]
 ): number => {
+  // Only calculate for "Blocked" status (Removed doesn't have blockedAt)
   const blockedViolations = violations.filter(
-    (v) => (v.status === "Blocked" || v.status === "Removed") && v.blockedAt
+    (v) => v.status === "Blocked" && v.blockedAt
   );
 
   if (blockedViolations.length === 0) return 0;
@@ -155,8 +156,9 @@ export const calculateAvgBlockTimeNumber = (
 };
 
 export const calculateBlockedSuccess = (violations: Violation[]): string => {
+  // Only calculate for "Blocked" status (Removed is separate)
   const blockedViolations = violations.filter(
-    (v) => v.status === "Blocked" || v.status === "Removed"
+    (v) => v.status === "Blocked"
   );
 
   if (blockedViolations.length === 0) return "0%";
@@ -173,10 +175,9 @@ export const calculateBlockedSuccess = (violations: Violation[]): string => {
 };
 
 export const calculateStillActive = (violations: Violation[]): number => {
+  // Only count "Blocked" status (Removed is separate)
   return violations.filter(
-    (v) =>
-      (v.status === "Blocked" || v.status === "Removed") &&
-      (v.active || v.stillActive)
+    (v) => v.status === "Blocked" && (v.active || v.stillActive)
   ).length;
 };
 
@@ -378,10 +379,8 @@ export const formatBlockedViolationText = (violation: Violation): string => {
   let text = `${contentType} • added on ${dateTimeStr}, • ${addedAgo}`;
 
   // If blocked and has blockedAt, show block time (time from added to blocked)
-  if (
-    (violation.status === "Blocked" || violation.status === "Removed") &&
-    violation.blockedAt
-  ) {
+  // Note: Only "Blocked" status has blockedAt, "Removed" does not
+  if (violation.status === "Blocked" && violation.blockedAt) {
     const blockedTime = new Date(violation.blockedAt).getTime();
     // Block time = blockedAt - timeAdded (time it took to block)
     const diffMs = blockedTime - addedTime;
@@ -451,11 +450,10 @@ export const calculateAndSavePlatformStats = async (
     // Calculate avg block time (in minutes)
     const avgBlockTime = calculateAvgBlockTimeNumber(violations);
 
-    // Calculate block/removal success rate (percentage)
-    const blockedOrRemovedCount = blockedCount + removedCount;
-    const blockRemovalSuccessRate =
+    // Calculate block success rate (percentage) - only blocked, NOT removed
+    const blockSuccessRate =
       totalViolations > 0
-        ? Math.round((blockedOrRemovedCount / totalViolations) * 100)
+        ? Math.round((blockedCount / totalViolations) * 100)
         : 0;
 
     // Save to database
@@ -477,7 +475,7 @@ export const calculateAndSavePlatformStats = async (
         removedCount,
         underReviewCount,
         avgBlockTime,
-        blockRemovalSuccessRate,
+        blockSuccessRate,
       }),
     });
 

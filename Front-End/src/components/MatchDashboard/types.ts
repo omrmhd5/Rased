@@ -47,9 +47,12 @@ export type PlatformData = {
   activeViolations: number;
   blockedRate: number;
   blockedCount: number;
+  removedCount?: number; // From backend
+  underReviewCount?: number; // From backend
   totalViews: string;
   avgBlockTime: string;
   blockedSuccess: string;
+  blockSuccessRate?: number; // From backend (0-100)
   stillActive: number;
   violations: Violation[];
 };
@@ -82,7 +85,7 @@ export interface Match {
   removedCount?: number;
   underReviewCount?: number;
   avgBlockTime?: number;
-  blockRemovalSuccessRate?: number;
+  blockSuccessRate?: number;
 }
 
 export interface BackendViolation {
