@@ -35,12 +35,14 @@ export function ContentSplitChart({ data }: ContentSplitChartProps) {
 
   return (
     <Card className="p-6 lg:col-span-3">
-      <h3 className="font-semibold mb-6 text-lg">Live Stream vs Highlights vs Others</h3>
+      <h3 className="font-semibold mb-6 text-lg">
+        Live Stream vs Highlights vs Others
+      </h3>
 
       <div className="space-y-4">
         {data.map((entry, index) => {
           const percentage = maxValue > 0 ? (entry.value / maxValue) * 100 : 0;
-          
+
           return (
             <div
               key={index}
@@ -52,7 +54,9 @@ export function ContentSplitChart({ data }: ContentSplitChartProps) {
                   backgroundColor: `${entry.color}20`,
                   border: `2px solid ${entry.color}`,
                 }}>
-                <div style={{ color: entry.color }} className="transition-transform duration-300 group-hover:scale-110">
+                <div
+                  style={{ color: entry.color }}
+                  className="transition-transform duration-300 group-hover:scale-110">
                   {getIcon(entry.name)}
                 </div>
               </div>
@@ -65,7 +69,10 @@ export function ContentSplitChart({ data }: ContentSplitChartProps) {
                   </span>
                   <div className="text-right ml-4">
                     <p className="font-bold text-base leading-tight transition-transform duration-300 group-hover:scale-105">
-                      {formatViews(entry.value)} <span className="text-xs font-normal text-muted-foreground">views</span>
+                      {formatViews(entry.value)}{" "}
+                      <span className="text-xs font-normal text-muted-foreground">
+                        views
+                      </span>
                     </p>
                     <p className="text-xs text-muted-foreground leading-tight transition-transform duration-300 group-hover:scale-105">
                       {entry.violations} violations
@@ -91,6 +98,3 @@ export function ContentSplitChart({ data }: ContentSplitChartProps) {
     </Card>
   );
 }
-
-
-

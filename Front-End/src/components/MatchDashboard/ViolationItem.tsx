@@ -72,7 +72,7 @@ export function ViolationItem({
 }: ViolationItemProps) {
   // Force re-render every minute to update time displays
   const [, setRefresh] = useState(0);
-  
+
   useEffect(() => {
     const interval = setInterval(() => {
       setRefresh((prev) => prev + 1);
@@ -129,7 +129,9 @@ export function ViolationItem({
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
-                onClick={() => onCopyUrl(violation.violationUrl || violation.url || "")}>
+                onClick={() =>
+                  onCopyUrl(violation.violationUrl || violation.url || "")
+                }>
                 <Copy className="h-3.5 w-3.5" />
               </Button>
             </TooltipTrigger>
@@ -173,7 +175,8 @@ export function ViolationItem({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onAddNote(platform.id, violation)}>
+              <DropdownMenuItem
+                onClick={() => onAddNote(platform.id, violation)}>
                 <FileEdit className="mr-2 h-4 w-4" />
                 Add note
               </DropdownMenuItem>
@@ -250,4 +253,3 @@ export function ViolationItem({
     </div>
   );
 }
-

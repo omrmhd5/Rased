@@ -78,11 +78,15 @@ const platformByMatchSchema = new mongoose.Schema(
 );
 
 // Compound index for unique platform-match combination
-platformByMatchSchema.index({ platformId: 1, externalMatchId: 1 }, { unique: true });
+platformByMatchSchema.index(
+  { platformId: 1, externalMatchId: 1 },
+  { unique: true }
+);
 platformByMatchSchema.index({ matchId: 1, platformId: 1 });
 
-const PlatformByMatch = mongoose.model("PlatformByMatch", platformByMatchSchema);
+const PlatformByMatch = mongoose.model(
+  "PlatformByMatch",
+  platformByMatchSchema
+);
 
 export default PlatformByMatch;
-
-

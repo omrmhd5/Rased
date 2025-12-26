@@ -8,12 +8,7 @@ import { formatViews, calculateBlockDuration } from "./utils";
 interface PlatformComparisonProps {
   platformOperations: PlatformData[];
   contentTypeFilter: string;
-  comparisonMetric:
-    | "violations"
-    | "views"
-    | "blocked"
-    | "response"
-    | "active";
+  comparisonMetric: "violations" | "views" | "blocked" | "response" | "active";
   comparisonSort: "views" | "response" | "active";
   comparisonSortDirection: "desc" | "asc";
   selectedSlots: string[];
@@ -58,7 +53,9 @@ export function PlatformComparison({
 
     const totalViews = filteredViolations.reduce((sum, v) => {
       const viewsStr = v.views?.replace(/[^0-9.]/g, "") || "0";
-      const views = parseFloat(viewsStr) * (v.views?.toUpperCase().includes("K") ? 1000 : 1);
+      const views =
+        parseFloat(viewsStr) *
+        (v.views?.toUpperCase().includes("K") ? 1000 : 1);
       return sum + views;
     }, 0);
 
@@ -102,9 +99,7 @@ export function PlatformComparison({
       default:
         compareResult = 0;
     }
-    return comparisonSortDirection === "desc"
-      ? compareResult
-      : -compareResult;
+    return comparisonSortDirection === "desc" ? compareResult : -compareResult;
   });
 
   const slaThreshold = 10;
@@ -146,7 +141,6 @@ export function PlatformComparison({
       }, 100);
     }
   };
-
 
   return (
     <div className="mt-6">
@@ -427,4 +421,3 @@ export function PlatformComparison({
     </div>
   );
 }
-

@@ -87,7 +87,10 @@ router.get("/", async (req, res) => {
     const sortOrder = sort === "asc" ? 1 : -1;
 
     const violations = await Violation.find(query)
-      .populate("matchId", "team1 team2 date time week competition stadium externalMatchId")
+      .populate(
+        "matchId",
+        "team1 team2 date time week competition stadium externalMatchId"
+      )
       .sort({ timeAdded: sortOrder })
       .limit(limitNum)
       .lean();
@@ -184,14 +187,18 @@ router.post("/", async (req, res) => {
     let blockedAtValue = undefined;
     const finalStatus = status || "Active";
     const statusLower = finalStatus.toLowerCase();
-    
+
     if (blockedAt !== undefined && blockedAt !== null && blockedAt !== "") {
       // If blockedAt is explicitly provided, use it
       blockedAtValue = new Date(blockedAt);
     } else if (statusLower === "blocked") {
       // If status is blocked and no blockedAt provided, set to now
       blockedAtValue = new Date();
-    } else if (statusLower === "active" || statusLower === "under review" || statusLower === "removed") {
+    } else if (
+      statusLower === "active" ||
+      statusLower === "under review" ||
+      statusLower === "removed"
+    ) {
       // If status is active, under review, or removed, don't set blockedAt
       blockedAtValue = undefined;
     }
@@ -215,7 +222,10 @@ router.post("/", async (req, res) => {
 
     const savedViolation = await violation.save();
     const populated = await Violation.findById(savedViolation._id)
-      .populate("matchId", "team1 team2 date time week competition stadium externalMatchId")
+      .populate(
+        "matchId",
+        "team1 team2 date time week competition stadium externalMatchId"
+      )
       .lean();
 
     // Update match content type counts
@@ -250,14 +260,20 @@ router.put("/:id", async (req, res) => {
       notes,
     } = req.body;
 
-    const violation = await Violation.findById(req.params.id).populate("matchId");
+    const violation = await Violation.findById(req.params.id).populate(
+      "matchId"
+    );
 
     if (!violation) {
       return res.status(404).json({ error: "Violation not found" });
     }
 
     // Update externalMatchId from the match if matchId is populated
-    if (violation.matchId && typeof violation.matchId === 'object' && violation.matchId.externalMatchId) {
+    if (
+      violation.matchId &&
+      typeof violation.matchId === "object" &&
+      violation.matchId.externalMatchId
+    ) {
       violation.externalMatchId = violation.matchId.externalMatchId;
     } else if (violation.matchId) {
       // If matchId is not populated, fetch the match to get externalMatchId
@@ -276,7 +292,7 @@ router.put("/:id", async (req, res) => {
     if (status !== undefined) violation.status = status;
     if (views !== undefined) violation.views = views;
     if (timeAdded !== undefined) violation.timeAdded = new Date(timeAdded);
-    
+
     // Handle blockedAt - set it if provided, or handle it based on status
     if (blockedAt !== undefined) {
       if (blockedAt) {
@@ -289,20 +305,29 @@ router.put("/:id", async (req, res) => {
       // If status is being updated but blockedAt is not provided, handle it based on status
       const statusLower = status.toLowerCase();
       const oldStatusLower = violation.status.toLowerCase();
-      
-      if (statusLower === "active" || statusLower === "under review" || statusLower === "removed") {
+
+      if (
+        statusLower === "active" ||
+        statusLower === "under review" ||
+        statusLower === "removed"
+      ) {
         // If changing TO active, under review, or removed, clear blockedAt
         // Explicitly delete the field to ensure it's removed from the document
         delete violation.blockedAt;
       } else if (statusLower === "blocked") {
         // If changing TO blocked from any other status, set blockedAt to now
         // Only set if it doesn't already exist (preserve existing blockedAt if already set)
-        if (!violation.blockedAt || oldStatusLower === "active" || oldStatusLower === "under review" || oldStatusLower === "removed") {
+        if (
+          !violation.blockedAt ||
+          oldStatusLower === "active" ||
+          oldStatusLower === "under review" ||
+          oldStatusLower === "removed"
+        ) {
           violation.blockedAt = new Date();
         }
       }
     }
-    
+
     if (active !== undefined) violation.active = active;
 
     // Handle notes - convert to array if string
@@ -350,9 +375,10 @@ router.patch("/:id/status", async (req, res) => {
     }
 
     // Normalize status to match schema enum (capitalized)
-    const normalizedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+    const normalizedStatus =
+      status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
     const validStatuses = ["Active", "Blocked", "Removed", "Under Review"];
-    
+
     if (!validStatuses.includes(normalizedStatus)) {
       return res.status(400).json({ error: "Invalid status value" });
     }
@@ -367,7 +393,11 @@ router.patch("/:id/status", async (req, res) => {
     if (statusLower === "blocked") {
       // If changing TO blocked, set blockedAt (use provided time or current time)
       violation.blockedAt = blockedAt ? new Date(blockedAt) : new Date();
-    } else if (statusLower === "active" || statusLower === "under review" || statusLower === "removed") {
+    } else if (
+      statusLower === "active" ||
+      statusLower === "under review" ||
+      statusLower === "removed"
+    ) {
       // If changing TO active, under review, or removed, clear blockedAt
       // Explicitly delete the field to ensure it's removed from the document
       delete violation.blockedAt;
