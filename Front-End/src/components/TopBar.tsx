@@ -1,12 +1,25 @@
-import { Menu, Search, CheckSquare, Grid3x3, Bell, ShoppingCart, User } from "lucide-react";
+import { Menu, Search, CheckSquare, Grid3x3, Bell, ShoppingCart, User, ArrowLeft } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
+
 export function TopBar() {
+  const navigate = useNavigate();
+
   return <header className="sticky top-0 h-16 bg-card border-b border-border z-40 flex items-center px-3 sm:px-4 lg:px-6 gap-2 sm:gap-4 w-full">
-      {/* Menu Toggle - First, always visible */}
-      <div className="flex items-center flex-shrink-0">
+      {/* Back Button & Menu Toggle */}
+      <div className="flex items-center flex-shrink-0 gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => navigate(-1)}
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span className="sr-only">Go back</span>
+          </Button>
           <SidebarTrigger>
             <Menu className="h-5 w-5" />
           </SidebarTrigger>

@@ -371,8 +371,8 @@ export default function MatchDashboard() {
     "violations" | "views" | "blocked" | "response" | "active"
   >("violations");
   const [comparisonSort, setComparisonSort] = useState<
-    "violations" | "views" | "response" | "active"
-  >("violations");
+    "views" | "response" | "active"
+  >("views");
   const [comparisonSortDirection, setComparisonSortDirection] = useState<
     "desc" | "asc"
   >("desc");
@@ -619,21 +619,27 @@ export default function MatchDashboard() {
           const convertedViolation =
             convertBackendViolationToFrontend(updatedViolationData);
 
+          // Find current platform and calculate updated violations
+          const currentPlatform = platformOperations.find((p) => p.id === platformId);
+          if (!currentPlatform) {
+            throw new Error("Platform not found");
+          }
+
+          const updatedViolations = currentPlatform.violations.map((v) => {
+            if (v.id !== violationId) return v;
+
+            return {
+              ...v,
+              status: "Active" as const,
+              statusBadge: "Active" as const,
+              blockedAt: undefined, // Clear blockedAt when unblocking
+            };
+          });
+
           // Update local state
           setPlatformOperations((prev) =>
             prev.map((p) => {
               if (p.id !== platformId) return p;
-
-              const updatedViolations = p.violations.map((v) => {
-                if (v.id !== violationId) return v;
-
-                return {
-                  ...v,
-                  status: "Active" as const,
-                  statusBadge: "Active" as const,
-                  blockedAt: undefined, // Clear blockedAt when unblocking
-                };
-              });
 
               const totalViolations = updatedViolations.length;
               const activeViolations = updatedViolations.filter(
