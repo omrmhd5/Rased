@@ -86,6 +86,8 @@ export interface Match {
   underReviewCount?: number;
   avgBlockTime?: number;
   blockSuccessRate?: number;
+  topPlatformId?: string; // Platform ID (not _id) with most views
+  mostViews?: number; // Highest views count from any platform
 }
 
 export interface BackendViolation {

@@ -702,6 +702,8 @@ router.put("/:externalMatchId", async (req, res) => {
       competition,
       stadium,
       league,
+      topPlatformId,
+      mostViews,
     } = req.body;
 
     const match = await Match.findOne({
@@ -767,6 +769,10 @@ router.put("/:externalMatchId", async (req, res) => {
         changedAt: new Date(),
       });
     }
+    
+    // Update top platform fields
+    if (topPlatformId !== undefined) match.topPlatformId = topPlatformId;
+    if (mostViews !== undefined) match.mostViews = mostViews;
 
     const updatedMatch = await match.save();
     res.json(updatedMatch);

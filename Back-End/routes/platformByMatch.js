@@ -98,11 +98,28 @@ async function updateMatchAggregatedStats(externalMatchId) {
           )
         : 0;
 
+    // Find top platform (platform with most views)
+    let topPlatformId = null;
+    let mostViews = 0;
+    if (platformStats.length > 0) {
+      const topPlatform = platformStats.reduce((top, current) => {
+        const currentViews = current.totalViews || 0;
+        const topViews = top.totalViews || 0;
+        return currentViews > topViews ? current : top;
+      });
+      if (topPlatform && topPlatform.totalViews > 0) {
+        topPlatformId = topPlatform.platformId;
+        mostViews = topPlatform.totalViews || 0;
+      }
+    }
+
     // Update Match document
     await Match.findByIdAndUpdate(match._id, {
       ...aggregated,
       avgBlockTime,
       blockSuccessRate,
+      topPlatformId,
+      mostViews,
     });
   } catch (error) {
     console.error("Error updating match aggregated stats:", error);
@@ -116,7 +133,9 @@ router.get("/", async (req, res) => {
     const { matchId, platformId } = req.query;
 
     if (!matchId) {
-      return res.status(400).json({ error: "matchId (externalMatchId) is required" });
+      return res
+        .status(400)
+        .json({ error: "matchId (externalMatchId) is required" });
     }
 
     // Find match by externalMatchId
@@ -136,7 +155,7 @@ router.get("/", async (req, res) => {
 
     const stats = await PlatformByMatch.find(query).lean();
 
-    res.json(platformId ? (stats[0] || null) : stats);
+    res.json(platformId ? stats[0] || null : stats);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -271,7 +290,8 @@ router.put("/:id", async (req, res) => {
     if (activeCount !== undefined) stats.activeCount = activeCount;
     if (blockedCount !== undefined) stats.blockedCount = blockedCount;
     if (removedCount !== undefined) stats.removedCount = removedCount;
-    if (underReviewCount !== undefined) stats.underReviewCount = underReviewCount;
+    if (underReviewCount !== undefined)
+      stats.underReviewCount = underReviewCount;
     if (avgBlockTime !== undefined) stats.avgBlockTime = avgBlockTime;
     if (blockSuccessRate !== undefined)
       stats.blockSuccessRate = blockSuccessRate;
@@ -316,5 +336,3 @@ router.delete("/:id", async (req, res) => {
 });
 
 export default router;
-
-

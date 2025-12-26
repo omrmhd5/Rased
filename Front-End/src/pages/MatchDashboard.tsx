@@ -32,6 +32,7 @@ import {
   calculateBlockDuration,
   formatBlockedViolationText,
   calculateAndSavePlatformStats,
+  calculateAndSaveTopPlatform,
   type Violation,
   type PlatformData,
   type Match,
@@ -231,6 +232,14 @@ export default function MatchDashboard() {
                 convertedViolations
               );
             });
+
+            // Calculate and save top platform (platform with most views)
+            if (matchData.externalMatchId) {
+              calculateAndSaveTopPlatform(
+                matchData.externalMatchId,
+                platformOperations
+              );
+            }
           }
 
           // Chart will update automatically via useEffect when match/platformOperations change
@@ -453,6 +462,14 @@ export default function MatchDashboard() {
                 violations
               );
             });
+
+            // Calculate and save top platform
+            if (matchData.externalMatchId) {
+              calculateAndSaveTopPlatform(
+                matchData.externalMatchId,
+                platformOperations
+              );
+            }
           }
 
           // Chart will update automatically via useEffect when match/platformOperations change
@@ -726,6 +743,13 @@ export default function MatchDashboard() {
       );
     }
 
+    // Sort by timeAdded (most recent first)
+    filtered = filtered.sort((a, b) => {
+      const timeA = a.timeAdded ? new Date(a.timeAdded).getTime() : 0;
+      const timeB = b.timeAdded ? new Date(b.timeAdded).getTime() : 0;
+      return timeB - timeA; // Descending order (most recent first)
+    });
+
     return filtered;
   };
 
@@ -891,6 +915,11 @@ export default function MatchDashboard() {
               platformId,
               match.externalMatchId,
               updatedViolations
+            );
+            // Update top platform
+            calculateAndSaveTopPlatform(
+              match.externalMatchId,
+              platformOperations
             );
           }
 
@@ -1475,13 +1504,22 @@ export default function MatchDashboard() {
   const avgBlockTime =
     avgBlockTimeNumber > 0 ? avgBlockTimeNumber.toFixed(1) : "0";
 
-  // Find top platform (still calculated from platformOperations as it's platform-specific)
-  const topPlatform = platformOperations.reduce((top, p) => {
-    const pViews = parseInt(p.totalViews.replace(/[^0-9]/g, "")) || 0;
-    const topViews =
-      parseInt((top?.totalViews || "0").replace(/[^0-9]/g, "")) || 0;
-    return pViews > topViews ? p : top;
-  }, platformOperations[0] || null);
+  // Find top platform from backend or fallback to calculation
+  let topPlatform: PlatformData | null = null;
+  if (match.topPlatformId) {
+    // Use backend topPlatformId to find the platform
+    topPlatform =
+      platformOperations.find((p) => p.id === match.topPlatformId) || null;
+  }
+  // Fallback: calculate from platformOperations if backend doesn't have it
+  if (!topPlatform && platformOperations.length > 0) {
+    topPlatform = platformOperations.reduce((top, p) => {
+      const pViews = parseInt(p.totalViews.replace(/[^0-9]/g, "")) || 0;
+      const topViews =
+        parseInt((top?.totalViews || "0").replace(/[^0-9]/g, "")) || 0;
+      return pViews > topViews ? p : top;
+    }, platformOperations[0] || null);
+  }
 
   return (
     <div className="space-y-6">

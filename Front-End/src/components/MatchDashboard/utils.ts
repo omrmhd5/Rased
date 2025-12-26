@@ -486,3 +486,43 @@ export const calculateAndSavePlatformStats = async (
     console.error("Error calculating and saving platform stats:", error);
   }
 };
+
+/**
+ * Calculate and save top platform (platform with most views) to Match
+ */
+export const calculateAndSaveTopPlatform = async (
+  externalMatchId: string,
+  platformOperations: Array<{ id: string; totalViews: string }>
+): Promise<void> => {
+  try {
+    if (!externalMatchId || platformOperations.length === 0) return;
+
+    // Find platform with most views
+    const topPlatform = platformOperations.reduce((top, current) => {
+      const currentViews = parseInt(current.totalViews.replace(/[^0-9]/g, "")) || 0;
+      const topViews = parseInt((top?.totalViews || "0").replace(/[^0-9]/g, "")) || 0;
+      return currentViews > topViews ? current : top;
+    }, platformOperations[0]);
+
+    const topPlatformId = topPlatform.id;
+    const mostViews = parseInt(topPlatform.totalViews.replace(/[^0-9]/g, "")) || 0;
+
+    // Update Match document
+    const response = await fetch(`${API_URL}/matches/${externalMatchId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        topPlatformId,
+        mostViews,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("Failed to save top platform:", await response.text());
+    }
+  } catch (error) {
+    console.error("Error calculating and saving top platform:", error);
+  }
+};

@@ -134,6 +134,14 @@ const matchSchema = new mongoose.Schema(
       type: Number,
       default: 0, // percentage (0-100)
     },
+    topPlatformId: {
+      type: String,
+      default: null, // Platform ID (not _id) with most views
+    },
+    mostViews: {
+      type: Number,
+      default: 0, // Highest views count from any platform
+    },
   },
   {
     timestamps: true,

@@ -274,7 +274,11 @@ export function MatchOverview({
             </div>
           </div>
           <p className="text-3xl font-bold text-foreground mb-1 transition-transform duration-300 hover:scale-105">
-            {topPlatform ? topPlatform.totalViews : "0"}
+            {match.mostViews !== undefined && match.mostViews !== null
+              ? match.mostViews.toLocaleString("en-US")
+              : topPlatform
+              ? topPlatform.totalViews
+              : "0"}
             <span className="text-base text-muted-foreground ml-1">views</span>
           </p>
           <p className="text-xs text-muted-foreground">

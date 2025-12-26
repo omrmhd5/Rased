@@ -31,34 +31,34 @@ export function MatchActivityLogChart({
     return Math.round((value / totalViolations) * 100);
   };
 
-  // Prepare chart data
+  // Prepare chart data - colors match MatchOverview component
   const chartData: ChartData[] = [
     {
       name: "Active",
       value: activeCount,
       percentage: calculatePercentage(activeCount),
-      color: "hsl(var(--destructive))",
+      color: "hsl(var(--destructive))", // Matches MatchOverview Active (destructive)
       icon: <Activity className="h-3 w-3" />,
     },
     {
       name: "Blocked",
       value: blockedCount,
       percentage: calculatePercentage(blockedCount),
-      color: "hsl(221 83% 53%)", // Indigo
+      color: "hsl(var(--success))", // Matches MatchOverview Blocked Successfully (success)
       icon: <Shield className="h-3 w-3" />,
     },
     {
       name: "Removed",
       value: removedCount,
       percentage: calculatePercentage(removedCount),
-      color: "hsl(39 100% 50%)", // Amber
+      color: "hsl(24.6 95% 53.1%)", // Matches MatchOverview Removed (orange-500)
       icon: <Shield className="h-3 w-3" />,
     },
     {
       name: "Under Review",
       value: underReviewCount,
       percentage: calculatePercentage(underReviewCount),
-      color: "hsl(48 96% 50%)", // Yellow
+      color: "hsl(48 96% 50%)", // Matches MatchOverview Under Review (yellow-500)
       icon: <FileQuestion className="h-3 w-3" />,
     },
   ].filter((item) => item.value > 0); // Only show segments with values > 0
