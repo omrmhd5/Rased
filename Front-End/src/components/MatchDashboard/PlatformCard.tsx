@@ -165,6 +165,21 @@ export function PlatformCard({
           </p>
         </div>
 
+        {/* Avg block time */}
+        <div className="p-3 rounded-xl bg-gradient-to-br from-success/10 to-success/5 border border-success/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-success/20 cursor-pointer group">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="p-0.5 rounded bg-success/20 group-hover:bg-success/30 transition-colors">
+              <Clock className="h-2.5 w-2.5 text-success" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">
+              Avg block time
+            </p>
+          </div>
+          <p className="text-lg font-bold text-success transition-transform duration-300 group-hover:scale-110">
+            {platform.avgBlockTime}
+          </p>
+        </div>
+
         {/* Removed */}
         <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer group">
           <div className="flex items-center gap-1.5 mb-2">
@@ -177,21 +192,6 @@ export function PlatformCard({
           </div>
           <p className="text-lg font-bold text-orange-500 transition-transform duration-300 group-hover:scale-110">
             {removedCount}
-          </p>
-        </div>
-
-        {/* Avg block time */}
-        <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20 cursor-pointer group">
-          <div className="flex items-center gap-1.5 mb-2">
-            <div className="p-0.5 rounded bg-purple-500/20 group-hover:bg-purple-500/30 transition-colors">
-              <Clock className="h-2.5 w-2.5 text-purple-500" />
-            </div>
-            <p className="text-[10px] font-medium text-muted-foreground">
-              Avg block time
-            </p>
-          </div>
-          <p className="text-lg font-bold text-purple-600 dark:text-purple-400 transition-transform duration-300 group-hover:scale-110">
-            {platform.avgBlockTime}
           </p>
         </div>
 

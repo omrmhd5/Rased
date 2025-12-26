@@ -5,17 +5,22 @@ import { cn } from "@/lib/utils";
 import { PlatformData } from "./types";
 import { formatViews, calculateBlockDuration } from "./utils";
 
+type SortColumn =
+  | "views"
+  | "violations"
+  | "active"
+  | "blocked"
+  | "removed"
+  | "avgBlockTime"
+  | "underReview";
+
 interface PlatformComparisonProps {
   platformOperations: PlatformData[];
   contentTypeFilter: string;
-  comparisonMetric: "violations" | "views" | "blocked" | "response" | "active";
-  comparisonSort: "views" | "response" | "active";
+  comparisonSort: SortColumn;
   comparisonSortDirection: "desc" | "asc";
   selectedSlots: string[];
-  onMetricChange: (
-    metric: "violations" | "views" | "blocked" | "response" | "active"
-  ) => void;
-  onSortChange: (sort: "views" | "response" | "active") => void;
+  onSortChange: (sort: SortColumn) => void;
   onSortDirectionChange: (direction: "desc" | "asc") => void;
   onSelectedSlotsChange: (slots: string[]) => void;
 }
@@ -23,64 +28,49 @@ interface PlatformComparisonProps {
 export function PlatformComparison({
   platformOperations,
   contentTypeFilter,
-  comparisonMetric,
   comparisonSort,
   comparisonSortDirection,
   selectedSlots,
-  onMetricChange,
   onSortChange,
   onSortDirectionChange,
   onSelectedSlotsChange,
 }: PlatformComparisonProps) {
   const platformMetrics = platformOperations.map((platform) => {
-    const filteredViolations =
-      contentTypeFilter === "all"
-        ? platform.violations
-        : platform.violations.filter(
-            (v) => v.type.toLowerCase() === contentTypeFilter
-          );
-
-    const totalViolations = filteredViolations.length;
-    // Only count "Blocked" status, NOT "Removed" (they are different statuses)
-    const blockedViolations = filteredViolations.filter(
-      (v) => v.status === "Blocked"
-    );
-    const blockedCount = blockedViolations.length;
-    const blockedPercent =
-      totalViolations > 0
-        ? Math.round((blockedCount / totalViolations) * 100)
-        : 0;
-
-    const totalViews = filteredViolations.reduce((sum, v) => {
-      const viewsStr = v.views?.replace(/[^0-9.]/g, "") || "0";
-      const views =
-        parseFloat(viewsStr) *
-        (v.views?.toUpperCase().includes("K") ? 1000 : 1);
-      return sum + views;
-    }, 0);
-
-    const activeCount = filteredViolations.filter((v) =>
-      ["reported", "active", "pending", "review"].includes(
-        v.status.toLowerCase()
-      )
-    ).length;
-
-    const avgBlockTimeMinutes =
-      blockedViolations.length > 0
-        ? blockedViolations.reduce((sum, v) => {
-            const blockInfo = calculateBlockDuration(v);
-            return sum + (blockInfo?.duration ?? 0);
-          }, 0) / blockedViolations.length
-        : 0;
+    // Always use backend data directly from platform object (ignore content type filter)
+    const totalViolations = platform.totalViolations ?? 0;
+    const blockedCount = platform.blockedCount ?? 0;
+    // Parse totalViews from string format (e.g., "1,234" or "20") to number
+    const totalViewsStr = platform.totalViews?.replace(/[^0-9.]/g, "") || "0";
+    const totalViews = parseInt(totalViewsStr) || 0;
+    const activeCount = platform.activeViolations ?? 0;
+    const removedCount = platform.removedCount ?? 0;
+    const underReviewCount = platform.underReviewCount ?? 0;
+    // Parse avgBlockTime from string format (e.g., "21 min", "2h", "1d") to minutes
+    const avgBlockTimeStr = platform.avgBlockTime || "0 min";
+    let avgBlockTimeMinutes = 0;
+    if (avgBlockTimeStr.includes("d")) {
+      const days = parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
+      avgBlockTimeMinutes = days * 1440;
+    } else if (avgBlockTimeStr.includes("h")) {
+      const hours = parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
+      avgBlockTimeMinutes = hours * 60;
+    } else {
+      const minutes = parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
+      avgBlockTimeMinutes = minutes;
+    }
+    // Use backend blockSuccessRate (0-100)
+    const blockSuccessRate = platform.blockSuccessRate ?? 0;
 
     return {
       platform,
       totalViolations,
       blockedCount,
-      blockedPercent,
       totalViews,
       activeCount,
+      removedCount,
+      underReviewCount,
       avgBlockTimeMinutes,
+      blockSuccessRate,
     };
   });
 
@@ -90,19 +80,29 @@ export function PlatformComparison({
       case "views":
         compareResult = b.totalViews - a.totalViews;
         break;
-      case "response":
-        compareResult = b.avgBlockTimeMinutes - a.avgBlockTimeMinutes;
+      case "violations":
+        compareResult = b.totalViolations - a.totalViolations;
         break;
       case "active":
         compareResult = b.activeCount - a.activeCount;
+        break;
+      case "blocked":
+        compareResult = b.blockedCount - a.blockedCount;
+        break;
+      case "removed":
+        compareResult = b.removedCount - a.removedCount;
+        break;
+      case "avgBlockTime":
+        compareResult = b.avgBlockTimeMinutes - a.avgBlockTimeMinutes;
+        break;
+      case "underReview":
+        compareResult = b.underReviewCount - a.underReviewCount;
         break;
       default:
         compareResult = 0;
     }
     return comparisonSortDirection === "desc" ? compareResult : -compareResult;
   });
-
-  const slaThreshold = 10;
 
   const handleRowClick = (platformId: string) => {
     if (selectedSlots.includes(platformId)) {
@@ -153,17 +153,6 @@ export function PlatformComparison({
             <p className="text-sm text-muted-foreground">
               Compare platforms for this match
             </p>
-            <p className="text-xs text-muted-foreground/70 mt-2">
-              Metrics respect the current content filter (
-              {contentTypeFilter === "all"
-                ? "All types"
-                : contentTypeFilter === "live"
-                ? "Live"
-                : contentTypeFilter === "highlights"
-                ? "Highlights"
-                : "Other"}
-              )
-            </p>
           </div>
         </div>
 
@@ -176,79 +165,24 @@ export function PlatformComparison({
                 </th>
                 <th
                   onClick={() => {
-                    if (comparisonMetric === "violations") {
+                    if (comparisonSort === "views") {
                       onSortDirectionChange(
                         comparisonSortDirection === "desc" ? "asc" : "desc"
                       );
                     } else {
-                      onMetricChange("violations");
-                      onSortChange("violations");
-                      onSortDirectionChange("desc");
-                    }
-                  }}
-                  className={cn(
-                    "text-left text-xs px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors select-none",
-                    comparisonMetric === "violations"
-                      ? "font-semibold text-foreground border-b-2 border-primary"
-                      : "font-medium text-muted-foreground"
-                  )}>
-                  <div className="flex items-center gap-1">
-                    Violations
-                    {comparisonMetric === "violations" && (
-                      <span className="text-[10px]">
-                        {comparisonSortDirection === "desc" ? "↓" : "↑"}
-                      </span>
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => {
-                    if (comparisonMetric === "blocked") {
-                      onSortDirectionChange(
-                        comparisonSortDirection === "desc" ? "asc" : "desc"
-                      );
-                    } else {
-                      onMetricChange("blocked");
-                      onSortChange("violations");
-                      onSortDirectionChange("desc");
-                    }
-                  }}
-                  className={cn(
-                    "text-left text-xs px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors select-none",
-                    comparisonMetric === "blocked"
-                      ? "font-semibold text-foreground border-b-2 border-primary"
-                      : "font-medium text-muted-foreground"
-                  )}>
-                  <div className="flex items-center gap-1">
-                    Blocked
-                    {comparisonMetric === "blocked" && (
-                      <span className="text-[10px]">
-                        {comparisonSortDirection === "desc" ? "↓" : "↑"}
-                      </span>
-                    )}
-                  </div>
-                </th>
-                <th
-                  onClick={() => {
-                    if (comparisonMetric === "views") {
-                      onSortDirectionChange(
-                        comparisonSortDirection === "desc" ? "asc" : "desc"
-                      );
-                    } else {
-                      onMetricChange("views");
                       onSortChange("views");
                       onSortDirectionChange("desc");
                     }
                   }}
                   className={cn(
                     "text-left text-xs px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors select-none",
-                    comparisonMetric === "views"
+                    comparisonSort === "views"
                       ? "font-semibold text-foreground border-b-2 border-primary"
                       : "font-medium text-muted-foreground"
                   )}>
                   <div className="flex items-center gap-1">
                     Views
-                    {comparisonMetric === "views" && (
+                    {comparisonSort === "views" && (
                       <span className="text-[10px]">
                         {comparisonSortDirection === "desc" ? "↓" : "↑"}
                       </span>
@@ -257,25 +191,50 @@ export function PlatformComparison({
                 </th>
                 <th
                   onClick={() => {
-                    if (comparisonMetric === "active") {
+                    if (comparisonSort === "violations") {
                       onSortDirectionChange(
                         comparisonSortDirection === "desc" ? "asc" : "desc"
                       );
                     } else {
-                      onMetricChange("active");
+                      onSortChange("violations");
+                      onSortDirectionChange("desc");
+                    }
+                  }}
+                  className={cn(
+                    "text-left text-xs px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors select-none",
+                    comparisonSort === "violations"
+                      ? "font-semibold text-foreground border-b-2 border-primary"
+                      : "font-medium text-muted-foreground"
+                  )}>
+                  <div className="flex items-center gap-1">
+                    Violations
+                    {comparisonSort === "violations" && (
+                      <span className="text-[10px]">
+                        {comparisonSortDirection === "desc" ? "↓" : "↑"}
+                      </span>
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => {
+                    if (comparisonSort === "active") {
+                      onSortDirectionChange(
+                        comparisonSortDirection === "desc" ? "asc" : "desc"
+                      );
+                    } else {
                       onSortChange("active");
                       onSortDirectionChange("desc");
                     }
                   }}
                   className={cn(
                     "text-left text-xs px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors select-none",
-                    comparisonMetric === "active"
+                    comparisonSort === "active"
                       ? "font-semibold text-foreground border-b-2 border-primary"
                       : "font-medium text-muted-foreground"
                   )}>
                   <div className="flex items-center gap-1">
-                    Still active
-                    {comparisonMetric === "active" && (
+                    Active
+                    {comparisonSort === "active" && (
                       <span className="text-[10px]">
                         {comparisonSortDirection === "desc" ? "↓" : "↑"}
                       </span>
@@ -284,25 +243,102 @@ export function PlatformComparison({
                 </th>
                 <th
                   onClick={() => {
-                    if (comparisonMetric === "response") {
+                    if (comparisonSort === "blocked") {
                       onSortDirectionChange(
                         comparisonSortDirection === "desc" ? "asc" : "desc"
                       );
                     } else {
-                      onMetricChange("response");
-                      onSortChange("response");
+                      onSortChange("blocked");
                       onSortDirectionChange("desc");
                     }
                   }}
                   className={cn(
                     "text-left text-xs px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors select-none",
-                    comparisonMetric === "response"
+                    comparisonSort === "blocked"
                       ? "font-semibold text-foreground border-b-2 border-primary"
                       : "font-medium text-muted-foreground"
                   )}>
                   <div className="flex items-center gap-1">
-                    Avg block time
-                    {comparisonMetric === "response" && (
+                    Blocked
+                    {comparisonSort === "blocked" && (
+                      <span className="text-[10px]">
+                        {comparisonSortDirection === "desc" ? "↓" : "↑"}
+                      </span>
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => {
+                    if (comparisonSort === "avgBlockTime") {
+                      onSortDirectionChange(
+                        comparisonSortDirection === "desc" ? "asc" : "desc"
+                      );
+                    } else {
+                      onSortChange("avgBlockTime");
+                      onSortDirectionChange("desc");
+                    }
+                  }}
+                  className={cn(
+                    "text-left text-xs px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors select-none",
+                    comparisonSort === "avgBlockTime"
+                      ? "font-semibold text-foreground border-b-2 border-primary"
+                      : "font-medium text-muted-foreground"
+                  )}>
+                  <div className="flex items-center gap-1">
+                    Avg Block Time
+                    {comparisonSort === "avgBlockTime" && (
+                      <span className="text-[10px]">
+                        {comparisonSortDirection === "desc" ? "↓" : "↑"}
+                      </span>
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => {
+                    if (comparisonSort === "removed") {
+                      onSortDirectionChange(
+                        comparisonSortDirection === "desc" ? "asc" : "desc"
+                      );
+                    } else {
+                      onSortChange("removed");
+                      onSortDirectionChange("desc");
+                    }
+                  }}
+                  className={cn(
+                    "text-left text-xs px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors select-none",
+                    comparisonSort === "removed"
+                      ? "font-semibold text-foreground border-b-2 border-primary"
+                      : "font-medium text-muted-foreground"
+                  )}>
+                  <div className="flex items-center gap-1">
+                    Removed
+                    {comparisonSort === "removed" && (
+                      <span className="text-[10px]">
+                        {comparisonSortDirection === "desc" ? "↓" : "↑"}
+                      </span>
+                    )}
+                  </div>
+                </th>
+                <th
+                  onClick={() => {
+                    if (comparisonSort === "underReview") {
+                      onSortDirectionChange(
+                        comparisonSortDirection === "desc" ? "asc" : "desc"
+                      );
+                    } else {
+                      onSortChange("underReview");
+                      onSortDirectionChange("desc");
+                    }
+                  }}
+                  className={cn(
+                    "text-left text-xs px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors select-none",
+                    comparisonSort === "underReview"
+                      ? "font-semibold text-foreground border-b-2 border-primary"
+                      : "font-medium text-muted-foreground"
+                  )}>
+                  <div className="flex items-center gap-1">
+                    Under Review
+                    {comparisonSort === "underReview" && (
                       <span className="text-[10px]">
                         {comparisonSortDirection === "desc" ? "↓" : "↑"}
                       </span>
@@ -310,7 +346,7 @@ export function PlatformComparison({
                   </div>
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">
-                  Status
+                  Target Status
                 </th>
               </tr>
             </thead>
@@ -319,16 +355,11 @@ export function PlatformComparison({
                 const { platform } = metrics;
                 const IconComponent = platform.icon;
 
-                let statusVariant: "default" | "secondary" | "destructive" =
-                  "default";
-                let statusText = "Within target";
-                if (metrics.avgBlockTimeMinutes > slaThreshold * 1.5) {
-                  statusVariant = "destructive";
-                  statusText = "Slow";
-                } else if (metrics.avgBlockTimeMinutes > slaThreshold) {
-                  statusVariant = "secondary";
-                  statusText = "Slightly slow";
-                }
+                // Match MatchOverview logic: <= 15 = success, > 15 = destructive
+                const isWithinTarget = metrics.avgBlockTimeMinutes <= 15;
+                const statusText = isWithinTarget
+                  ? "Within target"
+                  : "Over target";
 
                 return (
                   <tr
@@ -350,34 +381,7 @@ export function PlatformComparison({
                       <span
                         className={cn(
                           "text-sm",
-                          comparisonMetric === "violations"
-                            ? "font-semibold"
-                            : "font-medium"
-                        )}>
-                        {metrics.totalViolations}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div>
-                        <p
-                          className={cn(
-                            "text-sm",
-                            comparisonMetric === "blocked"
-                              ? "font-semibold"
-                              : "font-medium"
-                          )}>
-                          {metrics.blockedCount} blocked
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {metrics.blockedPercent}% success
-                        </p>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          "text-sm",
-                          comparisonMetric === "views"
+                          comparisonSort === "views"
                             ? "font-semibold"
                             : "font-medium"
                         )}>
@@ -388,7 +392,18 @@ export function PlatformComparison({
                       <span
                         className={cn(
                           "text-sm",
-                          comparisonMetric === "active"
+                          comparisonSort === "violations"
+                            ? "font-semibold"
+                            : "font-medium"
+                        )}>
+                        {metrics.totalViolations}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={cn(
+                          "text-sm",
+                          comparisonSort === "active"
                             ? "font-semibold"
                             : "font-medium"
                         )}>
@@ -396,18 +411,64 @@ export function PlatformComparison({
                       </span>
                     </td>
                     <td className="px-4 py-3">
+                      <div>
+                        <span
+                          className={cn(
+                            "text-sm",
+                            comparisonSort === "blocked"
+                              ? "font-semibold"
+                              : "font-medium"
+                          )}>
+                          {metrics.blockedCount}
+                        </span>
+                        <p className="text-xs text-muted-foreground">
+                          {metrics.blockSuccessRate}% success rate
+                        </p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
                       <span
                         className={cn(
                           "text-sm",
-                          comparisonMetric === "response"
+                          comparisonSort === "avgBlockTime"
                             ? "font-semibold"
                             : "font-medium"
                         )}>
-                        {metrics.avgBlockTimeMinutes.toFixed(1)} min
+                        {metrics.avgBlockTimeMinutes % 1 === 0
+                          ? metrics.avgBlockTimeMinutes
+                          : metrics.avgBlockTimeMinutes.toFixed(1)}{" "}
+                        min
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <Badge variant={statusVariant} className="text-xs">
+                      <span
+                        className={cn(
+                          "text-sm",
+                          comparisonSort === "removed"
+                            ? "font-semibold"
+                            : "font-medium"
+                        )}>
+                        {metrics.removedCount}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={cn(
+                          "text-sm",
+                          comparisonSort === "underReview"
+                            ? "font-semibold"
+                            : "font-medium"
+                        )}>
+                        {metrics.underReviewCount}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge
+                        className={`text-xs transition-all duration-300 ${
+                          isWithinTarget
+                            ? "bg-success/20 text-success border-success/30"
+                            : "bg-destructive/20 text-destructive border-destructive/30"
+                        }`}>
                         {statusText}
                       </Badge>
                     </td>

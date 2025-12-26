@@ -2,11 +2,26 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Zap,
   AlertTriangle,
   RefreshCw,
   MessageSquare,
   Activity,
+  Plus,
+  Trash2,
+  Link,
+  User,
+  Film,
+  Eye,
+  Clock,
+  Shield,
 } from "lucide-react";
 
 interface ActivityLogItem {
@@ -18,10 +33,26 @@ interface ActivityLogItem {
   platform?: string;
 }
 
+type ActivityFilter =
+  | "all"
+  | "added"
+  | "deleted"
+  | "status_change"
+  | "notes"
+  | "notes_added"
+  | "notes_changed"
+  | "notes_edited"
+  | "url_changed"
+  | "account_changed"
+  | "content_type_changed"
+  | "views_changed"
+  | "time_added_changed"
+  | "blocked_at_changed";
+
 interface ActivityLogProps {
   log: ActivityLogItem[];
-  filter: "all" | "violations" | "status" | "notes";
-  onFilterChange: (filter: "all" | "violations" | "status" | "notes") => void;
+  filter: ActivityFilter;
+  onFilterChange: (filter: ActivityFilter) => void;
   getPlatformColor: (platform: string | null) => string;
 }
 
@@ -29,12 +60,31 @@ const getEventIcon = (type: string) => {
   switch (type) {
     case "match":
       return Zap;
+    case "added":
+      return Plus;
+    case "deleted":
+      return Trash2;
+    case "status_change":
+      return RefreshCw;
+    case "notes":
+    case "notes_added":
+    case "notes_changed":
+    case "notes_edited":
+      return MessageSquare;
+    case "url_changed":
+      return Link;
+    case "account_changed":
+      return User;
+    case "content_type_changed":
+      return Film;
+    case "views_changed":
+      return Eye;
+    case "time_added_changed":
+      return Clock;
+    case "blocked_at_changed":
+      return Shield;
     case "violation":
       return AlertTriangle;
-    case "status":
-      return RefreshCw;
-    case "note":
-      return MessageSquare;
     default:
       return Activity;
   }
@@ -48,41 +98,60 @@ export function ActivityLog({
 }: ActivityLogProps) {
   const filteredLog = log.filter((item) => {
     if (filter === "all") return true;
-    if (filter === "violations") return item.type === "violation";
-    if (filter === "status") return item.type === "status";
-    if (filter === "notes") return item.type === "note";
-    return true;
+    if (filter === "notes") {
+      // Show all note-related activities
+      return (
+        item.type === "notes_added" ||
+        item.type === "notes_changed" ||
+        item.type === "notes_edited"
+      );
+    }
+    // Map filter to log item type
+    const filterTypeMap: Record<ActivityFilter, string> = {
+      all: "",
+      added: "added",
+      deleted: "deleted",
+      status_change: "status_change",
+      notes: "",
+      notes_added: "notes_added",
+      notes_changed: "notes_changed",
+      notes_edited: "notes_edited",
+      url_changed: "url_changed",
+      account_changed: "account_changed",
+      content_type_changed: "content_type_changed",
+      views_changed: "views_changed",
+      time_added_changed: "time_added_changed",
+      blocked_at_changed: "blocked_at_changed",
+    };
+    return item.type === filterTypeMap[filter];
   });
 
   return (
     <Card className="p-6 lg:col-span-2">
       <h3 className="font-semibold mb-4">Match Activity Log</h3>
 
-      <div className="flex gap-2 mb-4 flex-wrap">
-        <Badge
-          variant={filter === "all" ? "default" : "outline"}
-          className="cursor-pointer text-xs"
-          onClick={() => onFilterChange("all")}>
-          All
-        </Badge>
-        <Badge
-          variant={filter === "violations" ? "default" : "outline"}
-          className="cursor-pointer text-xs"
-          onClick={() => onFilterChange("violations")}>
-          Violations
-        </Badge>
-        <Badge
-          variant={filter === "status" ? "default" : "outline"}
-          className="cursor-pointer text-xs"
-          onClick={() => onFilterChange("status")}>
-          Status changes
-        </Badge>
-        <Badge
-          variant={filter === "notes" ? "default" : "outline"}
-          className="cursor-pointer text-xs"
-          onClick={() => onFilterChange("notes")}>
-          Notes
-        </Badge>
+      <div className="mb-4">
+        <Select value={filter} onValueChange={(value) => onFilterChange(value as ActivityFilter)}>
+          <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
+            <SelectValue placeholder="Filter activity" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px] p-1">
+            <SelectItem value="all" className="text-xs py-1.5">All Activity</SelectItem>
+            <SelectItem value="added" className="text-xs py-1.5">Violation Added</SelectItem>
+            <SelectItem value="deleted" className="text-xs py-1.5">Violation Deleted</SelectItem>
+            <SelectItem value="status_change" className="text-xs py-1.5">Status Change</SelectItem>
+            <SelectItem value="notes" className="text-xs py-1.5">Notes (All)</SelectItem>
+            <SelectItem value="notes_added" className="text-xs py-1.5">Notes - Added</SelectItem>
+            <SelectItem value="notes_changed" className="text-xs py-1.5">Notes - Changed</SelectItem>
+            <SelectItem value="notes_edited" className="text-xs py-1.5">Notes - Edited</SelectItem>
+            <SelectItem value="url_changed" className="text-xs py-1.5">URL Changed</SelectItem>
+            <SelectItem value="account_changed" className="text-xs py-1.5">Account Changed</SelectItem>
+            <SelectItem value="content_type_changed" className="text-xs py-1.5">Content Type Changed</SelectItem>
+            <SelectItem value="views_changed" className="text-xs py-1.5">Views Changed</SelectItem>
+            <SelectItem value="time_added_changed" className="text-xs py-1.5">Time Added Changed</SelectItem>
+            <SelectItem value="blocked_at_changed" className="text-xs py-1.5">Blocked At Changed</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <ScrollArea className="h-[320px]">
