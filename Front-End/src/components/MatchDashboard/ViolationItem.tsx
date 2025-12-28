@@ -529,19 +529,27 @@ export function ViolationItem({
                         );
                       } else if (action === "removed") {
                         description = "Blocked At removed";
-                      } else {
-                        // action === "changed" or no action (fallback)
+                      } else if (action === "changed" || !action) {
+                        // action === "changed" or no action (fallback) - this is when time is explicitly changed
+                        const timeOptions: Intl.DateTimeFormatOptions = {
+                          month: "2-digit",
+                          day: "2-digit",
+                          year: "numeric",
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        };
                         const oldBlocked =
                           entry.oldValue &&
                           (typeof entry.oldValue === "string" ||
                             typeof entry.oldValue === "number")
-                            ? new Date(entry.oldValue).toLocaleString()
+                            ? new Date(entry.oldValue).toLocaleString("en-US", timeOptions)
                             : "undefined";
                         const newBlocked =
                           entry.newValue &&
                           (typeof entry.newValue === "string" ||
                             typeof entry.newValue === "number")
-                            ? new Date(entry.newValue).toLocaleString()
+                            ? new Date(entry.newValue).toLocaleString("en-US", timeOptions)
                             : "undefined";
                         description = (
                           <>
@@ -555,6 +563,35 @@ export function ViolationItem({
                             </code>
                           </>
                         );
+                      }
+                    } else if (entry.field === "notes") {
+                      // Check if it's a note deletion, edit, or other change
+                      if (entry.changes?.action === "deleted" && entry.changes?.removed) {
+                        // Note was deleted
+                        const removedNotes = entry.changes.removed;
+                        description = `Note${removedNotes.length > 1 ? "s" : ""} deleted: ${removedNotes.join(", ")}`;
+                      } else if (entry.changes?.action === "changed" && entry.changes?.edited) {
+                        // Note was edited - show "from X to Y" format
+                        const edited = entry.changes.edited;
+                        if (edited.length > 0) {
+                          const firstEdit = edited[0];
+                          description = (
+                            <>
+                              Note changed from{" "}
+                              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                                {firstEdit.old}
+                              </code>{" "}
+                              to{" "}
+                              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                                {firstEdit.new}
+                              </code>
+                            </>
+                          );
+                        } else {
+                          description = "Notes changed";
+                        }
+                      } else {
+                        description = "Notes changed";
                       }
                     } else {
                       const oldVal = String(entry.oldValue ?? "");

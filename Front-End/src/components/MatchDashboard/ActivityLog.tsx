@@ -52,19 +52,16 @@ type ActivityFilter =
   | "all"
   | "added"
   | "deleted"
-  | "status_change"
-  | "notes"
-  | "notes_added"
-  | "notes_changed"
-  | "notes_edited"
   | "url_changed"
   | "account_changed"
   | "content_type_changed"
+  | "status_change"
   | "views_changed"
   | "time_added_changed"
   | "blocked_at_changed"
-  | "blocked_at_added"
-  | "blocked_at_removed";
+  | "notes_added"
+  | "notes_edited"
+  | "notes_changed";
 
 interface ActivityLogProps {
   log: ActivityLogItem[];
@@ -396,9 +393,7 @@ export function ActivityLog({
                   )
                 : []) ||
               [];
-            description = `Note${
-              addedNotes.length > 1 ? "s" : ""
-            } added: ${addedNotes.join(", ")}`;
+            description = addedNotes.join(", ");
             break;
           }
           case "field_updated": {
@@ -540,21 +535,29 @@ export function ActivityLog({
                 type = "blocked_at_removed";
                 badge = "Blocked At Removed";
                 description = "Blocked at removed";
-              } else {
-                // action === "changed" or no action (fallback)
+              } else if (action === "changed" || !action) {
+                // action === "changed" or no action (fallback) - this is when time is explicitly changed
                 type = "blocked_at_changed";
                 badge = "Blocked At Changed";
+                const timeOptions: Intl.DateTimeFormatOptions = {
+                  month: "2-digit",
+                  day: "2-digit",
+                  year: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                };
                 const oldBlocked =
                   entry.oldValue &&
                   (typeof entry.oldValue === "string" ||
                     typeof entry.oldValue === "number")
-                    ? new Date(entry.oldValue).toLocaleString()
+                    ? new Date(entry.oldValue).toLocaleString("en-US", timeOptions)
                     : "undefined";
                 const newBlocked =
                   entry.newValue &&
                   (typeof entry.newValue === "string" ||
                     typeof entry.newValue === "number")
-                    ? new Date(entry.newValue).toLocaleString()
+                    ? new Date(entry.newValue).toLocaleString("en-US", timeOptions)
                     : "undefined";
                 description = (
                   <>
@@ -570,9 +573,41 @@ export function ActivityLog({
                 );
               }
             } else if (entry.field === "notes") {
-              type = "notes_changed";
-              badge = "Notes Changed";
-              description = "Notes changed";
+              // Check if it's a note deletion, edit, or other change
+              if (entry.changes?.action === "deleted" && entry.changes?.removed) {
+                // Note was deleted
+                type = "notes_edited";
+                badge = "Note Deleted";
+                const removedNotes = entry.changes.removed;
+                description = removedNotes.join(", ");
+              } else if (entry.changes?.action === "changed" && entry.changes?.edited) {
+                // Note was edited - show "from X to Y" format
+                type = "notes_changed";
+                badge = "Note Changed";
+                const edited = entry.changes.edited;
+                if (edited.length > 0) {
+                  const firstEdit = edited[0];
+                  description = (
+                    <>
+                      Note changed from{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {firstEdit.old}
+                      </code>{" "}
+                      to{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {firstEdit.new}
+                      </code>
+                    </>
+                  );
+                } else {
+                  description = "Notes changed";
+                }
+              } else {
+                // Other note changes
+                type = "notes_changed";
+                badge = "Note Changed";
+                description = "Notes changed";
+              }
             } else {
               type = "field_updated";
               badge = "Updated";
@@ -679,32 +714,20 @@ export function ActivityLog({
 
   const filteredLog = allLogItems.filter((item) => {
     if (filter === "all") return true;
-    if (filter === "notes") {
-      // Show all note-related activities
-      return (
-        item.type === "notes_added" ||
-        item.type === "notes_changed" ||
-        item.type === "notes_edited"
-      );
-    }
-    // Map filter to log item type
     const filterTypeMap: Record<ActivityFilter, string> = {
       all: "",
       added: "added",
       deleted: "deleted",
-      status_change: "status_change",
-      notes: "",
-      notes_added: "notes_added",
-      notes_changed: "notes_changed",
-      notes_edited: "notes_edited",
       url_changed: "url_changed",
       account_changed: "account_changed",
       content_type_changed: "content_type_changed",
+      status_change: "status_change",
       views_changed: "views_changed",
       time_added_changed: "time_added_changed",
       blocked_at_changed: "blocked_at_changed",
-      blocked_at_added: "blocked_at_added",
-      blocked_at_removed: "blocked_at_removed",
+      notes_added: "notes_added",
+      notes_edited: "notes_edited",
+      notes_changed: "notes_changed",
     };
     return item.type === filterTypeMap[filter];
   });
@@ -730,21 +753,6 @@ export function ActivityLog({
             <SelectItem value="deleted" className="text-xs py-1.5">
               Violation Deleted
             </SelectItem>
-            <SelectItem value="status_change" className="text-xs py-1.5">
-              Status Change
-            </SelectItem>
-            <SelectItem value="notes" className="text-xs py-1.5">
-              Notes (All)
-            </SelectItem>
-            <SelectItem value="notes_added" className="text-xs py-1.5">
-              Notes - Added
-            </SelectItem>
-            <SelectItem value="notes_changed" className="text-xs py-1.5">
-              Notes - Changed
-            </SelectItem>
-            <SelectItem value="notes_edited" className="text-xs py-1.5">
-              Notes - Edited
-            </SelectItem>
             <SelectItem value="url_changed" className="text-xs py-1.5">
               URL Changed
             </SelectItem>
@@ -753,6 +761,9 @@ export function ActivityLog({
             </SelectItem>
             <SelectItem value="content_type_changed" className="text-xs py-1.5">
               Content Type Changed
+            </SelectItem>
+            <SelectItem value="status_change" className="text-xs py-1.5">
+              Status Change
             </SelectItem>
             <SelectItem value="views_changed" className="text-xs py-1.5">
               Views Changed
@@ -763,11 +774,14 @@ export function ActivityLog({
             <SelectItem value="blocked_at_changed" className="text-xs py-1.5">
               Blocked At Changed
             </SelectItem>
-            <SelectItem value="blocked_at_added" className="text-xs py-1.5">
-              Blocked At Added
+            <SelectItem value="notes_added" className="text-xs py-1.5">
+              Notes - Added
             </SelectItem>
-            <SelectItem value="blocked_at_removed" className="text-xs py-1.5">
-              Blocked At Removed
+            <SelectItem value="notes_edited" className="text-xs py-1.5">
+              Notes - Edited
+            </SelectItem>
+            <SelectItem value="notes_changed" className="text-xs py-1.5">
+              Notes - Changed
             </SelectItem>
           </SelectContent>
         </Select>
@@ -808,11 +822,18 @@ export function ActivityLog({
                         className={`text-xs px-2 py-0.5 h-5 font-medium ${
                           item.type === "added"
                             ? "bg-success text-white border-success/20"
+                            : item.type === "notes_added"
+                            ? "bg-success text-white border-success/20"
+                            : item.type === "notes_changed"
+                            ? "bg-yellow-500 text-white border-yellow-500/20"
+                            : item.type === "notes_edited"
+                            ? "bg-destructive text-white border-destructive/20"
                             : item.type === "status_change" ||
                               item.type === "content_type_changed"
                             ? "bg-cyan-500 text-white border-cyan-500/20"
                             : item.type === "views_changed" ||
-                              item.type === "time_added_changed"
+                              item.type === "time_added_changed" ||
+                              item.type === "blocked_at_changed"
                             ? "bg-purple-500 text-white border-purple-500/20"
                             : item.type === "url_changed" ||
                               item.type === "account_changed"

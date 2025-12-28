@@ -362,6 +362,7 @@ router.put("/:id", async (req, res) => {
     const originalBlockedAt = originalViolation.blockedAt
       ? new Date(originalViolation.blockedAt).toISOString()
       : undefined;
+    const originalNotes = [...(violation.notes || [])]; // Store BEFORE updating
     const changes = {};
 
     // Update externalMatchId from the match if matchId is populated
@@ -445,6 +446,7 @@ router.put("/:id", async (req, res) => {
     // Track blockedAt changes separately (only when explicitly provided, not auto-set from status)
     let blockedAtChanged = false;
     let blockedAtAction = null; // 'added', 'removed', 'changed', or null
+    let blockedAtExplicitlyChanged = false; // Track if blockedAt was explicitly provided and changed
 
     // Handle blockedAt - set it if provided, or handle it based on status
     if (blockedAt !== undefined) {
@@ -464,6 +466,7 @@ router.put("/:id", async (req, res) => {
           blockedAtAction = "removed";
         } else {
           blockedAtAction = "changed";
+          blockedAtExplicitlyChanged = true; // Mark as explicitly changed (time changed, not added/removed)
         }
         blockedAtChanged = true;
         changes.blockedAt = { old: oldBlockedAt, new: newBlockedAt };
@@ -534,9 +537,6 @@ router.put("/:id", async (req, res) => {
       }
     }
 
-    // Store original notes for logging (originalStatus already stored above)
-    const originalNotes = [...(violation.notes || [])];
-
     // Normalize status for logging comparison
     let normalizedStatusForLog = status;
     if (status !== undefined) {
@@ -577,14 +577,18 @@ router.put("/:id", async (req, res) => {
           ? new Date(updatedViolation.blockedAt).toISOString()
           : undefined;
         changesObj.blockedAtAdded = finalBlockedAt;
-        // Don't log separate blockedAt added
-        blockedAtChanged = false;
+        // Don't log separate blockedAt added (unless it was explicitly changed, which is handled separately)
+        if (!blockedAtExplicitlyChanged) {
+          blockedAtChanged = false;
+        }
       }
       // If changing FROM blocked, include blockedAt removed info
       else if (oldStatusLower === "blocked" && statusLower !== "blocked") {
         changesObj.blockedAtRemoved = true;
-        // Don't log separate blockedAt removed
-        blockedAtChanged = false;
+        // Don't log separate blockedAt removed (unless it was explicitly changed, which is handled separately)
+        if (!blockedAtExplicitlyChanged) {
+          blockedAtChanged = false;
+        }
       }
 
       await logViolationChange(updatedViolation._id, "status_changed", {
@@ -610,7 +614,34 @@ router.put("/:id", async (req, res) => {
         JSON.stringify(newNotes.sort());
       if (notesChanged) {
         const addedNotes = newNotes.filter((n) => !originalNotes.includes(n));
-        if (addedNotes.length > 0) {
+        const removedNotes = originalNotes.filter((n) => !newNotes.includes(n));
+        
+        // If notes were edited (same count, different content) - this means a note was changed, not added/removed
+        if (originalNotes.length === newNotes.length && addedNotes.length > 0 && removedNotes.length > 0) {
+          // Notes were edited/changed - match old notes with new notes by position
+          const edited = [];
+          for (let i = 0; i < originalNotes.length; i++) {
+            if (originalNotes[i] !== newNotes[i]) {
+              edited.push({
+                old: originalNotes[i],
+                new: newNotes[i]
+              });
+            }
+          }
+          
+          // Log as field_updated with action "changed"
+          await logViolationChange(updatedViolation._id, "field_updated", {
+            user: req.user,
+            field: "notes",
+            oldValue: originalNotes,
+            newValue: newNotes,
+            changes: {
+              action: "changed",
+              edited: edited,
+            },
+          });
+        } else if (addedNotes.length > 0) {
+          // New notes were added
           await logViolationChange(updatedViolation._id, "note_added", {
             user: req.user,
             field: "notes",
@@ -620,7 +651,20 @@ router.put("/:id", async (req, res) => {
               added: addedNotes,
             },
           });
+        } else if (removedNotes.length > 0) {
+          // Notes were removed/deleted
+          await logViolationChange(updatedViolation._id, "field_updated", {
+            user: req.user,
+            field: "notes",
+            oldValue: originalNotes,
+            newValue: newNotes,
+            changes: {
+              action: "deleted",
+              removed: removedNotes,
+            },
+          });
         } else {
+          // Other note changes
           await logViolationChange(updatedViolation._id, "field_updated", {
             user: req.user,
             field: "notes",
@@ -631,24 +675,24 @@ router.put("/:id", async (req, res) => {
       }
     }
 
-    // Log blockedAt changes separately with appropriate action
-    // Only log if it's NOT a status change (status changes handle blockedAt in their own log)
-    if (blockedAtChanged && blockedAtAction && status === undefined) {
+    // Log blockedAt time changes independently (when time is explicitly changed, not added/removed)
+    // This should be logged separately from status changes, similar to "Time Added Changed"
+    if (blockedAtExplicitlyChanged && blockedAtAction === "changed") {
       const finalBlockedAt = updatedViolation.blockedAt
         ? new Date(updatedViolation.blockedAt).toISOString()
         : undefined;
-      const originalBlockedAtISO = originalBlockedAt;
+      const originalBlockedAtISO = originalBlockedAt
+        ? new Date(originalBlockedAt).toISOString()
+        : undefined;
 
-      if (blockedAtAction === "changed") {
-        // Only log "changed" - added/removed are handled in status_changed
-        await logViolationChange(updatedViolation._id, "field_updated", {
-          user: req.user,
-          field: "blockedAt",
-          oldValue: originalBlockedAtISO,
-          newValue: finalBlockedAt,
-          changes: { action: "changed" },
-        });
-      }
+      // Log as field_updated with action "changed" - this will be displayed as "Blocked At Changed"
+      await logViolationChange(updatedViolation._id, "field_updated", {
+        user: req.user,
+        field: "blockedAt",
+        oldValue: originalBlockedAtISO,
+        newValue: finalBlockedAt,
+        changes: { action: "changed" },
+      });
     }
 
     // Log other field updates - only log fields that were explicitly provided and actually changed

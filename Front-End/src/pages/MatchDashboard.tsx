@@ -47,17 +47,16 @@ export default function MatchDashboard() {
     | "all"
     | "added"
     | "deleted"
-    | "status_change"
-    | "notes"
-    | "notes_added"
-    | "notes_changed"
-    | "notes_edited"
     | "url_changed"
     | "account_changed"
     | "content_type_changed"
+    | "status_change"
     | "views_changed"
     | "time_added_changed"
     | "blocked_at_changed"
+    | "notes_added"
+    | "notes_edited"
+    | "notes_changed"
   >("all");
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
