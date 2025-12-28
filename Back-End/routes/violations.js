@@ -129,6 +129,53 @@ router.get("/deleted-logs/:externalMatchId", async (req, res) => {
   }
 });
 
+// DELETE /api/violations/deleted-logs/:logId - Delete a deleted violation log entry
+router.delete("/deleted-logs/:logId", async (req, res) => {
+  try {
+    const { logId } = req.params;
+
+    const deletedLog = await DeletedViolationLog.findByIdAndDelete(logId);
+
+    if (!deletedLog) {
+      return res.status(404).json({ error: "Deleted log entry not found" });
+    }
+
+    res.json({ message: "Deleted log entry removed successfully" });
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(400).json({ error: "Invalid log ID" });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/violations/:violationId/audit-log/:logEntryId - Delete an audit log entry from a violation
+router.delete("/:violationId/audit-log/:logEntryId", async (req, res) => {
+  try {
+    const { violationId, logEntryId } = req.params;
+
+    const violation = await Violation.findById(violationId);
+
+    if (!violation) {
+      return res.status(404).json({ error: "Violation not found" });
+    }
+
+    // Remove the audit log entry
+    violation.auditLog = violation.auditLog.filter(
+      (entry) => entry._id.toString() !== logEntryId
+    );
+
+    await violation.save();
+
+    res.json({ message: "Audit log entry removed successfully" });
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(400).json({ error: "Invalid violation or log entry ID" });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/violations/:id - Get single violation
 router.get("/:id", async (req, res) => {
   try {

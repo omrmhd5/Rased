@@ -478,17 +478,25 @@ export function ViolationItem({
                         </>
                       );
                     } else if (entry.field === "timeAdded") {
+                      const timeOptions: Intl.DateTimeFormatOptions = {
+                        month: "2-digit",
+                        day: "2-digit",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      };
                       const oldTime =
                         entry.oldValue &&
                         (typeof entry.oldValue === "string" ||
                           typeof entry.oldValue === "number")
-                          ? new Date(entry.oldValue).toLocaleString()
+                          ? new Date(entry.oldValue).toLocaleString("en-US", timeOptions)
                           : "";
                       const newTime =
                         entry.newValue &&
                         (typeof entry.newValue === "string" ||
                           typeof entry.newValue === "number")
-                          ? new Date(entry.newValue).toLocaleString()
+                          ? new Date(entry.newValue).toLocaleString("en-US", timeOptions)
                           : "";
                       description = (
                         <>

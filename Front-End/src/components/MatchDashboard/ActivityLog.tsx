@@ -23,9 +23,16 @@ import {
   Clock,
   Shield,
   UserCircle,
+  X,
 } from "lucide-react";
-import { Violation, AuditLogEntry, DeletedViolationLog } from "./types";
-import React from "react";
+import {
+  Violation,
+  AuditLogEntry,
+  DeletedViolationLog,
+  API_URL,
+} from "./types";
+import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
+import React, { useState } from "react";
 
 interface ActivityLogItem {
   type: string;
@@ -36,6 +43,9 @@ interface ActivityLogItem {
   platform?: string;
   timestamp?: number; // For sorting
   userName?: string; // Username who performed the action
+  violationId?: string; // Violation ID for audit log entries
+  logEntryId?: string; // Audit log entry ID
+  deletedLogId?: string; // Deleted violation log ID
 }
 
 type ActivityFilter =
@@ -69,6 +79,7 @@ interface ActivityLogProps {
     violations: Violation[];
   }>; // Platform operations to get platform names
   deletedViolationLogs?: DeletedViolationLog[]; // Deleted violation logs from separate collection
+  onRefetch?: () => void; // Callback to refetch data after deletion
 }
 
 const getEventIcon = (type: string) => {
@@ -114,7 +125,64 @@ export function ActivityLog({
   violations = [],
   platformOperations = [],
   deletedViolationLogs = [],
+  onRefetch,
 }: ActivityLogProps) {
+  const [deleteConfirmItem, setDeleteConfirmItem] =
+    useState<ActivityLogItem | null>(null);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
+  const handleDeleteLog = (item: ActivityLogItem) => {
+    setDeleteConfirmItem(item);
+    setIsDeleteConfirmOpen(true);
+  };
+
+  const confirmDeleteLog = async () => {
+    if (!deleteConfirmItem) return;
+
+    try {
+      let response;
+      if (deleteConfirmItem.deletedLogId) {
+        // Delete from DeletedViolationLog collection
+        response = await fetch(
+          `${API_URL}/violations/deleted-logs/${deleteConfirmItem.deletedLogId}`,
+          {
+            method: "DELETE",
+            credentials: "include",
+          }
+        );
+      } else if (
+        deleteConfirmItem.violationId &&
+        deleteConfirmItem.logEntryId
+      ) {
+        // Delete audit log entry from violation
+        response = await fetch(
+          `${API_URL}/violations/${deleteConfirmItem.violationId}/audit-log/${deleteConfirmItem.logEntryId}`,
+          {
+            method: "DELETE",
+            credentials: "include",
+          }
+        );
+      } else {
+        console.error("Cannot delete: missing required IDs");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to delete log entry");
+      }
+
+      // Refetch data to update the UI
+      if (onRefetch) {
+        onRefetch();
+      }
+
+      setIsDeleteConfirmOpen(false);
+      setDeleteConfirmItem(null);
+    } catch (error) {
+      console.error("Error deleting log entry:", error);
+      alert("Failed to delete log entry. Please try again.");
+    }
+  };
   // Convert violation audit logs to ActivityLogItem format
   const auditLogItems: ActivityLogItem[] = [];
 
@@ -160,6 +228,7 @@ export function ActivityLog({
       platform: platformName,
       timestamp: timestamp.getTime(),
       userName: deletedLog.userName,
+      deletedLogId: deletedLog._id,
     });
   });
 
@@ -404,17 +473,37 @@ export function ActivityLog({
             } else if (entry.field === "timeAdded") {
               type = "time_added_changed";
               badge = "Time Added Changed";
+              const timeOptions: Intl.DateTimeFormatOptions = {
+                month: "2-digit",
+                day: "2-digit",
+                year: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+                hour12: true,
+              };
               const oldTime =
                 entry.oldValue && typeof entry.oldValue === "string"
-                  ? new Date(entry.oldValue).toLocaleString()
+                  ? new Date(entry.oldValue).toLocaleString(
+                      "en-US",
+                      timeOptions
+                    )
                   : entry.oldValue && typeof entry.oldValue === "number"
-                  ? new Date(entry.oldValue).toLocaleString()
+                  ? new Date(entry.oldValue).toLocaleString(
+                      "en-US",
+                      timeOptions
+                    )
                   : "";
               const newTime =
                 entry.newValue && typeof entry.newValue === "string"
-                  ? new Date(entry.newValue).toLocaleString()
+                  ? new Date(entry.newValue).toLocaleString(
+                      "en-US",
+                      timeOptions
+                    )
                   : entry.newValue && typeof entry.newValue === "number"
-                  ? new Date(entry.newValue).toLocaleString()
+                  ? new Date(entry.newValue).toLocaleString(
+                      "en-US",
+                      timeOptions
+                    )
                   : "";
               description = (
                 <>
@@ -543,11 +632,18 @@ export function ActivityLog({
               ? "destructive"
               : type === "status_change"
               ? "secondary"
+              : type === "added"
+              ? "default"
               : "default",
           description,
           platform: platformName,
           timestamp: timestamp.getTime(), // Store timestamp for sorting
           userName: entry.userName,
+          violationId: violation._id || violation.id?.toString(),
+          logEntryId:
+            entry && typeof entry === "object" && "_id" in entry
+              ? String((entry as { _id: unknown })._id)
+              : undefined,
         });
       });
     }
@@ -695,7 +791,7 @@ export function ActivityLog({
               return (
                 <div
                   key={i}
-                  className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:border-border hover:bg-muted/30 transition-all group">
+                  className="flex items-start gap-3 p-3 rounded-lg border border-border/50 hover:border-border hover:bg-muted/30 transition-all group relative">
                   <div className="shrink-0 mt-0.5">
                     <div className="w-8 h-8 rounded-lg bg-muted/60 flex items-center justify-center group-hover:bg-muted/80 transition-colors">
                       <EventIcon className="h-4 w-4 text-muted-foreground" />
@@ -709,7 +805,20 @@ export function ActivityLog({
                       </p>
                       <Badge
                         variant={item.badgeVariant}
-                        className="text-xs px-2 py-0.5 h-5 font-medium">
+                        className={`text-xs px-2 py-0.5 h-5 font-medium ${
+                          item.type === "added"
+                            ? "bg-success text-white border-success/20"
+                            : item.type === "status_change" ||
+                              item.type === "content_type_changed"
+                            ? "bg-cyan-500 text-white border-cyan-500/20"
+                            : item.type === "views_changed" ||
+                              item.type === "time_added_changed"
+                            ? "bg-purple-500 text-white border-purple-500/20"
+                            : item.type === "url_changed" ||
+                              item.type === "account_changed"
+                            ? "bg-yellow-500 text-white border-yellow-500/20"
+                            : ""
+                        }`}>
                         {item.badge}
                       </Badge>
                       {item.userName && (
@@ -719,6 +828,16 @@ export function ActivityLog({
                             {item.userName}
                           </span>
                         </div>
+                      )}
+                      {/* Delete button - appears on hover, after userName */}
+                      {(item.deletedLogId ||
+                        (item.violationId && item.logEntryId)) && (
+                        <button
+                          onClick={() => handleDeleteLog(item)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                          title="Delete log entry">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
                       )}
                     </div>
                     <div className="text-sm leading-relaxed text-foreground break-words">
@@ -739,6 +858,17 @@ export function ActivityLog({
           )}
         </div>
       </ScrollArea>
+
+      <DeleteConfirmDialog
+        open={isDeleteConfirmOpen}
+        onOpenChange={(open) => {
+          setIsDeleteConfirmOpen(open);
+          if (!open) setDeleteConfirmItem(null);
+        }}
+        onConfirm={confirmDeleteLog}
+        title="Delete Log Entry"
+        description="Are you sure you want to delete this log entry? This action cannot be undone."
+      />
     </Card>
   );
 }

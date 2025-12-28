@@ -52,6 +52,7 @@ const violationSchema = new mongoose.Schema(
     },
     views: {
       type: String,
+      default: "0",
       trim: true,
     },
     timeAdded: {

@@ -1624,6 +1624,7 @@ export default function MatchDashboard() {
           violations={platformOperations.flatMap((p) => p.violations)}
           platformOperations={platformOperations}
           deletedViolationLogs={deletedViolationLogs}
+          onRefetch={() => refetchAllData(true)}
         />
       </div>
 
