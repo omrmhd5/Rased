@@ -1,6 +1,7 @@
 import express from "express";
 import Violation from "../models/Violation.js";
 import Match from "../models/Match.js";
+import DeletedViolationLog from "../models/DeletedViolationLog.js";
 import { optionalAuth } from "../middleware/auth.js";
 import { logViolationChange } from "../utils/violationLogger.js";
 
@@ -102,6 +103,28 @@ router.get("/", async (req, res) => {
 
     res.json(violations);
   } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/violations/deleted-logs/:externalMatchId - Get deleted violation logs for a match
+// IMPORTANT: This route must come BEFORE /:id to avoid route conflicts
+router.get("/deleted-logs/:externalMatchId", async (req, res) => {
+  try {
+    const { externalMatchId } = req.params;
+
+    // Query by externalMatchId directly (match might be deleted)
+    const deletedLogs = await DeletedViolationLog.find({
+      externalMatchId: externalMatchId,
+    })
+      .sort({ timestamp: -1 })
+      .lean();
+
+    res.json(deletedLogs);
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(400).json({ error: "Invalid match ID" });
+    }
     res.status(500).json({ error: error.message });
   }
 });
@@ -286,8 +309,9 @@ router.put("/:id", async (req, res) => {
       return res.status(404).json({ error: "Violation not found" });
     }
 
-    // Store original values for logging
+    // Store original values for logging (BEFORE any updates)
     const originalViolation = violation.toObject();
+    const originalStatus = violation.status; // Store BEFORE updating
     const originalBlockedAt = originalViolation.blockedAt
       ? new Date(originalViolation.blockedAt).toISOString()
       : undefined;
@@ -335,9 +359,23 @@ router.put("/:id", async (req, res) => {
       changes.contentType = { old: violation.contentType, new: contentType };
       violation.contentType = contentType;
     }
-    if (status !== undefined && status !== violation.status) {
-      changes.status = { old: violation.status, new: status };
-      violation.status = status;
+    // Normalize status for comparison and storage
+    let normalizedStatusForUpdate = status;
+    if (status !== undefined) {
+      // Normalize status to match schema enum (capitalized)
+      const normalizedStatus =
+        status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+      // Handle "Under Review" specially
+      normalizedStatusForUpdate =
+        normalizedStatus === "Under review" ? "Under Review" : normalizedStatus;
+
+      if (normalizedStatusForUpdate !== violation.status) {
+        changes.status = {
+          old: violation.status,
+          new: normalizedStatusForUpdate,
+        };
+        violation.status = normalizedStatusForUpdate;
+      }
     }
     if (views !== undefined && views !== violation.views) {
       changes.views = { old: violation.views, new: views };
@@ -449,9 +487,19 @@ router.put("/:id", async (req, res) => {
       }
     }
 
-    // Store original values for logging
-    const originalStatus = violation.status;
+    // Store original notes for logging (originalStatus already stored above)
     const originalNotes = [...(violation.notes || [])];
+
+    // Normalize status for logging comparison
+    let normalizedStatusForLog = status;
+    if (status !== undefined) {
+      normalizedStatusForLog =
+        status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+      // Handle "Under Review" specially
+      if (normalizedStatusForLog === "Under review") {
+        normalizedStatusForLog = "Under Review";
+      }
+    }
 
     // If blockedAt needs to be removed, use $unset to ensure it's deleted from DB
     if (blockedAtChanged && blockedAtAction === "removed") {
@@ -467,8 +515,12 @@ router.put("/:id", async (req, res) => {
 
     // Log changes
     // Log status change if status was updated
-    if (status !== undefined && status !== originalStatus) {
-      const statusLower = status.toLowerCase();
+    if (
+      status !== undefined &&
+      normalizedStatusForUpdate &&
+      normalizedStatusForUpdate !== originalStatus
+    ) {
+      const statusLower = normalizedStatusForUpdate.toLowerCase();
       const oldStatusLower = originalStatus.toLowerCase();
       const changesObj = {};
 
@@ -492,7 +544,7 @@ router.put("/:id", async (req, res) => {
         user: req.user,
         field: "status",
         oldValue: originalStatus,
-        newValue: status,
+        newValue: normalizedStatusForUpdate,
         changes: Object.keys(changesObj).length > 0 ? changesObj : undefined,
       });
     }
@@ -699,7 +751,39 @@ router.delete("/:id", async (req, res) => {
     const matchId = violation.matchId;
     const violationId = violation._id;
 
-    // Log deletion before deleting
+    // Get externalMatchId from violation or match
+    let externalMatchId = violation.externalMatchId;
+    if (!externalMatchId && violation.matchId) {
+      // If matchId is populated, get externalMatchId from it
+      if (
+        typeof violation.matchId === "object" &&
+        violation.matchId.externalMatchId
+      ) {
+        externalMatchId = violation.matchId.externalMatchId;
+      } else {
+        // Fetch match to get externalMatchId
+        const match = await Match.findById(violation.matchId);
+        if (match && match.externalMatchId) {
+          externalMatchId = match.externalMatchId;
+        }
+      }
+    }
+
+    // Save deleted violation log to separate collection before deleting
+    await DeletedViolationLog.create({
+      externalMatchId: externalMatchId || null, // Required for querying
+      action: "deleted",
+      userId: req.user ? req.user.userId : null,
+      userName: req.user ? req.user.username : "System",
+      timestamp: new Date(),
+      changes: {
+        platformId: violation.platformId,
+        platformName: violation.platformName,
+        accountChannel: violation.accountChannel,
+      },
+    });
+
+    // Log deletion in violation's audit log before deleting (optional, for consistency)
     await logViolationChange(violationId, "deleted", {
       user: req.user,
       initialData: {

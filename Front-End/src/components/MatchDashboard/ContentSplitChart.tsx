@@ -34,7 +34,7 @@ export function ContentSplitChart({ data }: ContentSplitChartProps) {
   const maxValue = Math.max(...data.map((d) => d.value), 1);
 
   return (
-    <Card className="p-6 lg:col-span-3">
+    <Card className="p-6 lg:col-span-1">
       <h3 className="font-semibold mb-6 text-lg">
         Live Stream vs Highlights vs Others
       </h3>

@@ -22,8 +22,9 @@ import {
   Eye,
   Clock,
   Shield,
+  UserCircle,
 } from "lucide-react";
-import { Violation, AuditLogEntry } from "./types";
+import { Violation, AuditLogEntry, DeletedViolationLog } from "./types";
 import React from "react";
 
 interface ActivityLogItem {
@@ -34,6 +35,7 @@ interface ActivityLogItem {
   description: string | React.ReactNode; // Allow ReactNode for highlighted descriptions
   platform?: string;
   timestamp?: number; // For sorting
+  userName?: string; // Username who performed the action
 }
 
 type ActivityFilter =
@@ -66,6 +68,7 @@ interface ActivityLogProps {
     name: string;
     violations: Violation[];
   }>; // Platform operations to get platform names
+  deletedViolationLogs?: DeletedViolationLog[]; // Deleted violation logs from separate collection
 }
 
 const getEventIcon = (type: string) => {
@@ -110,9 +113,55 @@ export function ActivityLog({
   getPlatformIcon,
   violations = [],
   platformOperations = [],
+  deletedViolationLogs = [],
 }: ActivityLogProps) {
   // Convert violation audit logs to ActivityLogItem format
   const auditLogItems: ActivityLogItem[] = [];
+
+  // Process deleted violation logs from separate collection
+  deletedViolationLogs.forEach((deletedLog) => {
+    const timestamp = new Date(deletedLog.timestamp);
+    const formattedDate = timestamp.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+    const formattedTime = timestamp.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    const timeAgo = formatTimeAgo(timestamp);
+
+    const platformName = deletedLog.changes?.platformName || "platform";
+    const accountName = deletedLog.changes?.accountChannel || "";
+
+    auditLogItems.push({
+      type: "deleted",
+      time: `${formattedDate} at ${formattedTime} • ${timeAgo}`,
+      badge: "Deleted",
+      badgeVariant: "destructive",
+      description: (
+        <>
+          Violation deleted from{" "}
+          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+            {platformName}
+          </code>
+          {accountName && (
+            <>
+              {" "}
+              for channel/user{" "}
+              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                {accountName}
+              </code>
+            </>
+          )}
+        </>
+      ),
+      platform: platformName,
+      timestamp: timestamp.getTime(),
+      userName: deletedLog.userName,
+    });
+  });
 
   // Create a map of violation IDs to platform names
   const violationToPlatformMap = new Map<string, string>();
@@ -148,9 +197,26 @@ export function ActivityLog({
           case "created": {
             type = "added";
             badge = "Added";
-            description = `Violation created on ${
-              violation.platformName || "platform"
-            }`;
+            const platformName = violation.platformName || "platform";
+            const accountName =
+              violation.accountChannel || violation.accountHandle || "";
+            description = (
+              <>
+                Violation created on{" "}
+                <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  {platformName}
+                </code>
+                {accountName && (
+                  <>
+                    {" "}
+                    for channel/user{" "}
+                    <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                      {accountName}
+                    </code>
+                  </>
+                )}
+              </>
+            );
             break;
           }
           case "status_changed": {
@@ -158,6 +224,21 @@ export function ActivityLog({
             badge = "Status Change";
             const oldStatus = String(entry.oldValue || "");
             const newStatus = String(entry.newValue || "");
+
+            // Helper function to get status color classes
+            const getStatusColorClasses = (status: string) => {
+              const statusLower = status.toLowerCase();
+              if (statusLower === "active") {
+                return "bg-destructive/10 text-destructive";
+              } else if (statusLower === "blocked") {
+                return "bg-success/10 text-success";
+              } else if (statusLower === "removed") {
+                return "bg-cyan-500/10 text-cyan-500";
+              } else if (statusLower === "under review") {
+                return "bg-yellow-500/10 text-yellow-500";
+              }
+              return "bg-primary/10 text-primary";
+            };
 
             // Check if blockedAt was added or removed
             if (entry.changes?.blockedAtAdded) {
@@ -170,11 +251,17 @@ export function ActivityLog({
               description = (
                 <>
                   Status changed from{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  <code
+                    className={`text-xs ${getStatusColorClasses(
+                      oldStatus
+                    )} px-1.5 py-0.5 rounded font-mono`}>
                     {oldStatus}
                   </code>{" "}
                   to{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  <code
+                    className={`text-xs ${getStatusColorClasses(
+                      newStatus
+                    )} px-1.5 py-0.5 rounded font-mono`}>
                     {newStatus}
                   </code>
                   <div className="mt-1 text-xs text-muted-foreground">
@@ -189,11 +276,17 @@ export function ActivityLog({
               description = (
                 <>
                   Status changed from{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  <code
+                    className={`text-xs ${getStatusColorClasses(
+                      oldStatus
+                    )} px-1.5 py-0.5 rounded font-mono`}>
                     {oldStatus}
                   </code>{" "}
                   to{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  <code
+                    className={`text-xs ${getStatusColorClasses(
+                      newStatus
+                    )} px-1.5 py-0.5 rounded font-mono`}>
                     {newStatus}
                   </code>
                   <div className="mt-1 text-xs text-muted-foreground">
@@ -202,7 +295,24 @@ export function ActivityLog({
                 </>
               );
             } else {
-              description = `Status changed from "${oldStatus}" to "${newStatus}"`;
+              description = (
+                <>
+                  Status changed from{" "}
+                  <code
+                    className={`text-xs ${getStatusColorClasses(
+                      oldStatus
+                    )} px-1.5 py-0.5 rounded font-mono`}>
+                    {oldStatus}
+                  </code>{" "}
+                  to{" "}
+                  <code
+                    className={`text-xs ${getStatusColorClasses(
+                      newStatus
+                    )} px-1.5 py-0.5 rounded font-mono`}>
+                    {newStatus}
+                  </code>
+                </>
+              );
             }
             break;
           }
@@ -400,7 +510,7 @@ export function ActivityLog({
             }
             break;
           }
-          case "deleted":
+          case "deleted": {
             type = "deleted";
             badge = "Deleted";
             const violationId = violation._id || violation.id?.toString();
@@ -410,6 +520,7 @@ export function ActivityLog({
               "platform";
             description = `Violation deleted from ${platformName}`;
             break;
+          }
           default:
             type = entry.action;
             badge = "Updated";
@@ -436,6 +547,7 @@ export function ActivityLog({
           description,
           platform: platformName,
           timestamp: timestamp.getTime(), // Store timestamp for sorting
+          userName: entry.userName,
         });
       });
     }
@@ -591,15 +703,23 @@ export function ActivityLog({
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <p className="text-xs text-muted-foreground">
                         {item.time}
                       </p>
                       <Badge
                         variant={item.badgeVariant}
-                        className="text-xs px-2 py-0.5 h-5">
+                        className="text-xs px-2 py-0.5 h-5 font-medium">
                         {item.badge}
                       </Badge>
+                      {item.userName && (
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/50">
+                          <UserCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground font-medium">
+                            {item.userName}
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="text-sm leading-relaxed text-foreground break-words">
                       {item.description}

@@ -32,6 +32,20 @@ export type AuditLogEntry = {
   };
 };
 
+export type DeletedViolationLog = {
+  _id?: string;
+  matchId: string;
+  action: "deleted";
+  userId?: string;
+  userName: string;
+  timestamp: string | Date;
+  changes?: {
+    platformId?: string;
+    platformName?: string;
+    accountChannel?: string;
+  };
+};
+
 export type Violation = {
   id: number | string;
   _id?: string; // MongoDB _id

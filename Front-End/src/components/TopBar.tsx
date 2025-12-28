@@ -70,11 +70,11 @@ export function TopBar() {
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10 p-0">
-              <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center">
-                <User className="h-5 w-5 text-primary-foreground" />
-              </div>
-            </Button>
+        <Button variant="ghost" size="icon" className="h-10 w-10 p-0">
+          <div className="h-9 w-9 rounded-full bg-primary flex items-center justify-center">
+            <User className="h-5 w-5 text-primary-foreground" />
+          </div>
+        </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>

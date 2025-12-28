@@ -178,9 +178,9 @@ export function MatchOverview({
         </div>
 
         {/* Removed */}
-        <div className="flex items-center gap-2.5 transition-all duration-300 hover:scale-105 hover:bg-orange-500/5 rounded-lg p-2 -m-2 cursor-pointer">
-          <div className="p-2 rounded-full bg-orange-500/10 shrink-0 transition-transform duration-300 hover:scale-110">
-            <XCircle className="h-3.5 w-3.5 text-orange-500" />
+        <div className="flex items-center gap-2.5 transition-all duration-300 hover:scale-105 hover:bg-cyan-500/5 rounded-lg p-2 -m-2 cursor-pointer">
+          <div className="p-2 rounded-full bg-cyan-500/10 shrink-0 transition-transform duration-300 hover:scale-110">
+            <XCircle className="h-3.5 w-3.5 text-cyan-500" />
           </div>
           <div>
             <p className="text-xl font-bold leading-none mb-1 transition-transform duration-300 hover:scale-105">

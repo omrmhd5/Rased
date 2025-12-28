@@ -181,16 +181,16 @@ export function PlatformCard({
         </div>
 
         {/* Removed */}
-        <div className="p-3 rounded-xl bg-gradient-to-br from-orange-500/10 to-orange-500/5 border border-orange-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer group">
+        <div className="p-3 rounded-xl bg-gradient-to-br from-cyan-500/10 to-cyan-500/5 border border-cyan-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-cyan-500/20 cursor-pointer group">
           <div className="flex items-center gap-1.5 mb-2">
-            <div className="p-0.5 rounded bg-orange-500/20 group-hover:bg-orange-500/30 transition-colors">
-              <XCircle className="h-2.5 w-2.5 text-orange-500" />
+            <div className="p-0.5 rounded bg-cyan-500/20 group-hover:bg-cyan-500/30 transition-colors">
+              <XCircle className="h-2.5 w-2.5 text-cyan-500" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
               Removed
             </p>
           </div>
-          <p className="text-lg font-bold text-orange-500 transition-transform duration-300 group-hover:scale-110">
+          <p className="text-lg font-bold text-cyan-500 transition-transform duration-300 group-hover:scale-110">
             {removedCount}
           </p>
         </div>

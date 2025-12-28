@@ -51,7 +51,7 @@ export function MatchViolationsStatusBreakdown({
       name: "Removed",
       value: removedCount,
       percentage: calculatePercentage(removedCount),
-      color: "hsl(24.6 95% 53.1%)", // Matches MatchOverview Removed (orange-500)
+      color: "hsl(188 94% 43%)", // Matches MatchOverview Removed (cyan-500)
       icon: <XCircle className="h-3 w-3" />,
     },
     {

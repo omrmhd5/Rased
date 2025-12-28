@@ -37,6 +37,7 @@ import {
   type PlatformData,
   type Match,
   type BackendViolation,
+  type DeletedViolationLog,
   API_URL,
 } from "@/components/MatchDashboard";
 
@@ -69,6 +70,11 @@ export default function MatchDashboard() {
   const [platformOperations, setPlatformOperations] = useState<PlatformData[]>(
     getInitialPlatformOperations()
   );
+
+  // Deleted violation logs state
+  const [deletedViolationLogs, setDeletedViolationLogs] = useState<
+    DeletedViolationLog[]
+  >([]);
 
   // Refetch trigger - increment this to trigger a full data refetch
   const [refetchTrigger, setRefetchTrigger] = useState(0);
@@ -258,6 +264,22 @@ export default function MatchDashboard() {
           }
 
           // Chart will update automatically via useEffect when match/platformOperations change
+        }
+
+        // Fetch deleted violation logs for this match
+        try {
+          const deletedLogsResponse = await fetch(
+            `${API_URL}/violations/deleted-logs/${matchData.externalMatchId}`,
+            {
+              credentials: "include",
+            }
+          );
+          if (deletedLogsResponse.ok) {
+            const deletedLogs = await deletedLogsResponse.json();
+            setDeletedViolationLogs(deletedLogs || []);
+          }
+        } catch (error) {
+          console.error("Error fetching deleted violation logs:", error);
         }
 
         // Restore scroll position after state updates are complete
@@ -490,6 +512,22 @@ export default function MatchDashboard() {
           }
 
           // Chart will update automatically via useEffect when match/platformOperations change
+        }
+
+        // Fetch deleted violation logs for this match
+        try {
+          const deletedLogsResponse = await fetch(
+            `${API_URL}/violations/deleted-logs/${matchData.externalMatchId}`,
+            {
+              credentials: "include",
+            }
+          );
+          if (deletedLogsResponse.ok) {
+            const deletedLogs = await deletedLogsResponse.json();
+            setDeletedViolationLogs(deletedLogs || []);
+          }
+        } catch (error) {
+          console.error("Error fetching deleted violation logs:", error);
         }
       } catch (error) {
         console.error("Error fetching match:", error);
@@ -1575,7 +1613,7 @@ export default function MatchDashboard() {
         underReviewCount={totalUnderReview}
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <ContentSplitChart data={contentSplitData} />
         <ActivityLog
           log={activityLog}
@@ -1585,6 +1623,7 @@ export default function MatchDashboard() {
           getPlatformIcon={getPlatformIcon}
           violations={platformOperations.flatMap((p) => p.violations)}
           platformOperations={platformOperations}
+          deletedViolationLogs={deletedViolationLogs}
         />
       </div>
 

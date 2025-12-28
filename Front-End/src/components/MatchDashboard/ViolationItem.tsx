@@ -111,25 +111,19 @@ export function ViolationItem({
             {violation.time}
           </span>
           <Badge
-            variant={
-              violation.statusBadge === "Removed"
-                ? "destructive"
-                : violation.statusBadge === "Active" ||
-                  violation.statusBadge === "Reported"
-                ? "default"
-                : violation.statusBadge === "Review"
-                ? "secondary"
-                : "outline"
-            }
+            variant="outline"
             className={cn(
               "text-xs",
               (violation.statusBadge === "Active" ||
                 violation.statusBadge === "Reported") &&
-                "bg-success text-success-foreground hover:bg-success/80",
+                "bg-red-100 text-red-700 hover:bg-red-200 border-red-300 dark:bg-red-900/30 dark:text-red-400",
               violation.statusBadge === "Blocked" &&
-                "bg-muted text-muted-foreground hover:bg-muted/80 border-muted-foreground/20",
-              violation.statusBadge === "Review" &&
-                "bg-yellow-500/10 text-yellow-600 dark:text-yellow-500 hover:bg-yellow-500/20 border-yellow-500/20"
+                "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
+              violation.statusBadge === "Removed" &&
+                "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
+              (violation.statusBadge === "Review" ||
+                violation.statusBadge === "Under Review") &&
+                "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
             )}>
             {violation.statusBadge}
           </Badge>
@@ -294,12 +288,45 @@ export function ViolationItem({
 
               let description: string | React.ReactNode = "";
               switch (entry.action) {
-                case "created":
-                  description = "Violation created";
+                case "created": {
+                  const platformName = violation.platformName || "platform";
+                  const accountName = violation.accountChannel || violation.accountHandle || "";
+                  description = (
+                    <>
+                      Violation created on{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {platformName}
+                      </code>
+                      {accountName && (
+                        <>
+                          {" "}for channel/user{" "}
+                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                            {accountName}
+                          </code>
+                        </>
+                      )}
+                    </>
+                  );
                   break;
+                }
                 case "status_changed": {
                   const oldStatus = String(entry.oldValue || "");
                   const newStatus = String(entry.newValue || "");
+
+                  // Helper function to get status color classes
+                  const getStatusColorClasses = (status: string) => {
+                    const statusLower = status.toLowerCase();
+                    if (statusLower === "active") {
+                      return "bg-destructive/10 text-destructive";
+                    } else if (statusLower === "blocked") {
+                      return "bg-success/10 text-success";
+                    } else if (statusLower === "removed") {
+                      return "bg-cyan-500/10 text-cyan-500";
+                    } else if (statusLower === "under review") {
+                      return "bg-yellow-500/10 text-yellow-500";
+                    }
+                    return "bg-primary/10 text-primary";
+                  };
 
                   // Check if blockedAt was added or removed
                   if (entry.changes?.blockedAtAdded) {
@@ -314,11 +341,11 @@ export function ViolationItem({
                     description = (
                       <>
                         Status changed from{" "}
-                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        <code className={`text-xs ${getStatusColorClasses(oldStatus)} px-1.5 py-0.5 rounded font-mono`}>
                           {oldStatus}
                         </code>{" "}
                         to{" "}
-                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        <code className={`text-xs ${getStatusColorClasses(newStatus)} px-1.5 py-0.5 rounded font-mono`}>
                           {newStatus}
                         </code>
                         <div className="mt-1 text-xs text-muted-foreground">
@@ -333,11 +360,11 @@ export function ViolationItem({
                     description = (
                       <>
                         Status changed from{" "}
-                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        <code className={`text-xs ${getStatusColorClasses(oldStatus)} px-1.5 py-0.5 rounded font-mono`}>
                           {oldStatus}
                         </code>{" "}
                         to{" "}
-                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        <code className={`text-xs ${getStatusColorClasses(newStatus)} px-1.5 py-0.5 rounded font-mono`}>
                           {newStatus}
                         </code>
                         <div className="mt-1 text-xs text-muted-foreground">
@@ -349,11 +376,11 @@ export function ViolationItem({
                     description = (
                       <>
                         Status changed from{" "}
-                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        <code className={`text-xs ${getStatusColorClasses(oldStatus)} px-1.5 py-0.5 rounded font-mono`}>
                           {oldStatus}
                         </code>{" "}
                         to{" "}
-                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        <code className={`text-xs ${getStatusColorClasses(newStatus)} px-1.5 py-0.5 rounded font-mono`}>
                           {newStatus}
                         </code>
                       </>
