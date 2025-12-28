@@ -1,11 +1,13 @@
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import matchRoutes from "./routes/matches.js";
 import violationRoutes from "./routes/violations.js";
 import platformRoutes from "./routes/platforms.js";
 import platformByMatchRoutes from "./routes/platformByMatch.js";
+import authRoutes from "./routes/auth.js";
 
 // Load environment variables
 dotenv.config();
@@ -51,8 +53,10 @@ app.use(
 );
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser()); // Parse cookies
 
 // Routes
+app.use("/api/auth", authRoutes);
 app.use("/api/matches", matchRoutes);
 app.use("/api/violations", violationRoutes);
 app.use("/api/platforms", platformRoutes);

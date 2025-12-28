@@ -462,6 +462,7 @@ export const calculateAndSavePlatformStats = async (
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
       body: JSON.stringify({
         platformId,
         externalMatchId,
@@ -509,6 +510,7 @@ export const calculateAndSaveTopPlatform = async (
 
     // Update Match document
     const response = await fetch(`${API_URL}/matches/${externalMatchId}`, {
+      credentials: "include",
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

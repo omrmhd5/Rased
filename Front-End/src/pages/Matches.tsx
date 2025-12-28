@@ -145,7 +145,10 @@ export default function Matches() {
     try {
       // Fetch matches directly from database
       const response = await fetch(
-        `${API_URL}/matches?league=${selectedLeague}&week=${selectedWeek}`
+        `${API_URL}/matches?league=${selectedLeague}&week=${selectedWeek}`,
+        {
+          credentials: "include",
+        }
       );
 
       if (!response.ok) {
@@ -200,13 +203,19 @@ export default function Matches() {
     try {
       // Trigger API sync - don't wait for it, don't show loading
       const response = await fetch(
-        `${API_URL}/matches/external?league=${selectedLeague}&week=${selectedWeek}`
+        `${API_URL}/matches/external?league=${selectedLeague}&week=${selectedWeek}`,
+        {
+          credentials: "include",
+        }
       );
 
       if (response.ok) {
         // Sync completed successfully, refresh from DB
         const refreshResponse = await fetch(
-          `${API_URL}/matches?league=${selectedLeague}&week=${selectedWeek}`
+          `${API_URL}/matches?league=${selectedLeague}&week=${selectedWeek}`,
+          {
+            credentials: "include",
+          }
         );
 
         if (refreshResponse.ok) {
@@ -276,6 +285,7 @@ export default function Matches() {
         headers: {
           "Content-Type": "application/json",
         },
+        credentials: "include",
         body: JSON.stringify({
           description: formDescription || undefined,
           team1: formTeam1,
@@ -465,7 +475,7 @@ export default function Matches() {
     if (totalMinutes > 0 && totalMinutes <= 60) {
       if (hours > 0) {
         return { type: "countdown", text: `${hours}h ${minutes}m` };
-    }
+      }
       return { type: "countdown", text: `${minutes}m` };
     }
 
@@ -483,7 +493,7 @@ export default function Matches() {
       match.status === "upcoming"
         ? getCountdownText(match.date, match.time)
         : null;
-    
+
     return (
       <Card className="p-6 hover:shadow-lg transition-shadow">
         <div className="flex items-start justify-between mb-4">
@@ -508,7 +518,7 @@ export default function Matches() {
                   match.status === "postponed"
                     ? "default"
                     : "outline"
-              }>
+                }>
                 {match.status === "live" && "● LIVE"}
                 {match.status === "upcoming" && "Upcoming"}
                 {match.status === "postponed" && "Postponed"}
@@ -518,7 +528,9 @@ export default function Matches() {
               </Badge>
               <Badge variant="outline">Week {match.week}</Badge>
               {countdown && countdown.type === "countdown" && (
-                <Badge variant="outline" className="bg-chart-1/10 text-chart-1 animate-pulse">
+                <Badge
+                  variant="outline"
+                  className="bg-chart-1/10 text-chart-1 animate-pulse">
                   <Clock className="h-3 w-3 mr-1" />
                   Starts in {countdown.text}
                 </Badge>
@@ -553,8 +565,8 @@ export default function Matches() {
                 </span>
               </div>
               {match.stadium && (
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
                   <span>{match.stadium}</span>
                 </div>
               )}
@@ -563,7 +575,7 @@ export default function Matches() {
                   {typeof match.competition === "string"
                     ? match.competition
                     : (match.competition as Competition).name}
-              </div>
+                </div>
               )}
             </div>
           </div>
@@ -653,7 +665,7 @@ export default function Matches() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3 mb-1">
-          <h1 className="text-2xl font-bold">Matches</h1>
+            <h1 className="text-2xl font-bold">Matches</h1>
             <Badge variant="secondary" className="text-sm">
               {leagueNames[selectedLeague!]}
             </Badge>
@@ -763,15 +775,15 @@ export default function Matches() {
                 <div key={dayKey} className="space-y-4">
                   <h2 className="text-xl font-semibold text-foreground border-b pb-2">
                     {formatDayHeader(dayKey)}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {matchesByDay[dayKey].map((match) => (
                       <MatchCard key={match.externalMatchId} match={match} />
                     ))}
                   </div>
                 </div>
-            ))}
-          </div>
+              ))}
+            </div>
           ) : (
             <Card className="p-8 text-center">
               <p className="text-muted-foreground">
@@ -953,8 +965,8 @@ export default function Matches() {
                   onChange={(e) => setFormTime(e.target.value)}
                   required
                 />
-        </div>
-      </div>
+              </div>
+            </div>
 
             {/* Optional fields */}
             <div className="space-y-2">
@@ -977,8 +989,8 @@ export default function Matches() {
                 value={formDescription}
                 onChange={(e) => setFormDescription(e.target.value)}
               />
-        </div>
-      </div>
+            </div>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddMatchOpen(false)}>
               Cancel

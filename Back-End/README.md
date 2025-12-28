@@ -33,6 +33,9 @@ NODE_ENV=development
 MONGODB_URI=mongodb://localhost:27017/rased
 FRONTEND_URL=http://localhost:5173
 
+# JWT Secret for authentication (generate a strong random string)
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-min-32-characters
+
 # External API Configuration (Perform Feeds)
 EXTERNAL_API_URL=https://api.performfeeds.com/soccerdata/match/ft1tiv1inq7v1sk3y9tv12yh5/
 EXTERNAL_API_TMCL=6ru2ri6bqeg9l7av4ppdpdx5g
@@ -72,6 +75,13 @@ The server will start on `http://localhost:5000` (or your configured PORT).
 ### Health Check
 
 - `GET /api/health` - Check API status
+
+### Authentication
+
+- `POST /api/auth/register` - Register new user (requires: username, email, password, confirmPassword)
+- `POST /api/auth/login` - Login user (requires: email, password)
+- `POST /api/auth/logout` - Logout user (clears cookie)
+- `GET /api/auth/verify` - Verify token and get current user (requires authentication)
 
 ### Matches
 
