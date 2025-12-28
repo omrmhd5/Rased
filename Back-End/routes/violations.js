@@ -1,8 +1,13 @@
 import express from "express";
 import Violation from "../models/Violation.js";
 import Match from "../models/Match.js";
+import { optionalAuth } from "../middleware/auth.js";
+import { logViolationChange } from "../utils/violationLogger.js";
 
 const router = express.Router();
+
+// Apply optional auth to all routes (logs user if authenticated, otherwise uses "System")
+router.use(optionalAuth);
 
 // Helper function to update match content type counts
 const updateMatchContentTypeCounts = async (matchId) => {
@@ -228,6 +233,19 @@ router.post("/", async (req, res) => {
       )
       .lean();
 
+    // Log creation
+    await logViolationChange(savedViolation._id, "created", {
+      user: req.user,
+      changes: {
+        violationUrl,
+        accountChannel,
+        contentType,
+        status: finalStatus,
+        platformId,
+        platformName,
+      },
+    });
+
     // Update match content type counts
     await updateMatchContentTypeCounts(internalMatchId);
 
@@ -268,6 +286,13 @@ router.put("/:id", async (req, res) => {
       return res.status(404).json({ error: "Violation not found" });
     }
 
+    // Store original values for logging
+    const originalViolation = violation.toObject();
+    const originalBlockedAt = originalViolation.blockedAt
+      ? new Date(originalViolation.blockedAt).toISOString()
+      : undefined;
+    const changes = {};
+
     // Update externalMatchId from the match if matchId is populated
     if (
       violation.matchId &&
@@ -283,28 +308,98 @@ router.put("/:id", async (req, res) => {
       }
     }
 
-    // Update fields
-    if (matchName !== undefined) violation.matchName = matchName;
-    if (platformName !== undefined) violation.platformName = platformName;
-    if (violationUrl !== undefined) violation.violationUrl = violationUrl;
-    if (accountChannel !== undefined) violation.accountChannel = accountChannel;
-    if (contentType !== undefined) violation.contentType = contentType;
-    if (status !== undefined) violation.status = status;
-    if (views !== undefined) violation.views = views;
-    if (timeAdded !== undefined) violation.timeAdded = new Date(timeAdded);
+    // Update fields and track changes
+    if (matchName !== undefined && matchName !== violation.matchName) {
+      changes.matchName = { old: violation.matchName, new: matchName };
+      violation.matchName = matchName;
+    }
+    if (platformName !== undefined && platformName !== violation.platformName) {
+      changes.platformName = { old: violation.platformName, new: platformName };
+      violation.platformName = platformName;
+    }
+    if (violationUrl !== undefined && violationUrl !== violation.violationUrl) {
+      changes.violationUrl = { old: violation.violationUrl, new: violationUrl };
+      violation.violationUrl = violationUrl;
+    }
+    if (
+      accountChannel !== undefined &&
+      accountChannel !== violation.accountChannel
+    ) {
+      changes.accountChannel = {
+        old: violation.accountChannel,
+        new: accountChannel,
+      };
+      violation.accountChannel = accountChannel;
+    }
+    if (contentType !== undefined && contentType !== violation.contentType) {
+      changes.contentType = { old: violation.contentType, new: contentType };
+      violation.contentType = contentType;
+    }
+    if (status !== undefined && status !== violation.status) {
+      changes.status = { old: violation.status, new: status };
+      violation.status = status;
+    }
+    if (views !== undefined && views !== violation.views) {
+      changes.views = { old: violation.views, new: views };
+      violation.views = views;
+    }
+    if (timeAdded !== undefined) {
+      const newTimeAdded = new Date(timeAdded);
+      const oldTimeAdded = new Date(violation.timeAdded);
+      // Compare timestamps to avoid timezone/precision issues
+      if (Math.abs(newTimeAdded.getTime() - oldTimeAdded.getTime()) > 1000) {
+        // Only log if difference is more than 1 second
+        changes.timeAdded = {
+          old: oldTimeAdded,
+          new: newTimeAdded,
+        };
+        violation.timeAdded = newTimeAdded;
+      }
+    }
+
+    // Track blockedAt changes separately (only when explicitly provided, not auto-set from status)
+    let blockedAtChanged = false;
+    let blockedAtAction = null; // 'added', 'removed', 'changed', or null
 
     // Handle blockedAt - set it if provided, or handle it based on status
     if (blockedAt !== undefined) {
+      // blockedAt was explicitly provided in the request
+      const oldBlockedAt = violation.blockedAt
+        ? new Date(violation.blockedAt).toISOString()
+        : undefined;
+      const newBlockedAt = blockedAt
+        ? new Date(blockedAt).toISOString()
+        : undefined;
+
+      // Only track as change if it actually changed
+      if (oldBlockedAt !== newBlockedAt) {
+        if (!oldBlockedAt && newBlockedAt) {
+          blockedAtAction = "added";
+        } else if (oldBlockedAt && !newBlockedAt) {
+          blockedAtAction = "removed";
+        } else {
+          blockedAtAction = "changed";
+        }
+        blockedAtChanged = true;
+        changes.blockedAt = { old: oldBlockedAt, new: newBlockedAt };
+      }
+
       if (blockedAt) {
         violation.blockedAt = new Date(blockedAt);
       } else {
-        // Explicitly delete the field to ensure it's removed from the document
-        delete violation.blockedAt;
+        // Explicitly unset the field to ensure it's removed from the document
+        if (violation.blockedAt) {
+          await Violation.findByIdAndUpdate(violation._id, {
+            $unset: { blockedAt: "" },
+          });
+        }
+        violation.blockedAt = undefined;
       }
     } else if (status !== undefined) {
       // If status is being updated but blockedAt is not provided, handle it based on status
       const statusLower = status.toLowerCase();
       const oldStatusLower = violation.status.toLowerCase();
+      const hadBlockedAt = !!violation.blockedAt;
 
       if (
         statusLower === "active" ||
@@ -312,8 +407,18 @@ router.put("/:id", async (req, res) => {
         statusLower === "removed"
       ) {
         // If changing TO active, under review, or removed, clear blockedAt
-        // Explicitly delete the field to ensure it's removed from the document
-        delete violation.blockedAt;
+        if (hadBlockedAt) {
+          // Only log if it actually had blockedAt before
+          blockedAtAction = "removed";
+          blockedAtChanged = true;
+        }
+        // Explicitly unset the field to ensure it's removed from the document
+        if (hadBlockedAt) {
+          await Violation.findByIdAndUpdate(violation._id, {
+            $unset: { blockedAt: "" },
+          });
+        }
+        violation.blockedAt = undefined;
       } else if (statusLower === "blocked") {
         // If changing TO blocked from any other status, set blockedAt to now
         // Only set if it doesn't already exist (preserve existing blockedAt if already set)
@@ -323,6 +428,11 @@ router.put("/:id", async (req, res) => {
           oldStatusLower === "under review" ||
           oldStatusLower === "removed"
         ) {
+          if (!hadBlockedAt) {
+            // Only log if it didn't have blockedAt before
+            blockedAtAction = "added";
+            blockedAtChanged = true;
+          }
           violation.blockedAt = new Date();
         }
       }
@@ -339,10 +449,130 @@ router.put("/:id", async (req, res) => {
       }
     }
 
+    // Store original values for logging
+    const originalStatus = violation.status;
+    const originalNotes = [...(violation.notes || [])];
+
+    // If blockedAt needs to be removed, use $unset to ensure it's deleted from DB
+    if (blockedAtChanged && blockedAtAction === "removed") {
+      await Violation.findByIdAndUpdate(violation._id, {
+        $unset: { blockedAt: "" },
+      });
+    }
+
     const updatedViolation = await violation.save();
     const populated = await Violation.findById(updatedViolation._id)
       .populate("matchId")
       .lean();
+
+    // Log changes
+    // Log status change if status was updated
+    if (status !== undefined && status !== originalStatus) {
+      const statusLower = status.toLowerCase();
+      const oldStatusLower = originalStatus.toLowerCase();
+      const changesObj = {};
+
+      // If changing TO blocked, include blockedAt info
+      if (statusLower === "blocked" && oldStatusLower !== "blocked") {
+        const finalBlockedAt = updatedViolation.blockedAt
+          ? new Date(updatedViolation.blockedAt).toISOString()
+          : undefined;
+        changesObj.blockedAtAdded = finalBlockedAt;
+        // Don't log separate blockedAt added
+        blockedAtChanged = false;
+      }
+      // If changing FROM blocked, include blockedAt removed info
+      else if (oldStatusLower === "blocked" && statusLower !== "blocked") {
+        changesObj.blockedAtRemoved = true;
+        // Don't log separate blockedAt removed
+        blockedAtChanged = false;
+      }
+
+      await logViolationChange(updatedViolation._id, "status_changed", {
+        user: req.user,
+        field: "status",
+        oldValue: originalStatus,
+        newValue: status,
+        changes: Object.keys(changesObj).length > 0 ? changesObj : undefined,
+      });
+    }
+
+    // Log note changes
+    if (notes !== undefined) {
+      let newNotes = [];
+      if (typeof notes === "string") {
+        newNotes = notes.trim() ? [notes.trim()] : [];
+      } else if (Array.isArray(notes)) {
+        newNotes = notes.filter((n) => n && n.trim());
+      }
+
+      const notesChanged =
+        JSON.stringify(originalNotes.sort()) !==
+        JSON.stringify(newNotes.sort());
+      if (notesChanged) {
+        const addedNotes = newNotes.filter((n) => !originalNotes.includes(n));
+        if (addedNotes.length > 0) {
+          await logViolationChange(updatedViolation._id, "note_added", {
+            user: req.user,
+            field: "notes",
+            oldValue: originalNotes,
+            newValue: newNotes,
+            changes: {
+              added: addedNotes,
+            },
+          });
+        } else {
+          await logViolationChange(updatedViolation._id, "field_updated", {
+            user: req.user,
+            field: "notes",
+            oldValue: originalNotes,
+            newValue: newNotes,
+          });
+        }
+      }
+    }
+
+    // Log blockedAt changes separately with appropriate action
+    // Only log if it's NOT a status change (status changes handle blockedAt in their own log)
+    if (blockedAtChanged && blockedAtAction && status === undefined) {
+      const finalBlockedAt = updatedViolation.blockedAt
+        ? new Date(updatedViolation.blockedAt).toISOString()
+        : undefined;
+      const originalBlockedAtISO = originalBlockedAt;
+
+      if (blockedAtAction === "changed") {
+        // Only log "changed" - added/removed are handled in status_changed
+        await logViolationChange(updatedViolation._id, "field_updated", {
+          user: req.user,
+          field: "blockedAt",
+          oldValue: originalBlockedAtISO,
+          newValue: finalBlockedAt,
+          changes: { action: "changed" },
+        });
+      }
+    }
+
+    // Log other field updates - only log fields that were explicitly provided and actually changed
+    // Use the changes object we built earlier, which already has proper comparisons
+    // Exclude blockedAt from this loop since it's handled separately above
+    for (const key in changes) {
+      if (key !== "status" && key !== "notes" && key !== "blockedAt") {
+        // Status, notes, and blockedAt are handled separately above
+        const change = changes[key];
+        // Format Date objects for logging
+        const oldValue =
+          change.old instanceof Date ? change.old.toISOString() : change.old;
+        const newValue =
+          change.new instanceof Date ? change.new.toISOString() : change.new;
+
+        await logViolationChange(updatedViolation._id, "field_updated", {
+          user: req.user,
+          field: key,
+          oldValue: oldValue,
+          newValue: newValue,
+        });
+      }
+    }
 
     // Update match content type counts
     await updateMatchContentTypeCounts(violation.matchId);
@@ -374,6 +604,9 @@ router.patch("/:id/status", async (req, res) => {
       return res.status(404).json({ error: "Violation not found" });
     }
 
+    // Store original status for logging
+    const originalStatus = violation.status;
+
     // Normalize status to match schema enum (capitalized)
     const normalizedStatus =
       status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
@@ -390,6 +623,8 @@ router.patch("/:id/status", async (req, res) => {
     // - Clear blockedAt when status changes TO Active, Removed, or Under Review
     // - Removed is a different status and should NOT have blockedAt
     const statusLower = normalizedStatus.toLowerCase();
+    const hadBlockedAt = !!violation.blockedAt;
+
     if (statusLower === "blocked") {
       // If changing TO blocked, set blockedAt (use provided time or current time)
       violation.blockedAt = blockedAt ? new Date(blockedAt) : new Date();
@@ -399,14 +634,46 @@ router.patch("/:id/status", async (req, res) => {
       statusLower === "removed"
     ) {
       // If changing TO active, under review, or removed, clear blockedAt
-      // Explicitly delete the field to ensure it's removed from the document
-      delete violation.blockedAt;
+      // Use $unset to ensure it's removed from the document
+      if (hadBlockedAt) {
+        await Violation.findByIdAndUpdate(violation._id, {
+          $unset: { blockedAt: "" },
+        });
+      }
+      violation.blockedAt = undefined;
     }
 
     const updatedViolation = await violation.save();
     const populated = await Violation.findById(updatedViolation._id)
       .populate("matchId")
       .lean();
+
+    // Log status change
+    if (normalizedStatus !== originalStatus) {
+      const statusLower = normalizedStatus.toLowerCase();
+      const oldStatusLower = originalStatus.toLowerCase();
+      const changesObj = {};
+
+      // If changing TO blocked, include blockedAt info
+      if (statusLower === "blocked" && oldStatusLower !== "blocked") {
+        const finalBlockedAt = updatedViolation.blockedAt
+          ? new Date(updatedViolation.blockedAt).toISOString()
+          : undefined;
+        changesObj.blockedAtAdded = finalBlockedAt;
+      }
+      // If changing FROM blocked, include blockedAt removed info
+      else if (oldStatusLower === "blocked" && statusLower !== "blocked") {
+        changesObj.blockedAtRemoved = true;
+      }
+
+      await logViolationChange(updatedViolation._id, "status_changed", {
+        user: req.user,
+        field: "status",
+        oldValue: originalStatus,
+        newValue: normalizedStatus,
+        changes: Object.keys(changesObj).length > 0 ? changesObj : undefined,
+      });
+    }
 
     // Update match content type counts
     await updateMatchContentTypeCounts(violation.matchId);
@@ -430,6 +697,18 @@ router.delete("/:id", async (req, res) => {
     }
 
     const matchId = violation.matchId;
+    const violationId = violation._id;
+
+    // Log deletion before deleting
+    await logViolationChange(violationId, "deleted", {
+      user: req.user,
+      initialData: {
+        violationUrl: violation.violationUrl,
+        accountChannel: violation.accountChannel,
+        status: violation.status,
+      },
+    });
+
     await Violation.findByIdAndDelete(req.params.id);
 
     // Update match content type counts

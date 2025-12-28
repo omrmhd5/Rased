@@ -67,6 +67,35 @@ const violationSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    auditLog: [
+      {
+        action: {
+          type: String,
+          enum: [
+            "created",
+            "updated",
+            "deleted",
+            "status_changed",
+            "note_added",
+            "field_updated",
+          ],
+          required: true,
+        },
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        userName: String,
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+        field: String, // Which field changed (for updates)
+        oldValue: mongoose.Schema.Types.Mixed,
+        newValue: mongoose.Schema.Types.Mixed,
+        changes: Object, // Full diff object for complex updates
+      },
+    ],
   },
   {
     timestamps: true, // Adds createdAt and updatedAt fields
@@ -78,6 +107,7 @@ violationSchema.index({ matchId: 1, platformId: 1 });
 violationSchema.index({ status: 1, contentType: 1 });
 violationSchema.index({ timeAdded: -1 });
 violationSchema.index({ violationUrl: 1 });
+violationSchema.index({ "auditLog.timestamp": -1 }); // Index for audit log queries
 
 const Violation = mongoose.model("Violation", violationSchema);
 

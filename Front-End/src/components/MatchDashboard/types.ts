@@ -1,8 +1,35 @@
-import { FaXTwitter, FaYoutube, FaFacebook, FaTiktok, FaInstagram } from "react-icons/fa6";
+import {
+  FaXTwitter,
+  FaYoutube,
+  FaFacebook,
+  FaTiktok,
+  FaInstagram,
+} from "react-icons/fa6";
 
 export type StatusHistoryEntry = {
   status: "Reported" | "Active" | "Blocked" | "Removed" | "Review" | "Pending";
   changedAt: string;
+};
+
+export type AuditLogEntry = {
+  action:
+    | "created"
+    | "updated"
+    | "deleted"
+    | "status_changed"
+    | "note_added"
+    | "field_updated";
+  userId?: string;
+  userName: string;
+  timestamp: string | Date;
+  field?: string;
+  oldValue?: string | number | boolean | string[] | null;
+  newValue?: string | number | boolean | string[] | null;
+  changes?: {
+    [key: string]: unknown;
+    added?: string[];
+    removed?: string[];
+  };
 };
 
 export type Violation = {
@@ -18,6 +45,8 @@ export type Violation = {
   active: boolean;
   notes?: string[];
   externalMatchId?: string; // Match external ID
+  auditLog?: AuditLogEntry[]; // Audit log entries
+  platformName?: string; // Platform name for display
   // Computed/display fields (not from backend)
   time?: string;
   addedAgo?: string;
@@ -115,9 +144,9 @@ export interface BackendViolation {
   active?: boolean;
   notes?: string[];
   blockedAt?: string | Date;
+  auditLog?: AuditLogEntry[];
   __v?: number;
 }
 
-export const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
-
-
+export const API_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:5000/api";

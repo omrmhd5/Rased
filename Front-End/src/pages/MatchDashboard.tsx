@@ -1582,6 +1582,9 @@ export default function MatchDashboard() {
           filter={logFilter}
           onFilterChange={setLogFilter}
           getPlatformColor={getPlatformColor}
+          getPlatformIcon={getPlatformIcon}
+          violations={platformOperations.flatMap((p) => p.violations)}
+          platformOperations={platformOperations}
         />
       </div>
 

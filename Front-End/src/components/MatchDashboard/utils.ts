@@ -247,6 +247,8 @@ export const convertBackendViolationToFrontend = (
     views: backendViolation.views || "0",
     violationUrl: backendViolation.violationUrl,
     accountChannel: backendViolation.accountChannel,
+    auditLog: backendViolation.auditLog || [],
+    platformName: backendViolation.platformName,
     timeAdded: backendViolation.timeAdded,
     blockedAt: backendViolation.blockedAt
       ? typeof backendViolation.blockedAt === "string"
