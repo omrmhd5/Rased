@@ -434,10 +434,24 @@ export function PlatformComparison({
                             ? "font-semibold"
                             : "font-medium"
                         )}>
-                        {metrics.avgBlockTimeMinutes % 1 === 0
-                          ? metrics.avgBlockTimeMinutes
-                          : metrics.avgBlockTimeMinutes.toFixed(1)}{" "}
-                        min
+                        {(() => {
+                          const minutes =
+                            metrics.avgBlockTimeMinutes % 1 === 0
+                              ? metrics.avgBlockTimeMinutes
+                              : metrics.avgBlockTimeMinutes.toFixed(1);
+                          const hours = metrics.avgBlockTimeMinutes / 60;
+                          return (
+                            <>
+                              {minutes}{" "}
+                              <span className="text-xs text-muted-foreground">
+                                min{" "}
+                                <span className="text-medium text-muted-foreground">
+                                  ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}hrs)
+                                </span>
+                              </span>
+                            </>
+                          );
+                        })()}
                       </span>
                     </td>
                     <td className="px-4 py-3">

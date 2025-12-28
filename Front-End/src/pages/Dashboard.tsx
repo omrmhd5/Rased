@@ -327,7 +327,12 @@ export default function Dashboard() {
             <TrendingUp className="h-4 w-4 text-success/50" />
           </div>
           
-          <p className="text-3xl font-bold text-foreground mb-2">12.4<span className="text-base text-muted-foreground ml-1">min</span></p>
+          <p className="text-3xl font-bold text-foreground mb-2">
+            12.4
+            <span className="text-base text-muted-foreground ml-1">
+              min 0.2hrs
+            </span>
+          </p>
           
           <div className="flex items-center justify-center mb-2">
             <div className="relative">
@@ -343,7 +348,6 @@ export default function Dashboard() {
           
           <div className="text-center">
             <Badge className="text-xs mb-1.5 bg-success/20 text-success border-success/30">✓ Within Target</Badge>
-            <p className="text-xs text-muted-foreground leading-relaxed">Target: 15 min SLA</p>
           </div>
           </Card>
         </div>

@@ -176,7 +176,35 @@ export function PlatformCard({
             </p>
           </div>
           <p className="text-lg font-bold text-success transition-transform duration-300 group-hover:scale-110">
-            {platform.avgBlockTime}
+            {(() => {
+              // Parse avgBlockTime string (could be "10 min", "10h", "1d", etc.) to minutes
+              const avgBlockTimeStr = platform.avgBlockTime || "0 min";
+              let minutes = 0;
+              if (avgBlockTimeStr.includes("d")) {
+                const days =
+                  parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
+                minutes = days * 1440;
+              } else if (avgBlockTimeStr.includes("h")) {
+                const hours =
+                  parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
+                minutes = hours * 60;
+              } else {
+                minutes =
+                  parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
+              }
+              const hours = minutes / 60;
+              return (
+                <>
+                  {minutes % 1 === 0 ? minutes : minutes.toFixed(1)}
+                  <span className="text-xs text-muted-foreground ml-1">
+                    min{" "}
+                    <span className="text-xs text-muted-foreground">
+                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}hrs)
+                    </span>
+                  </span>
+                </>
+              );
+            })()}
           </p>
         </div>
 

@@ -256,12 +256,34 @@ export function MatchOverview({
             </Badge>
           </div>
           <p className="text-3xl font-bold text-foreground mb-1 transition-transform duration-300 hover:scale-105">
-            {avgBlockTimeNumber !== undefined && avgBlockTimeNumber !== null
-              ? avgBlockTimeNumber
-              : avgBlockTime}
-            <span className="text-base text-muted-foreground ml-1">min</span>
+            {(() => {
+              const minutes =
+                avgBlockTimeNumber !== undefined && avgBlockTimeNumber !== null
+                  ? avgBlockTimeNumber
+                  : parseFloat(avgBlockTime) || 0;
+              const hours = minutes / 60;
+              return (
+                <>
+                  {minutes}
+                  <span className="text-base text-muted-foreground ml-1">
+                    min{" "}
+                    <span className="text-medium text-muted-foreground">
+                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}hrs)
+                    </span>
+                  </span>
+                </>
+              );
+            })()}
           </p>
-          <p className="text-xs text-muted-foreground">Target: 15 min SLA</p>
+          <p className="text-sm text-muted-foreground">
+            Target: 15{" "}
+            <span className="text-xs text-muted-foreground">
+              min{" "}
+              <span className="text-medium text-muted-foreground">
+                (0.25hrs)
+              </span>
+            </span>
+          </p>
         </div>
 
         {/* Top Platform */}

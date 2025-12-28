@@ -58,6 +58,8 @@ export default function MatchDashboard() {
     | "notes_edited"
     | "notes_changed"
   >("all");
+  const [platformFilter, setPlatformFilter] = useState<string>("all");
+  const [userFilter, setUserFilter] = useState<string>("all");
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
   const [contentSplitData, setContentSplitData] = useState(
@@ -1624,6 +1626,10 @@ export default function MatchDashboard() {
           platformOperations={platformOperations}
           deletedViolationLogs={deletedViolationLogs}
           onRefetch={() => refetchAllData(true)}
+          platformFilter={platformFilter}
+          onPlatformFilterChange={setPlatformFilter}
+          userFilter={userFilter}
+          onUserFilterChange={setUserFilter}
         />
       </div>
 

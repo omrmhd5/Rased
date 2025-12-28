@@ -77,6 +77,10 @@ interface ActivityLogProps {
   }>; // Platform operations to get platform names
   deletedViolationLogs?: DeletedViolationLog[]; // Deleted violation logs from separate collection
   onRefetch?: () => void; // Callback to refetch data after deletion
+  platformFilter?: string; // Platform filter value
+  onPlatformFilterChange?: (platform: string) => void; // Platform filter change handler
+  userFilter?: string; // User filter value
+  onUserFilterChange?: (user: string) => void; // User filter change handler
 }
 
 const getEventIcon = (type: string) => {
@@ -123,6 +127,10 @@ export function ActivityLog({
   platformOperations = [],
   deletedViolationLogs = [],
   onRefetch,
+  platformFilter = "all",
+  onPlatformFilterChange,
+  userFilter = "all",
+  onUserFilterChange,
 }: ActivityLogProps) {
   const [deleteConfirmItem, setDeleteConfirmItem] =
     useState<ActivityLogItem | null>(null);
@@ -712,36 +720,61 @@ export function ActivityLog({
     }
   });
 
+  // Extract unique platforms and users from all log items
+  const uniquePlatforms = Array.from(
+    new Set(allLogItems.map((item) => item.platform).filter(Boolean))
+  ).sort();
+  
+  const uniqueUsers = Array.from(
+    new Set(allLogItems.map((item) => item.userName).filter(Boolean))
+  ).sort();
+
   const filteredLog = allLogItems.filter((item) => {
-    if (filter === "all") return true;
-    const filterTypeMap: Record<ActivityFilter, string> = {
-      all: "",
-      added: "added",
-      deleted: "deleted",
-      url_changed: "url_changed",
-      account_changed: "account_changed",
-      content_type_changed: "content_type_changed",
-      status_change: "status_change",
-      views_changed: "views_changed",
-      time_added_changed: "time_added_changed",
-      blocked_at_changed: "blocked_at_changed",
-      notes_added: "notes_added",
-      notes_edited: "notes_edited",
-      notes_changed: "notes_changed",
-    };
-    return item.type === filterTypeMap[filter];
+    // Filter by activity type
+    if (filter !== "all") {
+      const filterTypeMap: Record<ActivityFilter, string> = {
+        all: "",
+        added: "added",
+        deleted: "deleted",
+        url_changed: "url_changed",
+        account_changed: "account_changed",
+        content_type_changed: "content_type_changed",
+        status_change: "status_change",
+        views_changed: "views_changed",
+        time_added_changed: "time_added_changed",
+        blocked_at_changed: "blocked_at_changed",
+        notes_added: "notes_added",
+        notes_edited: "notes_edited",
+        notes_changed: "notes_changed",
+      };
+      if (item.type !== filterTypeMap[filter]) {
+        return false;
+      }
+    }
+
+    // Filter by platform
+    if (platformFilter !== "all" && item.platform !== platformFilter) {
+      return false;
+    }
+
+    // Filter by user
+    if (userFilter !== "all" && item.userName !== userFilter) {
+      return false;
+    }
+
+    return true;
   });
 
   return (
     <Card className="p-6 lg:col-span-2">
       <h3 className="font-semibold mb-4">Match Activity Log</h3>
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-wrap gap-2">
         <Select
           value={filter}
           onValueChange={(value) => onFilterChange(value as ActivityFilter)}>
           <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
-            <SelectValue placeholder="Filter activity" />
+            <SelectValue placeholder="All Activity" />
           </SelectTrigger>
           <SelectContent className="max-h-[300px] p-1">
             <SelectItem value="all" className="text-xs py-1.5">
@@ -785,6 +818,54 @@ export function ActivityLog({
             </SelectItem>
           </SelectContent>
         </Select>
+
+        {/* Platform Filter */}
+        {onPlatformFilterChange && (
+          <Select
+            value={platformFilter}
+            onValueChange={onPlatformFilterChange}>
+            <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
+              <SelectValue placeholder="All Platforms" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px] p-1">
+              <SelectItem value="all" className="text-xs py-1.5">
+                All Platforms
+              </SelectItem>
+              {uniquePlatforms.map((platform) => (
+                <SelectItem
+                  key={platform}
+                  value={platform}
+                  className="text-xs py-1.5">
+                  {platform}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        {/* User Filter */}
+        {onUserFilterChange && (
+          <Select
+            value={userFilter}
+            onValueChange={onUserFilterChange}>
+            <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
+              <SelectValue placeholder="All Users" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px] p-1">
+              <SelectItem value="all" className="text-xs py-1.5">
+                All Users
+              </SelectItem>
+              {uniqueUsers.map((user) => (
+                <SelectItem
+                  key={user}
+                  value={user}
+                  className="text-xs py-1.5">
+                  {user}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       <ScrollArea className="h-[320px]">
