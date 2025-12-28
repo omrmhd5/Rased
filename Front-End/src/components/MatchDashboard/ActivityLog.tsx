@@ -24,6 +24,8 @@ import {
   Shield,
   UserCircle,
   X,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import {
   Violation,
@@ -32,6 +34,12 @@ import {
   API_URL,
 } from "./types";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import React, { useState } from "react";
 
 interface ActivityLogItem {
@@ -135,6 +143,7 @@ export function ActivityLog({
   const [deleteConfirmItem, setDeleteConfirmItem] =
     useState<ActivityLogItem | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isMaximized, setIsMaximized] = useState(false);
 
   const handleDeleteLog = (item: ActivityLogItem) => {
     setDeleteConfirmItem(item);
@@ -559,13 +568,19 @@ export function ActivityLog({
                   entry.oldValue &&
                   (typeof entry.oldValue === "string" ||
                     typeof entry.oldValue === "number")
-                    ? new Date(entry.oldValue).toLocaleString("en-US", timeOptions)
+                    ? new Date(entry.oldValue).toLocaleString(
+                        "en-US",
+                        timeOptions
+                      )
                     : "undefined";
                 const newBlocked =
                   entry.newValue &&
                   (typeof entry.newValue === "string" ||
                     typeof entry.newValue === "number")
-                    ? new Date(entry.newValue).toLocaleString("en-US", timeOptions)
+                    ? new Date(entry.newValue).toLocaleString(
+                        "en-US",
+                        timeOptions
+                      )
                     : "undefined";
                 description = (
                   <>
@@ -582,18 +597,27 @@ export function ActivityLog({
               }
             } else if (entry.field === "notes") {
               // Check if it's a note deletion, edit, or other change
-              if (entry.changes?.action === "deleted" && entry.changes?.removed) {
+              if (
+                entry.changes?.action === "deleted" &&
+                entry.changes?.removed
+              ) {
                 // Note was deleted
                 type = "notes_edited";
                 badge = "Note Deleted";
                 const removedNotes = entry.changes.removed;
                 description = removedNotes.join(", ");
-              } else if (entry.changes?.action === "changed" && entry.changes?.edited) {
+              } else if (
+                entry.changes?.action === "changed" &&
+                entry.changes?.edited
+              ) {
                 // Note was edited - show "from X to Y" format
                 type = "notes_changed";
                 badge = "Note Changed";
-                const edited = entry.changes.edited;
-                if (edited.length > 0) {
+                const edited = entry.changes.edited as Array<{
+                  old: string;
+                  new: string;
+                }>;
+                if (edited && Array.isArray(edited) && edited.length > 0) {
                   const firstEdit = edited[0];
                   description = (
                     <>
@@ -724,7 +748,7 @@ export function ActivityLog({
   const uniquePlatforms = Array.from(
     new Set(allLogItems.map((item) => item.platform).filter(Boolean))
   ).sort();
-  
+
   const uniqueUsers = Array.from(
     new Set(allLogItems.map((item) => item.userName).filter(Boolean))
   ).sort();
@@ -765,10 +789,9 @@ export function ActivityLog({
     return true;
   });
 
-  return (
-    <Card className="p-6 lg:col-span-2">
-      <h3 className="font-semibold mb-4">Match Activity Log</h3>
-
+  // Render the log content (used in both normal and maximized views)
+  const renderLogContent = (scrollHeight?: string) => (
+    <>
       <div className="mb-4 flex flex-wrap gap-2">
         <Select
           value={filter}
@@ -821,9 +844,7 @@ export function ActivityLog({
 
         {/* Platform Filter */}
         {onPlatformFilterChange && (
-          <Select
-            value={platformFilter}
-            onValueChange={onPlatformFilterChange}>
+          <Select value={platformFilter} onValueChange={onPlatformFilterChange}>
             <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
               <SelectValue placeholder="All Platforms" />
             </SelectTrigger>
@@ -845,9 +866,7 @@ export function ActivityLog({
 
         {/* User Filter */}
         {onUserFilterChange && (
-          <Select
-            value={userFilter}
-            onValueChange={onUserFilterChange}>
+          <Select value={userFilter} onValueChange={onUserFilterChange}>
             <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
               <SelectValue placeholder="All Users" />
             </SelectTrigger>
@@ -856,10 +875,7 @@ export function ActivityLog({
                 All Users
               </SelectItem>
               {uniqueUsers.map((user) => (
-                <SelectItem
-                  key={user}
-                  value={user}
-                  className="text-xs py-1.5">
+                <SelectItem key={user} value={user} className="text-xs py-1.5">
                   {user}
                 </SelectItem>
               ))}
@@ -868,7 +884,7 @@ export function ActivityLog({
         )}
       </div>
 
-      <ScrollArea className="h-[320px]">
+      <ScrollArea className={scrollHeight || "h-[320px]"}>
         <div className="space-y-2">
           {filteredLog.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -960,18 +976,55 @@ export function ActivityLog({
           )}
         </div>
       </ScrollArea>
+    </>
+  );
 
-      <DeleteConfirmDialog
-        open={isDeleteConfirmOpen}
-        onOpenChange={(open) => {
-          setIsDeleteConfirmOpen(open);
-          if (!open) setDeleteConfirmItem(null);
-        }}
-        onConfirm={confirmDeleteLog}
-        title="Delete Log Entry"
-        description="Are you sure you want to delete this log entry? This action cannot be undone."
-      />
-    </Card>
+  return (
+    <>
+      <Card className="p-6 lg:col-span-2">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold">Match Activity Log</h3>
+          <button
+            onClick={() => setIsMaximized(true)}
+            className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+            title="Maximize">
+            <Maximize2 className="h-4 w-4" />
+          </button>
+        </div>
+
+        {renderLogContent()}
+
+        <DeleteConfirmDialog
+          open={isDeleteConfirmOpen}
+          onOpenChange={(open) => {
+            setIsDeleteConfirmOpen(open);
+            if (!open) setDeleteConfirmItem(null);
+          }}
+          onConfirm={confirmDeleteLog}
+          title="Delete Log Entry"
+          description="Are you sure you want to delete this log entry? This action cannot be undone."
+        />
+      </Card>
+
+      <Dialog open={isMaximized} onOpenChange={setIsMaximized}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] flex flex-col p-0 translate-x-[-50%] translate-y-[-50%] left-[50%] top-[50%] [&>button]:hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <DialogTitle>Match Activity Log</DialogTitle>
+              <button
+                onClick={() => setIsMaximized(false)}
+                className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                title="Minimize">
+                <Minimize2 className="h-4 w-4" />
+              </button>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden px-6 pb-6 pt-4">
+            {renderLogContent("h-[calc(95vh-140px)]")}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

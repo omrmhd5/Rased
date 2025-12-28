@@ -20,9 +20,18 @@ import {
   TrendingUp,
   FileQuestion,
   XCircle,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { PlatformData, Violation } from "./types";
 import { ViolationItem } from "./ViolationItem";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useState } from "react";
 
 interface PlatformCardProps {
   platform: PlatformData;
@@ -55,6 +64,7 @@ export function PlatformCard({
   onAddNote,
   getPlatformIcon,
 }: PlatformCardProps) {
+  const [isMaximized, setIsMaximized] = useState(false);
   const IconComponent = platform.icon;
 
   // Use backend metrics from platform object (no local calculations)
@@ -79,30 +89,9 @@ export function PlatformCard({
     (v) => (v.contentType || v.type) === "Other"
   ).length;
 
-  return (
-    <Card id={`platform-card-${platform.id}`} className="p-5 transition-all">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1.5">
-            <IconComponent
-              className="h-5 w-5"
-              style={{ color: platform.color }}
-            />
-            <h3 className="font-semibold">{platform.name}</h3>
-          </div>
-          <p className="text-xs text-muted-foreground ml-7">
-            Live: {liveCount} • Highlights: {highlightsCount} • Others:{" "}
-            {othersCount}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button size="sm" className="text-xs" onClick={onAddViolation}>
-            <Plus className="h-3 w-3 mr-1.5" />
-            Add violation
-          </Button>
-        </div>
-      </div>
-
+  // Render the platform card content (used in both normal and maximized views)
+  const renderCardContent = (isFullScreen?: boolean) => (
+    <>
       {/* Stats Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
         {/* Total views */}
@@ -305,36 +294,136 @@ export function PlatformCard({
         </div>
       </div>
 
-      <ScrollArea className="h-[280px]">
-        {filteredViolations.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center py-12">
-            <AlertCircle className="h-8 w-8 text-muted-foreground mb-2" />
-            <p className="text-sm text-muted-foreground mb-4">
-              No violations found matching your filters.
+      {isFullScreen ? (
+        <div>
+          {filteredViolations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center text-center py-12">
+              <AlertCircle className="h-8 w-8 text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground mb-4">
+                No violations found matching your filters.
+              </p>
+              <Button size="sm" variant="outline" onClick={onAddViolation}>
+                <Plus className="h-3 w-3 mr-1.5" />
+                Add violation
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredViolations.map((violation) => (
+                <ViolationItem
+                  key={violation.id}
+                  violation={violation}
+                  platform={platform}
+                  onEdit={onEdit}
+                  onToggleStatus={onToggleStatus}
+                  onDelete={onDelete}
+                  onCopyUrl={onCopyUrl}
+                  onAddNote={onAddNote}
+                  getPlatformIcon={getPlatformIcon}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        <ScrollArea className="h-[280px]">
+          {filteredViolations.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-center py-12">
+              <AlertCircle className="h-8 w-8 text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground mb-4">
+                No violations found matching your filters.
+              </p>
+              <Button size="sm" variant="outline" onClick={onAddViolation}>
+                <Plus className="h-3 w-3 mr-1.5" />
+                Add violation
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {filteredViolations.map((violation) => (
+                <ViolationItem
+                  key={violation.id}
+                  violation={violation}
+                  platform={platform}
+                  onEdit={onEdit}
+                  onToggleStatus={onToggleStatus}
+                  onDelete={onDelete}
+                  onCopyUrl={onCopyUrl}
+                  onAddNote={onAddNote}
+                  getPlatformIcon={getPlatformIcon}
+                />
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+      )}
+    </>
+  );
+
+  return (
+    <>
+      <Card id={`platform-card-${platform.id}`} className="p-5 transition-all">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1.5">
+              <IconComponent
+                className="h-5 w-5"
+                style={{ color: platform.color }}
+              />
+              <h3 className="font-semibold">{platform.name}</h3>
+            </div>
+            <p className="text-xs text-muted-foreground ml-7">
+              Live: {liveCount} • Highlights: {highlightsCount} • Others:{" "}
+              {othersCount}
             </p>
-            <Button size="sm" variant="outline" onClick={onAddViolation}>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsMaximized(true)}
+              className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              title="Maximize">
+              <Maximize2 className="h-4 w-4" />
+            </button>
+            <Button size="sm" className="text-xs" onClick={onAddViolation}>
               <Plus className="h-3 w-3 mr-1.5" />
               Add violation
             </Button>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {filteredViolations.map((violation) => (
-              <ViolationItem
-                key={violation.id}
-                violation={violation}
-                platform={platform}
-                onEdit={onEdit}
-                onToggleStatus={onToggleStatus}
-                onDelete={onDelete}
-                onCopyUrl={onCopyUrl}
-                onAddNote={onAddNote}
-                getPlatformIcon={getPlatformIcon}
-              />
-            ))}
+        </div>
+
+        {renderCardContent()}
+      </Card>
+
+      <Dialog open={isMaximized} onOpenChange={setIsMaximized}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] flex flex-col p-0 translate-x-[-50%] translate-y-[-50%] left-[50%] top-[50%] [&>button]:hidden">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <IconComponent
+                  className="h-5 w-5"
+                  style={{ color: platform.color }}
+                />
+                <DialogTitle>{platform.name}</DialogTitle>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" className="text-xs" onClick={onAddViolation}>
+                  <Plus className="h-3 w-3 mr-1.5" />
+                  Add violation
+                </Button>
+                <button
+                  onClick={() => setIsMaximized(false)}
+                  className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  title="Minimize">
+                  <Minimize2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
+            {renderCardContent(true)}
           </div>
-        )}
-      </ScrollArea>
-    </Card>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
