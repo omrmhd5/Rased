@@ -23,6 +23,7 @@ interface PlatformComparisonProps {
   onSortChange: (sort: SortColumn) => void;
   onSortDirectionChange: (direction: "desc" | "asc") => void;
   onSelectedSlotsChange: (slots: string[]) => void;
+  targetMins?: number;
 }
 
 export function PlatformComparison({
@@ -34,6 +35,7 @@ export function PlatformComparison({
   onSortChange,
   onSortDirectionChange,
   onSelectedSlotsChange,
+  targetMins = 15,
 }: PlatformComparisonProps) {
   const platformMetrics = platformOperations.map((platform) => {
     // Always use backend data directly from platform object (ignore content type filter)
@@ -355,8 +357,8 @@ export function PlatformComparison({
                 const { platform } = metrics;
                 const IconComponent = platform.icon;
 
-                // Match MatchOverview logic: <= 15 = success, > 15 = destructive
-                const isWithinTarget = metrics.avgBlockTimeMinutes <= 15;
+                // Match MatchOverview logic: <= targetMins = success, > targetMins = destructive
+                const isWithinTarget = metrics.avgBlockTimeMinutes <= targetMins;
                 const statusText = isWithinTarget
                   ? "Within target"
                   : "Over target";

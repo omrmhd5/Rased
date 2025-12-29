@@ -29,6 +29,7 @@ interface MatchOverviewProps {
   underReviewCount?: number;
   avgBlockTimeNumber?: number;
   blockSuccessRate?: number;
+  targetMins?: number;
 }
 
 export function MatchOverview({
@@ -47,6 +48,7 @@ export function MatchOverview({
   underReviewCount,
   avgBlockTimeNumber,
   blockSuccessRate,
+  targetMins = 15,
 }: MatchOverviewProps) {
   const formatMatchDateTime = () => {
     const dateStr = match.date;
@@ -244,13 +246,13 @@ export function MatchOverview({
               className={`text-xs transition-all duration-300 ${
                 (avgBlockTimeNumber !== undefined && avgBlockTimeNumber !== null
                   ? avgBlockTimeNumber
-                  : parseFloat(avgBlockTime)) <= 15
+                  : parseFloat(avgBlockTime)) <= targetMins
                   ? "bg-success/20 text-success border-success/30"
                   : "bg-destructive/20 text-destructive border-destructive/30"
               }`}>
               {(avgBlockTimeNumber !== undefined && avgBlockTimeNumber !== null
                 ? avgBlockTimeNumber
-                : parseFloat(avgBlockTime)) <= 15
+                : parseFloat(avgBlockTime)) <= targetMins
                 ? "Within target"
                 : "Over target"}
             </Badge>
@@ -276,11 +278,11 @@ export function MatchOverview({
             })()}
           </p>
           <p className="text-sm text-muted-foreground">
-            Target: 15{" "}
+            Target: {targetMins}{" "}
             <span className="text-xs text-muted-foreground">
               min{" "}
               <span className="text-medium text-muted-foreground">
-                (0.25hrs)
+                ({(targetMins / 60).toFixed(2)}hrs)
               </span>
             </span>
           </p>

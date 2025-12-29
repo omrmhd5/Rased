@@ -1,6 +1,7 @@
 import { useParams } from "react-router-dom";
-import { AlertCircle, RefreshCw, Activity } from "lucide-react";
+import { AlertCircle, RefreshCw, Activity, Download } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
+import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import {
   MatchOverview,
@@ -76,6 +77,9 @@ export default function MatchDashboard() {
   const [deletedViolationLogs, setDeletedViolationLogs] = useState<
     DeletedViolationLog[]
   >([]);
+
+  // Settings state
+  const [targetMins, setTargetMins] = useState<number>(15);
 
   // Refetch trigger - increment this to trigger a full data refetch
   const [refetchTrigger, setRefetchTrigger] = useState(0);
@@ -334,6 +338,28 @@ export default function MatchDashboard() {
   // Helper function to trigger refetch (call this after any violation change)
   const triggerRefetch = useCallback(() => {
     setRefetchTrigger((prev) => prev + 1);
+  }, []);
+
+  // Fetch settings on mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch(`${API_URL}/settings`, {
+          credentials: "include",
+        });
+
+        if (response.ok) {
+          const settings = await response.json();
+          setTargetMins(settings.targetMins || 15);
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+        // Use default value if API fails
+        setTargetMins(15);
+      }
+    };
+
+    fetchSettings();
   }, []);
 
   // Fetch match data
@@ -1588,6 +1614,17 @@ export default function MatchDashboard() {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-end">
+        <Button
+          variant="outline"
+          onClick={() => {
+            // TODO: Implement download functionality
+            console.log("Download clicked");
+          }}>
+          <Download className="h-4 w-4 mr-2" />
+          Download
+        </Button>
+      </div>
       <MatchOverview
         match={match}
         totalViolations={totalViolations}
@@ -1604,6 +1641,7 @@ export default function MatchDashboard() {
         underReviewCount={totalUnderReview}
         avgBlockTimeNumber={avgBlockTimeNumber}
         blockSuccessRate={blockSuccessRate}
+        targetMins={targetMins}
       />
 
       <MatchViolationsStatusBreakdown
@@ -1718,6 +1756,7 @@ export default function MatchDashboard() {
         onSortChange={setComparisonSort}
         onSortDirectionChange={setComparisonSortDirection}
         onSelectedSlotsChange={setSelectedSlots}
+        targetMins={targetMins}
       />
 
       <AddViolationSheet
