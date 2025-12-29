@@ -1268,16 +1268,6 @@ export default function Matches() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Input
-                id="description"
-                type="text"
-                placeholder="Auto-generated if left empty"
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-              />
-            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddMatchOpen(false)}>
@@ -1479,17 +1469,7 @@ export default function Matches() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description (Optional)</Label>
-              <Input
-                id="edit-description"
-                type="text"
-                placeholder="Auto-generated if left empty"
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-              />
-        </div>
-      </div>
+          </div>
           <DialogFooter>
             <Button
               variant="outline"

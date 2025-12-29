@@ -418,9 +418,15 @@ async function saveMatchesToDatabase(transformedMatches) {
         });
         createdCount++;
       } else {
+        // Skip updating if match has been manually edited
+        if (existingMatch.isEdited === true) {
+          unchangedCount++;
+          return;
+        }
+
         // Check if anything changed
         if (hasChanges(existingMatch, dbMatchData)) {
-          // Update existing match
+          // Update existing match (only if not manually edited)
           await Match.findOneAndUpdate(
             filter,
             {
@@ -468,6 +474,8 @@ async function returnMatchesFromDatabase(req, res) {
     const sortOrder = sort === "asc" ? 1 : -1;
 
     // Fetch matches without populate to avoid errors with old string data
+    // Exclude deleted matches
+    query.isDeleted = { $ne: true };
     const matches = await Match.find(query)
       .sort({ date: sortOrder })
       .limit(limitNum)
@@ -542,6 +550,7 @@ router.get("/:externalMatchId", async (req, res) => {
   try {
     const match = await Match.findOne({
       externalMatchId: req.params.externalMatchId,
+      isDeleted: { $ne: true },
     }).populate("competition");
 
     if (!match) {
@@ -759,9 +768,10 @@ router.put("/:externalMatchId", async (req, res) => {
       scores,
     } = req.body;
 
-    // Try to find match by externalMatchId first
+    // Try to find match by externalMatchId first (exclude deleted matches)
     let match = await Match.findOne({
       externalMatchId: externalMatchIdParam,
+      isDeleted: { $ne: true },
     });
 
     // If not found, try by _id (for manually created matches where externalMatchId = _id)
@@ -903,6 +913,9 @@ router.put("/:externalMatchId", async (req, res) => {
       }
     }
 
+    // Mark match as edited when manually updated
+    match.isEdited = true;
+
     const updatedMatch = await match.save();
 
     // Populate competition and format response
@@ -946,6 +959,7 @@ router.delete("/:externalMatchId", async (req, res) => {
   try {
     const match = await Match.findOne({
       externalMatchId: req.params.externalMatchId,
+      isDeleted: { $ne: true },
     });
 
     if (!match) {
@@ -968,12 +982,13 @@ router.delete("/:externalMatchId", async (req, res) => {
       externalMatchId: req.params.externalMatchId,
     });
 
-    await Match.findOneAndDelete({
-      externalMatchId: req.params.externalMatchId,
-    });
+    // Soft delete: Set isDeleted to true instead of actually deleting the match
+    match.isDeleted = true;
+    await match.save();
+
     res.json({
       message:
-        "Match, associated violations, platform stats, and deleted violation logs deleted",
+        "Match marked as deleted. Associated violations, platform stats, and deleted violation logs have been removed.",
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -985,6 +1000,7 @@ router.get("/:externalMatchId/stats", async (req, res) => {
   try {
     const match = await Match.findOne({
       externalMatchId: req.params.externalMatchId,
+      isDeleted: { $ne: true },
     });
 
     if (!match) {

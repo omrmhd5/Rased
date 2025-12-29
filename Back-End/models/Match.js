@@ -142,6 +142,16 @@ const matchSchema = new mongoose.Schema(
       type: Number,
       default: 0, // Highest views count from any platform
     },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    isEdited: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,
