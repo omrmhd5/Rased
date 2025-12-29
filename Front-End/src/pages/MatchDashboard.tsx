@@ -1,8 +1,15 @@
 import { useParams } from "react-router-dom";
-import { AlertCircle, RefreshCw, Activity, Download } from "lucide-react";
-import { useState, useEffect, useCallback } from "react";
+import {
+  AlertCircle,
+  RefreshCw,
+  Activity,
+  Download,
+  Loader2,
+} from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import * as htmlToImage from "html-to-image";
 import {
   MatchOverview,
   MatchViolationsStatusBreakdown,
@@ -80,6 +87,15 @@ export default function MatchDashboard() {
 
   // Settings state
   const [targetMins, setTargetMins] = useState<number>(15);
+
+  // Refs for report components
+  const matchOverviewRef = useRef<HTMLDivElement>(null);
+  const statusBreakdownRef = useRef<HTMLDivElement>(null);
+  const contentSplitRef = useRef<HTMLDivElement>(null);
+  const platformComparisonRef = useRef<HTMLDivElement>(null);
+
+  // Download state
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Refetch trigger - increment this to trigger a full data refetch
   const [refetchTrigger, setRefetchTrigger] = useState(0);
@@ -1612,48 +1628,327 @@ export default function MatchDashboard() {
     }, platformOperations[0] || null);
   }
 
+  // Download report as PNG
+  const handleDownloadReport = async () => {
+    if (!match) {
+      toast({
+        title: "Error",
+        description: "Match data not available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDownloading(true);
+    try {
+      const images: string[] = [];
+
+      // Get target width from MatchOverview to match all components
+      let targetWidth = 1200; // Default width
+      if (matchOverviewRef.current) {
+        const overviewRect = matchOverviewRef.current.getBoundingClientRect();
+        targetWidth = overviewRect.width;
+      }
+
+      // Create and capture header with match details
+      const headerDiv = document.createElement("div");
+      headerDiv.style.cssText = `
+        width: ${targetWidth}px;
+        padding: 40px;
+        background-color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      `;
+
+      // Get match details
+      const getCompetitionName = () => {
+        if (
+          typeof match.competition === "object" &&
+          match.competition !== null
+        ) {
+          return (match.competition as { name?: string }).name || "";
+        }
+        return typeof match.competition === "string" ? match.competition : "";
+      };
+
+      const formatMatchDateTime = () => {
+        const dateStr = match.date;
+        const timeStr = match.time || "";
+        if (!dateStr) return "";
+
+        try {
+          const date = new Date(dateStr);
+          const formattedDate = date.toLocaleDateString("en-US", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          });
+          return timeStr ? `${formattedDate} at ${timeStr}` : formattedDate;
+        } catch {
+          return dateStr + (timeStr ? ` at ${timeStr}` : "");
+        }
+      };
+
+      const competitionName = getCompetitionName();
+      const matchDateTime = formatMatchDateTime();
+      const week = match.week || "N/A";
+
+      headerDiv.innerHTML = `
+        <h1 style="font-size: 32px; font-weight: bold; margin: 0 0 16px 0; color: #1a1a1a;">
+          ${match.team1} vs ${match.team2}
+        </h1>
+        <div style="font-size: 18px; color: #666; line-height: 1.8;">
+          <p style="margin: 0 0 8px 0;"><strong>League:</strong> ${
+            competitionName || "N/A"
+          }</p>
+          <p style="margin: 0 0 8px 0;"><strong>Week:</strong> ${week}</p>
+          <p style="margin: 0;"><strong>Date & Time:</strong> ${
+            matchDateTime || "N/A"
+          }</p>
+        </div>
+      `;
+
+      // Temporarily add to DOM for capture
+      document.body.appendChild(headerDiv);
+
+      // Wait for rendering
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Capture header
+      const headerImage = await htmlToImage.toPng(headerDiv, {
+        backgroundColor: "#ffffff",
+        quality: 1,
+        pixelRatio: 2,
+        width: targetWidth,
+      });
+
+      // Remove from DOM
+      document.body.removeChild(headerDiv);
+
+      images.push(headerImage);
+
+      // Capture MatchOverview
+      if (matchOverviewRef.current) {
+        const dataUrl = await htmlToImage.toPng(matchOverviewRef.current, {
+          backgroundColor: "#ffffff",
+          quality: 1,
+          pixelRatio: 2,
+        });
+        images.push(dataUrl);
+      }
+
+      // Capture Status Breakdown
+      if (statusBreakdownRef.current) {
+        const dataUrl = await htmlToImage.toPng(statusBreakdownRef.current, {
+          backgroundColor: "#ffffff",
+          quality: 1,
+          pixelRatio: 2,
+        });
+        images.push(dataUrl);
+      }
+
+      // Capture Content Split Chart - make it full width but match other components' width
+      if (contentSplitRef.current) {
+        // First, get the width from MatchOverview to match it
+        let targetWidth = 1200; // Default width
+        if (matchOverviewRef.current) {
+          const overviewRect = matchOverviewRef.current.getBoundingClientRect();
+          targetWidth = overviewRect.width;
+        }
+
+        const element = contentSplitRef.current;
+        const originalStyle = element.style.cssText;
+
+        // Find and modify the grid parent container
+        const gridParent = element.closest(".grid");
+        const originalGridStyle = gridParent
+          ? (gridParent as HTMLElement).style.cssText
+          : "";
+        const originalGridClass = gridParent ? gridParent.className : "";
+
+        // Store all parent styles to restore later
+        const parentStyles: Array<{
+          element: HTMLElement;
+          originalStyle: string;
+        }> = [];
+        let currentParent = element.parentElement;
+        while (currentParent) {
+          parentStyles.push({
+            element: currentParent,
+            originalStyle: currentParent.style.cssText,
+          });
+          currentParent = currentParent.parentElement;
+        }
+
+        // Make element match the target width
+        element.style.width = `${targetWidth}px`;
+        element.style.maxWidth = "none";
+        element.style.margin = "0";
+
+        // Modify grid parent to single column and match width
+        if (gridParent) {
+          (gridParent as HTMLElement).style.display = "block";
+          (gridParent as HTMLElement).style.width = `${targetWidth}px`;
+          (gridParent as HTMLElement).style.maxWidth = "none";
+          (gridParent as HTMLElement).style.gridTemplateColumns = "none";
+        }
+
+        // Modify all parent containers
+        parentStyles.forEach(({ element: parentEl }) => {
+          parentEl.style.width = `${targetWidth}px`;
+          parentEl.style.maxWidth = "none";
+        });
+
+        // Wait for styles to apply
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        const dataUrl = await htmlToImage.toPng(element, {
+          backgroundColor: "#ffffff",
+          quality: 1,
+          pixelRatio: 2,
+          width: targetWidth,
+        });
+
+        // Restore original styles
+        element.style.cssText = originalStyle;
+        if (gridParent) {
+          (gridParent as HTMLElement).style.cssText = originalGridStyle;
+          gridParent.className = originalGridClass;
+        }
+        parentStyles.forEach(
+          ({ element: parentEl, originalStyle: origStyle }) => {
+            parentEl.style.cssText = origStyle;
+          }
+        );
+
+        images.push(dataUrl);
+      }
+
+      // Capture Platform Comparison
+      if (platformComparisonRef.current) {
+        const dataUrl = await htmlToImage.toPng(platformComparisonRef.current, {
+          backgroundColor: "#ffffff",
+          quality: 1,
+          pixelRatio: 2,
+        });
+        images.push(dataUrl);
+      }
+
+      if (images.length === 0) {
+        throw new Error("No components found to capture");
+      }
+
+      // Create a canvas to combine all images
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("Could not get canvas context");
+      }
+
+      // Load all images and calculate total height
+      const imagePromises = images.map((url) => {
+        return new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = url;
+        });
+      });
+
+      const loadedImages = await Promise.all(imagePromises);
+      const maxWidth = Math.max(...loadedImages.map((img) => img.width));
+      const totalHeight = loadedImages.reduce(
+        (sum, img) => sum + img.height,
+        0
+      );
+
+      // Set canvas dimensions
+      canvas.width = maxWidth;
+      canvas.height = totalHeight;
+
+      // Draw all images vertically
+      let currentY = 0;
+      loadedImages.forEach((img) => {
+        ctx.drawImage(img, 0, currentY);
+        currentY += img.height;
+      });
+
+      // Convert to blob and download
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          throw new Error("Failed to create image blob");
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+
+        // Format filename with week
+        const week = match.week || "N/A";
+        const weekFormatted = week.toString().replace(/\s+/g, "-");
+        const dateFormatted = new Date().toISOString().split("T")[0];
+        link.download = `Match-Report-Week-${weekFormatted}-${match.team1}-vs-${match.team2}-${dateFormatted}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        toast({
+          title: "Report Downloaded",
+          description: "Match report has been downloaded successfully",
+        });
+      }, "image/png");
+    } catch (error) {
+      console.error("Error generating report:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to generate report",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-end">
-        <Button
-          variant="outline"
-          onClick={() => {
-            // TODO: Implement download functionality
-            console.log("Download clicked");
-          }}>
-          <Download className="h-4 w-4 mr-2" />
-          Download
-        </Button>
+      <div ref={matchOverviewRef}>
+        <MatchOverview
+          match={match}
+          totalViolations={totalViolations}
+          totalBlocked={totalBlocked}
+          totalActive={totalActive}
+          blockedRate={blockedRate}
+          formattedTotalViews={formattedTotalViews}
+          avgBlockTime={avgBlockTime}
+          topPlatform={topPlatform}
+          totalViews={totalViews}
+          activeCount={totalActive}
+          blockedCount={totalBlocked}
+          removedCount={totalRemoved}
+          underReviewCount={totalUnderReview}
+          avgBlockTimeNumber={avgBlockTimeNumber}
+          blockSuccessRate={blockSuccessRate}
+          targetMins={targetMins}
+          onDownloadReport={handleDownloadReport}
+          isDownloading={isDownloading}
+        />
       </div>
-      <MatchOverview
-        match={match}
-        totalViolations={totalViolations}
-        totalBlocked={totalBlocked}
-        totalActive={totalActive}
-        blockedRate={blockedRate}
-        formattedTotalViews={formattedTotalViews}
-        avgBlockTime={avgBlockTime}
-        topPlatform={topPlatform}
-        totalViews={totalViews}
-        activeCount={totalActive}
-        blockedCount={totalBlocked}
-        removedCount={totalRemoved}
-        underReviewCount={totalUnderReview}
-        avgBlockTimeNumber={avgBlockTimeNumber}
-        blockSuccessRate={blockSuccessRate}
-        targetMins={targetMins}
-      />
 
-      <MatchViolationsStatusBreakdown
-        totalViolations={totalViolations}
-        activeCount={totalActive}
-        blockedCount={totalBlocked}
-        removedCount={totalRemoved}
-        underReviewCount={totalUnderReview}
-      />
+      <div ref={statusBreakdownRef}>
+        <MatchViolationsStatusBreakdown
+          totalViolations={totalViolations}
+          activeCount={totalActive}
+          blockedCount={totalBlocked}
+          removedCount={totalRemoved}
+          underReviewCount={totalUnderReview}
+        />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <ContentSplitChart data={contentSplitData} />
+        <div ref={contentSplitRef}>
+          <ContentSplitChart data={contentSplitData} />
+        </div>
         <ActivityLog
           log={activityLog}
           filter={logFilter}
@@ -1747,17 +2042,19 @@ export default function MatchDashboard() {
         </div>
       </div>
 
-      <PlatformComparison
-        platformOperations={platformOperations}
-        contentTypeFilter={contentTypeFilter}
-        comparisonSort={comparisonSort}
-        comparisonSortDirection={comparisonSortDirection}
-        selectedSlots={selectedSlots}
-        onSortChange={setComparisonSort}
-        onSortDirectionChange={setComparisonSortDirection}
-        onSelectedSlotsChange={setSelectedSlots}
-        targetMins={targetMins}
-      />
+      <div ref={platformComparisonRef}>
+        <PlatformComparison
+          platformOperations={platformOperations}
+          contentTypeFilter={contentTypeFilter}
+          comparisonSort={comparisonSort}
+          comparisonSortDirection={comparisonSortDirection}
+          selectedSlots={selectedSlots}
+          onSortChange={setComparisonSort}
+          onSortDirectionChange={setComparisonSortDirection}
+          onSelectedSlotsChange={setSelectedSlots}
+          targetMins={targetMins}
+        />
+      </div>
 
       <AddViolationSheet
         open={isAddViolationOpen}

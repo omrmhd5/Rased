@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   AlertTriangle,
   Shield,
@@ -9,6 +10,8 @@ import {
   Award,
   XCircle,
   FileQuestion,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { Match, PlatformData } from "./types";
 
@@ -30,6 +33,8 @@ interface MatchOverviewProps {
   avgBlockTimeNumber?: number;
   blockSuccessRate?: number;
   targetMins?: number;
+  onDownloadReport?: () => void;
+  isDownloading?: boolean;
 }
 
 export function MatchOverview({
@@ -49,6 +54,8 @@ export function MatchOverview({
   avgBlockTimeNumber,
   blockSuccessRate,
   targetMins = 15,
+  onDownloadReport,
+  isDownloading = false,
 }: MatchOverviewProps) {
   const formatMatchDateTime = () => {
     const dateStr = match.date;
@@ -108,8 +115,30 @@ export function MatchOverview({
             {match.stadium || "N/A"}
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-xs font-medium mb-1.5">{formatMatchDateTime()}</p>
+        <div className="text-right flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2">
+            <p className="text-xs font-medium">{formatMatchDateTime()}</p>
+            {onDownloadReport && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onDownloadReport}
+                disabled={isDownloading}
+                className="h-7 px-2 text-xs">
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-3 w-3 mr-1.5" />
+                    Download
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
           {getStatusBadge()}
         </div>
       </div>
