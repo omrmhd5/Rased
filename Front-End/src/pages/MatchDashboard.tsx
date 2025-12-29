@@ -659,7 +659,7 @@ export default function MatchDashboard() {
       ]);
     }
   }, [match, platformOperations]);
-
+  
   // Platform slot system (max 2 platforms visible)
   const [selectedSlots, setSelectedSlots] = useState<string[]>([
     "twitter",
@@ -672,7 +672,7 @@ export default function MatchDashboard() {
   const [platformSearchQuery, setPlatformSearchQuery] = useState<{
     [key: string]: string;
   }>({});
-
+  
   // Add/Edit violation state
   const [isAddViolationOpen, setIsAddViolationOpen] = useState(false);
   const [selectedPlatformForAdd, setSelectedPlatformForAdd] =
@@ -681,7 +681,7 @@ export default function MatchDashboard() {
     null
   );
   const [isEditMode, setIsEditMode] = useState(false);
-
+  
   // Form state
   const [formUrl, setFormUrl] = useState("");
   const [formAccountHandle, setFormAccountHandle] = useState("");
@@ -694,7 +694,7 @@ export default function MatchDashboard() {
   const [formBlockedAt, setFormBlockedAt] = useState("");
   const [formStillActive, setFormStillActive] = useState(false);
   const [formNotes, setFormNotes] = useState<string[]>([]);
-
+  
   // Block confirmation dialog state
   const [isBlockConfirmOpen, setIsBlockConfirmOpen] = useState(false);
   const [blockConfirmViolation, setBlockConfirmViolation] = useState<{
@@ -720,7 +720,7 @@ export default function MatchDashboard() {
     platformId: string;
     violation: Violation;
   } | null>(null);
-
+  
   // Platform comparison state
   const [comparisonSort, setComparisonSort] = useState<
     | "views"
@@ -734,7 +734,7 @@ export default function MatchDashboard() {
   const [comparisonSortDirection, setComparisonSortDirection] = useState<
     "desc" | "asc"
   >("desc");
-
+  
   // Match report state
 
   // Helper to get competition name
@@ -807,17 +807,17 @@ export default function MatchDashboard() {
     const cardFilter = platformCardFilter[platformId] || "all";
     const searchQuery = platformSearchQuery[platformId] || "";
     let filtered = violations;
-
+    
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (v) =>
-          v.url.toLowerCase().includes(query) ||
-          (v.accountHandle && v.accountHandle.toLowerCase().includes(query))
+        v.url.toLowerCase().includes(query) ||
+        (v.accountHandle && v.accountHandle.toLowerCase().includes(query))
       );
     }
-
+    
     // Apply card filter (All/Active/Blocked/Removed/Review)
     if (cardFilter !== "all") {
       if (cardFilter === "active") {
@@ -836,7 +836,7 @@ export default function MatchDashboard() {
         filtered = filtered.filter((v) => v.statusBadge === statusBadge);
       }
     }
-
+    
     // Apply content type filter
     if (contentTypeFilter !== "all") {
       filtered = filtered.filter(
@@ -850,10 +850,10 @@ export default function MatchDashboard() {
       const timeB = b.timeAdded ? new Date(b.timeAdded).getTime() : 0;
       return timeB - timeA; // Descending order (most recent first)
     });
-
+    
     return filtered;
   };
-
+  
   // Open add violation drawer
   const openAddViolationDrawer = (platformId: string) => {
     setSelectedPlatformForAdd(platformId);
@@ -871,7 +871,7 @@ export default function MatchDashboard() {
     setFormNotes([]);
     setIsAddViolationOpen(true);
   };
-
+  
   // Open edit violation drawer
   const openEditViolationDrawer = (
     platformId: string,
@@ -931,7 +931,7 @@ export default function MatchDashboard() {
     );
     setIsAddViolationOpen(true);
   };
-
+  
   // Toggle violation status (quick block/unblock)
   const toggleViolationStatus = (
     platformId: string,
@@ -939,12 +939,12 @@ export default function MatchDashboard() {
   ) => {
     const platform = platformOperations.find((p) => p.id === platformId);
     if (!platform) return;
-
+    
     const violation = platform.violations.find(
       (v) => v.id === violationId || v._id === violationId
     );
     if (!violation) return;
-
+    
     const isCurrentlyBlocked = violation.status === "Blocked";
     const isCurrentlyRemoved = violation.status === "Removed";
 
@@ -990,23 +990,23 @@ export default function MatchDashboard() {
 
           const updatedViolations = currentPlatform.violations.map((v) => {
             if (v.id !== violationId) return v;
-
-            return {
-              ...v,
+          
+          return {
+            ...v,
               status: "Active" as const,
               statusBadge: "Active" as const,
               blockedAt: undefined, // Clear blockedAt when unblocking
-            };
-          });
-
+          };
+        });
+        
           // Update local state - only update violations list, metrics will come from backend refetch
           setPlatformOperations((prev) =>
             prev.map((p) => {
               if (p.id !== platformId) return p;
               // Just update violations, keep existing metrics (will be updated by refetch)
-              return {
-                ...p,
-                violations: updatedViolations,
+        return { 
+          ...p, 
+          violations: updatedViolations,
               };
             })
           );
@@ -1051,11 +1051,11 @@ export default function MatchDashboard() {
       setIsBlockConfirmOpen(true);
     }
   };
-
+  
   // Confirm block with chosen time
   const confirmBlock = async () => {
     if (!blockConfirmViolation) return;
-
+    
     const { platformId, violationId, violation } = blockConfirmViolation;
     // Convert block time to UTC (customBlockTime is in KSA time from datetime-local input)
     const blockTime =
@@ -1106,7 +1106,7 @@ export default function MatchDashboard() {
       // Calculate updated violations
       const updatedViolations = currentPlatform.violations.map((v) => {
         if (v.id !== violationId && v._id !== violationId) return v;
-
+        
         return {
           ...v,
           status: "Blocked" as const,
@@ -1114,15 +1114,15 @@ export default function MatchDashboard() {
           blockedAt: convertedViolation.blockedAt || blockTime,
         };
       });
-
+      
       // Update local state - only update violations list, metrics will come from backend refetch
       setPlatformOperations((prev) =>
         prev.map((platform) => {
           if (platform.id !== platformId) return platform;
           // Just update violations, keep existing metrics (will be updated by refetch)
-          return {
-            ...platform,
-            violations: updatedViolations,
+      return {
+        ...platform,
+        violations: updatedViolations,
           };
         })
       );
@@ -1138,16 +1138,16 @@ export default function MatchDashboard() {
 
       // Trigger refetch of all data
       triggerRefetch();
-
-      toast({
-        title: "Violation blocked",
+    
+    toast({
+      title: "Violation blocked",
         description: `Violation marked as blocked at ${new Date(
           blockTime
         ).toLocaleString()}`,
-      });
-
-      setIsBlockConfirmOpen(false);
-      setBlockConfirmViolation(null);
+    });
+    
+    setIsBlockConfirmOpen(false);
+    setBlockConfirmViolation(null);
     } catch (error) {
       console.error("Error blocking violation:", error);
       toast({
@@ -1157,7 +1157,7 @@ export default function MatchDashboard() {
       });
     }
   };
-
+  
   // Save violation (add or edit)
   const saveViolation = async () => {
     if (!formUrl) {
@@ -1168,7 +1168,7 @@ export default function MatchDashboard() {
       });
       return;
     }
-
+    
     if (!formAccountHandle) {
       toast({
         title: "Validation Error",
@@ -1191,7 +1191,7 @@ export default function MatchDashboard() {
       (p) => p.id === selectedPlatformForAdd
     );
     if (!platform) return;
-
+    
     try {
       // Map contentType to match backend schema exactly: "Live", "Highlights", or "Other"
       let contentType: "Live" | "Highlights" | "Other" = "Other";
@@ -1280,9 +1280,9 @@ export default function MatchDashboard() {
             });
 
             // Just update violations, keep existing metrics (will be updated by refetch)
-            return {
-              ...p,
-              violations: updatedViolations,
+        return {
+          ...p,
+          violations: updatedViolations,
             };
           })
         );
@@ -1312,13 +1312,13 @@ export default function MatchDashboard() {
 
         // Trigger refetch of all data
         triggerRefetch();
-
-        toast({
-          title: "Violation updated",
-          description: "Changes saved successfully",
-        });
-      } else {
-        // Add new violation
+      
+      toast({
+        title: "Violation updated",
+        description: "Changes saved successfully",
+      });
+    } else {
+      // Add new violation
         const response = await fetch(`${API_URL}/violations`, {
           method: "POST",
           headers: {
@@ -1341,14 +1341,14 @@ export default function MatchDashboard() {
 
         setPlatformOperations((prev) =>
           prev.map((p) => {
-            if (p.id !== selectedPlatformForAdd) return p;
-
+        if (p.id !== selectedPlatformForAdd) return p;
+        
             const updatedViolations = [frontendViolation, ...p.violations];
-
+        
             // Just update violations, keep existing metrics (will be updated by refetch)
-            return {
-              ...p,
-              violations: updatedViolations,
+        return {
+          ...p,
+          violations: updatedViolations,
             };
           })
         );
@@ -1373,14 +1373,14 @@ export default function MatchDashboard() {
 
         // Trigger refetch of all data
         triggerRefetch();
-
-        toast({
-          title: "Violation added",
-          description: `New violation added to ${platform.name}`,
-        });
-      }
-
-      setIsAddViolationOpen(false);
+      
+      toast({
+        title: "Violation added",
+        description: `New violation added to ${platform.name}`,
+      });
+    }
+    
+    setIsAddViolationOpen(false);
     } catch (error) {
       console.error("Error saving violation:", error);
       toast({
@@ -1431,16 +1431,16 @@ export default function MatchDashboard() {
       // Update local state
       setPlatformOperations((prev) =>
         prev.map((p) => {
-          if (p.id !== platformId) return p;
-
+      if (p.id !== platformId) return p;
+      
           const updatedViolations = p.violations.filter(
             (v) => v.id !== violationId && v._id !== violationId
           );
-
+      
           // Just update violations, keep existing metrics (will be updated by refetch)
-          return {
-            ...p,
-            violations: updatedViolations,
+      return {
+        ...p,
+        violations: updatedViolations,
           };
         })
       );
@@ -1464,9 +1464,9 @@ export default function MatchDashboard() {
 
       // Trigger refetch of all data
       triggerRefetch();
-
-      toast({
-        title: "Violation deleted",
+    
+    toast({
+      title: "Violation deleted",
         description: "Violation has been removed successfully",
       });
 
@@ -1481,7 +1481,7 @@ export default function MatchDashboard() {
       });
     }
   };
-
+  
   // Copy violation URL
   const copyViolationUrl = (url: string) => {
     navigator.clipboard.writeText(url);
@@ -1575,24 +1575,24 @@ export default function MatchDashboard() {
   };
 
   if (loading) {
-    return (
+                return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">Loading match data...</p>
-        </div>
-      </div>
+          </div>
+          </div>
     );
   }
 
   if (!match) {
-    return (
+                return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-center">
+                      <div className="text-center">
           <AlertCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">Match not found</p>
-        </div>
-      </div>
+                      </div>
+                      </div>
     );
   }
 
@@ -1704,7 +1704,7 @@ export default function MatchDashboard() {
           <p style="margin: 0;"><strong>Date & Time:</strong> ${
             matchDateTime || "N/A"
           }</p>
-        </div>
+                    </div>
       `;
 
       // Temporarily add to DOM for capture
@@ -1932,8 +1932,8 @@ export default function MatchDashboard() {
           targetMins={targetMins}
           onDownloadReport={handleDownloadReport}
           isDownloading={isDownloading}
-        />
-      </div>
+              />
+            </div>
 
       <div ref={statusBreakdownRef}>
         <MatchViolationsStatusBreakdown
@@ -1942,8 +1942,8 @@ export default function MatchDashboard() {
           blockedCount={totalBlocked}
           removedCount={totalRemoved}
           underReviewCount={totalUnderReview}
-        />
-      </div>
+              />
+            </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div ref={contentSplitRef}>
@@ -1963,8 +1963,8 @@ export default function MatchDashboard() {
           onPlatformFilterChange={setPlatformFilter}
           userFilter={userFilter}
           onUserFilterChange={setUserFilter}
-        />
-      </div>
+              />
+            </div>
 
       <BlockConfirmDialog
         open={isBlockConfirmOpen}
@@ -1984,7 +1984,7 @@ export default function MatchDashboard() {
           <h2 className="text-lg font-semibold">
             Platform Operations (This Match)
           </h2>
-        </div>
+            </div>
 
         <PlatformFilters
           selectedSlots={selectedSlots}
@@ -2040,7 +2040,7 @@ export default function MatchDashboard() {
               );
             })}
         </div>
-      </div>
+            </div>
 
       <div ref={platformComparisonRef}>
         <PlatformComparison
@@ -2054,7 +2054,7 @@ export default function MatchDashboard() {
           onSelectedSlotsChange={setSelectedSlots}
           targetMins={targetMins}
         />
-      </div>
+              </div>
 
       <AddViolationSheet
         open={isAddViolationOpen}

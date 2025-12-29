@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import Match from "../models/Match.js";
 import Competition from "../models/Competition.js";
 import Violation from "../models/Violation.js";
+import PlatformByMatch from "../models/PlatformByMatch.js";
+import DeletedViolationLog from "../models/DeletedViolationLog.js";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
 
@@ -614,11 +616,31 @@ router.post("/", async (req, res) => {
     let competitionRef = null;
     let externalCompetitionId = null;
     if (competition) {
-      // Try to find existing competition by name
+      // Try to find existing competition by exact name match first
       let comp = await Competition.findOne({ name: competition });
 
+      // If not found, try to find by league and known name variations
       if (!comp) {
-        // Create new competition if it doesn't exist
+        // Map frontend competition names to database competition names
+        const competitionNameMap = {
+          "Saudi Pro League": "Saudi League",
+          "Italian Serie A": "Italian Serie A",
+          "Spanish La Liga": "Spanish La Liga",
+        };
+
+        const mappedName = competitionNameMap[competition];
+        if (mappedName) {
+          comp = await Competition.findOne({ name: mappedName });
+        }
+
+        // If still not found, try to find by league only (for the specific league)
+        if (!comp && finalLeague) {
+          comp = await Competition.findOne({ league: finalLeague });
+        }
+      }
+
+      // If still not found, create new competition
+      if (!comp) {
         comp = await Competition.create({
           externalId: `manual_${Date.now()}_${Math.random()
             .toString(36)
@@ -682,7 +704,34 @@ router.post("/", async (req, res) => {
       await savedMatch.save();
     }
 
-    res.status(201).json(savedMatch);
+    // Populate competition and format response
+    const populatedMatch = await Match.findById(savedMatch._id)
+      .populate("competition")
+      .lean();
+
+    // Format competition to string name for frontend
+    let competitionName = "";
+    if (populatedMatch.competition) {
+      if (
+        typeof populatedMatch.competition === "object" &&
+        populatedMatch.competition.name
+      ) {
+        competitionName = populatedMatch.competition.name;
+      } else if (typeof populatedMatch.competition === "string") {
+        competitionName = populatedMatch.competition;
+      }
+    }
+
+    // Format date to string
+    const formattedMatch = {
+      ...populatedMatch,
+      date: populatedMatch.date
+        ? new Date(populatedMatch.date).toISOString().split("T")[0]
+        : "",
+      competition: competitionName,
+    };
+
+    res.status(201).json(formattedMatch);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -691,6 +740,8 @@ router.post("/", async (req, res) => {
 // PUT /api/matches/:externalMatchId - Update match
 router.put("/:externalMatchId", async (req, res) => {
   try {
+    const externalMatchIdParam = req.params.externalMatchId;
+
     const {
       description,
       team1,
@@ -704,14 +755,47 @@ router.put("/:externalMatchId", async (req, res) => {
       league,
       topPlatformId,
       mostViews,
+      winner,
+      scores,
     } = req.body;
 
-    const match = await Match.findOne({
-      externalMatchId: req.params.externalMatchId,
+    // Try to find match by externalMatchId first
+    let match = await Match.findOne({
+      externalMatchId: externalMatchIdParam,
     });
+
+    // If not found, try by _id (for manually created matches where externalMatchId = _id)
+    if (!match) {
+      // Check if the parameter looks like a MongoDB ObjectId
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(externalMatchIdParam);
+
+      if (isObjectId) {
+        match = await Match.findById(externalMatchIdParam);
+      }
+    }
 
     if (!match) {
       return res.status(404).json({ error: "Match not found" });
+    }
+
+    // Determine league from competition name if league is not provided or invalid
+    let finalLeague = league || match.league;
+
+    if (competition && !finalLeague) {
+      const competitionLower = competition.toLowerCase();
+      if (competitionLower.includes("saudi")) {
+        finalLeague = "saudi";
+      } else if (
+        competitionLower.includes("italian") ||
+        competitionLower.includes("serie a")
+      ) {
+        finalLeague = "italian";
+      } else if (
+        competitionLower.includes("spanish") ||
+        competitionLower.includes("la liga")
+      ) {
+        finalLeague = "spanish";
+      }
     }
 
     // Update fields
@@ -724,38 +808,65 @@ router.put("/:externalMatchId", async (req, res) => {
     if (competition !== undefined) {
       let competitionRef = null;
       let externalCompetitionId = null;
-      
+
       if (competition) {
-        // Try to find competition by ObjectId first
-        let comp = await Competition.findById(competition);
-        
+        let comp = null;
+
+        // Only try ObjectId lookup if it's a valid ObjectId format
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(competition);
+        if (isObjectId) {
+          comp = await Competition.findById(competition);
+        }
+
         // If not found by ObjectId, try by externalId
         if (!comp) {
           comp = await Competition.findOne({ externalId: competition });
         }
-        
-        // If still not found, try by name
+
+        // If still not found, try by exact name match
         if (!comp) {
           comp = await Competition.findOne({ name: competition });
         }
-        
+
+        // If still not found, try to find by league and known name variations
+        if (!comp) {
+          // Map frontend competition names to database competition names
+          const competitionNameMap = {
+            "Saudi Pro League": "Saudi League",
+            "Italian Serie A": "Italian Serie A",
+            "Spanish La Liga": "Spanish La Liga",
+          };
+
+          const mappedName = competitionNameMap[competition];
+          if (mappedName) {
+            comp = await Competition.findOne({ name: mappedName });
+          }
+
+          // If still not found, try to find by league only (for the specific league)
+          if (!comp && finalLeague) {
+            comp = await Competition.findOne({ league: finalLeague });
+          } else if (!comp && match.league) {
+            comp = await Competition.findOne({ league: match.league });
+          }
+        }
+
         if (comp) {
           competitionRef = comp._id;
           externalCompetitionId = comp.externalId;
         }
       }
-      
+
       match.competition = competitionRef;
       match.externalCompetitionId = externalCompetitionId;
     }
     if (stadium !== undefined) match.stadium = stadium;
-    if (league !== undefined) {
-      if (!["saudi", "italian", "spanish"].includes(league)) {
+    if (finalLeague) {
+      if (!["saudi", "italian", "spanish"].includes(finalLeague)) {
         return res.status(400).json({
           error: "Invalid league. Must be one of: saudi, italian, spanish",
         });
       }
-      match.league = league;
+      match.league = finalLeague;
     }
 
     // Handle status change
@@ -769,13 +880,59 @@ router.put("/:externalMatchId", async (req, res) => {
         changedAt: new Date(),
       });
     }
-    
+
     // Update top platform fields
     if (topPlatformId !== undefined) match.topPlatformId = topPlatformId;
     if (mostViews !== undefined) match.mostViews = mostViews;
 
+    // Update winner and scores
+    // Clear winner and scores if status is anything other than "finished"
+    const finalStatus = status !== undefined ? status : match.status;
+
+    if (finalStatus !== "finished") {
+      // Status is not "finished" - clear winner and scores
+      match.winner = null;
+      match.scores = null;
+    } else if (status === "finished") {
+      // Status is "finished", update winner and scores if provided
+      if (winner !== undefined) {
+        match.winner = winner || null;
+      }
+      if (scores !== undefined) {
+        match.scores = scores || null;
+      }
+    }
+
     const updatedMatch = await match.save();
-    res.json(updatedMatch);
+
+    // Populate competition and format response
+    const populatedMatch = await Match.findById(updatedMatch._id)
+      .populate("competition")
+      .lean();
+
+    // Format competition to string name for frontend
+    let competitionName = "";
+    if (populatedMatch.competition) {
+      if (
+        typeof populatedMatch.competition === "object" &&
+        populatedMatch.competition.name
+      ) {
+        competitionName = populatedMatch.competition.name;
+      } else if (typeof populatedMatch.competition === "string") {
+        competitionName = populatedMatch.competition;
+      }
+    }
+
+    // Format date to string
+    const formattedMatch = {
+      ...populatedMatch,
+      date: populatedMatch.date
+        ? new Date(populatedMatch.date).toISOString().split("T")[0]
+        : "",
+      competition: competitionName,
+    };
+
+    res.json(formattedMatch);
   } catch (error) {
     if (error.name === "CastError") {
       return res.status(400).json({ error: "Invalid match ID" });
@@ -798,10 +955,26 @@ router.delete("/:externalMatchId", async (req, res) => {
     // Delete associated violations
     await Violation.deleteMany({ matchId: match._id });
 
+    // Delete associated platformByMatch documents
+    await PlatformByMatch.deleteMany({
+      $or: [
+        { matchId: match._id },
+        { externalMatchId: req.params.externalMatchId },
+      ],
+    });
+
+    // Delete associated deleted violation logs
+    await DeletedViolationLog.deleteMany({
+      externalMatchId: req.params.externalMatchId,
+    });
+
     await Match.findOneAndDelete({
       externalMatchId: req.params.externalMatchId,
     });
-    res.json({ message: "Match and associated violations deleted" });
+    res.json({
+      message:
+        "Match, associated violations, platform stats, and deleted violation logs deleted",
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

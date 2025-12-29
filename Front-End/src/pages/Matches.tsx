@@ -17,6 +17,23 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -29,6 +46,9 @@ import {
   Clock,
   Trophy,
   Plus,
+  MoreVertical,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
@@ -66,7 +86,7 @@ interface Match {
   week: string;
   competition?: Competition | string; // Can be populated object or string
   stadium?: string;
-  status: "upcoming" | "live" | "finished" | "cancelled" | "postponed";
+  status: "upcoming" | "live" | "finished" | "postponed";
   league: "saudi" | "italian" | "spanish";
   winner?: "home" | "away" | "draw" | null;
   scores?: {
@@ -97,6 +117,9 @@ export default function Matches() {
   const [loading, setLoading] = useState(false);
   const [isAddMatchOpen, setIsAddMatchOpen] = useState(false);
   const [matchFilter, setMatchFilter] = useState<MatchFilter>("all");
+  const [isEditMatchOpen, setIsEditMatchOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null);
 
   // Form state for adding match
   const [formDate, setFormDate] = useState("");
@@ -108,7 +131,7 @@ export default function Matches() {
   const [formVenue, setFormVenue] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formStatus, setFormStatus] = useState<
-    "upcoming" | "live" | "finished" | "cancelled" | "postponed"
+    "upcoming" | "live" | "finished" | "postponed"
   >("upcoming");
   const [formWinner, setFormWinner] = useState<"home" | "away" | "draw" | "">(
     ""
@@ -260,6 +283,237 @@ export default function Matches() {
     }
   }, [selectedLeague, selectedWeek, fetchMatchesFromDB, syncMatchesFromAPI]);
 
+  const resetForm = () => {
+    setFormDescription("");
+    setFormDate("");
+    setFormTime("");
+    setFormWeek("");
+    setFormCompetition("");
+    setFormTeam1("");
+    setFormTeam2("");
+    setFormVenue("");
+    setFormStatus("upcoming");
+    setFormWinner("");
+    setFormScoreHome("");
+    setFormScoreAway("");
+    setSelectedMatch(null);
+  };
+
+  const convertTimeTo24Hour = (timeStr: string): string => {
+    if (!timeStr) return "";
+    // Check if it's already in 24-hour format (HH:MM or HH:MM:SS)
+    if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(timeStr) && !timeStr.includes("AM") && !timeStr.includes("PM")) {
+      // Already 24-hour format, just return HH:MM
+      return timeStr.split(":").slice(0, 2).join(":");
+    }
+    // Parse 12-hour format (e.g., "2:50 PM")
+    const pmMatch = timeStr.match(/(\d+):(\d+)\s*(PM|AM)/i);
+    if (pmMatch) {
+      let hours = parseInt(pmMatch[1]);
+      const minutes = pmMatch[2];
+      const isPM = pmMatch[3].toUpperCase() === "PM";
+      if (isPM && hours !== 12) hours += 12;
+      if (!isPM && hours === 12) hours = 0;
+      return `${hours.toString().padStart(2, "0")}:${minutes}`;
+    }
+    return "";
+  };
+
+  const convertTimeTo12Hour = (timeStr: string): string => {
+    if (!timeStr) return "";
+    // Check if it's already in 12-hour format
+    if (timeStr.includes("AM") || timeStr.includes("PM")) {
+      return timeStr;
+    }
+    // Parse 24-hour format (HH:MM or HH:MM:SS)
+    const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})(:\d{2})?/);
+    if (timeMatch) {
+      let hours = parseInt(timeMatch[1]);
+      const minutes = timeMatch[2];
+      const period = hours >= 12 ? "PM" : "AM";
+      const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+      return `${hours12}:${minutes} ${period}`;
+    }
+    return "";
+  };
+
+  const handleEditMatch = (match: Match) => {
+    setSelectedMatch(match);
+    // Populate form with match data
+    setFormDate(match.date || "");
+    setFormTime(convertTimeTo24Hour(match.time || ""));
+    setFormWeek(match.week || "");
+    
+    // Map database competition names to frontend dropdown values
+    const competitionName =
+      typeof match.competition === "string"
+        ? match.competition
+        : (match.competition as Competition)?.name || "";
+    
+    // Map database names to frontend dropdown values
+    const competitionMap: Record<string, string> = {
+      "Saudi League": "Saudi Pro League",
+      "Italian Serie A": "Italian Serie A",
+      "Spanish La Liga": "Spanish La Liga",
+    };
+    
+    const mappedCompetition = competitionMap[competitionName] || competitionName;
+    setFormCompetition(mappedCompetition);
+    
+    setFormTeam1(match.team1 || "");
+    setFormTeam2(match.team2 || "");
+    setFormVenue(match.stadium || "");
+    setFormDescription(match.description || "");
+    setFormStatus(match.status);
+    setFormWinner(match.winner || "");
+    setFormScoreHome(match.scores?.home?.toString() || "");
+    setFormScoreAway(match.scores?.away?.toString() || "");
+    setIsEditMatchOpen(true);
+  };
+
+  const handleUpdateMatch = async () => {
+    if (!selectedMatch || !formDate || !formTime || !formTeam1 || !formTeam2 || !formWeek) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const updateData = {
+            description: formDescription || undefined,
+            team1: formTeam1,
+            team2: formTeam2,
+            date: formDate,
+            time: convertTimeTo12Hour(formTime),
+            week: formWeek,
+            competition: formCompetition || undefined,
+            stadium: formVenue || undefined,
+            league: formCompetition
+              ? formCompetition === "Saudi Pro League"
+                ? "saudi"
+                : formCompetition === "Italian Serie A"
+                ? "italian"
+                : formCompetition === "Spanish La Liga"
+                ? "spanish"
+                : selectedLeague
+              : selectedLeague,
+            status: formStatus,
+            winner:
+              formStatus === "finished" && formWinner ? formWinner : undefined,
+            scores:
+              formStatus === "finished" &&
+              formScoreHome !== "" &&
+              formScoreAway !== ""
+                ? {
+                    home: Number(formScoreHome),
+                    away: Number(formScoreAway),
+                  }
+                : undefined,
+      };
+
+      const response = await fetch(
+        `${API_URL}/matches/${selectedMatch.externalMatchId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify(updateData),
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update match");
+      }
+
+      const updatedMatch = await response.json();
+      // Format date to string if it's a Date object
+      const formattedMatch: Match = {
+        ...updatedMatch,
+        date:
+          typeof updatedMatch.date === "string"
+            ? updatedMatch.date
+            : new Date(updatedMatch.date).toISOString().split("T")[0],
+      };
+
+      // Update the match in the list
+      setMatches(
+        matches.map((m) =>
+          m.externalMatchId === selectedMatch.externalMatchId
+            ? formattedMatch
+            : m
+        )
+      );
+
+      toast({
+        title: "Success",
+        description: "Match updated successfully",
+      });
+
+      // Reset form and close dialog
+      resetForm();
+      setIsEditMatchOpen(false);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to update match";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteMatch = (match: Match) => {
+    setSelectedMatch(match);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteMatch = async () => {
+    if (!selectedMatch) return;
+
+    try {
+      const response = await fetch(
+        `${API_URL}/matches/${selectedMatch.externalMatchId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to delete match");
+      }
+
+      // Remove match from list
+      setMatches(
+        matches.filter((m) => m.externalMatchId !== selectedMatch.externalMatchId)
+      );
+
+      toast({
+        title: "Success",
+        description: "Match deleted successfully",
+      });
+
+      setSelectedMatch(null);
+      setIsDeleteDialogOpen(false);
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Failed to delete match";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAddMatch = async () => {
     if (!formDate || !formTime || !formTeam1 || !formTeam2 || !formWeek) {
       toast({
@@ -291,7 +545,7 @@ export default function Matches() {
           team1: formTeam1,
           team2: formTeam2,
           date: formDate,
-          time: formTime,
+          time: convertTimeTo12Hour(formTime),
           week: formWeek,
           competition: formCompetition || undefined,
           stadium: formVenue || undefined,
@@ -326,12 +580,21 @@ export default function Matches() {
 
       const newMatch = await response.json();
       // Format date to string if it's a Date object
+      // Handle competition - ensure it's a string
+      const competitionName =
+        typeof newMatch.competition === "object" && newMatch.competition !== null
+          ? (newMatch.competition as Competition).name
+          : typeof newMatch.competition === "string"
+          ? newMatch.competition
+          : "";
+
       const formattedMatch: Match = {
         ...newMatch,
         date:
           typeof newMatch.date === "string"
             ? newMatch.date
             : new Date(newMatch.date).toISOString().split("T")[0],
+        competition: competitionName,
       };
       setMatches([...matches, formattedMatch]);
       toast({
@@ -340,18 +603,7 @@ export default function Matches() {
       });
 
       // Reset form
-      setFormDescription("");
-      setFormDate("");
-      setFormTime("");
-      setFormWeek("");
-      setFormCompetition("");
-      setFormTeam1("");
-      setFormTeam2("");
-      setFormVenue("");
-      setFormStatus("upcoming");
-      setFormWinner("");
-      setFormScoreHome("");
-      setFormScoreAway("");
+      resetForm();
       setIsAddMatchOpen(false);
     } catch (error: unknown) {
       const errorMessage =
@@ -493,13 +745,15 @@ export default function Matches() {
       match.status === "upcoming"
         ? getCountdownText(match.date, match.time)
         : null;
-
+    
     return (
       <Card className="p-6 hover:shadow-lg transition-shadow">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <Badge
+            <div className="flex items-start justify-between mb-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge
                 className={
                   match.status === "live"
                     ? "bg-red-500 text-white"
@@ -518,7 +772,7 @@ export default function Matches() {
                   match.status === "postponed"
                     ? "default"
                     : "outline"
-                }>
+              }>
                 {match.status === "live" && "● LIVE"}
                 {match.status === "upcoming" && "Upcoming"}
                 {match.status === "postponed" && "Postponed"}
@@ -527,14 +781,36 @@ export default function Matches() {
                   "Completed"}
               </Badge>
               <Badge variant="outline">Week {match.week}</Badge>
-              {countdown && countdown.type === "countdown" && (
-                <Badge
-                  variant="outline"
-                  className="bg-chart-1/10 text-chart-1 animate-pulse">
+                  {countdown && countdown.type === "countdown" && (
+                    <Badge
+                      variant="outline"
+                      className="bg-chart-1/10 text-chart-1 animate-pulse">
                   <Clock className="h-3 w-3 mr-1" />
-                  Starts in {countdown.text}
+                      Starts in {countdown.text}
                 </Badge>
               )}
+                </div>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => handleEditMatch(match)}>
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => handleDeleteMatch(match)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <h3 className="text-xl font-bold mb-2">
               {match.team1} vs {match.team2}
@@ -565,8 +841,8 @@ export default function Matches() {
                 </span>
               </div>
               {match.stadium && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
                   <span>{match.stadium}</span>
                 </div>
               )}
@@ -575,7 +851,7 @@ export default function Matches() {
                   {typeof match.competition === "string"
                     ? match.competition
                     : (match.competition as Competition).name}
-                </div>
+              </div>
               )}
             </div>
           </div>
@@ -665,7 +941,7 @@ export default function Matches() {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-2xl font-bold">Matches</h1>
+          <h1 className="text-2xl font-bold">Matches</h1>
             <Badge variant="secondary" className="text-sm">
               {leagueNames[selectedLeague!]}
             </Badge>
@@ -685,7 +961,10 @@ export default function Matches() {
           </Button>
           <Button
             size="sm"
-            onClick={() => setIsAddMatchOpen(true)}
+            onClick={() => {
+              resetForm();
+              setIsAddMatchOpen(true);
+            }}
             className="gap-2">
             <Plus className="h-4 w-4" />
             Add Match Manually
@@ -716,7 +995,11 @@ export default function Matches() {
           <p className="text-muted-foreground mb-4">
             No matches found for this league and week
           </p>
-          <Button onClick={() => setIsAddMatchOpen(true)}>
+          <Button
+            onClick={() => {
+              resetForm();
+              setIsAddMatchOpen(true);
+            }}>
             <Plus className="h-4 w-4 mr-2" />
             Add Match Manually
           </Button>
@@ -775,15 +1058,15 @@ export default function Matches() {
                 <div key={dayKey} className="space-y-4">
                   <h2 className="text-xl font-semibold text-foreground border-b pb-2">
                     {formatDayHeader(dayKey)}
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {matchesByDay[dayKey].map((match) => (
                       <MatchCard key={match.externalMatchId} match={match} />
                     ))}
                   </div>
                 </div>
-              ))}
-            </div>
+            ))}
+          </div>
           ) : (
             <Card className="p-8 text-center">
               <p className="text-muted-foreground">
@@ -795,7 +1078,14 @@ export default function Matches() {
       )}
 
       {/* Add Match Dialog */}
-      <Dialog open={isAddMatchOpen} onOpenChange={setIsAddMatchOpen}>
+      <Dialog
+        open={isAddMatchOpen}
+        onOpenChange={(open) => {
+          setIsAddMatchOpen(open);
+          if (!open) {
+            resetForm();
+          }
+        }}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Match Manually</DialogTitle>
@@ -860,7 +1150,6 @@ export default function Matches() {
                       | "upcoming"
                       | "live"
                       | "finished"
-                      | "cancelled"
                       | "postponed"
                   )
                 }>
@@ -870,8 +1159,7 @@ export default function Matches() {
                 <SelectContent>
                   <SelectItem value="upcoming">Upcoming</SelectItem>
                   <SelectItem value="live">Live</SelectItem>
-                  <SelectItem value="finished">Finished</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                  <SelectItem value="finished">Completed</SelectItem>
                   <SelectItem value="postponed">Postponed</SelectItem>
                 </SelectContent>
               </Select>
@@ -965,8 +1253,8 @@ export default function Matches() {
                   onChange={(e) => setFormTime(e.target.value)}
                   required
                 />
-              </div>
-            </div>
+        </div>
+      </div>
 
             {/* Optional fields */}
             <div className="space-y-2">
@@ -999,6 +1287,250 @@ export default function Matches() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Edit Match Dialog */}
+      <Dialog
+        open={isEditMatchOpen}
+        onOpenChange={(open) => {
+          setIsEditMatchOpen(open);
+          if (!open) {
+            resetForm();
+          }
+        }}>
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Match</DialogTitle>
+            <DialogDescription>
+              Update match details for {leagueNames[selectedLeague!]}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {/* Competition */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-competition">Competition</Label>
+              <Select
+                value={formCompetition}
+                onValueChange={setFormCompetition}>
+                <SelectTrigger id="edit-competition">
+                  <SelectValue placeholder="Select competition" />
+                </SelectTrigger>
+                <SelectContent>
+                  {competitions.map((comp) => (
+                    <SelectItem key={comp} value={comp}>
+                      {comp}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Team 1 Name */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-team1">Team 1 Name *</Label>
+              <Input
+                id="edit-team1"
+                type="text"
+                placeholder="e.g., Al Hilal"
+                value={formTeam1}
+                onChange={(e) => setFormTeam1(e.target.value)}
+                required
+              />
+            </div>
+
+            {/* Team 2 Name */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-team2">Team 2 Name *</Label>
+              <Input
+                id="edit-team2"
+                type="text"
+                placeholder="e.g., Al Nassr"
+                value={formTeam2}
+                onChange={(e) => setFormTeam2(e.target.value)}
+                required
+              />
+            </div>
+
+            {/* Status */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-status">Status *</Label>
+              <Select
+                value={formStatus}
+                onValueChange={(value) =>
+                  setFormStatus(
+                    value as
+                      | "upcoming"
+                      | "live"
+                      | "finished"
+                      | "postponed"
+                  )
+                }>
+                <SelectTrigger id="edit-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="upcoming">Upcoming</SelectItem>
+                  <SelectItem value="live">Live</SelectItem>
+                  <SelectItem value="finished">Completed</SelectItem>
+                  <SelectItem value="postponed">Postponed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Status-dependent fields (Winner and Scores) */}
+            {formStatus === "finished" && (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-winner">Winner *</Label>
+                  <Select
+                    value={formWinner}
+                    onValueChange={(value) =>
+                      setFormWinner(value as "home" | "away" | "draw" | "")
+                    }>
+                    <SelectTrigger id="edit-winner">
+                      <SelectValue placeholder="Select winner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="home">
+                        {formTeam1 || "Team 1"}
+                      </SelectItem>
+                      <SelectItem value="away">
+                        {formTeam2 || "Team 2"}
+                      </SelectItem>
+                      <SelectItem value="draw">Draw</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-scoreHome">Team 1 Score *</Label>
+                    <Input
+                      id="edit-scoreHome"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={formScoreHome}
+                      onChange={(e) => setFormScoreHome(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-scoreAway">Team 2 Score *</Label>
+                    <Input
+                      id="edit-scoreAway"
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={formScoreAway}
+                      onChange={(e) => setFormScoreAway(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Week */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-week">Week *</Label>
+              <Input
+                id="edit-week"
+                type="text"
+                placeholder="e.g., 12"
+                value={formWeek}
+                onChange={(e) => setFormWeek(e.target.value)}
+                required
+              />
+            </div>
+
+            {/* Date and Time */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-date">Date *</Label>
+                <Input
+                  id="edit-date"
+                  type="date"
+                  value={formDate}
+                  onChange={(e) => setFormDate(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-time">Time *</Label>
+                <Input
+                  id="edit-time"
+                  type="time"
+                  value={formTime}
+                  onChange={(e) => setFormTime(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Optional fields */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-venue">Venue (Optional)</Label>
+              <Input
+                id="edit-venue"
+                type="text"
+                placeholder="e.g., King Fahd International Stadium"
+                value={formVenue}
+                onChange={(e) => setFormVenue(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description (Optional)</Label>
+              <Input
+                id="edit-description"
+                type="text"
+                placeholder="Auto-generated if left empty"
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+              />
+        </div>
+      </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                resetForm();
+                setIsEditMatchOpen(false);
+              }}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateMatch}>Update Match</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the match{" "}
+              {selectedMatch && (
+                <span className="font-semibold">
+                  {selectedMatch.team1} vs {selectedMatch.team2}
+                </span>
+              )}{" "}
+              and all associated violations. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedMatch(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeleteMatch}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

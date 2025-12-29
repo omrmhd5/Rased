@@ -20,9 +20,6 @@ const settingsSchema = new mongoose.Schema(
   }
 );
 
-// Ensure only one document exists - prevent multiple documents
-settingsSchema.index({ identifier: 1 }, { unique: true });
-
 // Static method to get or create the singleton settings
 settingsSchema.statics.getSingleton = async function () {
   let settings = await this.findOne({ identifier: "singleton" });

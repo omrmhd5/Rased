@@ -10,7 +10,6 @@ const userSchema = new mongoose.Schema(
       trim: true,
       minlength: 3,
       maxlength: 30,
-      index: true,
     },
     email: {
       type: String,
@@ -19,7 +18,6 @@ const userSchema = new mongoose.Schema(
       trim: true,
       lowercase: true,
       match: [/^\S+@\S+\.\S+$/, "Please enter a valid email address"],
-      index: true,
     },
     password: {
       type: String,
@@ -58,10 +56,6 @@ userSchema.methods.toJSON = function () {
   delete obj.password;
   return obj;
 };
-
-// Indexes
-userSchema.index({ email: 1 });
-userSchema.index({ username: 1 });
 
 const User = mongoose.model("User", userSchema);
 
