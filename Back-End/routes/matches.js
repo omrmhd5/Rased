@@ -1050,6 +1050,11 @@ router.get("/dashboard/stats", async (req, res) => {
           upcoming: 0,
           postponed: 0,
         },
+        contentSplit: {
+          live: { views: 0, violations: 0 },
+          highlights: { views: 0, violations: 0 },
+          others: { views: 0, violations: 0 },
+        },
       });
     }
 
@@ -1168,17 +1173,77 @@ router.get("/dashboard/stats", async (req, res) => {
           )
         : null;
 
-    // Get top match details
+    // Get top match details with platform breakdown
     let topMatch = null;
     if (topMatchData) {
       const match = await Match.findById(topMatchData.matchId)
-        .select("team1 team2 week date")
+        .select("team1 team2 week date externalMatchId")
         .lean();
       if (match) {
+        // Get violations for this match
+        const matchViolations = await Violation.find({
+          matchId: topMatchData.matchId,
+        }).lean();
+
+        // Calculate total views
+        const processViews = (viewsStr) => {
+          if (!viewsStr || viewsStr === "0") return 0;
+          const upperViews = viewsStr.toUpperCase();
+          if (upperViews.includes("K")) {
+            const num = parseFloat(upperViews.replace(/[K]/g, "")) || 0;
+            return num * 1000;
+          }
+          return parseFloat(viewsStr) || 0;
+        };
+
+        const totalViews = matchViolations.reduce(
+          (sum, v) => sum + processViews(v.views),
+          0
+        );
+
+        // Aggregate by platform
+        const platformBreakdown = {};
+        matchViolations.forEach((v) => {
+          const platformId = v.platformId;
+          const platformName = v.platformName || platformId;
+          if (!platformBreakdown[platformId]) {
+            platformBreakdown[platformId] = {
+              name: platformName,
+              violations: 0,
+              views: 0,
+              blocked: 0,
+            };
+          }
+          platformBreakdown[platformId].violations++;
+          platformBreakdown[platformId].views += processViews(v.views);
+          if (
+            v.status === "Blocked" ||
+            v.status === "blocked" ||
+            v.status === "Removed" ||
+            v.status === "removed"
+          ) {
+            platformBreakdown[platformId].blocked++;
+          }
+        });
+
+        // Convert to array and calculate success rates
+        const platforms = Object.values(platformBreakdown).map((platform) => ({
+          name: platform.name,
+          violations: platform.violations,
+          views: platform.views,
+          successRate:
+            platform.violations > 0
+              ? Math.round((platform.blocked / platform.violations) * 100)
+              : 0,
+        }));
+
         topMatch = {
           teams: `${match.team1} vs ${match.team2}`,
           week: match.week,
           violations: topMatchData.count,
+          totalViews: totalViews,
+          externalMatchId: match.externalMatchId,
+          platforms: platforms,
         };
       }
     }
@@ -1218,6 +1283,56 @@ router.get("/dashboard/stats", async (req, res) => {
       }
     });
 
+    // Process views manually to handle "K" suffix
+    const processViews = (viewsStr) => {
+      if (!viewsStr || viewsStr === "0") return 0;
+      const upperViews = viewsStr.toUpperCase();
+      if (upperViews.includes("K")) {
+        const num = parseFloat(upperViews.replace(/[K]/g, "")) || 0;
+        return num * 1000;
+      }
+      return parseFloat(viewsStr) || 0;
+    };
+
+    // Calculate content split statistics (Live, Highlights, Others)
+    const contentSplitStats = await Violation.aggregate([
+      {
+        $match: {
+          matchId: { $in: matchIds },
+        },
+      },
+      {
+        $group: {
+          _id: "$contentType",
+          violations: { $sum: 1 },
+          viewsArray: { $push: "$views" },
+        },
+      },
+    ]);
+
+    // Format content split data
+    const contentSplit = {
+      live: { views: 0, violations: 0 },
+      highlights: { views: 0, violations: 0 },
+      others: { views: 0, violations: 0 },
+    };
+
+    contentSplitStats.forEach((stat) => {
+      const contentType = stat._id?.toLowerCase() || "other";
+      const totalViews = stat.viewsArray.reduce((sum, v) => sum + processViews(v), 0);
+      
+      if (contentType === "live") {
+        contentSplit.live.views = totalViews;
+        contentSplit.live.violations = stat.violations || 0;
+      } else if (contentType === "highlights") {
+        contentSplit.highlights.views = totalViews;
+        contentSplit.highlights.violations = stat.violations || 0;
+      } else {
+        contentSplit.others.views = totalViews;
+        contentSplit.others.violations = stat.violations || 0;
+      }
+    });
+
     res.json({
       totalViolations,
       blocked,
@@ -1241,6 +1356,7 @@ router.get("/dashboard/stats", async (req, res) => {
         upcoming: upcomingMatches,
         postponed: postponedMatches,
       },
+      contentSplit,
     });
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);

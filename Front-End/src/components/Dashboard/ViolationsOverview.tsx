@@ -46,9 +46,7 @@ export function ViolationsOverview({
               <p className="text-xl font-bold leading-none mb-1 transition-transform duration-300 hover:scale-105">
                 {totalViolations.toLocaleString()}
               </p>
-              <p className="text-xs text-muted-foreground">
-                Total Violations
-              </p>
+              <p className="text-xs text-muted-foreground">Total Violations</p>
             </div>
           </div>
 
@@ -136,4 +134,3 @@ export function ViolationsOverview({
     </Card>
   );
 }
-

@@ -1,0 +1,203 @@
+import { Card } from "@/components/ui/card";
+import {
+  Eye,
+  Twitter,
+  Youtube,
+  Facebook,
+  Instagram,
+  TrendingUp,
+  Loader2,
+} from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+interface TopMatchByViolationsProps {
+  topMatch: {
+    teams: string;
+    week: string;
+    violations: number;
+    totalViews: number;
+    externalMatchId: string;
+    platforms: Array<{
+      name: string;
+      violations: number;
+      views: number;
+      successRate: number;
+    }>;
+  } | null;
+  statsLoading: boolean;
+}
+
+// Get platform icon
+const getPlatformIcon = (name: string) => {
+  switch (name) {
+    case "X/Twitter":
+    case "Twitter":
+      return Twitter;
+    case "YouTube":
+      return Youtube;
+    case "Facebook":
+      return Facebook;
+    case "Instagram":
+      return Instagram;
+    case "Telegram":
+      return TrendingUp;
+    case "TikTok":
+      return Eye;
+    default:
+      return Eye;
+  }
+};
+
+// Get platform color
+const getPlatformColor = (name: string) => {
+  switch (name) {
+    case "X/Twitter":
+    case "Twitter":
+      return "hsl(203,89%,53%)";
+    case "YouTube":
+      return "hsl(0,100%,50%)";
+    case "Facebook":
+      return "hsl(221,44%,41%)";
+    case "TikTok":
+      return "hsl(0,0%,0%)";
+    case "Instagram":
+      return "hsl(329,100%,50%)";
+    case "Telegram":
+      return "hsl(200,100%,48%)";
+    default:
+      return "hsl(var(--muted-foreground))";
+  }
+};
+
+// Format views helper
+const formatViewsForDisplay = (views: number) => {
+  if (views >= 1000000) {
+    return `${(views / 1000000).toFixed(1)}M`;
+  }
+  if (views >= 1000) {
+    return `${(views / 1000).toFixed(1)}K`;
+  }
+  return views.toString();
+};
+
+export function TopMatchByViolations({
+  topMatch,
+  statsLoading,
+}: TopMatchByViolationsProps) {
+  const navigate = useNavigate();
+
+  if (!topMatch) {
+    return null;
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-4">
+      <Card className="p-4">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-base font-semibold">Top Match by Violations</h3>
+          <button
+            onClick={() => navigate(`/match/${topMatch.externalMatchId}`)}
+            className="text-[10px] text-primary hover:underline flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary/5 hover:bg-primary/10 transition-colors">
+            View Match
+            <Eye className="h-3 w-3" />
+          </button>
+        </div>
+
+        {statsLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
+            <div className="text-xs text-muted-foreground">
+              Loading match data...
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 p-3 rounded-lg bg-muted/30">
+              <p className="text-xs font-medium text-muted-foreground mb-0.5">
+                Match
+              </p>
+              <p className="font-semibold text-base">{topMatch.teams}</p>
+              <div className="flex items-baseline gap-1.5 mt-2">
+                <p className="text-2xl font-bold">
+                  {formatViewsForDisplay(topMatch.totalViews)}
+                </p>
+                <p className="text-xs text-muted-foreground">total views</p>
+              </div>
+              <div className="flex items-baseline gap-1.5 mt-2">
+                <p className="text-2xl font-bold">{topMatch.violations}</p>
+                <p className="text-xs text-muted-foreground">
+                  total violations
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                Breakdown by Platform
+              </p>
+              {topMatch.platforms && topMatch.platforms.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {topMatch.platforms.map((platform) => {
+                    const PlatformIcon = getPlatformIcon(platform.name);
+                    const platformColor = getPlatformColor(platform.name);
+                    const contentTypeLabel =
+                      platform.violations === 1 ? "violation" : "violations";
+                    const blockedCount = Math.round(
+                      (platform.violations * platform.successRate) / 100
+                    );
+
+                    return (
+                      <div
+                        key={platform.name}
+                        className="p-3 rounded-lg bg-background border border-border hover:shadow-md transition-all duration-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                            style={{
+                              backgroundColor: `${platformColor}10`,
+                            }}>
+                            <PlatformIcon
+                              className="h-3.5 w-3.5"
+                              style={{ color: platformColor }}
+                            />
+                          </div>
+                          <p className="font-semibold text-sm">
+                            {platform.name}
+                          </p>
+                        </div>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          <span className="text-base font-bold text-foreground">
+                            {formatViewsForDisplay(platform.views)}
+                          </span>{" "}
+                          views •{" "}
+                          <span className="text-base font-bold text-foreground">
+                            {platform.violations}
+                          </span>{" "}
+                          {contentTypeLabel}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          <span className="text-base font-bold text-success">
+                            {blockedCount}
+                          </span>{" "}
+                          blocked with{" "}
+                          <span className="text-base font-bold text-success">
+                            {platform.successRate}%
+                          </span>{" "}
+                          success
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-xs text-muted-foreground">
+                  No platform data available
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </Card>
+    </div>
+  );
+}

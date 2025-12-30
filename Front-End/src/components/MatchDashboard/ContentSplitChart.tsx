@@ -11,45 +11,63 @@ interface ContentSplitData {
 
 interface ContentSplitChartProps {
   data: ContentSplitData[];
+  compact?: boolean;
 }
 
 // Icon mapping for each content type
-const getIcon = (name: string) => {
+const getIcon = (name: string, compact: boolean = false) => {
+  const iconSize = compact ? "h-3 w-3" : "h-4 w-4";
   switch (name.toLowerCase()) {
     case "total violations":
-      return <BarChart3 className="h-4 w-4" />;
+      return <BarChart3 className={iconSize} />;
     case "live":
-      return <Play className="h-4 w-4" />;
+      return <Play className={iconSize} />;
     case "highlights":
-      return <Film className="h-4 w-4" />;
+      return <Film className={iconSize} />;
     case "others":
-      return <MoreHorizontal className="h-4 w-4" />;
+      return <MoreHorizontal className={iconSize} />;
     default:
-      return <MoreHorizontal className="h-4 w-4" />;
+      return <MoreHorizontal className={iconSize} />;
   }
 };
 
-export function ContentSplitChart({ data }: ContentSplitChartProps) {
+export function ContentSplitChart({ data, compact = false }: ContentSplitChartProps) {
   // Calculate max value for percentage calculation
   const maxValue = Math.max(...data.map((d) => d.value), 1);
 
+  // Use compact styles if compact prop is true
+  const cardPadding = compact ? "p-4" : "p-6";
+  const titleMargin = compact ? "mb-3" : "mb-6";
+  const titleSize = compact ? "text-base" : "text-lg";
+  const spacing = compact ? "space-y-2.5" : "space-y-4";
+  const itemGap = compact ? "gap-3" : "gap-4";
+  const itemPadding = compact ? "p-2" : "p-3";
+  const iconSize = compact ? "w-8 h-8" : "w-10 h-10";
+  const iconInnerSize = compact ? "h-3 w-3" : "h-4 w-4";
+  const nameSize = compact ? "text-xs" : "text-sm";
+  const valueSize = compact ? "text-sm" : "text-base";
+  const viewsLabelSize = compact ? "text-[10px]" : "text-xs";
+  const violationsSize = compact ? "text-[10px]" : "text-xs";
+  const marginBottom = compact ? "mb-1.5" : "mb-2";
+  const barHeight = compact ? "h-2" : "h-3";
+
   return (
-    <Card className="p-6 lg:col-span-1">
-      <h3 className="font-semibold mb-6 text-lg">
+    <Card className={`${cardPadding} lg:col-span-1`}>
+      <h3 className={`font-semibold ${titleMargin} ${titleSize}`}>
         Live Stream vs Highlights vs Others
       </h3>
 
-      <div className="space-y-4">
+      <div className={spacing}>
         {data.map((entry, index) => {
           const percentage = maxValue > 0 ? (entry.value / maxValue) * 100 : 0;
 
           return (
             <div
               key={index}
-              className="flex items-center gap-4 group transition-all duration-300 hover:scale-[1.02] hover:bg-muted/30 rounded-lg p-3 -m-3 cursor-pointer">
+              className={`flex items-center ${itemGap} group transition-all duration-300 hover:scale-[1.02] hover:bg-muted/30 rounded-lg ${itemPadding} -m-2 cursor-pointer`}>
               {/* Icon */}
               <div
-                className="flex items-center justify-center w-10 h-10 rounded-full shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg"
+                className={`flex items-center justify-center ${iconSize} rounded-full shrink-0 transition-all duration-300 group-hover:scale-110 group-hover:shadow-lg`}
                 style={{
                   backgroundColor: `${entry.color}20`,
                   border: `2px solid ${entry.color}`,
@@ -57,31 +75,31 @@ export function ContentSplitChart({ data }: ContentSplitChartProps) {
                 <div
                   style={{ color: entry.color }}
                   className="transition-transform duration-300 group-hover:scale-110">
-                  {getIcon(entry.name)}
+                  {getIcon(entry.name, compact)}
                 </div>
               </div>
 
               {/* Name and Bar Container */}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-semibold text-sm uppercase tracking-wide transition-colors duration-300 group-hover:text-foreground">
+                <div className={`flex items-center justify-between ${marginBottom}`}>
+                  <span className={`font-semibold ${nameSize} uppercase tracking-wide transition-colors duration-300 group-hover:text-foreground`}>
                     {entry.name}
                   </span>
-                  <div className="text-right ml-4">
-                    <p className="font-bold text-base leading-tight transition-transform duration-300 group-hover:scale-105">
+                  <div className={`text-right ${compact ? "ml-3" : "ml-4"}`}>
+                    <p className={`font-bold ${valueSize} leading-tight transition-transform duration-300 group-hover:scale-105`}>
                       {formatViews(entry.value)}{" "}
-                      <span className="text-xs font-normal text-muted-foreground">
+                      <span className={`${viewsLabelSize} font-normal text-muted-foreground`}>
                         views
                       </span>
                     </p>
-                    <p className="text-xs text-muted-foreground leading-tight transition-transform duration-300 group-hover:scale-105">
+                    <p className={`${violationsSize} text-muted-foreground leading-tight transition-transform duration-300 group-hover:scale-105`}>
                       {entry.violations} violations
                     </p>
                   </div>
                 </div>
 
                 {/* Horizontal Progress Bar */}
-                <div className="relative w-full h-3 bg-muted rounded-full overflow-hidden transition-all duration-300 group-hover:shadow-md">
+                <div className={`relative w-full ${barHeight} bg-muted rounded-full overflow-hidden transition-all duration-300 group-hover:shadow-md`}>
                   <div
                     className="h-full rounded-full transition-all duration-500 ease-out group-hover:shadow-lg"
                     style={{

@@ -61,6 +61,8 @@ import { Button } from "@/components/ui/button";
 import { RoundReport } from "@/components/RoundReport";
 import { ViolationsOverview } from "@/components/Dashboard/ViolationsOverview";
 import { MatchStatsOverview } from "@/components/Dashboard/MatchStatsOverview";
+import { TopMatchByViolations } from "@/components/Dashboard/TopMatchByViolations";
+import { ContentSplitChart } from "@/components/MatchDashboard/ContentSplitChart";
 
 type League = "saudi" | "italian" | "spanish" | null;
 type WeekFilterType = "all" | "single" | "range";
@@ -241,6 +243,14 @@ export default function Dashboard() {
       teams: string;
       week: string;
       violations: number;
+      totalViews: number;
+      externalMatchId: string;
+      platforms: Array<{
+        name: string;
+        violations: number;
+        views: number;
+        successRate: number;
+      }>;
     } | null,
     matchStats: {
       total: 0,
@@ -248,6 +258,11 @@ export default function Dashboard() {
       live: 0,
       upcoming: 0,
       postponed: 0,
+    },
+    contentSplit: {
+      live: { views: 0, violations: 0 },
+      highlights: { views: 0, violations: 0 },
+      others: { views: 0, violations: 0 },
     },
   });
   const [statsLoading, setStatsLoading] = useState(true); // Start with true to show loading initially
@@ -320,6 +335,11 @@ export default function Dashboard() {
             upcoming: 0,
             postponed: 0,
           },
+          contentSplit: data.contentSplit || {
+            live: { views: 0, violations: 0 },
+            highlights: { views: 0, violations: 0 },
+            others: { views: 0, violations: 0 },
+          },
         });
         // Only set loading to false after successful fetch
         setStatsLoading(false);
@@ -342,6 +362,11 @@ export default function Dashboard() {
             live: 0,
             upcoming: 0,
             postponed: 0,
+          },
+          contentSplit: {
+            live: { views: 0, violations: 0 },
+            highlights: { views: 0, violations: 0 },
+            others: { views: 0, violations: 0 },
           },
         });
         setStatsLoading(false);
@@ -378,6 +403,7 @@ export default function Dashboard() {
   const getPlatformIcon = (name: string) => {
     switch (name) {
       case "X/Twitter":
+      case "Twitter":
         return Twitter;
       case "YouTube":
         return Youtube;
@@ -387,6 +413,8 @@ export default function Dashboard() {
         return Instagram;
       case "Telegram":
         return TrendingUp;
+      case "TikTok":
+        return Eye;
       default:
         return Eye;
     }
@@ -589,28 +617,28 @@ export default function Dashboard() {
         </div>
 
         {/* Right Column: Stacked Small Cards (30% width) */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
           {/* Total Views Card (Small) */}
-          <Card className="p-5 bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-4/20 cursor-pointer">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-muted-foreground">
+          <Card className="p-4 bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-4/20 cursor-pointer">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[11px] font-medium text-muted-foreground">
                 Total Views
               </p>
-              <Eye className="h-4 w-4 text-chart-4" />
+              <Eye className="h-3.5 w-3.5 text-chart-4" />
             </div>
 
             {statsLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="flex items-baseline gap-2">
-                <p className="text-3xl font-bold text-foreground">
+              <div className="flex items-baseline gap-1.5">
+                <p className="text-2xl font-bold text-foreground">
                   {dashboardStats.totalViews >= 1000
                     ? `${(dashboardStats.totalViews / 1000).toFixed(1)}K`
                     : dashboardStats.totalViews.toLocaleString()}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[11px] text-muted-foreground">
                   Across All Platforms
                 </p>
               </div>
@@ -618,26 +646,26 @@ export default function Dashboard() {
           </Card>
 
           {/* Avg Block Time Card */}
-          <Card className="p-5 bg-gradient-to-br from-success/5 to-success/10 border border-success/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-success/20 cursor-pointer">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-xs font-medium text-muted-foreground">
+          <Card className="p-4 bg-gradient-to-br from-success/5 to-success/10 border border-success/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-success/20 cursor-pointer">
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-[11px] font-medium text-muted-foreground">
                 Avg Block Time
               </p>
-              <Clock className="h-4 w-4 text-success" />
+              <Clock className="h-3.5 w-3.5 text-success" />
             </div>
             {statsLoading ? (
-              <div className="flex items-center justify-center py-4">
-                <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+              <div className="flex items-center justify-center py-3">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <p className="text-2xl font-bold text-foreground">
+              <p className="text-xl font-bold text-foreground">
                 {(() => {
                   const minutes = dashboardStats.avgBlockTime || 0;
                   const hours = minutes / 60;
                   return (
                     <>
                       {minutes}
-                      <span className="text-base text-muted-foreground ml-1">
+                      <span className="text-sm text-muted-foreground ml-1">
                         min{" "}
                         <span className="text-medium text-muted-foreground">
                           ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}hrs)
@@ -652,20 +680,20 @@ export default function Dashboard() {
 
           {/* Top Platform Card */}
           {dashboardStats.topPlatform && (
-            <Card className="p-5 bg-gradient-to-br from-chart-2/5 to-chart-2/10 border border-chart-2/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-2/20 cursor-pointer">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium text-muted-foreground">
+            <Card className="p-4 bg-gradient-to-br from-chart-2/5 to-chart-2/10 border border-chart-2/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-2/20 cursor-pointer">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[11px] font-medium text-muted-foreground">
                   Top Platform
                 </p>
                 {(() => {
                   const Icon = getPlatformIcon(dashboardStats.topPlatform.name);
-                  return <Icon className="h-4 w-4 text-chart-2" />;
+                  return <Icon className="h-3.5 w-3.5 text-chart-2" />;
                 })()}
               </div>
-              <p className="text-lg font-bold text-foreground mb-1">
+              <p className="text-base font-bold text-foreground mb-0.5">
                 {dashboardStats.topPlatform.name}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground">
                 {dashboardStats.topPlatform.violations} violations
               </p>
             </Card>
@@ -673,194 +701,72 @@ export default function Dashboard() {
 
           {/* Top Match Card */}
           {dashboardStats.topMatch && (
-            <Card className="p-5 bg-gradient-to-br from-orange-500/5 to-orange-500/10 border border-orange-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-xs font-medium text-muted-foreground">
+            <Card className="p-4 bg-gradient-to-br from-orange-500/5 to-orange-500/10 border border-orange-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-[11px] font-medium text-muted-foreground">
                   Top Match
                 </p>
-                <Trophy className="h-4 w-4 text-orange-600" />
+                <Trophy className="h-3.5 w-3.5 text-orange-600" />
               </div>
-              <p className="text-lg font-bold text-foreground mb-1">
+              <p className="text-base font-bold text-foreground mb-0.5">
                 {dashboardStats.topMatch.teams}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground">
                 Week {dashboardStats.topMatch.week} •{" "}
                 {dashboardStats.topMatch.violations} violations
               </p>
             </Card>
           )}
+
+          {/* Content Split Chart */}
+          <div className="mt-4">
+            {(() => {
+              // Calculate total views for Total Violations entry
+              const totalViews =
+                dashboardStats.contentSplit.live.views +
+                dashboardStats.contentSplit.highlights.views +
+                dashboardStats.contentSplit.others.views;
+
+              const contentSplitData = [
+                {
+                  name: "Total Violations",
+                  value: totalViews,
+                  violations: dashboardStats.totalViolations,
+                  color: "hsl(var(--chart-4))",
+                },
+                {
+                  name: "Live",
+                  value: dashboardStats.contentSplit.live.views,
+                  violations: dashboardStats.contentSplit.live.violations,
+                  color: "hsl(var(--chart-1))",
+                },
+                {
+                  name: "Highlights",
+                  value: dashboardStats.contentSplit.highlights.views,
+                  violations: dashboardStats.contentSplit.highlights.violations,
+                  color: "hsl(var(--chart-2))",
+                },
+                {
+                  name: "Others",
+                  value: dashboardStats.contentSplit.others.views,
+                  violations: dashboardStats.contentSplit.others.violations,
+                  color: "hsl(var(--chart-3))",
+                },
+              ];
+
+              return (
+                <ContentSplitChart data={contentSplitData} compact={true} />
+              );
+            })()}
+          </div>
         </div>
       </div>
 
       {/* Row 2: Top Match Card (Full Width) */}
-      <div className="grid grid-cols-1 gap-6">
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold">Top Match by Violations</h3>
-            <button
-              onClick={() => (window.location.href = "/matches")}
-              className="text-xs text-primary hover:underline flex items-center gap-1 px-3 py-1.5 rounded-md bg-primary/5 hover:bg-primary/10 transition-colors">
-              View Matches
-              <Eye className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
-          <div className="mb-6 p-4 rounded-lg bg-muted/30">
-            <p className="text-sm font-medium text-muted-foreground mb-1">
-              Match
-            </p>
-            <p className="font-semibold text-lg">NEOM vs Al Ettifaq</p>
-            <div className="flex items-baseline gap-2 mt-3">
-              <p className="text-3xl font-bold">251K</p>
-              <p className="text-sm text-muted-foreground">total views</p>
-            </div>
-            <div className="mt-2">
-              <p className="text-sm text-muted-foreground">
-                89 total violations
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">
-              Breakdown by Platform
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* X/Twitter */}
-              <div className="p-5 rounded-xl bg-background border border-border hover:shadow-md transition-all duration-200">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-[hsl(203,89%,53%)]/10 flex items-center justify-center flex-shrink-0">
-                    <Twitter className="h-5 w-5 text-[hsl(203,89%,53%)]" />
-                  </div>
-                  <p className="font-semibold text-base">X/Twitter</p>
-                </div>
-                <p className="text-2xl font-bold text-foreground mb-0.5">
-                  45.6K
-                </p>
-                <p className="text-xs text-muted-foreground mb-3">
-                  total views over 21 tweet        
-                </p>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-semibold text-success">
-                    91%
-                  </span>
-                  <span className="text-xs text-muted-foreground">success</span>
-                </div>
-              </div>
-
-              {/* YouTube */}
-              <div className="p-5 rounded-xl bg-background border border-border hover:shadow-md transition-all duration-200">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-[hsl(0,100%,50%)]/10 flex items-center justify-center flex-shrink-0">
-                    <Youtube className="h-5 w-5 text-[hsl(0,100%,50%)]" />
-                  </div>
-                  <p className="font-semibold text-base">YouTube</p>
-                </div>
-                <p className="text-2xl font-bold text-foreground mb-0.5">
-                  78.9K
-                </p>
-                <p className="text-xs text-muted-foreground mb-3">
-                  total views over 13 video    
-                </p>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-semibold text-success">
-                    89%
-                  </span>
-                  <span className="text-xs text-muted-foreground">success</span>
-                </div>
-              </div>
-
-              {/* Facebook */}
-              <div className="p-5 rounded-xl bg-background border border-border hover:shadow-md transition-all duration-200">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-[hsl(221,44%,41%)]/10 flex items-center justify-center flex-shrink-0">
-                    <Facebook className="h-5 w-5 text-[hsl(221,44%,41%)]" />
-                  </div>
-                  <p className="font-semibold text-base">Facebook</p>
-                </div>
-                <p className="text-2xl font-bold text-foreground mb-0.5">
-                  34.2K
-                </p>
-                <p className="text-xs text-muted-foreground mb-3">
-                  total views 22 post  
-                </p>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-semibold text-success">
-                    88%
-                  </span>
-                  <span className="text-xs text-muted-foreground">success</span>
-                </div>
-              </div>
-
-              {/* TikTok */}
-              <div className="p-5 rounded-xl bg-background border border-border hover:shadow-md transition-all duration-200">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                    <Eye className="h-5 w-5" />
-                  </div>
-                  <p className="font-semibold text-base">TikTok</p>
-                </div>
-                <p className="text-2xl font-bold text-foreground mb-0.5">
-                  56.7K
-                </p>
-                <p className="text-xs text-muted-foreground mb-3">
-                  total views over 323 video     
-                </p>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-semibold text-success">
-                    93%
-                  </span>
-                  <span className="text-xs text-muted-foreground">success</span>
-                </div>
-              </div>
-
-              {/* Instagram */}
-              <div className="p-5 rounded-xl bg-background border border-border hover:shadow-md transition-all duration-200">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-[hsl(329,100%,50%)]/10 flex items-center justify-center flex-shrink-0">
-                    <Instagram className="h-5 w-5 text-[hsl(329,100%,50%)]" />
-                  </div>
-                  <p className="font-semibold text-base">Instagram</p>
-                </div>
-                <p className="text-2xl font-bold text-foreground mb-0.5">
-                  23.4K
-                </p>
-                <p className="text-xs text-muted-foreground mb-3">
-                  total views over 21 post    
-                </p>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-semibold text-success">
-                    90%
-                  </span>
-                  <span className="text-xs text-muted-foreground">success</span>
-                </div>
-              </div>
-
-              {/* Telegram */}
-              <div className="p-5 rounded-xl bg-background border border-border hover:shadow-md transition-all duration-200">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-10 h-10 rounded-full bg-[hsl(200,100%,48%)]/10 flex items-center justify-center flex-shrink-0">
-                    <TrendingUp className="h-5 w-5 text-[hsl(200,100%,48%)]" />
-                  </div>
-                  <p className="font-semibold text-base">Telegram</p>
-                </div>
-                <p className="text-2xl font-bold text-foreground mb-0.5">
-                  12.3K
-                </p>
-                <p className="text-xs text-muted-foreground mb-3">
-                  total views post 
-                </p>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-semibold text-warning">
-                    67%
-                  </span>
-                  <span className="text-xs text-muted-foreground">success</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-      </div>
+      <TopMatchByViolations
+        topMatch={dashboardStats.topMatch}
+        statsLoading={statsLoading}
+      />
 
       {/* Row 3: Violations & Views by Platform */}
       <Card className="p-6">
@@ -1068,111 +974,6 @@ export default function Dashboard() {
         </ResponsiveContainer>
       </Card>
 
-      {/* Row 4: Success rate + Donut KPIs */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <div className="mb-6">
-            <h3 className="font-semibold mb-1">SAIP Overview   </h3>
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-bold">88.2% Success Rate  </span>
-              <Badge className="bg-success text-success-foreground">
-                ↑ 3.4%
-              </Badge>
-            </div>
-            <p className="text-xs text-muted-foreground">vs last round</p>
-          </div>
-          <div className="space-y-3">
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>Websites</span>
-                <span className="font-medium">33/32</span>
-              </div>
-              <Progress value={88} className="h-2" />
-              <p className="text-xs text-muted-foreground mt-1">
-                88% success rate
-              </p>
-            </div>
-            <div>
-              <div className="flex justify-between text-sm mb-2">
-                <span>IPTV</span>
-                <span className="font-medium">265/224</span>
-              </div>
-              <Progress value={90} className="h-2 [&>div]:bg-muted" />
-              <p className="text-xs text-muted-foreground mt-1">
-                90% success rate
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="p-6">
-          <h3 className="font-semibold mb-6">
-            Live Stream V.S. Highlights                  
-          </h3>
-          <div className="grid grid-cols-2 gap-6">
-            <div className="text-center">
-              <div className="relative inline-block">
-                <svg className="w-32 h-32">
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    stroke="hsl(var(--muted))"
-                    strokeWidth="10"
-                    fill="none"
-                  />
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    stroke="hsl(var(--chart-1))"
-                    strokeWidth="10"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 56}`}
-                    strokeDashoffset={`${2 * Math.PI * 56 * 0.35}`}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center flex-col">
-                  <span className="text-2xl font-bold">503k</span>
-                  <span className="text-xs text-muted-foreground">view</span>
-                </div>
-              </div>
-              <p className="text-sm font-medium mt-2">For Live Streams</p>
-              <p className="text-xs text-muted-foreground">on all platforms</p>
-            </div>
-            <div className="text-center">
-              <div className="relative inline-block">
-                <svg className="w-32 h-32">
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    stroke="hsl(var(--muted))"
-                    strokeWidth="10"
-                    fill="none"
-                  />
-                  <circle
-                    cx="64"
-                    cy="64"
-                    r="56"
-                    stroke="hsl(var(--chart-3))"
-                    strokeWidth="10"
-                    fill="none"
-                    strokeDasharray={`${2 * Math.PI * 56}`}
-                    strokeDashoffset={`${2 * Math.PI * 56 * 0.42}`}
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center flex-col">
-                  <span className="text-2xl font-bold">1.8m</span>
-                  <span className="text-xs text-muted-foreground">view</span>
-                </div>
-              </div>
-              <p className="text-sm font-medium mt-2">For Highlights</p>
-              <p className="text-xs text-muted-foreground">on all platforms</p>
-            </div>
-          </div>
-        </Card>
-      </div>
 
       {/* Row 4: Matches Leaderboard, Platform Performance, Active Trouble List */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
