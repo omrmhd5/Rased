@@ -121,9 +121,9 @@ export function MatchViolationsStatusBreakdown({
   // If no violations, show empty state
   if (totalViolations === 0) {
     return (
-      <Card className="p-6 lg:col-span-3">
-        <h3 className="font-semibold mb-6 text-lg">Match Violations Status Breakdown</h3>
-        <div className="flex items-center justify-center h-64">
+      <Card className="p-4">
+        <h3 className="font-semibold mb-4 text-base">Violations Status Breakdown</h3>
+        <div className="flex items-center justify-center h-32">
           <p className="text-sm text-muted-foreground">No violations to display</p>
         </div>
       </Card>
@@ -131,13 +131,13 @@ export function MatchViolationsStatusBreakdown({
   }
 
   return (
-    <Card className="p-6 lg:col-span-3 transition-all duration-300 hover:shadow-lg">
-      <h3 className="font-semibold mb-6 text-lg">Match Violations Status Breakdown</h3>
+    <Card className="p-4 transition-all duration-300 hover:shadow-lg">
+      <h3 className="font-semibold mb-4 text-base">Violations Status Breakdown</h3>
       
-      <div className="flex flex-col lg:flex-row items-center gap-6">
+      <div className="flex flex-col lg:flex-row items-center gap-3">
         {/* Pie Chart */}
         <div className="w-full lg:w-1/2">
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={180}>
             <PieChart>
               <Pie
                 data={chartData}
@@ -145,7 +145,7 @@ export function MatchViolationsStatusBreakdown({
                 cy="50%"
                 labelLine={false}
                 label={({ name, percentage }) => `${name}: ${percentage}%`}
-                outerRadius={100}
+                outerRadius={60}
                 fill="#8884d8"
                 dataKey="value"
                 stroke="hsl(var(--background))"
@@ -161,15 +161,15 @@ export function MatchViolationsStatusBreakdown({
         </div>
 
         {/* Legend with details */}
-        <div className="w-full lg:w-1/2 space-y-3">
+        <div className="w-full lg:w-1/2 space-y-2">
           {chartData.map((item, index) => (
             <div
               key={index}
-              className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border transition-all duration-300 hover:scale-[1.02] hover:bg-muted/50 cursor-pointer group"
+              className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border transition-all duration-300 hover:scale-[1.02] hover:bg-muted/50 cursor-pointer group"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
                 <div
-                  className="p-2 rounded-lg transition-all duration-300 group-hover:scale-110"
+                  className="p-1.5 rounded-lg transition-all duration-300 group-hover:scale-110"
                   style={{
                     backgroundColor: `${item.color}20`,
                     border: `2px solid ${item.color}`,
@@ -178,14 +178,14 @@ export function MatchViolationsStatusBreakdown({
                   <div style={{ color: item.color }}>{item.icon}</div>
                 </div>
                 <div>
-                  <p className="font-semibold text-sm">{item.name}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="font-semibold text-xs">{item.name}</p>
+                  <p className="text-[10px] text-muted-foreground">
                     {item.value} violation{item.value !== 1 ? "s" : ""}
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-lg font-bold" style={{ color: item.color }}>
+                <p className="text-base font-bold" style={{ color: item.color }}>
                   {item.percentage}%
                 </p>
               </div>

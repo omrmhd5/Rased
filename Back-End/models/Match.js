@@ -162,6 +162,8 @@ const matchSchema = new mongoose.Schema(
 matchSchema.index({ date: -1 });
 matchSchema.index({ status: 1 });
 matchSchema.index({ team1: 1, team2: 1 });
+matchSchema.index({ league: 1, week: 1, isDeleted: 1 }); // For dashboard stats aggregation
+matchSchema.index({ league: 1, isDeleted: 1 }); // For league-based queries
 
 // Virtual for match name
 matchSchema.virtual("name").get(function () {

@@ -22,14 +22,14 @@ const queryClient = new QueryClient();
 // Component for routes that require authentication and sidebar
 const AuthenticatedLayout = () => {
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <TopBar />
-          <main className="flex-1 p-4 sm:p-6 bg-background overflow-x-hidden">
-            <div className="max-w-7xl mx-auto">
-              <Routes>
+        <SidebarProvider>
+          <div className="min-h-screen flex w-full">
+            <AppSidebar />
+            <div className="flex-1 flex flex-col">
+              <TopBar />
+              <main className="flex-1 p-4 sm:p-6 bg-background overflow-x-hidden">
+                <div className="max-w-7xl mx-auto">
+                  <Routes>
                 <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/matches" element={<ProtectedRoute><Matches /></ProtectedRoute>} />
@@ -37,14 +37,14 @@ const AuthenticatedLayout = () => {
                 <Route path="/reports" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/users" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </div>
+              </main>
             </div>
-          </main>
-        </div>
-      </div>
-    </SidebarProvider>
+          </div>
+        </SidebarProvider>
   );
 };
 

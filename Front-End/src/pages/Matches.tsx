@@ -742,8 +742,8 @@ export default function Matches() {
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-start justify-between mb-2">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-2">
                   <Badge
                 className={
                   match.status === "live"
@@ -1376,8 +1376,8 @@ export default function Matches() {
                   onChange={(e) => setFormTime(e.target.value)}
                   required
                 />
-              </div>
-            </div>
+        </div>
+      </div>
 
             {/* Optional fields */}
             <div className="space-y-2">

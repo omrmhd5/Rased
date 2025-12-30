@@ -995,6 +995,259 @@ router.delete("/:externalMatchId", async (req, res) => {
   }
 });
 
+// GET /api/matches/dashboard/stats - Get dashboard statistics aggregated by week/league
+router.get("/dashboard/stats", async (req, res) => {
+  try {
+    const { league, weekFilter, week, weekStart, weekEnd } = req.query;
+
+    // Validate league
+    if (!league || !["saudi", "italian", "spanish"].includes(league)) {
+      return res.status(400).json({
+        error:
+          "Valid league parameter is required (saudi, italian, or spanish)",
+      });
+    }
+
+    // Build match query
+    const matchQuery = {
+      league: league,
+      isDeleted: { $ne: true },
+    };
+
+    // Add week filter based on weekFilter type
+    if (weekFilter === "single" && week) {
+      matchQuery.week = week.toString();
+    } else if (weekFilter === "range" && weekStart && weekEnd) {
+      const startWeek = parseInt(weekStart);
+      const endWeek = parseInt(weekEnd);
+      const weekArray = Array.from(
+        { length: endWeek - startWeek + 1 },
+        (_, i) => (startWeek + i).toString()
+      );
+      matchQuery.week = { $in: weekArray };
+    }
+    // If weekFilter is "all" or not provided, no week filter is applied
+
+    // Find all matches matching the criteria
+    const matches = await Match.find(matchQuery).select("_id").lean();
+    const matchIds = matches.map((m) => m._id);
+
+    if (matchIds.length === 0) {
+      return res.json({
+        totalViolations: 0,
+        blocked: 0,
+        stillActive: 0,
+        removed: 0,
+        underReview: 0,
+        totalViews: 0,
+        avgBlockTime: 0,
+        topPlatform: null,
+        topMatch: null,
+        matchStats: {
+          total: 0,
+          completed: 0,
+          live: 0,
+          upcoming: 0,
+          postponed: 0,
+        },
+      });
+    }
+
+    // Aggregate violations by status
+    const stats = await Violation.aggregate([
+      {
+        $match: {
+          matchId: { $in: matchIds },
+        },
+      },
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    // Get detailed violation data for additional calculations
+    const violations = await Violation.find({
+      matchId: { $in: matchIds },
+    })
+      .select(
+        "status views blockedAt timeAdded platformId platformName matchId"
+      )
+      .lean();
+
+    // Initialize counts
+    let totalViolations = 0;
+    let blocked = 0;
+    let stillActive = 0;
+    let removed = 0;
+    let underReview = 0;
+
+    // Process aggregation results
+    stats.forEach((stat) => {
+      const status = stat._id;
+      const count = stat.count;
+      totalViolations += count;
+
+      if (status === "Blocked") {
+        blocked += count;
+      } else if (status === "Active") {
+        stillActive += count;
+      } else if (status === "Removed") {
+        removed += count;
+      } else if (status === "Under Review") {
+        underReview += count;
+        // Under Review does NOT count as active
+      }
+    });
+
+    // Calculate total views
+    let totalViews = 0;
+    violations.forEach((v) => {
+      const viewsStr = v.views || "0";
+      // Handle "K" suffix (e.g., "1.5K" = 1500)
+      if (viewsStr.includes("K") || viewsStr.includes("k")) {
+        const num = parseFloat(viewsStr.replace(/[Kk]/g, "")) || 0;
+        totalViews += num * 1000;
+      } else {
+        totalViews += parseFloat(viewsStr) || 0;
+      }
+    });
+
+    // Calculate average block time (only for blocked violations with blockedAt)
+    let avgBlockTime = 0;
+    const blockedViolations = violations.filter(
+      (v) => v.status === "Blocked" && v.blockedAt && v.timeAdded
+    );
+    if (blockedViolations.length > 0) {
+      const totalBlockTime = blockedViolations.reduce((sum, v) => {
+        const timeAdded = new Date(v.timeAdded);
+        const blockedAt = new Date(v.blockedAt);
+        const diffMs = blockedAt.getTime() - timeAdded.getTime();
+        return sum + diffMs / 60000; // Convert to minutes
+      }, 0);
+      avgBlockTime = Math.round(totalBlockTime / blockedViolations.length);
+    }
+
+    // Find top platform (platform with most violations)
+    const platformStats = {};
+    violations.forEach((v) => {
+      if (!platformStats[v.platformId]) {
+        platformStats[v.platformId] = {
+          id: v.platformId,
+          name: v.platformName,
+          count: 0,
+        };
+      }
+      platformStats[v.platformId].count++;
+    });
+    const topPlatform =
+      Object.values(platformStats).length > 0
+        ? Object.values(platformStats).reduce((top, current) =>
+            current.count > top.count ? current : top
+          )
+        : null;
+
+    // Find top match (match with most violations)
+    const matchViolationCounts = {};
+    violations.forEach((v) => {
+      const matchIdStr = v.matchId.toString();
+      if (!matchViolationCounts[matchIdStr]) {
+        matchViolationCounts[matchIdStr] = {
+          matchId: v.matchId,
+          count: 0,
+        };
+      }
+      matchViolationCounts[matchIdStr].count++;
+    });
+    const topMatchData =
+      Object.values(matchViolationCounts).length > 0
+        ? Object.values(matchViolationCounts).reduce((top, current) =>
+            current.count > top.count ? current : top
+          )
+        : null;
+
+    // Get top match details
+    let topMatch = null;
+    if (topMatchData) {
+      const match = await Match.findById(topMatchData.matchId)
+        .select("team1 team2 week date")
+        .lean();
+      if (match) {
+        topMatch = {
+          teams: `${match.team1} vs ${match.team2}`,
+          week: match.week,
+          violations: topMatchData.count,
+        };
+      }
+    }
+
+    // Calculate match statistics
+    const matchStats = await Match.aggregate([
+      {
+        $match: matchQuery,
+      },
+      {
+        $group: {
+          _id: "$status",
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    let totalMatches = 0;
+    let completedMatches = 0;
+    let liveMatches = 0;
+    let upcomingMatches = 0;
+    let postponedMatches = 0;
+
+    matchStats.forEach((stat) => {
+      const status = stat._id;
+      const count = stat.count;
+      totalMatches += count;
+
+      if (status === "finished") {
+        completedMatches += count;
+      } else if (status === "live") {
+        liveMatches += count;
+      } else if (status === "upcoming" || status === "scheduled") {
+        upcomingMatches += count;
+      } else if (status === "postponed") {
+        postponedMatches += count;
+      }
+    });
+
+    res.json({
+      totalViolations,
+      blocked,
+      stillActive,
+      removed,
+      underReview,
+      totalViews,
+      avgBlockTime,
+      topPlatform: topPlatform
+        ? {
+            id: topPlatform.id,
+            name: topPlatform.name,
+            violations: topPlatform.count,
+          }
+        : null,
+      topMatch,
+      matchStats: {
+        total: totalMatches,
+        completed: completedMatches,
+        live: liveMatches,
+        upcoming: upcomingMatches,
+        postponed: postponedMatches,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching dashboard stats:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/matches/:externalMatchId/stats - Get match statistics
 router.get("/:externalMatchId/stats", async (req, res) => {
   try {
