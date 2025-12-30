@@ -92,7 +92,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       const data = await response.json();
       setUser(data.user);
-      navigate("/matches");
+      navigate("/");
     } catch (error) {
       console.error("Login error:", error);
       throw error;
@@ -122,7 +122,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       const data = await response.json();
       setUser(data.user);
-      navigate("/matches");
+      navigate("/");
     } catch (error) {
       console.error("Registration error:", error);
       throw error;

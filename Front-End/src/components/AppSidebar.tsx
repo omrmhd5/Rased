@@ -1,4 +1,4 @@
-import { Home, Calendar, FileText, Users, Settings } from "lucide-react";
+import { Home, Calendar, FileText, Users, Settings, BarChart3 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/sidebar";
 
 const analyticsItems = [
-  { title: "Dashboard", url: "/", icon: Home },
+  { title: "Home", url: "/", icon: Home },
+  { title: "Dashboard", url: "/dashboard", icon: BarChart3 },
 ];
 
 const operationsItems = [

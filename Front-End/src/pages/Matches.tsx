@@ -44,7 +44,6 @@ import {
   Shield,
   AlertTriangle,
   Clock,
-  Trophy,
   Plus,
   MoreVertical,
   Edit,
@@ -112,7 +111,6 @@ export default function Matches() {
   const navigate = useNavigate();
   const [selectedWeek, setSelectedWeek] = useState("12");
   const [selectedLeague, setSelectedLeague] = useState<League>(null);
-  const [isLeagueDialogOpen, setIsLeagueDialogOpen] = useState(true);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAddMatchOpen, setIsAddMatchOpen] = useState(false);
@@ -144,14 +142,16 @@ export default function Matches() {
     const savedLeague = localStorage.getItem("selectedLeague") as League;
     if (savedLeague && ["saudi", "italian", "spanish"].includes(savedLeague)) {
       setSelectedLeague(savedLeague);
-      setIsLeagueDialogOpen(false);
+    } else {
+      // If no league is selected, redirect to home
+      navigate("/");
     }
 
     const savedWeek = localStorage.getItem("selectedWeek");
     if (savedWeek) {
       setSelectedWeek(savedWeek);
     }
-  }, []);
+  }, [navigate]);
 
   // Save selected week to localStorage whenever it changes
   useEffect(() => {
@@ -688,15 +688,6 @@ export default function Matches() {
     });
   };
 
-  const handleLeagueSelect = (league: "saudi" | "italian" | "spanish") => {
-    setSelectedLeague(league);
-    localStorage.setItem("selectedLeague", league);
-    setIsLeagueDialogOpen(false);
-  };
-
-  const handleChangeLeague = () => {
-    setIsLeagueDialogOpen(true);
-  };
 
   const getCountdownText = (dateStr: string | Date, timeStr: string) => {
     const date = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
@@ -870,70 +861,9 @@ export default function Matches() {
     );
   };
 
-  // League Selection Dialog
-  if (isLeagueDialogOpen) {
-    return (
-      <Dialog
-        open={isLeagueDialogOpen}
-        onOpenChange={(open) => {
-          if (!open) {
-            setIsLeagueDialogOpen(false);
-          }
-        }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-2xl text-center">
-              Select League
-            </DialogTitle>
-            <DialogDescription className="text-center">
-              Choose a league to view matches
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-4">
-            <Button
-              variant="outline"
-              className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
-              onClick={() => handleLeagueSelect("saudi")}>
-              <div className="flex items-center gap-3 w-full">
-                <Trophy className="h-6 w-6 text-chart-1" />
-                <div className="flex-1 text-left">
-                  <div className="font-semibold text-lg">Saudi Pro League</div>
-                  <div className="text-sm text-muted-foreground">
-                    Saudi Arabia
-                  </div>
-                </div>
-              </div>
-            </Button>
-
-            <Button
-              variant="outline"
-              className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
-              onClick={() => handleLeagueSelect("italian")}>
-              <div className="flex items-center gap-3 w-full">
-                <Trophy className="h-6 w-6 text-chart-2" />
-                <div className="flex-1 text-left">
-                  <div className="font-semibold text-lg">Italian Serie A</div>
-                  <div className="text-sm text-muted-foreground">Italy</div>
-                </div>
-              </div>
-            </Button>
-
-            <Button
-              variant="outline"
-              className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
-              onClick={() => handleLeagueSelect("spanish")}>
-              <div className="flex items-center gap-3 w-full">
-                <Trophy className="h-6 w-6 text-chart-3" />
-                <div className="flex-1 text-left">
-                  <div className="font-semibold text-lg">Spanish La Liga</div>
-                  <div className="text-sm text-muted-foreground">Spain</div>
-                </div>
-              </div>
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
+  // If no league is selected, don't render the matches page
+  if (!selectedLeague) {
+    return null;
   }
 
   return (
@@ -951,14 +881,6 @@ export default function Matches() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleChangeLeague}
-            className="gap-2">
-            <Trophy className="h-4 w-4" />
-            Change League
-          </Button>
           <Button
             size="sm"
             onClick={() => {

@@ -9,6 +9,7 @@ import { TopBar } from "@/components/TopBar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
+import Home from "./pages/Home";
 import Matches from "./pages/Matches";
 import MatchDashboard from "./pages/MatchDashboard";
 import Login from "./pages/Login";
@@ -29,7 +30,8 @@ const AuthenticatedLayout = () => {
           <main className="flex-1 p-4 sm:p-6 bg-background overflow-x-hidden">
             <div className="max-w-7xl mx-auto">
               <Routes>
-                <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/matches" element={<ProtectedRoute><Matches /></ProtectedRoute>} />
                 <Route path="/match/:id" element={<ProtectedRoute><MatchDashboard /></ProtectedRoute>} />
                 <Route path="/reports" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
