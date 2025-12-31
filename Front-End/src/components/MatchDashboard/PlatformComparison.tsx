@@ -16,26 +16,32 @@ type SortColumn =
 
 interface PlatformComparisonProps {
   platformOperations: PlatformData[];
-  contentTypeFilter: string;
+  contentTypeFilter?: string;
   comparisonSort: SortColumn;
   comparisonSortDirection: "desc" | "asc";
-  selectedSlots: string[];
+  selectedSlots?: string[];
   onSortChange: (sort: SortColumn) => void;
   onSortDirectionChange: (direction: "desc" | "asc") => void;
-  onSelectedSlotsChange: (slots: string[]) => void;
+  onSelectedSlotsChange?: (slots: string[]) => void;
   targetMins?: number;
+  title?: string;
+  description?: string;
+  showCard?: boolean;
 }
 
 export function PlatformComparison({
   platformOperations,
-  contentTypeFilter,
+  contentTypeFilter = "",
   comparisonSort,
   comparisonSortDirection,
-  selectedSlots,
+  selectedSlots = [],
   onSortChange,
   onSortDirectionChange,
   onSelectedSlotsChange,
   targetMins = 15,
+  title = "Platform Comparison (This Match)",
+  description = "Compare platforms for this match",
+  showCard = true,
 }: PlatformComparisonProps) {
   const platformMetrics = platformOperations.map((platform) => {
     // Always use backend data directly from platform object (ignore content type filter)
@@ -107,6 +113,8 @@ export function PlatformComparison({
   });
 
   const handleRowClick = (platformId: string) => {
+    if (!onSelectedSlotsChange) return;
+    
     if (selectedSlots.includes(platformId)) {
       const element = document.getElementById(`platform-card-${platformId}`);
       if (element) {
@@ -144,19 +152,16 @@ export function PlatformComparison({
     }
   };
 
-  return (
-    <div className="mt-6">
-      <Card className="p-6">
+  const content = (
+    <>
+      {showCard && (
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h3 className="text-lg font-semibold mb-1">
-              Platform Comparison (This Match)
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Compare platforms for this match
-            </p>
+            <h3 className="text-lg font-semibold mb-1">{title}</h3>
+            <p className="text-sm text-muted-foreground">{description}</p>
           </div>
         </div>
+      )}
 
         <div className="mt-6 border rounded-lg overflow-hidden">
           <table className="w-full">
@@ -494,7 +499,16 @@ export function PlatformComparison({
             </tbody>
           </table>
         </div>
-      </Card>
-    </div>
+    </>
   );
+
+  if (showCard) {
+    return (
+      <div className="mt-6">
+        <Card className="p-6">{content}</Card>
+      </div>
+    );
+  }
+
+  return <div className="mt-6">{content}</div>;
 }

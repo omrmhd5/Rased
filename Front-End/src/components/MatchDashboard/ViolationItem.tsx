@@ -291,6 +291,8 @@ export function ViolationItem({
                 case "created": {
                   const platformName = violation.platformName || "platform";
                   const accountName = violation.accountChannel || violation.accountHandle || "";
+                  const views = violation.views || "0";
+                  const status = violation.status || "";
                   description = (
                     <>
                       Violation created on{" "}
@@ -302,6 +304,38 @@ export function ViolationItem({
                           {" "}for channel/user{" "}
                           <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                             {accountName}
+                          </code>
+                        </>
+                      )}
+                      {views && views !== "0" && status && (
+                        <>
+                          {" "}
+                          with{" "}
+                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                            {formatViewsString(views)} views
+                          </code>
+                          {" "}
+                          and status:{" "}
+                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                            {status}
+                          </code>
+                        </>
+                      )}
+                      {views && views !== "0" && !status && (
+                        <>
+                          {" "}
+                          with{" "}
+                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                            {formatViewsString(views)} views
+                          </code>
+                        </>
+                      )}
+                      {!views && status && (
+                        <>
+                          {" "}
+                          with status:{" "}
+                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                            {status}
                           </code>
                         </>
                       )}

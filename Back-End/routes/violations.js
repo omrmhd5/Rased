@@ -880,6 +880,8 @@ router.delete("/:id", async (req, res) => {
         platformId: violation.platformId,
         platformName: violation.platformName,
         accountChannel: violation.accountChannel,
+        status: violation.status,
+        views: violation.views || "0",
       },
     });
 

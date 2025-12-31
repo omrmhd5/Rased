@@ -1073,7 +1073,9 @@ router.get("/dashboard/stats", async (req, res) => {
     // If weekFilter is "all" or not provided, no week filter is applied
 
     // Find all matches matching the criteria
-    const matches = await Match.find(matchQuery).select("_id").lean();
+    const matches = await Match.find(matchQuery)
+      .select("_id externalMatchId description team1 team2 week status")
+      .lean();
     const matchIds = matches.map((m) => m._id);
 
     if (matchIds.length === 0) {
@@ -1100,6 +1102,7 @@ router.get("/dashboard/stats", async (req, res) => {
           others: { views: 0, violations: 0 },
         },
         platforms: [],
+        matches: [],
       });
     }
 
@@ -1171,13 +1174,28 @@ router.get("/dashboard/stats", async (req, res) => {
       (v) => v.status === "Blocked" && v.blockedAt && v.timeAdded
     );
     if (blockedViolations.length > 0) {
-      const totalBlockTime = blockedViolations.reduce((sum, v) => {
+      const validBlockTimes = [];
+      blockedViolations.forEach((v) => {
         const timeAdded = new Date(v.timeAdded);
         const blockedAt = new Date(v.blockedAt);
-        const diffMs = blockedAt.getTime() - timeAdded.getTime();
-        return sum + diffMs / 60000; // Convert to minutes
-      }, 0);
-      avgBlockTime = Math.round(totalBlockTime / blockedViolations.length);
+        
+        // Validate dates are valid
+        if (!isNaN(timeAdded.getTime()) && !isNaN(blockedAt.getTime())) {
+          const diffMs = blockedAt.getTime() - timeAdded.getTime();
+          const diffMinutes = diffMs / 60000;
+          
+          // Only include reasonable block times (between 0 and 7 days = 10080 minutes)
+          // This prevents absurd values from bad data
+          if (diffMinutes >= 0 && diffMinutes <= 10080) {
+            validBlockTimes.push(diffMinutes);
+          }
+        }
+      });
+      
+      if (validBlockTimes.length > 0) {
+        const totalBlockTime = validBlockTimes.reduce((sum, time) => sum + time, 0);
+        avgBlockTime = Math.round(totalBlockTime / validBlockTimes.length);
+      }
     }
 
     // Helper function to process views (handle "K" suffix)
@@ -1299,15 +1317,30 @@ router.get("/dashboard/stats", async (req, res) => {
       // Calculate average block time
       let avgBlockTime = 0;
       if (platform.blockedViolations.length > 0) {
-        const totalBlockTime = platform.blockedViolations.reduce((sum, v) => {
-          const timeAdded = new Date(v.timeAdded);
-          const blockedAt = new Date(v.blockedAt);
-          const diffMs = blockedAt.getTime() - timeAdded.getTime();
-          return sum + diffMs / 60000; // Convert to minutes
-        }, 0);
-        avgBlockTime = Math.round(
-          totalBlockTime / platform.blockedViolations.length
-        );
+        const validBlockTimes = [];
+        platform.blockedViolations.forEach((v) => {
+          if (v.timeAdded && v.blockedAt) {
+            const timeAdded = new Date(v.timeAdded);
+            const blockedAt = new Date(v.blockedAt);
+            
+            // Validate dates are valid
+            if (!isNaN(timeAdded.getTime()) && !isNaN(blockedAt.getTime())) {
+              const diffMs = blockedAt.getTime() - timeAdded.getTime();
+              const diffMinutes = diffMs / 60000;
+              
+              // Only include reasonable block times (between 0 and 7 days = 10080 minutes)
+              // This prevents absurd values from bad data
+              if (diffMinutes >= 0 && diffMinutes <= 10080) {
+                validBlockTimes.push(diffMinutes);
+              }
+            }
+          }
+        });
+        
+        if (validBlockTimes.length > 0) {
+          const totalBlockTime = validBlockTimes.reduce((sum, time) => sum + time, 0);
+          avgBlockTime = Math.round(totalBlockTime / validBlockTimes.length);
+        }
       }
 
       return {
@@ -1510,6 +1543,55 @@ router.get("/dashboard/stats", async (req, res) => {
       }
     });
 
+    // Calculate matches leaderboard - get matches with violation counts and views
+    const matchesLeaderboard = await Violation.aggregate([
+      {
+        $match: {
+          matchId: { $in: matchIds },
+        },
+      },
+      {
+        $group: {
+          _id: "$matchId",
+          violations: { $sum: 1 },
+          views: {
+            $push: "$views",
+          },
+        },
+      },
+    ]);
+
+    // Create a map of matchId to violation stats
+    const matchStatsMap = new Map();
+    matchesLeaderboard.forEach((stat) => {
+      const totalViews = stat.views.reduce(
+        (sum, v) => sum + processViews(v),
+        0
+      );
+      matchStatsMap.set(stat._id.toString(), {
+        violations: stat.violations,
+        totalViews: totalViews,
+      });
+    });
+
+    // Build matches array with stats, sorted by violations descending
+    const matchesWithStats = matches
+      .map((match) => {
+        const stats = matchStatsMap.get(match._id.toString()) || {
+          violations: 0,
+          totalViews: 0,
+        };
+        return {
+          id: match.externalMatchId,
+          description: match.description || `${match.team1} vs ${match.team2}`,
+          week: match.week,
+          status: match.status,
+          violations: stats.violations,
+          totalViews: stats.totalViews,
+        };
+      })
+      .sort((a, b) => b.violations - a.violations);
+
     res.json({
       totalViolations,
       blocked,
@@ -1535,6 +1617,7 @@ router.get("/dashboard/stats", async (req, res) => {
       },
       contentSplit,
       platforms: platformsArray,
+      matches: matchesWithStats,
     });
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);

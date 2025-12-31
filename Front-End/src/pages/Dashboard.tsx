@@ -64,6 +64,9 @@ import { MatchStatsOverview } from "@/components/Dashboard/MatchStatsOverview";
 import { TopMatchByViolations } from "@/components/Dashboard/TopMatchByViolations";
 import { ContentSplitChart } from "@/components/MatchDashboard/ContentSplitChart";
 import { PlatformsOverview } from "@/components/Dashboard/PlatformsOverview";
+import { PlatformComparison } from "@/components/MatchDashboard/PlatformComparison";
+import { PlatformData } from "@/components/MatchDashboard/types";
+import { formatViews as formatViewsUtil } from "@/components/MatchDashboard/utils";
 
 type League = "saudi" | "italian" | "spanish" | null;
 type WeekFilterType = "all" | "single" | "range";
@@ -182,21 +185,7 @@ const platformData = [
     activeCount: 10,
   },
 ];
-// Detect current week
-const now = new Date();
-const upcomingMatches = mockMatches.filter((m) => new Date(m.date) >= now);
-const liveMatches = mockMatches.filter((m) => m.status === "live");
-const currentWeek =
-  liveMatches.length > 0
-    ? liveMatches[0].week
-    : upcomingMatches.length > 0
-    ? upcomingMatches[0].week
-    : Math.max(...mockMatches.map((m) => m.week));
-
-// Get all matches for current week
-const currentWeekMatches = mockMatches
-  .filter((m) => m.week === currentWeek)
-  .sort((a, b) => b.violations - a.violations); // Sort by violations desc
+// Note: currentWeek and currentWeekMatches are now calculated from real data in the component
 
 // Helper to format views
 const formatViews = (views: number) => {
@@ -215,6 +204,20 @@ export default function Dashboard() {
     "violations" | "response" | "active" | "success"
   >("violations");
   const [isRoundReportOpen, setIsRoundReportOpen] = useState(false);
+
+  // PlatformComparison sorting state
+  const [comparisonSort, setComparisonSort] = useState<
+    | "views"
+    | "violations"
+    | "active"
+    | "blocked"
+    | "removed"
+    | "avgBlockTime"
+    | "underReview"
+  >("violations");
+  const [comparisonSortDirection, setComparisonSortDirection] = useState<
+    "desc" | "asc"
+  >("desc");
 
   // League and week filtering
   const [selectedLeague, setSelectedLeague] = useState<League>(null);
@@ -281,6 +284,14 @@ export default function Dashboard() {
         others: { violations: number; views: number };
       };
       matchesAffected: number;
+    }>,
+    matches: [] as Array<{
+      id: string;
+      description: string;
+      week: string;
+      status: string;
+      violations: number;
+      totalViews: number;
     }>,
   });
   const [statsLoading, setStatsLoading] = useState(true); // Start with true to show loading initially
@@ -359,6 +370,7 @@ export default function Dashboard() {
             others: { views: 0, violations: 0 },
           },
           platforms: data.platforms || [],
+          matches: data.matches || [],
         });
         // Only set loading to false after successful fetch
         setStatsLoading(false);
@@ -388,6 +400,7 @@ export default function Dashboard() {
             others: { views: 0, violations: 0 },
           },
           platforms: [],
+          matches: [],
         });
         setStatsLoading(false);
       }
@@ -440,6 +453,79 @@ export default function Dashboard() {
     }
   };
 
+  // Get platform color
+  const getPlatformColor = (name: string): string => {
+    switch (name) {
+      case "X/Twitter":
+      case "Twitter":
+        return "hsl(203 89% 53%)";
+      case "YouTube":
+        return "hsl(0 100% 50%)";
+      case "Facebook":
+        return "hsl(221 44% 41%)";
+      case "Instagram":
+        return "hsl(340 75% 55%)";
+      case "Telegram":
+        return "hsl(199 89% 48%)";
+      case "TikTok":
+        return "hsl(0 0% 0%)";
+      default:
+        return "hsl(0 0% 50%)";
+    }
+  };
+
+  // Transform dashboard platforms to PlatformData format
+  const transformPlatformsToPlatformData = (): PlatformData[] => {
+    return dashboardStats.platforms.map((platform) => {
+      const IconComponent = getPlatformIcon(platform.name);
+      const color = getPlatformColor(platform.name);
+
+      // Format avgBlockTime from minutes to string format expected by PlatformComparison
+      // PlatformComparison expects formats like "21 min", "2h", or "1d"
+      let avgBlockTimeStr = "0 min";
+      if (platform.avgBlockTime > 0) {
+        const minutes = platform.avgBlockTime;
+        if (minutes >= 1440) {
+          // Convert to days
+          const days = Math.round(minutes / 1440);
+          avgBlockTimeStr = `${days}d`;
+        } else if (minutes >= 60) {
+          // Convert to hours
+          const hours = Math.round(minutes / 60);
+          avgBlockTimeStr = `${hours}h`;
+        } else {
+          // Keep as minutes
+          avgBlockTimeStr = `${Math.round(minutes)} min`;
+        }
+      }
+
+      // Format totalViews as string
+      const totalViewsStr = formatViewsUtil(platform.views);
+
+      // Calculate blockSuccessRate from successRate (0-100)
+      const blockSuccessRate = platform.successRate;
+
+      return {
+        id: platform.id,
+        name: platform.name,
+        icon: IconComponent,
+        color: color,
+        totalViolations: platform.violations,
+        activeViolations: platform.statusBreakdown.active,
+        blockedRate: platform.successRate,
+        blockedCount: platform.statusBreakdown.blocked,
+        removedCount: platform.statusBreakdown.removed,
+        underReviewCount: platform.statusBreakdown.underReview,
+        totalViews: totalViewsStr,
+        avgBlockTime: avgBlockTimeStr,
+        blockedSuccess: `${platform.successRate}%`,
+        blockSuccessRate: blockSuccessRate,
+        stillActive: platform.statusBreakdown.active,
+        violations: [], // Empty array as we don't need individual violations for comparison
+      };
+    });
+  };
+
   // Calculate time since added and sort active violations
   const getTimeSinceAdded = (reportedAt: string): string => {
     const now = new Date();
@@ -459,6 +545,29 @@ export default function Dashboard() {
     if (url.length <= maxLength) return url;
     return url.substring(0, maxLength - 3) + "...";
   };
+
+  // Calculate current week from real matches data
+  const liveMatches = dashboardStats.matches.filter((m) => m.status === "live");
+  const upcomingMatches = dashboardStats.matches.filter(
+    (m) => m.status === "upcoming" || m.status === "scheduled"
+  );
+  const currentWeek =
+    liveMatches.length > 0
+      ? liveMatches[0].week
+      : upcomingMatches.length > 0
+      ? upcomingMatches[0].week
+      : dashboardStats.matches.length > 0
+      ? Math.max(
+          ...dashboardStats.matches.map((m) => parseInt(m.week) || 0)
+        ).toString()
+      : "1";
+
+  // Get all matches for current week (already sorted by violations from API)
+  const currentWeekMatches = dashboardStats.matches.filter(
+    (m) => m.week === currentWeek
+  );
+
+  // Note: Active Trouble List still uses mockViolations - this may need to be updated separately
   const currentWeekMatchIds = currentWeekMatches.map((m) => m.id);
   const currentWeekViolations = mockViolations.filter(
     (v) =>
@@ -782,118 +891,48 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Row 2: Top Match Card (Full Width) */}
-      <TopMatchByViolations
-        topMatch={dashboardStats.topMatch}
-        statsLoading={statsLoading}
-      />
-
-      {/* Row 3: Violations & Views by Platform */}
+      {/* Row 2: Violations & Views by Platform */}
       <PlatformsOverview
         platforms={dashboardStats.platforms}
         statsLoading={statsLoading}
       />
 
-
-      {/* Row 4: Matches Leaderboard, Platform Performance, Active Trouble List */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Platform Performance - Now takes 2 columns (wider) */}
-        <Card className="lg:col-span-2 h-[340px] flex flex-col p-4">
-          <div className="flex items-center justify-between mb-3 flex-shrink-0">
-            <h3 className="text-[15px] font-semibold">Platform Performance</h3>
-            <Select
-              value={platformSort}
-              onValueChange={(value) => setPlatformSort(value as any)}>
-              <SelectTrigger className="w-[140px] h-[26px] text-[11px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="violations">Most Violations</SelectItem>
-                <SelectItem value="response">Slowest Response</SelectItem>
-                <SelectItem value="active"> For Highlights </SelectItem>
-                <SelectItem value="success">Lowest Success</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex-1 overflow-y-auto space-y-2">
-            {sortedPlatforms.map((platform) => {
-              const livePercent = Math.round(
-                (platform.liveViolations / platform.violations) * 100
-              );
-              const highlightsPercent = 100 - livePercent;
-              return (
-                <div
-                  key={platform.name}
-                  className="flex items-center justify-between py-3 px-3 rounded-lg border border-border/40 hover:bg-muted/20 transition-colors cursor-pointer min-h-[52px]">
-                  {/* Platform Identity */}
-                  <div className="flex items-center gap-2.5 flex-shrink-0 min-w-[120px]">
-                    <div
-                      className="w-2 h-2 rounded-full flex-shrink-0"
-                      style={{
-                        backgroundColor: platform.color,
-                      }}
-                    />
-                    <span className="text-[13px] font-semibold truncate">
-                      {platform.name}
-                    </span>
-                  </div>
-
-                  {/* Key Metrics Cluster */}
-                  <div className="flex items-center gap-3 flex-1 min-w-0 px-4">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-[14px] font-medium tabular-nums">
-                        {platform.violations}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">
-                        Violations
-                      </span>
-                    </div>
-                    <span className="text-muted-foreground/40">•</span>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-[14px] font-medium tabular-nums">
-                        {platform.successRate}%
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">
-                        Blocked
-                      </span>
-                    </div>
-                    <span className="text-muted-foreground/40">•</span>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-[14px] font-medium tabular-nums">
-                        {platform.avgBlockTime.toFixed(1)}m
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">
-                        Avg Time
-                      </span>
-                    </div>
-                    <span className="text-muted-foreground/40">•</span>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-[14px] font-medium tabular-nums">
-                        {platform.activeCount}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">
-                        Active
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Content Split Chips */}
-                  <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <span className="inline-flex items-center h-[22px] px-2 rounded-full border border-border/40 bg-background text-[10px] font-medium text-muted-foreground">
-                      Live {livePercent}%
-                    </span>
-                    <span className="inline-flex items-center h-[22px] px-2 rounded-full border border-border/40 bg-background text-[10px] font-medium text-muted-foreground">
-                      Highlights {highlightsPercent}%
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
+      {/* Platform Comparison - Shows all platforms */}
+      {statsLoading ? (
+        <Card className="p-6">
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
+            <span className="text-sm text-muted-foreground">
+              Loading platform comparison...
+            </span>
           </div>
         </Card>
+      ) : dashboardStats.platforms.length > 0 ? (
+        <PlatformComparison
+          platformOperations={transformPlatformsToPlatformData()}
+          comparisonSort={comparisonSort}
+          comparisonSortDirection={comparisonSortDirection}
+          onSortChange={setComparisonSort}
+          onSortDirectionChange={setComparisonSortDirection}
+          targetMins={15}
+          title="Platform Comparison"
+          description="Compare platform performance across all matches"
+          showCard={true}
+        />
+      ) : null}
+
+      {/* Row 3: Top Match by Violations and Matches Leaderboard */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Top Match by Violations - Takes 2 columns (wider) */}
+        <div className="lg:col-span-2">
+          <TopMatchByViolations
+            topMatch={dashboardStats.topMatch}
+            statsLoading={statsLoading}
+          />
+        </div>
 
         {/* Matches Leaderboard - Modern Redesign */}
-        <Card className="h-[340px] flex flex-col p-4">
+        <Card className="h-[500px] flex flex-col p-4">
           <div className="flex-shrink-0 mb-3">
             <div className="flex items-center justify-between">
               <div>
@@ -901,7 +940,7 @@ export default function Dashboard() {
                   Matches Leaderboard
                 </h3>
                 <p className="text-[11px] text-muted-foreground mt-1">
-                  Current week matches ranked by violations
+                  Matches ranked by violations
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -914,54 +953,60 @@ export default function Dashboard() {
                   تقرير الجولة
                 </Button>
                 <Badge variant="secondary" className="h-5 px-2 text-[10px]">
-                  Week {currentWeek}
+                  {weekFilterType === "all"
+                    ? "All Weeks"
+                    : weekFilterType === "single"
+                    ? `Week ${singleWeek}`
+                    : `Weeks ${weekRangeStart}-${weekRangeEnd}`}
                 </Badge>
               </div>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto space-y-2">
-            {currentWeekMatches.map((match) => {
-              const matchViolations = mockViolations.filter(
-                (v) => v.matchId === match.id
-              );
-              const violations = matchViolations.length;
-              const totalViews = matchViolations.reduce(
-                (sum, v) => sum + v.views,
-                0
-              );
-              return (
-                <div
-                  key={match.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-border/40 hover:border-primary/30 hover:bg-muted/20 transition-all cursor-pointer"
-                  onClick={() => navigate(`/match/${match.id}`)}>
-                  {/* Match Title */}
-                  <h4 className="text-[14px] font-semibold flex-1 min-w-0 truncate pr-4">
-                    {match.description}
-                  </h4>
+            {statsLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : dashboardStats.matches.length === 0 ? (
+              <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+                No matches found
+              </div>
+            ) : (
+              dashboardStats.matches.map((match) => {
+                return (
+                  <div
+                    key={match.id}
+                    className="flex items-center justify-between p-4 rounded-lg border border-border/40 hover:border-primary/30 hover:bg-muted/20 transition-all cursor-pointer"
+                    onClick={() => navigate(`/match/${match.id}`)}>
+                    {/* Match Title */}
+                    <h4 className="text-[14px] font-semibold flex-1 min-w-0 truncate pr-4">
+                      {match.description}
+                    </h4>
 
-                  {/* Metrics */}
-                  <div className="flex items-center gap-4 flex-shrink-0">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-[16px] font-bold tabular-nums">
-                        {violations}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">
-                        Violations
-                      </span>
-                    </div>
-                    <span className="text-muted-foreground/30">•</span>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-[16px] font-bold tabular-nums">
-                        {formatViews(totalViews)}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground">
-                        Views
-                      </span>
+                    {/* Metrics */}
+                    <div className="flex items-center gap-4 flex-shrink-0">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-[16px] font-bold tabular-nums">
+                          {match.violations}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          Violations
+                        </span>
+                      </div>
+                      <span className="text-muted-foreground/30">•</span>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-[16px] font-bold tabular-nums">
+                          {formatViews(match.totalViews)}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground">
+                          Views
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </Card>
 

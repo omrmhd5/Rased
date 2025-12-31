@@ -33,6 +33,7 @@ import {
   DeletedViolationLog,
   API_URL,
 } from "./types";
+import { formatViewsString } from "./utils";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import {
   Dialog,
@@ -216,6 +217,8 @@ export function ActivityLog({
 
     const platformName = deletedLog.changes?.platformName || "platform";
     const accountName = deletedLog.changes?.accountChannel || "";
+    const status = deletedLog.changes?.status || "";
+    const views = deletedLog.changes?.views || "0";
 
     auditLogItems.push({
       type: "deleted",
@@ -234,6 +237,38 @@ export function ActivityLog({
               for channel/user{" "}
               <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                 {accountName}
+              </code>
+            </>
+          )}
+          {views && views !== "0" && status && (
+            <>
+              {" "}
+              with{" "}
+              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                {formatViewsString(views)} views
+              </code>
+              {" "}
+              and status:{" "}
+              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                {status}
+              </code>
+            </>
+          )}
+          {views && views !== "0" && !status && (
+            <>
+              {" "}
+              with{" "}
+              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                {formatViewsString(views)} views
+              </code>
+            </>
+          )}
+          {!views && status && (
+            <>
+              {" "}
+              with status:{" "}
+              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                {status}
               </code>
             </>
           )}
@@ -283,6 +318,8 @@ export function ActivityLog({
             const platformName = violation.platformName || "platform";
             const accountName =
               violation.accountChannel || violation.accountHandle || "";
+            const views = violation.views || "0";
+            const status = violation.status || "";
             description = (
               <>
                 Violation created on{" "}
@@ -295,6 +332,38 @@ export function ActivityLog({
                     for channel/user{" "}
                     <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                       {accountName}
+                    </code>
+                  </>
+                )}
+                {views && views !== "0" && status && (
+                  <>
+                    {" "}
+                    with{" "}
+                    <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                      {formatViewsString(views)} views
+                    </code>
+                    {" "}
+                    and status:{" "}
+                    <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                      {status}
+                    </code>
+                  </>
+                )}
+                {views && views !== "0" && !status && (
+                  <>
+                    {" "}
+                    with{" "}
+                    <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                      {formatViewsString(views)} views
+                    </code>
+                  </>
+                )}
+                {!views && status && (
+                  <>
+                    {" "}
+                    with status:{" "}
+                    <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                      {status}
                     </code>
                   </>
                 )}

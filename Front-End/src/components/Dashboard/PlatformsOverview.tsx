@@ -19,7 +19,7 @@ import {
   Zap,
   Loader2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Platform {
   id: string;
@@ -106,7 +106,19 @@ export function PlatformsOverview({
   platforms,
   statsLoading,
 }: PlatformsOverviewProps) {
-  const [chartView, setChartView] = useState<ChartView>("violations");
+  // Load saved chart view from localStorage, default to "violations"
+  const [chartView, setChartView] = useState<ChartView>(() => {
+    const saved = localStorage.getItem("platformsOverviewChartView");
+    if (saved && ["views", "violations", "blocked"].includes(saved)) {
+      return saved as ChartView;
+    }
+    return "violations";
+  });
+
+  // Save to localStorage when chartView changes
+  useEffect(() => {
+    localStorage.setItem("platformsOverviewChartView", chartView);
+  }, [chartView]);
 
   // Prepare chart data
   const chartData = platforms.map((platform) => ({
@@ -185,15 +197,6 @@ export function PlatformsOverview({
         </div>
         <div className="inline-flex rounded-lg bg-muted p-1">
           <button
-            onClick={() => setChartView("views")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-              chartView === "views"
-                ? "bg-background shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            }`}>
-            Views
-          </button>
-          <button
             onClick={() => setChartView("violations")}
             className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
               chartView === "violations"
@@ -210,6 +213,15 @@ export function PlatformsOverview({
                 : "text-muted-foreground hover:text-foreground"
             }`}>
             Blocked vs Active
+          </button>
+          <button
+            onClick={() => setChartView("views")}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              chartView === "views"
+                ? "bg-background shadow-sm"
+                : "text-muted-foreground hover:text-foreground"
+            }`}>
+            Views
           </button>
         </div>
       </div>
