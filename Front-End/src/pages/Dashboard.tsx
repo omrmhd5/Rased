@@ -63,6 +63,7 @@ import { ViolationsOverview } from "@/components/Dashboard/ViolationsOverview";
 import { MatchStatsOverview } from "@/components/Dashboard/MatchStatsOverview";
 import { TopMatchByViolations } from "@/components/Dashboard/TopMatchByViolations";
 import { ContentSplitChart } from "@/components/MatchDashboard/ContentSplitChart";
+import { PlatformsOverview } from "@/components/Dashboard/PlatformsOverview";
 
 type League = "saudi" | "italian" | "spanish" | null;
 type WeekFilterType = "all" | "single" | "range";
@@ -210,9 +211,6 @@ const getAvgBlockTime = (matchId: number) => {
 };
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [chartView, setChartView] = useState<
-    "views" | "violations" | "blocked"
-  >("violations");
   const [platformSort, setPlatformSort] = useState<
     "violations" | "response" | "active" | "success"
   >("violations");
@@ -264,6 +262,26 @@ export default function Dashboard() {
       highlights: { views: 0, violations: 0 },
       others: { views: 0, violations: 0 },
     },
+    platforms: [] as Array<{
+      id: string;
+      name: string;
+      violations: number;
+      views: number;
+      successRate: number;
+      avgBlockTime: number;
+      statusBreakdown: {
+        active: number;
+        blocked: number;
+        removed: number;
+        underReview: number;
+      };
+      contentSplit: {
+        live: { violations: number; views: number };
+        highlights: { violations: number; views: number };
+        others: { violations: number; views: number };
+      };
+      matchesAffected: number;
+    }>,
   });
   const [statsLoading, setStatsLoading] = useState(true); // Start with true to show loading initially
 
@@ -340,6 +358,7 @@ export default function Dashboard() {
             highlights: { views: 0, violations: 0 },
             others: { views: 0, violations: 0 },
           },
+          platforms: data.platforms || [],
         });
         // Only set loading to false after successful fetch
         setStatsLoading(false);
@@ -368,6 +387,7 @@ export default function Dashboard() {
             highlights: { views: 0, violations: 0 },
             others: { views: 0, violations: 0 },
           },
+          platforms: [],
         });
         setStatsLoading(false);
       }
@@ -769,210 +789,10 @@ export default function Dashboard() {
       />
 
       {/* Row 3: Violations & Views by Platform */}
-      <Card className="p-6">
-        {/* Header with Toggle */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="font-semibold">Violations & Views by Platform</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Current Week Overview
-            </p>
-          </div>
-          <div className="inline-flex rounded-lg bg-muted p-1">
-            <button
-              onClick={() => setChartView("views")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                chartView === "views"
-                  ? "bg-background shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}>
-              Views
-            </button>
-            <button
-              onClick={() => setChartView("violations")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                chartView === "violations"
-                  ? "bg-background shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}>
-              Violations
-            </button>
-            <button
-              onClick={() => setChartView("blocked")}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                chartView === "blocked"
-                  ? "bg-background shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}>
-              Blocked vs Active
-            </button>
-          </div>
-        </div>
-
-        {/* Compact Insight Pills */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30">
-            <div
-              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-              style={{
-                backgroundColor: `${topViewsPlatform.color}15`,
-              }}>
-              {(() => {
-                const Icon = getPlatformIcon(topViewsPlatform.name);
-                return (
-                  <Icon
-                    className="h-4 w-4"
-                    style={{
-                      color: topViewsPlatform.color,
-                    }}
-                  />
-                );
-              })()}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-muted-foreground">
-                Top Platform by Views
-              </p>
-              <p className="text-sm font-semibold truncate">
-                {topViewsPlatform.name} leads with{" "}
-                {(topViewsPlatform.views / 1000).toFixed(1)}K views
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/30">
-            <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
-              <Zap className="h-4 w-4 text-success" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-muted-foreground">
-                Fastest Response
-              </p>
-              <p className="text-sm font-semibold truncate">
-                {fastestPlatform.name} with {fastestPlatform.avgBlockTime} min
-                avg
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Chart */}
-        <ResponsiveContainer width="100%" height={320}>
-          <BarChart
-            data={platformData}
-            margin={{
-              top: 10,
-              right: 10,
-              left: 0,
-              bottom: 30,
-            }}
-            barGap={8}
-            barCategoryGap="20%">
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="hsl(var(--border))"
-              opacity={0.3}
-              vertical={false}
-            />
-            <XAxis
-              dataKey="name"
-              tick={{
-                fontSize: 12,
-                fill: "hsl(var(--muted-foreground))",
-              }}
-              axisLine={{
-                stroke: "hsl(var(--border))",
-              }}
-              tickLine={false}
-            />
-            <YAxis
-              tick={{
-                fontSize: 11,
-                fill: "hsl(var(--muted-foreground))",
-              }}
-              axisLine={false}
-              tickLine={false}
-            />
-            <Tooltip
-              cursor={{
-                fill: "hsl(var(--muted))",
-                opacity: 0.1,
-              }}
-              contentStyle={{
-                backgroundColor: "hsl(var(--background))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: "8px",
-                padding: "8px 12px",
-                fontSize: "12px",
-              }}
-            />
-            <Legend
-              verticalAlign="bottom"
-              height={36}
-              iconType="circle"
-              iconSize={8}
-              wrapperStyle={{
-                paddingTop: "16px",
-                fontSize: "12px",
-              }}
-            />
-            {chartView === "violations" && (
-              <>
-                <Bar
-                  dataKey="liveViolations"
-                  name="Live Violations"
-                  fill="hsl(var(--chart-1))"
-                  radius={[6, 6, 0, 0]}
-                  maxBarSize={40}
-                />
-                <Bar
-                  dataKey="highlightsViolations"
-                  name="Highlights Violations"
-                  fill="hsl(var(--chart-2))"
-                  radius={[6, 6, 0, 0]}
-                  maxBarSize={40}
-                />
-              </>
-            )}
-            {chartView === "views" && (
-              <>
-                <Bar
-                  dataKey="liveViews"
-                  name="Live Views"
-                  fill="hsl(var(--chart-3))"
-                  radius={[6, 6, 0, 0]}
-                  maxBarSize={40}
-                />
-                <Bar
-                  dataKey="highlightsViews"
-                  name="Highlights Views"
-                  fill="hsl(var(--chart-4))"
-                  radius={[6, 6, 0, 0]}
-                  maxBarSize={40}
-                />
-              </>
-            )}
-            {chartView === "blocked" && (
-              <>
-                <Bar
-                  dataKey="blockedCount"
-                  name="Blocked"
-                  fill="hsl(var(--success))"
-                  radius={[6, 6, 0, 0]}
-                  maxBarSize={40}
-                />
-                <Bar
-                  dataKey="activeCount"
-                  name="Active"
-                  fill="hsl(var(--destructive))"
-                  radius={[6, 6, 0, 0]}
-                  maxBarSize={40}
-                />
-              </>
-            )}
-          </BarChart>
-        </ResponsiveContainer>
-      </Card>
+      <PlatformsOverview
+        platforms={dashboardStats.platforms}
+        statsLoading={statsLoading}
+      />
 
 
       {/* Row 4: Matches Leaderboard, Platform Performance, Active Trouble List */}

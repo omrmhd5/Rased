@@ -38,12 +38,15 @@ const updateMatchContentTypeCounts = async (matchId) => {
     ).length;
     const totalViolations = violations.length;
 
-    // Update match with new counts
+    // Update match with new counts (only content type counts)
+    // This is an automated update from violations, not a manual edit
     await Match.findByIdAndUpdate(match._id, {
-      liveCount,
-      highlightsCount,
-      othersCount,
-      totalViolations,
+      $set: {
+        liveCount,
+        highlightsCount,
+        othersCount,
+        totalViolations,
+      },
     });
   } catch (error) {
     console.error("Error updating match content type counts:", error);
@@ -170,7 +173,9 @@ router.delete("/:violationId/audit-log/:logEntryId", async (req, res) => {
     res.json({ message: "Audit log entry removed successfully" });
   } catch (error) {
     if (error.name === "CastError") {
-      return res.status(400).json({ error: "Invalid violation or log entry ID" });
+      return res
+        .status(400)
+        .json({ error: "Invalid violation or log entry ID" });
     }
     res.status(500).json({ error: error.message });
   }
@@ -615,20 +620,24 @@ router.put("/:id", async (req, res) => {
       if (notesChanged) {
         const addedNotes = newNotes.filter((n) => !originalNotes.includes(n));
         const removedNotes = originalNotes.filter((n) => !newNotes.includes(n));
-        
+
         // If notes were edited (same count, different content) - this means a note was changed, not added/removed
-        if (originalNotes.length === newNotes.length && addedNotes.length > 0 && removedNotes.length > 0) {
+        if (
+          originalNotes.length === newNotes.length &&
+          addedNotes.length > 0 &&
+          removedNotes.length > 0
+        ) {
           // Notes were edited/changed - match old notes with new notes by position
           const edited = [];
           for (let i = 0; i < originalNotes.length; i++) {
             if (originalNotes[i] !== newNotes[i]) {
               edited.push({
                 old: originalNotes[i],
-                new: newNotes[i]
+                new: newNotes[i],
               });
             }
           }
-          
+
           // Log as field_updated with action "changed"
           await logViolationChange(updatedViolation._id, "field_updated", {
             user: req.user,

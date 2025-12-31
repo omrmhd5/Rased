@@ -418,12 +418,6 @@ async function saveMatchesToDatabase(transformedMatches) {
         });
         createdCount++;
       } else {
-        // Skip updating if match has been manually edited
-        if (existingMatch.isEdited === true) {
-          unchangedCount++;
-          return;
-        }
-
         // Check if anything changed
         if (hasChanges(existingMatch, dbMatchData)) {
           // Update existing match (only if not manually edited)
@@ -808,13 +802,37 @@ router.put("/:externalMatchId", async (req, res) => {
       }
     }
 
+    // Track if any actual changes are being made
+    let hasChanges = false;
+
     // Update fields
-    if (description !== undefined) match.description = description;
-    if (team1 !== undefined) match.team1 = team1;
-    if (team2 !== undefined) match.team2 = team2;
-    if (date !== undefined) match.date = new Date(date);
-    if (time !== undefined) match.time = time;
-    if (week !== undefined) match.week = week;
+    if (description !== undefined && description !== match.description) {
+      match.description = description;
+      hasChanges = true;
+    }
+    if (team1 !== undefined && team1 !== match.team1) {
+      match.team1 = team1;
+      hasChanges = true;
+    }
+    if (team2 !== undefined && team2 !== match.team2) {
+      match.team2 = team2;
+      hasChanges = true;
+    }
+    if (date !== undefined) {
+      const newDate = new Date(date);
+      if (newDate.getTime() !== new Date(match.date).getTime()) {
+        match.date = newDate;
+        hasChanges = true;
+      }
+    }
+    if (time !== undefined && time !== match.time) {
+      match.time = time;
+      hasChanges = true;
+    }
+    if (week !== undefined && week !== match.week) {
+      match.week = week;
+      hasChanges = true;
+    }
     if (competition !== undefined) {
       let competitionRef = null;
       let externalCompetitionId = null;
@@ -866,22 +884,33 @@ router.put("/:externalMatchId", async (req, res) => {
         }
       }
 
-      match.competition = competitionRef;
-      match.externalCompetitionId = externalCompetitionId;
+      const competitionChanged =
+        String(match.competition) !== String(competitionRef) ||
+        match.externalCompetitionId !== externalCompetitionId;
+      if (competitionChanged) {
+        match.competition = competitionRef;
+        match.externalCompetitionId = externalCompetitionId;
+        hasChanges = true;
+      }
     }
-    if (stadium !== undefined) match.stadium = stadium;
-    if (finalLeague) {
+    if (stadium !== undefined && stadium !== match.stadium) {
+      match.stadium = stadium;
+      hasChanges = true;
+    }
+    if (finalLeague && finalLeague !== match.league) {
       if (!["saudi", "italian", "spanish"].includes(finalLeague)) {
         return res.status(400).json({
           error: "Invalid league. Must be one of: saudi, italian, spanish",
         });
       }
       match.league = finalLeague;
+      hasChanges = true;
     }
 
     // Handle status change
     if (status !== undefined && status !== match.status) {
       match.status = status;
+      hasChanges = true;
       if (!match.statusHistory) {
         match.statusHistory = [];
       }
@@ -891,9 +920,15 @@ router.put("/:externalMatchId", async (req, res) => {
       });
     }
 
-    // Update top platform fields
-    if (topPlatformId !== undefined) match.topPlatformId = topPlatformId;
-    if (mostViews !== undefined) match.mostViews = mostViews;
+    // Update top platform fields (these are usually auto-updated, but check for changes)
+    if (topPlatformId !== undefined && topPlatformId !== match.topPlatformId) {
+      match.topPlatformId = topPlatformId;
+      hasChanges = true;
+    }
+    if (mostViews !== undefined && mostViews !== match.mostViews) {
+      match.mostViews = mostViews;
+      hasChanges = true;
+    }
 
     // Update winner and scores
     // Clear winner and scores if status is anything other than "finished"
@@ -901,20 +936,29 @@ router.put("/:externalMatchId", async (req, res) => {
 
     if (finalStatus !== "finished") {
       // Status is not "finished" - clear winner and scores
-      match.winner = null;
-      match.scores = null;
+      if (match.winner !== null || match.scores !== null) {
+        match.winner = null;
+        match.scores = null;
+        hasChanges = true;
+      }
     } else if (status === "finished") {
       // Status is "finished", update winner and scores if provided
       if (winner !== undefined) {
-        match.winner = winner || null;
+        const winnerChanged = (winner || null) !== match.winner;
+        if (winnerChanged) {
+          match.winner = winner || null;
+          hasChanges = true;
+        }
       }
       if (scores !== undefined) {
-        match.scores = scores || null;
+        const scoresChanged =
+          JSON.stringify(scores || null) !== JSON.stringify(match.scores);
+        if (scoresChanged) {
+          match.scores = scores || null;
+          hasChanges = true;
+        }
       }
     }
-
-    // Mark match as edited when manually updated
-    match.isEdited = true;
 
     const updatedMatch = await match.save();
 
@@ -1055,6 +1099,7 @@ router.get("/dashboard/stats", async (req, res) => {
           highlights: { views: 0, violations: 0 },
           others: { views: 0, violations: 0 },
         },
+        platforms: [],
       });
     }
 
@@ -1078,7 +1123,7 @@ router.get("/dashboard/stats", async (req, res) => {
       matchId: { $in: matchIds },
     })
       .select(
-        "status views blockedAt timeAdded platformId platformName matchId"
+        "status views blockedAt timeAdded platformId platformName matchId contentType"
       )
       .lean();
 
@@ -1135,6 +1180,17 @@ router.get("/dashboard/stats", async (req, res) => {
       avgBlockTime = Math.round(totalBlockTime / blockedViolations.length);
     }
 
+    // Helper function to process views (handle "K" suffix)
+    const processViewsForPlatform = (viewsStr) => {
+      if (!viewsStr || viewsStr === "0") return 0;
+      const upperViews = viewsStr.toUpperCase();
+      if (upperViews.includes("K")) {
+        const num = parseFloat(upperViews.replace(/[K]/g, "")) || 0;
+        return num * 1000;
+      }
+      return parseFloat(viewsStr) || 0;
+    };
+
     // Find top platform (platform with most violations)
     const platformStats = {};
     violations.forEach((v) => {
@@ -1153,6 +1209,122 @@ router.get("/dashboard/stats", async (req, res) => {
             current.count > top.count ? current : top
           )
         : null;
+
+    // Calculate detailed platform statistics for all platforms
+    const platformDetails = {};
+    const platformMatchSet = {}; // Track unique matches per platform
+
+    violations.forEach((v) => {
+      const platformId = v.platformId;
+      const platformName = v.platformName || platformId;
+
+      if (!platformDetails[platformId]) {
+        platformDetails[platformId] = {
+          id: platformId,
+          name: platformName,
+          violations: 0,
+          views: 0,
+          statusBreakdown: {
+            active: 0,
+            blocked: 0,
+            removed: 0,
+            underReview: 0,
+          },
+          contentSplit: {
+            live: { violations: 0, views: 0 },
+            highlights: { violations: 0, views: 0 },
+            others: { violations: 0, views: 0 },
+          },
+          blockedViolations: [],
+          totalBlockTime: 0,
+          matchesAffected: new Set(),
+        };
+        platformMatchSet[platformId] = new Set();
+      }
+
+      const platform = platformDetails[platformId];
+      platform.violations++;
+      platform.views += processViewsForPlatform(v.views);
+
+      // Track unique matches
+      const matchIdStr = v.matchId.toString();
+      platformMatchSet[platformId].add(matchIdStr);
+
+      // Status breakdown
+      const statusLower = (v.status || "").toLowerCase();
+      if (statusLower === "active") {
+        platform.statusBreakdown.active++;
+      } else if (statusLower === "blocked") {
+        platform.statusBreakdown.blocked++;
+        if (v.blockedAt && v.timeAdded) {
+          platform.blockedViolations.push({
+            blockedAt: v.blockedAt,
+            timeAdded: v.timeAdded,
+          });
+        }
+      } else if (statusLower === "removed") {
+        platform.statusBreakdown.removed++;
+      } else if (statusLower === "under review") {
+        platform.statusBreakdown.underReview++;
+      }
+
+      // Content type breakdown
+      // Enum values are: "Live", "Highlights", "Other" (exact case)
+      const contentType = (v.contentType || "").trim();
+
+      if (contentType === "Live") {
+        platform.contentSplit.live.violations++;
+        platform.contentSplit.live.views += processViewsForPlatform(v.views);
+      } else if (contentType === "Highlights") {
+        platform.contentSplit.highlights.violations++;
+        platform.contentSplit.highlights.views += processViewsForPlatform(
+          v.views
+        );
+      } else {
+        // "Other" or anything else goes to others
+        platform.contentSplit.others.violations++;
+        platform.contentSplit.others.views += processViewsForPlatform(v.views);
+      }
+    });
+
+    // Calculate success rates, avg block times, and matches affected
+    const platformsArray = Object.values(platformDetails).map((platform) => {
+      const totalBlocked =
+        platform.statusBreakdown.blocked + platform.statusBreakdown.removed;
+      const successRate =
+        platform.violations > 0
+          ? Math.round((totalBlocked / platform.violations) * 100)
+          : 0;
+
+      // Calculate average block time
+      let avgBlockTime = 0;
+      if (platform.blockedViolations.length > 0) {
+        const totalBlockTime = platform.blockedViolations.reduce((sum, v) => {
+          const timeAdded = new Date(v.timeAdded);
+          const blockedAt = new Date(v.blockedAt);
+          const diffMs = blockedAt.getTime() - timeAdded.getTime();
+          return sum + diffMs / 60000; // Convert to minutes
+        }, 0);
+        avgBlockTime = Math.round(
+          totalBlockTime / platform.blockedViolations.length
+        );
+      }
+
+      return {
+        id: platform.id,
+        name: platform.name,
+        violations: platform.violations,
+        views: platform.views,
+        successRate: successRate,
+        avgBlockTime: avgBlockTime,
+        statusBreakdown: platform.statusBreakdown,
+        contentSplit: platform.contentSplit,
+        matchesAffected: platformMatchSet[platform.id].size,
+      };
+    });
+
+    // Sort platforms by violations (descending)
+    platformsArray.sort((a, b) => b.violations - a.violations);
 
     // Find top match (match with most violations)
     const matchViolationCounts = {};
@@ -1318,16 +1490,21 @@ router.get("/dashboard/stats", async (req, res) => {
     };
 
     contentSplitStats.forEach((stat) => {
-      const contentType = stat._id?.toLowerCase() || "other";
-      const totalViews = stat.viewsArray.reduce((sum, v) => sum + processViews(v), 0);
-      
-      if (contentType === "live") {
+      // Enum values are: "Live", "Highlights", "Other" (exact case from aggregation)
+      const contentType = (stat._id || "").trim();
+      const totalViews = stat.viewsArray.reduce(
+        (sum, v) => sum + processViews(v),
+        0
+      );
+
+      if (contentType === "Live") {
         contentSplit.live.views = totalViews;
         contentSplit.live.violations = stat.violations || 0;
-      } else if (contentType === "highlights") {
+      } else if (contentType === "Highlights") {
         contentSplit.highlights.views = totalViews;
         contentSplit.highlights.violations = stat.violations || 0;
       } else {
+        // "Other" or anything else goes to others
         contentSplit.others.views = totalViews;
         contentSplit.others.violations = stat.violations || 0;
       }
@@ -1357,6 +1534,7 @@ router.get("/dashboard/stats", async (req, res) => {
         postponed: postponedMatches,
       },
       contentSplit,
+      platforms: platformsArray,
     });
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);

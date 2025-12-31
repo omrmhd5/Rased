@@ -147,11 +147,6 @@ const matchSchema = new mongoose.Schema(
       default: false,
       index: true,
     },
-    isEdited: {
-      type: Boolean,
-      default: false,
-      index: true,
-    },
   },
   {
     timestamps: true,

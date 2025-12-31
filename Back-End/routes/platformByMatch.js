@@ -113,13 +113,16 @@ async function updateMatchAggregatedStats(externalMatchId) {
       }
     }
 
-    // Update Match document
+    // Update Match document (only stats fields)
+    // This is an automated update from PlatformByMatch stats, not a manual edit
     await Match.findByIdAndUpdate(match._id, {
-      ...aggregated,
-      avgBlockTime,
-      blockSuccessRate,
-      topPlatformId,
-      mostViews,
+      $set: {
+        ...aggregated,
+        avgBlockTime,
+        blockSuccessRate,
+        topPlatformId,
+        mostViews,
+      },
     });
   } catch (error) {
     console.error("Error updating match aggregated stats:", error);
