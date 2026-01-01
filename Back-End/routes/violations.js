@@ -56,8 +56,52 @@ const updateMatchContentTypeCounts = async (matchId) => {
 // GET /api/violations - Get all violations with filters
 router.get("/", async (req, res) => {
   try {
-    const { matchId, platformId, status, type, search, limit, sort } =
-      req.query;
+    const {
+      matchId,
+      platformId,
+      status,
+      type,
+      search,
+      limit,
+      sort,
+      league,
+      weekFilter,
+      week,
+      weekStart,
+      weekEnd,
+    } = req.query;
+
+    // Build match query for league/week filtering
+    const matchQuery = {};
+    if (league && ["saudi", "italian", "spanish"].includes(league)) {
+      matchQuery.league = league;
+      matchQuery.isDeleted = { $ne: true };
+    }
+
+    // Add week filter based on weekFilter type
+    if (weekFilter === "single" && week) {
+      matchQuery.week = week.toString();
+    } else if (weekFilter === "range" && weekStart && weekEnd) {
+      const startWeek = parseInt(weekStart);
+      const endWeek = parseInt(weekEnd);
+      const weekArray = Array.from(
+        { length: endWeek - startWeek + 1 },
+        (_, i) => (startWeek + i).toString()
+      );
+      matchQuery.week = { $in: weekArray };
+    }
+
+    // Find matching matches first if league/week filters are provided
+    let matchIds = null;
+    if (Object.keys(matchQuery).length > 0) {
+      const matches = await Match.find(matchQuery)
+        .select("_id")
+        .lean();
+      matchIds = matches.map((m) => m._id);
+      if (matchIds.length === 0) {
+        return res.json([]);
+      }
+    }
 
     const query = {};
 
@@ -71,6 +115,9 @@ router.get("/", async (req, res) => {
         // If not found by externalMatchId, assume it's an internal _id
         query.matchId = matchId;
       }
+    } else if (matchIds !== null) {
+      // Use matchIds from league/week filter
+      query.matchId = { $in: matchIds };
     }
 
     if (platformId) {
@@ -98,7 +145,7 @@ router.get("/", async (req, res) => {
     const violations = await Violation.find(query)
       .populate(
         "matchId",
-        "team1 team2 date time week competition stadium externalMatchId"
+        "team1 team2 date time week competition stadium externalMatchId league description"
       )
       .sort({ timeAdded: sortOrder })
       .limit(limitNum)
