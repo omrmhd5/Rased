@@ -5,10 +5,17 @@ import {
   Activity,
   Download,
   Loader2,
+  BarChart3,
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { RoundReport } from "@/components/RoundReport";
 import * as htmlToImage from "html-to-image";
 import {
   MatchOverview,
@@ -96,6 +103,7 @@ export default function MatchDashboard() {
 
   // Download state
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isRoundReportOpen, setIsRoundReportOpen] = useState(false);
 
   // Refetch trigger - increment this to trigger a full data refetch
   const [refetchTrigger, setRefetchTrigger] = useState(0);
@@ -1932,6 +1940,7 @@ export default function MatchDashboard() {
           targetMins={targetMins}
           onDownloadReport={handleDownloadReport}
           isDownloading={isDownloading}
+          onRoundReport={() => setIsRoundReportOpen(true)}
               />
             </div>
 
@@ -2111,6 +2120,131 @@ export default function MatchDashboard() {
         violation={noteViolation?.violation || null}
         onSave={saveNote}
       />
+
+      {/* Round Report Modal */}
+      {match && (
+        <RoundReport
+          open={isRoundReportOpen}
+          onClose={() => setIsRoundReportOpen(false)}
+          week={match.week || "N/A"}
+          competition={getCompetitionName() || "N/A"}
+          fileName={`Round-Report-${getCompetitionName().replace(/\s+/g, "-")}-Week-${match.week || "N/A"}-${match.team1}-vs-${match.team2}-${new Date().toISOString().split("T")[0]}.png`}
+          liveMetrics={platformOperations
+            .filter((platform) => {
+              const liveViolations = platform.violations.filter(
+                (v) => (v.contentType || v.type) === "Live"
+              );
+              return liveViolations.length > 0;
+            })
+            .map((platform) => {
+              const IconComponent = platform.icon;
+              const liveViolations = platform.violations.filter(
+                (v) => (v.contentType || v.type) === "Live"
+              );
+              const detected = liveViolations.length;
+              const blocked = liveViolations.filter(
+                (v) => v.status === "Blocked" || v.statusBadge === "Blocked"
+              ).length;
+              const successRate =
+                detected > 0 ? Math.round((blocked / detected) * 100) : 0;
+              
+              // Calculate avg block time for live violations
+              const blockedViolations = liveViolations.filter(
+                (v) => v.blockedAt && (v.status === "Blocked" || v.statusBadge === "Blocked")
+              );
+              let avgBlockTime = 0;
+              if (blockedViolations.length > 0) {
+                const totalBlockTime = blockedViolations.reduce((sum, v) => {
+                  if (v.blockedAt && v.timeAdded) {
+                    const diffMs =
+                      new Date(v.blockedAt).getTime() -
+                      new Date(v.timeAdded).getTime();
+                    const diffMins = Math.floor(diffMs / 60000);
+                    return sum + Math.max(0, diffMins);
+                  }
+                  return sum;
+                }, 0);
+                avgBlockTime = Math.round(totalBlockTime / blockedViolations.length);
+              }
+
+              // Calculate views for live violations
+              const views = liveViolations.reduce((sum, v) => {
+                if (!v.views || v.views === "0") return sum;
+                const viewsStr = v.views.replace(/[^0-9.]/g, "");
+                const viewsNum = parseFloat(viewsStr) || 0;
+                const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
+                return sum + viewsNum * multiplier;
+              }, 0);
+
+              return {
+                platform: platform.name,
+                icon: <IconComponent className="h-4 w-4" style={{ color: platform.color }} />,
+                detected: detected,
+                blocked: blocked,
+                successRate: successRate,
+                avgBlockTime: avgBlockTime,
+                views: views,
+              };
+            })}
+          highlightsMetrics={platformOperations
+            .filter((platform) => {
+              const highlightsViolations = platform.violations.filter(
+                (v) => (v.contentType || v.type) === "Highlights"
+              );
+              return highlightsViolations.length > 0;
+            })
+            .map((platform) => {
+              const IconComponent = platform.icon;
+              const highlightsViolations = platform.violations.filter(
+                (v) => (v.contentType || v.type) === "Highlights"
+              );
+              const detected = highlightsViolations.length;
+              const blocked = highlightsViolations.filter(
+                (v) => v.status === "Blocked" || v.statusBadge === "Blocked"
+              ).length;
+              const successRate =
+                detected > 0 ? Math.round((blocked / detected) * 100) : 0;
+              
+              // Calculate avg block time for highlights violations
+              const blockedViolations = highlightsViolations.filter(
+                (v) => v.blockedAt && (v.status === "Blocked" || v.statusBadge === "Blocked")
+              );
+              let avgBlockTime = 0;
+              if (blockedViolations.length > 0) {
+                const totalBlockTime = blockedViolations.reduce((sum, v) => {
+                  if (v.blockedAt && v.timeAdded) {
+                    const diffMs =
+                      new Date(v.blockedAt).getTime() -
+                      new Date(v.timeAdded).getTime();
+                    const diffMins = Math.floor(diffMs / 60000);
+                    return sum + Math.max(0, diffMins);
+                  }
+                  return sum;
+                }, 0);
+                avgBlockTime = Math.round(totalBlockTime / blockedViolations.length);
+              }
+
+              // Calculate views for highlights violations
+              const views = highlightsViolations.reduce((sum, v) => {
+                if (!v.views || v.views === "0") return sum;
+                const viewsStr = v.views.replace(/[^0-9.]/g, "");
+                const viewsNum = parseFloat(viewsStr) || 0;
+                const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
+                return sum + viewsNum * multiplier;
+              }, 0);
+
+              return {
+                platform: platform.name,
+                icon: <IconComponent className="h-4 w-4" style={{ color: platform.color }} />,
+                detected: detected,
+                blocked: blocked,
+                successRate: successRate,
+                avgBlockTime: avgBlockTime,
+                views: views,
+              };
+            })}
+        />
+      )}
     </div>
   );
 }

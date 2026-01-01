@@ -48,7 +48,6 @@ const violationSchema = new mongoose.Schema(
       enum: ["Active", "Blocked", "Removed", "Under Review"],
       required: true,
       default: "Active",
-      index: true,
     },
     views: {
       type: String,
@@ -105,9 +104,8 @@ const violationSchema = new mongoose.Schema(
 
 // Indexes
 violationSchema.index({ matchId: 1, platformId: 1 });
-violationSchema.index({ status: 1, contentType: 1 });
+violationSchema.index({ status: 1, contentType: 1 }); // Compound index covers status-only queries too
 violationSchema.index({ matchId: 1, status: 1 }); // For dashboard stats aggregation
-violationSchema.index({ status: 1 }); // For status-based queries
 violationSchema.index({ timeAdded: -1 });
 violationSchema.index({ violationUrl: 1 });
 violationSchema.index({ "auditLog.timestamp": -1 }); // Index for audit log queries

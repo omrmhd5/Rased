@@ -12,8 +12,14 @@ import {
   FileQuestion,
   Download,
   Loader2,
+  BarChart3,
 } from "lucide-react";
 import { Match, PlatformData } from "./types";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 
 interface MatchOverviewProps {
   match: Match;
@@ -35,6 +41,7 @@ interface MatchOverviewProps {
   targetMins?: number;
   onDownloadReport?: () => void;
   isDownloading?: boolean;
+  onRoundReport?: () => void;
 }
 
 export function MatchOverview({
@@ -56,6 +63,7 @@ export function MatchOverview({
   targetMins = 15,
   onDownloadReport,
   isDownloading = false,
+  onRoundReport,
 }: MatchOverviewProps) {
   const formatMatchDateTime = () => {
     const dateStr = match.date;
@@ -118,25 +126,54 @@ export function MatchOverview({
         <div className="text-right flex flex-col items-end gap-2">
           <div className="flex items-center gap-2">
             <p className="text-xs font-medium">{formatMatchDateTime()}</p>
-            {onDownloadReport && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={onDownloadReport}
-                disabled={isDownloading}
-                className="h-7 px-2 text-xs">
-                {isDownloading ? (
-                  <>
-                    <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Download className="h-3 w-3 mr-1.5" />
-                    Download
-                  </>
-                )}
-              </Button>
+            {(onDownloadReport || onRoundReport) && (
+              <HoverCard openDelay={100} closeDelay={200}>
+                <HoverCardTrigger asChild>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    disabled={isDownloading}
+                    className="h-7 px-2 text-xs bg-blue-600 hover:bg-blue-700 text-white">
+                    {isDownloading ? (
+                      <>
+                        <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-3 w-3 mr-1.5" />
+                        Download
+                      </>
+                    )}
+                  </Button>
+                </HoverCardTrigger>
+                <HoverCardContent 
+                  align="end" 
+                  className="w-48 p-1"
+                  sideOffset={5}>
+                  <div className="flex flex-col">
+                    {onDownloadReport && (
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start h-9 text-xs font-normal"
+                        onClick={onDownloadReport}
+                        disabled={isDownloading}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download Report
+                      </Button>
+                    )}
+                    {onRoundReport && (
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start h-9 text-xs font-normal"
+                        onClick={onRoundReport}>
+                        <BarChart3 className="mr-2 h-4 w-4" />
+                        Round Report
+                      </Button>
+                    )}
+                  </div>
+                </HoverCardContent>
+              </HoverCard>
             )}
           </div>
           {getStatusBadge()}

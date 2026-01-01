@@ -1,4 +1,4 @@
-import { Home, Calendar, FileText, Users, Settings, BarChart3 } from "lucide-react";
+import { Home, Calendar, FileText, Users, Settings, BarChart3, AlertTriangle } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
   Sidebar,
@@ -15,6 +15,7 @@ import {
 const analyticsItems = [
   { title: "Home", url: "/", icon: Home },
   { title: "Dashboard", url: "/dashboard", icon: BarChart3 },
+  { title: "Problematic Accounts", url: "/problematic-accounts", icon: AlertTriangle },
 ];
 
 const operationsItems = [

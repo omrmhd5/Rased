@@ -9,7 +9,6 @@ import { useRef } from "react";
 
 interface PlatformMetrics {
   platform: string;
-  platformArabic: string;
   icon: React.ReactNode;
   detected: number;
   blocked: number;
@@ -23,9 +22,10 @@ interface RoundReportProps {
   onClose: () => void;
   week: string;
   competition: string;
-  dateRange: string;
+  dateRange?: string;
   liveMetrics: PlatformMetrics[];
   highlightsMetrics: PlatformMetrics[];
+  fileName?: string;
 }
 
 export const RoundReport = ({
@@ -36,6 +36,7 @@ export const RoundReport = ({
   dateRange,
   liveMetrics,
   highlightsMetrics,
+  fileName,
 }: RoundReportProps) => {
   const reportRef = useRef<HTMLDivElement>(null);
 
@@ -50,20 +51,24 @@ export const RoundReport = ({
         backgroundColor: "#ffffff",
       });
 
+      // Generate a nice filename
+      const defaultFileName = fileName || `Round-Report-${competition.replace(/\s+/g, "-")}-Week-${week}-${new Date().toISOString().split("T")[0]}.png`;
+      const sanitizedFileName = defaultFileName.replace(/[^a-zA-Z0-9.-]/g, "-");
+
       const link = document.createElement("a");
-      link.download = `anti-piracy-round-report-week-${week}.png`;
+      link.download = sanitizedFileName;
       link.href = dataUrl;
       link.click();
 
       toast({
-        title: "تم حفظ التقرير",
-        description: "تم حفظ تقرير الجولة كصورة بنجاح",
+        title: "Report Saved",
+        description: "Round report has been saved as an image successfully",
       });
     } catch (error) {
       console.error("Error exporting image:", error);
       toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء حفظ التقرير",
+        title: "Error",
+        description: "An error occurred while saving the report",
         variant: "destructive",
       });
     }
@@ -76,12 +81,16 @@ export const RoundReport = ({
   };
 
   const formatBlockTime = (minutes: number) => {
-    if (minutes === 0) return "غير متاح";
-    if (minutes >= 60) {
-      const hours = (minutes / 60).toFixed(1);
-      return `${hours} ساعة`;
+    if (minutes === 0) return "N/A";
+    if (minutes >= 1440) {
+      const days = Math.round(minutes / 1440);
+      return `${days}d`;
     }
-    return `${minutes.toFixed(1)} د`;
+    if (minutes >= 60) {
+      const hours = Math.round(minutes / 60);
+      return `${hours}h`;
+    }
+    return `${Math.round(minutes)}min`;
   };
 
   const formatViews = (views: number) => {
@@ -98,15 +107,15 @@ export const RoundReport = ({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-[95vw] w-[1280px] max-h-[95vh] overflow-y-auto p-0">
         <div className="sticky top-0 z-10 bg-background border-b px-6 py-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">تقرير الجولة</h2>
+          <h2 className="text-lg font-semibold">Round Report</h2>
           <div className="flex items-center gap-2">
             <Button onClick={handleExportImage} size="sm" variant="default">
               <Download className="h-4 w-4 mr-2" />
-              حفظ كصورة
+              Download as Image
             </Button>
             <Button onClick={onClose} size="sm" variant="ghost">
               <X className="h-4 w-4 mr-2" />
-              إغلاق
+              Close
             </Button>
           </div>
         </div>
@@ -115,34 +124,37 @@ export const RoundReport = ({
           <div
             ref={reportRef}
             className="bg-gradient-to-br from-background via-muted/20 to-background rounded-2xl shadow-2xl p-8 space-y-8"
-            dir="rtl"
           >
             {/* Header */}
             <div className="text-center space-y-3 pb-6 border-b">
-              <h1 className="text-3xl font-bold">التقرير الأسبوعي الشامل لمكافحة القرصنة لهذه الجولة</h1>
+              <h1 className="text-3xl font-bold">Anti-Piracy Round Report</h1>
               <p className="text-lg text-muted-foreground">
                 {competition} – Week {week}
               </p>
-              <div className="flex items-center justify-center gap-3 mt-3">
-                <span className="text-sm font-medium">{dateRange}</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">البيانات تشمل جميع المباريات في الأسبوع/الجولة الحالية</p>
+              {dateRange && (
+                <div className="flex items-center justify-center gap-3 mt-3">
+                  <span className="text-sm font-medium">{dateRange}</span>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-2">
+                Data includes all matches in the current week/round
+              </p>
             </div>
 
             {/* Live Stream Section */}
             <div className="space-y-4">
-              <h2 className="text-xl font-bold text-center">البث المباشر للمباريات</h2>
+              <h2 className="text-xl font-bold text-center">Live Stream Violations</h2>
               <Card className="overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-muted/50 border-b">
                       <tr>
-                        <th className="text-right text-sm font-semibold px-4 py-3">المنصة</th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">المكتشفة</th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">تمت الإزالة</th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">نسبة الإزالة</th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">متوسط الوقت</th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">المشاهدات</th>
+                        <th className="text-left text-sm font-semibold px-4 py-3">Platform</th>
+                        <th className="text-center text-sm font-semibold px-4 py-3">Detected</th>
+                        <th className="text-center text-sm font-semibold px-4 py-3">Blocked</th>
+                        <th className="text-center text-sm font-semibold px-4 py-3">Success Rate</th>
+                        <th className="text-center text-sm font-semibold px-4 py-3">Avg Block Time</th>
+                        <th className="text-center text-sm font-semibold px-4 py-3">Views</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -151,7 +163,7 @@ export const RoundReport = ({
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               {metric.icon}
-                              <span className="text-sm font-medium">{metric.platformArabic}</span>
+                              <span className="text-sm font-medium">{metric.platform}</span>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-center">
@@ -165,9 +177,8 @@ export const RoundReport = ({
                           <td className="px-4 py-3 text-center">
                             <div className="flex items-center justify-center gap-1">
                               <span className={`text-sm font-bold ${getSuccessRateColor(metric.successRate)}`}>
-                                {metric.successRate}٪
+                                {metric.successRate}%
                               </span>
-                              <span className="text-xs">↗</span>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-center">
@@ -188,18 +199,18 @@ export const RoundReport = ({
 
             {/* Highlights Section */}
             <div className="space-y-4">
-              <h2 className="text-xl font-bold text-center">لقطات المباريات</h2>
+              <h2 className="text-xl font-bold text-center">Highlights Violations</h2>
               <Card className="overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-muted/50 border-b">
                       <tr>
-                        <th className="text-right text-sm font-semibold px-4 py-3">المنصة</th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">المكتشفة</th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">تمت الإزالة</th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">نسبة الإزالة</th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">متوسط الوقت</th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">المشاهدات</th>
+                        <th className="text-left text-sm font-semibold px-4 py-3">Platform</th>
+                        <th className="text-center text-sm font-semibold px-4 py-3">Detected</th>
+                        <th className="text-center text-sm font-semibold px-4 py-3">Blocked</th>
+                        <th className="text-center text-sm font-semibold px-4 py-3">Success Rate</th>
+                        <th className="text-center text-sm font-semibold px-4 py-3">Avg Block Time</th>
+                        <th className="text-center text-sm font-semibold px-4 py-3">Views</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -208,7 +219,7 @@ export const RoundReport = ({
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               {metric.icon}
-                              <span className="text-sm font-medium">{metric.platformArabic}</span>
+                              <span className="text-sm font-medium">{metric.platform}</span>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-center">
@@ -222,9 +233,8 @@ export const RoundReport = ({
                           <td className="px-4 py-3 text-center">
                             <div className="flex items-center justify-center gap-1">
                               <span className={`text-sm font-bold ${getSuccessRateColor(metric.successRate)}`}>
-                                {metric.successRate}٪
+                                {metric.successRate}%
                               </span>
-                              <span className="text-xs">↗</span>
                             </div>
                           </td>
                           <td className="px-4 py-3 text-center">

@@ -28,9 +28,11 @@ import {
   XCircle,
   FileQuestion,
   Play,
+  Download,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import * as htmlToImage from "html-to-image";
 import {
   BarChart,
   Bar,
@@ -55,6 +57,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import { RoundReport } from "@/components/RoundReport";
 import { ViolationsOverview } from "@/components/Dashboard/ViolationsOverview";
 import { MatchStatsOverview } from "@/components/Dashboard/MatchStatsOverview";
@@ -64,6 +72,7 @@ import { PlatformsOverview } from "@/components/Dashboard/PlatformsOverview";
 import { PlatformComparison } from "@/components/MatchDashboard/PlatformComparison";
 import { PlatformData } from "@/components/MatchDashboard/types";
 import { formatViews as formatViewsUtil } from "@/components/MatchDashboard/utils";
+import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
 
 type League = "saudi" | "italian" | "spanish" | null;
 type WeekFilterType = "all" | "single" | "range";
@@ -298,6 +307,21 @@ export default function Dashboard() {
   const [troubleListViolations, setTroubleListViolations] = useState<any[]>([]);
   const [troubleListLoading, setTroubleListLoading] = useState(false);
 
+  // Download state
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // Refs for report components
+  const violationsOverviewRef = useRef<HTMLDivElement>(null);
+  const matchStatsOverviewRef = useRef<HTMLDivElement>(null);
+  const totalViewsCardRef = useRef<HTMLDivElement>(null);
+  const avgBlockTimeCardRef = useRef<HTMLDivElement>(null);
+  const topPlatformCardRef = useRef<HTMLDivElement>(null);
+  const topMatchCardRef = useRef<HTMLDivElement>(null);
+  const contentSplitChartRef = useRef<HTMLDivElement>(null);
+  const platformsOverviewRef = useRef<HTMLDivElement>(null);
+  const platformComparisonRef = useRef<HTMLDivElement>(null);
+  const topMatchByViolationsRef = useRef<HTMLDivElement>(null);
+
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
   // Load selected league from localStorage on mount
@@ -487,25 +511,33 @@ export default function Dashboard() {
     platformData[0]
   );
 
-  // Get platform icon
-  const getPlatformIcon = (name: string) => {
-    switch (name) {
-      case "X/Twitter":
-      case "Twitter":
-        return Twitter;
-      case "YouTube":
-        return Youtube;
-      case "Facebook":
-        return Facebook;
-      case "Instagram":
-        return Instagram;
-      case "Telegram":
-        return TrendingUp;
-      case "TikTok":
-        return Eye;
-      default:
-        return Eye;
+  // Get platform operations (for icon lookup)
+  const platformOperations = getInitialPlatformOperations();
+
+  // Get platform icon component class (for use with JSX like <Icon />)
+  const getPlatformIconComponent = (platformName: string) => {
+    const platform = platformOperations.find((p) => p.name === platformName);
+    if (!platform) {
+      // Fallback for platforms not in the list (e.g., Telegram)
+      return Activity;
     }
+    return platform.icon;
+  };
+
+  // Get platform icon as JSX (for direct rendering)
+  const getPlatformIcon = (platformName: string, size: string = "h-3.5 w-3.5") => {
+    const platform = platformOperations.find((p) => p.name === platformName);
+    if (!platform) {
+      // Fallback for platforms not in the list (e.g., Telegram)
+      return <Activity className={size} />;
+    }
+    const IconComponent = platform.icon;
+    return (
+      <IconComponent
+        className={size}
+        style={{ color: platform.color }}
+      />
+    );
   };
 
   // Get platform color
@@ -532,7 +564,7 @@ export default function Dashboard() {
   // Transform dashboard platforms to PlatformData format
   const transformPlatformsToPlatformData = (): PlatformData[] => {
     return dashboardStats.platforms.map((platform) => {
-      const IconComponent = getPlatformIcon(platform.name);
+      const IconComponent = getPlatformIconComponent(platform.name);
       const color = getPlatformColor(platform.name);
 
       // Format avgBlockTime from minutes to string format expected by PlatformComparison
@@ -717,6 +749,300 @@ export default function Dashboard() {
         return 0;
     }
   });
+
+  // Download report as PNG
+  const handleDownloadReport = async () => {
+    setIsDownloading(true);
+    try {
+      const images: string[] = [];
+
+      // Use a consistent target width for all components
+      const targetWidth = 1100; // Fixed width for better control
+
+      // Create and capture header with dashboard details
+      const headerDiv = document.createElement("div");
+      headerDiv.style.cssText = `
+        width: ${targetWidth}px;
+        padding: 40px;
+        background-color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      `;
+
+      const leagueName =
+        selectedLeague === "saudi"
+          ? "Saudi Pro League"
+          : selectedLeague === "italian"
+          ? "Italian Serie A"
+          : selectedLeague === "spanish"
+          ? "Spanish La Liga"
+          : "All Leagues";
+
+      const weekInfo =
+        weekFilterType === "all"
+          ? "All Weeks"
+          : weekFilterType === "single"
+          ? `Week ${singleWeek}`
+          : `Weeks ${weekRangeStart} - ${weekRangeEnd}`;
+
+      headerDiv.innerHTML = `
+        <h1 style="font-size: 32px; font-weight: bold; margin: 0 0 16px 0; color: #1a1a1a;">
+          Dashboard Report
+        </h1>
+        <div style="font-size: 18px; color: #666; line-height: 1.8;">
+          <p style="margin: 0 0 8px 0;"><strong>League:</strong> ${leagueName}</p>
+          <p style="margin: 0;"><strong>Period:</strong> ${weekInfo}</p>
+        </div>
+      `;
+
+      // Temporarily add to DOM for capture
+      document.body.appendChild(headerDiv);
+
+      // Wait for rendering
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      // Capture header
+      const headerImage = await htmlToImage.toPng(headerDiv, {
+        backgroundColor: "#ffffff",
+        quality: 1,
+        pixelRatio: 2,
+        width: targetWidth,
+      });
+
+      // Remove from DOM
+      document.body.removeChild(headerDiv);
+
+      images.push(headerImage);
+
+      // Helper function to capture element with width control
+      const captureElement = async (
+        element: HTMLElement | null,
+        width?: number
+      ): Promise<string | null> => {
+        if (!element) return null;
+
+        const originalStyle = element.style.cssText;
+        const originalWidth = element.style.width;
+        const originalMaxWidth = element.style.maxWidth;
+
+        // Set width if provided
+        if (width) {
+          element.style.width = `${width}px`;
+          element.style.maxWidth = `${width}px`;
+        }
+
+        // Find and modify parent containers
+        const parentStyles: Array<{
+          element: HTMLElement;
+          originalStyle: string;
+        }> = [];
+        let currentParent = element.parentElement;
+        while (currentParent) {
+          parentStyles.push({
+            element: currentParent,
+            originalStyle: currentParent.style.cssText,
+          });
+          if (width) {
+            currentParent.style.maxWidth = `${width}px`;
+          }
+          currentParent = currentParent.parentElement;
+        }
+
+        // Wait for styles to apply
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        try {
+          const dataUrl = await htmlToImage.toPng(element, {
+            backgroundColor: "#ffffff",
+            quality: 1,
+            pixelRatio: 2,
+            width: width,
+          });
+          return dataUrl;
+        } finally {
+          // Restore original styles
+          element.style.cssText = originalStyle;
+          if (width) {
+            element.style.width = originalWidth;
+            element.style.maxWidth = originalMaxWidth;
+          }
+          parentStyles.forEach(({ element: parentEl, originalStyle: origStyle }) => {
+            parentEl.style.cssText = origStyle;
+          });
+        }
+      };
+
+      // Capture Violations Overview
+      const violationsImg = await captureElement(
+        violationsOverviewRef.current,
+        targetWidth
+      );
+      if (violationsImg) images.push(violationsImg);
+
+      // Capture Match Stats Overview
+      const matchStatsImg = await captureElement(
+        matchStatsOverviewRef.current,
+        targetWidth
+      );
+      if (matchStatsImg) images.push(matchStatsImg);
+
+      // Combine small cards into one image
+      const smallCardsContainer = document.createElement("div");
+      smallCardsContainer.style.cssText = `
+        width: ${targetWidth}px;
+        padding: 20px;
+        background-color: #ffffff;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      `;
+
+      // Clone and add small cards
+      const cardsToCapture = [
+        totalViewsCardRef,
+        avgBlockTimeCardRef,
+        topPlatformCardRef,
+        topMatchCardRef,
+      ];
+
+      for (const ref of cardsToCapture) {
+        if (ref.current) {
+          const clone = ref.current.cloneNode(true) as HTMLElement;
+          clone.style.margin = "0";
+          smallCardsContainer.appendChild(clone);
+        }
+      }
+
+      // Add content split chart if available
+      if (contentSplitChartRef.current) {
+        const chartClone = contentSplitChartRef.current.cloneNode(true) as HTMLElement;
+        chartClone.style.margin = "0";
+        chartClone.style.width = "100%";
+        chartClone.style.gridColumn = "1 / -1";
+        smallCardsContainer.appendChild(chartClone);
+      }
+
+      document.body.appendChild(smallCardsContainer);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const smallCardsImg = await htmlToImage.toPng(smallCardsContainer, {
+        backgroundColor: "#ffffff",
+        quality: 1,
+        pixelRatio: 2,
+        width: targetWidth,
+      });
+      document.body.removeChild(smallCardsContainer);
+      images.push(smallCardsImg);
+
+      // Capture Platforms Overview with controlled width
+      const platformsImg = await captureElement(
+        platformsOverviewRef.current,
+        targetWidth
+      );
+      if (platformsImg) images.push(platformsImg);
+
+      // Capture Platform Comparison
+      const platformComparisonImg = await captureElement(
+        platformComparisonRef.current,
+        targetWidth
+      );
+      if (platformComparisonImg) images.push(platformComparisonImg);
+
+      // Capture Top Match by Violations
+      const topMatchImg = await captureElement(
+        topMatchByViolationsRef.current,
+        targetWidth
+      );
+      if (topMatchImg) images.push(topMatchImg);
+
+      if (images.length === 0) {
+        throw new Error("No components found to capture");
+      }
+
+      // Create a canvas to combine all images
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        throw new Error("Could not get canvas context");
+      }
+
+      // Load all images and calculate total height
+      const imagePromises = images.map((url) => {
+        return new Promise<HTMLImageElement>((resolve, reject) => {
+          const img = new Image();
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = url;
+        });
+      });
+
+      const loadedImages = await Promise.all(imagePromises);
+      const maxWidth = Math.max(...loadedImages.map((img) => img.width));
+      const totalHeight = loadedImages.reduce(
+        (sum, img) => sum + img.height,
+        0
+      );
+
+      // Set canvas dimensions
+      canvas.width = maxWidth;
+      canvas.height = totalHeight;
+
+      // Draw all images vertically
+      let currentY = 0;
+      loadedImages.forEach((img) => {
+        ctx.drawImage(img, 0, currentY);
+        currentY += img.height;
+      });
+
+      // Convert to blob and download
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          throw new Error("Failed to create image blob");
+        }
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+
+        // Format filename
+        const leagueFormatted = selectedLeague
+          ? selectedLeague === "saudi"
+            ? "Saudi-Pro-League"
+            : selectedLeague === "italian"
+            ? "Italian-Serie-A"
+            : "Spanish-La-Liga"
+          : "All-Leagues";
+        const weekFormatted =
+          weekFilterType === "all"
+            ? "All-Weeks"
+            : weekFilterType === "single"
+            ? `Week-${singleWeek}`
+            : `Weeks-${weekRangeStart}-${weekRangeEnd}`;
+        const dateFormatted = new Date().toISOString().split("T")[0];
+        link.download = `Dashboard-Report-${leagueFormatted}-${weekFormatted}-${dateFormatted}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        toast({
+          title: "Report Downloaded",
+          description: "Dashboard report has been downloaded successfully",
+        });
+      }, "image/png");
+    } catch (error) {
+      console.error("Error generating report:", error);
+      toast({
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Failed to generate report",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -749,6 +1075,51 @@ export default function Dashboard() {
                 : "No League"}
             </Badge>
           )}
+
+          {/* Download Dropdown */}
+          <HoverCard openDelay={100} closeDelay={100}>
+            <HoverCardTrigger asChild>
+              <Button
+                size="sm"
+                variant="default"
+                className="h-7 text-[11px] bg-blue-600 hover:bg-blue-700 text-white"
+                disabled={isDownloading}>
+                {isDownloading ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    Downloading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-3.5 w-3.5 mr-1.5" />
+                    Download
+                  </>
+                )}
+              </Button>
+            </HoverCardTrigger>
+            <HoverCardContent 
+              align="end" 
+              className="w-48 p-1"
+              sideOffset={5}>
+              <div className="flex flex-col">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start h-9 text-xs font-normal"
+                  onClick={handleDownloadReport}
+                  disabled={isDownloading}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download Report
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start h-9 text-xs font-normal"
+                  onClick={() => setIsRoundReportOpen(true)}>
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  Round Report
+                </Button>
+              </div>
+            </HoverCardContent>
+          </HoverCard>
 
           {/* Week Filter Type */}
           <Select
@@ -820,26 +1191,30 @@ export default function Dashboard() {
         {/* Left: Violations Overview and Match Stats Overview */}
         <div className="flex flex-col gap-4">
           {/* Violations Overview Component */}
-          <ViolationsOverview
-            totalViolations={dashboardStats.totalViolations}
-            stillActive={dashboardStats.stillActive}
-            blocked={dashboardStats.blocked}
-            removed={dashboardStats.removed}
-            underReview={dashboardStats.underReview}
-            statsLoading={statsLoading}
-          />
+          <div ref={violationsOverviewRef}>
+            <ViolationsOverview
+              totalViolations={dashboardStats.totalViolations}
+              stillActive={dashboardStats.stillActive}
+              blocked={dashboardStats.blocked}
+              removed={dashboardStats.removed}
+              underReview={dashboardStats.underReview}
+              statsLoading={statsLoading}
+            />
+          </div>
 
           {/* Match Stats Overview Component */}
-          <MatchStatsOverview
-            matchStats={dashboardStats.matchStats}
-            statsLoading={statsLoading}
-          />
+          <div ref={matchStatsOverviewRef}>
+            <MatchStatsOverview
+              matchStats={dashboardStats.matchStats}
+              statsLoading={statsLoading}
+            />
+          </div>
         </div>
 
         {/* Right Column: Stacked Small Cards (30% width) */}
         <div className="flex flex-col gap-3">
           {/* Total Views Card (Small) */}
-          <Card className="p-4 bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-4/20 cursor-pointer">
+          <Card ref={totalViewsCardRef} className="p-4 bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-4/20 cursor-pointer">
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-[11px] font-medium text-muted-foreground">
                 Total Views
@@ -866,7 +1241,7 @@ export default function Dashboard() {
           </Card>
 
           {/* Avg Block Time Card */}
-          <Card className="p-4 bg-gradient-to-br from-success/5 to-success/10 border border-success/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-success/20 cursor-pointer">
+          <Card ref={avgBlockTimeCardRef} className="p-4 bg-gradient-to-br from-success/5 to-success/10 border border-success/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-success/20 cursor-pointer">
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-[11px] font-medium text-muted-foreground">
                 Avg Block Time
@@ -900,13 +1275,13 @@ export default function Dashboard() {
 
           {/* Top Platform Card */}
           {dashboardStats.topPlatform && (
-            <Card className="p-4 bg-gradient-to-br from-chart-2/5 to-chart-2/10 border border-chart-2/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-2/20 cursor-pointer">
+            <Card ref={topPlatformCardRef} className="p-4 bg-gradient-to-br from-chart-2/5 to-chart-2/10 border border-chart-2/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-2/20 cursor-pointer">
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-[11px] font-medium text-muted-foreground">
                   Top Platform
                 </p>
                 {(() => {
-                  const Icon = getPlatformIcon(dashboardStats.topPlatform.name);
+                  const Icon = getPlatformIconComponent(dashboardStats.topPlatform.name);
                   return <Icon className="h-3.5 w-3.5 text-chart-2" />;
                 })()}
               </div>
@@ -921,7 +1296,7 @@ export default function Dashboard() {
 
           {/* Top Match Card */}
           {dashboardStats.topMatch && (
-            <Card className="p-4 bg-gradient-to-br from-orange-500/5 to-orange-500/10 border border-orange-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer">
+            <Card ref={topMatchCardRef} className="p-4 bg-gradient-to-br from-orange-500/5 to-orange-500/10 border border-orange-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer">
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-[11px] font-medium text-muted-foreground">
                   Top Match
@@ -939,7 +1314,7 @@ export default function Dashboard() {
           )}
 
           {/* Content Split Chart */}
-          <div className="mt-4">
+          <div ref={contentSplitChartRef} className="mt-4">
             {(() => {
               // Calculate total views for Total Violations entry
               const totalViews =
@@ -983,10 +1358,12 @@ export default function Dashboard() {
       </div>
 
       {/* Row 2: Violations & Views by Platform */}
-      <PlatformsOverview
-        platforms={dashboardStats.platforms}
-        statsLoading={statsLoading}
-      />
+      <div ref={platformsOverviewRef}>
+        <PlatformsOverview
+          platforms={dashboardStats.platforms}
+          statsLoading={statsLoading}
+        />
+      </div>
 
       {/* Platform Comparison - Shows all platforms */}
       {statsLoading ? (
@@ -999,23 +1376,25 @@ export default function Dashboard() {
           </div>
         </Card>
       ) : dashboardStats.platforms.length > 0 ? (
-        <PlatformComparison
-          platformOperations={transformPlatformsToPlatformData()}
-          comparisonSort={comparisonSort}
-          comparisonSortDirection={comparisonSortDirection}
-          onSortChange={setComparisonSort}
-          onSortDirectionChange={setComparisonSortDirection}
-          targetMins={15}
-          title="Platform Comparison"
-          description="Compare platform performance across all matches"
-          showCard={true}
-        />
+        <div ref={platformComparisonRef}>
+          <PlatformComparison
+            platformOperations={transformPlatformsToPlatformData()}
+            comparisonSort={comparisonSort}
+            comparisonSortDirection={comparisonSortDirection}
+            onSortChange={setComparisonSort}
+            onSortDirectionChange={setComparisonSortDirection}
+            targetMins={15}
+            title="Platform Comparison"
+            description="Compare platform performance across all matches"
+            showCard={true}
+          />
+        </div>
       ) : null}
 
       {/* Row 3: Top Match by Violations and Matches Leaderboard */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Top Match by Violations - Takes 2 columns (wider) */}
-        <div className="lg:col-span-2">
+        <div ref={topMatchByViolationsRef} className="lg:col-span-2">
           <TopMatchByViolations
             topMatch={dashboardStats.topMatch}
             statsLoading={statsLoading}
@@ -1035,14 +1414,6 @@ export default function Dashboard() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => setIsRoundReportOpen(true)}
-                  size="sm"
-                  variant="default"
-                  className="h-7 text-[11px]">
-                  <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
-                  تقرير الجولة
-                </Button>
                 <Badge variant="secondary" className="h-5 px-2 text-[10px]">
                   {weekFilterType === "all"
                     ? "All Weeks"
@@ -1149,15 +1520,15 @@ export default function Dashboard() {
                 violation.minutesSinceAdded,
                 currentWeekMinutesSinceAdded
               );
-              const PlatformIcon = getPlatformIcon(violation.platform);
-              const platformColor = getPlatformColor(violation.platform);
               return (
                 <div
                   key={violation.id}
                   className="group flex items-center gap-3 h-[42px] border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors px-2">
                   {/* Platform & Account - Fixed width */}
                   <div className="flex items-center gap-2 w-[180px] flex-shrink-0">
-                    <PlatformIcon className="h-4 w-4 flex-shrink-0" style={{ color: platformColor }} />
+                    <div className="flex-shrink-0">
+                      {getPlatformIcon(violation.platform, "h-4 w-4")}
+                    </div>
                     <div className="flex flex-col min-w-0 flex-1">
                       <span className="text-[13px] font-medium truncate">
                         {violation.platform}
@@ -1244,65 +1615,69 @@ export default function Dashboard() {
       <RoundReport
         open={isRoundReportOpen}
         onClose={() => setIsRoundReportOpen(false)}
-        week={currentWeek.toString()}
-        competition="Saudi Pro League"
-        dateRange="15 – 21 مايو 2026"
-        liveMetrics={platformData.map((p) => ({
-          platform: p.name,
-          platformArabic:
-            p.name === "X/Twitter"
-              ? "إكس/تويتر"
-              : p.name === "YouTube"
-              ? "يوتيوب"
-              : p.name === "Facebook"
-              ? "فيسبوك"
-              : p.name === "TikTok"
-              ? "تيك توك"
-              : p.name === "Instagram"
-              ? "إنستغرام"
-              : p.name === "Telegram"
-              ? "تيليغرام"
-              : p.name === "IPTV"
-              ? "IPTV"
-              : "مواقع الويب",
-          icon: (() => {
-            const Icon = getPlatformIcon(p.name);
-            return <Icon className="h-4 w-4" style={{ color: p.color }} />;
-          })(),
-          detected: p.liveViolations,
-          blocked: Math.round(p.liveViolations * (p.successRate / 100)),
-          successRate: p.successRate,
-          avgBlockTime: p.avgBlockTime,
-          views: p.liveViews,
-        }))}
-        highlightsMetrics={platformData.map((p) => ({
-          platform: p.name,
-          platformArabic:
-            p.name === "X/Twitter"
-              ? "إكس/تويتر"
-              : p.name === "YouTube"
-              ? "يوتيوب"
-              : p.name === "Facebook"
-              ? "فيسبوك"
-              : p.name === "TikTok"
-              ? "تيك توك"
-              : p.name === "Instagram"
-              ? "إنستغرام"
-              : p.name === "Telegram"
-              ? "تيليغرام"
-              : p.name === "IPTV"
-              ? "IPTV"
-              : "مواقع الويب",
-          icon: (() => {
-            const Icon = getPlatformIcon(p.name);
-            return <Icon className="h-4 w-4" style={{ color: p.color }} />;
-          })(),
-          detected: p.highlightsViolations,
-          blocked: Math.round(p.highlightsViolations * (p.successRate / 100)),
-          successRate: p.successRate,
-          avgBlockTime: p.avgBlockTime * 1.2, // Highlights typically take longer
-          views: p.highlightsViews,
-        }))}
+        week={
+          weekFilterType === "all"
+            ? "All"
+            : weekFilterType === "single"
+            ? singleWeek
+            : `${weekRangeStart}-${weekRangeEnd}`
+        }
+        competition={
+          selectedLeague === "saudi"
+            ? "Saudi Pro League"
+            : selectedLeague === "italian"
+            ? "Italian Serie A"
+            : selectedLeague === "spanish"
+            ? "Spanish La Liga"
+            : "All Leagues"
+        }
+        fileName={
+          weekFilterType === "all"
+            ? `Round-Report-${selectedLeague === "saudi" ? "Saudi-Pro-League" : selectedLeague === "italian" ? "Italian-Serie-A" : selectedLeague === "spanish" ? "Spanish-La-Liga" : "All-Leagues"}-All-Weeks-${new Date().toISOString().split("T")[0]}.png`
+            : weekFilterType === "single"
+            ? `Round-Report-${selectedLeague === "saudi" ? "Saudi-Pro-League" : selectedLeague === "italian" ? "Italian-Serie-A" : selectedLeague === "spanish" ? "Spanish-La-Liga" : "All-Leagues"}-Week-${singleWeek}-${new Date().toISOString().split("T")[0]}.png`
+            : `Round-Report-${selectedLeague === "saudi" ? "Saudi-Pro-League" : selectedLeague === "italian" ? "Italian-Serie-A" : selectedLeague === "spanish" ? "Spanish-La-Liga" : "All-Leagues"}-Weeks-${weekRangeStart}-${weekRangeEnd}-${new Date().toISOString().split("T")[0]}.png`
+        }
+        liveMetrics={dashboardStats.platforms
+          .filter((platform) => platform.contentSplit.live.violations > 0)
+          .map((platform) => {
+            const Icon = getPlatformIconComponent(platform.name);
+            const platformColor = getPlatformColor(platform.name);
+            const detected = platform.contentSplit.live.violations;
+            // Calculate blocked count for Live content type
+            // Use overall success rate to estimate blocked count for Live
+            const blocked = Math.round((detected * platform.successRate) / 100);
+            
+            return {
+              platform: platform.name,
+              icon: <Icon className="h-4 w-4" style={{ color: platformColor }} />,
+              detected: detected,
+              blocked: blocked,
+              successRate: platform.successRate,
+              avgBlockTime: platform.avgBlockTime,
+              views: platform.contentSplit.live.views,
+            };
+          })}
+        highlightsMetrics={dashboardStats.platforms
+          .filter((platform) => platform.contentSplit.highlights.violations > 0)
+          .map((platform) => {
+            const Icon = getPlatformIconComponent(platform.name);
+            const platformColor = getPlatformColor(platform.name);
+            const detected = platform.contentSplit.highlights.violations;
+            // Calculate blocked count for Highlights content type
+            // Use overall success rate to estimate blocked count for Highlights
+            const blocked = Math.round((detected * platform.successRate) / 100);
+            
+            return {
+              platform: platform.name,
+              icon: <Icon className="h-4 w-4" style={{ color: platformColor }} />,
+              detected: detected,
+              blocked: blocked,
+              successRate: platform.successRate,
+              avgBlockTime: platform.avgBlockTime,
+              views: platform.contentSplit.highlights.views,
+            };
+          })}
       />
     </div>
   );

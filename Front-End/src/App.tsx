@@ -16,6 +16,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
+import ProblematicAccounts from "./pages/ProblematicAccounts";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +35,7 @@ const AuthenticatedLayout = () => {
                 <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/matches" element={<ProtectedRoute><Matches /></ProtectedRoute>} />
                 <Route path="/match/:id" element={<ProtectedRoute><MatchDashboard /></ProtectedRoute>} />
+                <Route path="/problematic-accounts" element={<ProtectedRoute><ProblematicAccounts /></ProtectedRoute>} />
                 <Route path="/reports" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/users" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

@@ -228,6 +228,165 @@ router.delete("/:violationId/audit-log/:logEntryId", async (req, res) => {
   }
 });
 
+// GET /api/violations/problematic-accounts - Get most problematic accounts/channels
+// IMPORTANT: This route must be defined BEFORE /:id route to avoid route conflicts
+router.get("/problematic-accounts", async (req, res) => {
+  try {
+    const { league, weekFilter, week, weekStart, weekEnd, limit, platformId } = req.query;
+    
+    // Validate limit
+    const limitNum = limit ? parseInt(limit) : 50;
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 1000) {
+      return res.status(400).json({ 
+        error: "Invalid limit. Must be between 1 and 1000.",
+        received: limit 
+      });
+    }
+
+    // Build match filter based on league and week
+    const matchFilter = { isDeleted: { $ne: true } };
+    if (league && league !== "all" && league !== "null") {
+      if (!["saudi", "italian", "spanish"].includes(league)) {
+        return res.status(400).json({ error: "Invalid league. Must be saudi, italian, or spanish." });
+      }
+      matchFilter.league = league;
+    }
+
+    // Handle week filtering
+    if (weekFilter === "single" && week) {
+      matchFilter.week = week.toString();
+    } else if (weekFilter === "range" && weekStart && weekEnd) {
+      const startNum = parseInt(weekStart);
+      const endNum = parseInt(weekEnd);
+      if (isNaN(startNum) || isNaN(endNum) || startNum < 1 || endNum < 1 || startNum > endNum) {
+        return res.status(400).json({ error: "Invalid week range. Start must be <= end and both must be >= 1." });
+      }
+      const weekNumbers = [];
+      for (let w = startNum; w <= endNum; w++) {
+        weekNumbers.push(w.toString());
+      }
+      matchFilter.week = { $in: weekNumbers };
+    }
+
+    // Get matches that match the filter
+    const matches = await Match.find(matchFilter).select("_id externalMatchId").lean();
+    const matchIds = matches.map((m) => m._id);
+
+    // If no matches found, return empty array
+    if (matchIds.length === 0) {
+      return res.json([]);
+    }
+
+    // Helper function to process views (same as dashboard stats)
+    const processViews = (viewsStr) => {
+      if (!viewsStr || viewsStr === "0") return 0;
+      // Handle "K" suffix (e.g., "1.5K" = 1500)
+      if (viewsStr.includes("K") || viewsStr.includes("k")) {
+        const num = parseFloat(viewsStr.replace(/[Kk,]/g, "")) || 0;
+        return num * 1000;
+      }
+      return parseFloat(viewsStr.replace(/,/g, "")) || 0;
+    };
+
+    // Build violation match filter
+    const violationMatchFilter = {
+      matchId: { $in: matchIds },
+    };
+    
+    // Add platform filter if provided
+    if (platformId && platformId !== "all") {
+      violationMatchFilter.platformId = platformId;
+    }
+
+    // Aggregate violations by accountChannel and platform
+    const problematicAccountsRaw = await Violation.aggregate([
+      {
+        $match: violationMatchFilter,
+      },
+      {
+        $group: {
+          _id: {
+            accountChannel: "$accountChannel",
+            platformName: "$platformName",
+            platformId: "$platformId",
+          },
+          totalViolations: { $sum: 1 },
+          viewsArray: { $push: "$views" },
+          activeCount: {
+            $sum: { $cond: [{ $eq: ["$status", "Active"] }, 1, 0] },
+          },
+          blockedCount: {
+            $sum: { $cond: [{ $eq: ["$status", "Blocked"] }, 1, 0] },
+          },
+          removedCount: {
+            $sum: { $cond: [{ $eq: ["$status", "Removed"] }, 1, 0] },
+          },
+          underReviewCount: {
+            $sum: { $cond: [{ $eq: ["$status", "Under Review"] }, 1, 0] },
+          },
+          liveCount: {
+            $sum: { $cond: [{ $eq: ["$contentType", "Live"] }, 1, 0] },
+          },
+          highlightsCount: {
+            $sum: { $cond: [{ $eq: ["$contentType", "Highlights"] }, 1, 0] },
+          },
+          othersCount: {
+            $sum: { $cond: [{ $eq: ["$contentType", "Other"] }, 1, 0] },
+          },
+          matchesAffected: { $addToSet: "$matchId" },
+          latestViolation: { $max: "$timeAdded" },
+        },
+      },
+      {
+        $project: {
+          accountChannel: "$_id.accountChannel",
+          platformName: "$_id.platformName",
+          platformId: "$_id.platformId",
+          totalViolations: 1,
+          viewsArray: 1,
+          activeCount: 1,
+          blockedCount: 1,
+          removedCount: 1,
+          underReviewCount: 1,
+          liveCount: 1,
+          highlightsCount: 1,
+          othersCount: 1,
+          matchesAffected: { $size: "$matchesAffected" },
+          latestViolation: 1,
+        },
+      },
+      {
+        $sort: { totalViolations: -1 },
+      },
+      {
+        $limit: limitNum,
+      },
+    ]);
+
+    // Process views in JavaScript (simpler and more reliable)
+    const problematicAccounts = problematicAccountsRaw.map((account) => {
+      const totalViews = account.viewsArray.reduce(
+        (sum, viewsStr) => sum + processViews(viewsStr),
+        0
+      );
+      return {
+        ...account,
+        totalViews,
+        viewsArray: undefined, // Remove from response
+      };
+    });
+
+    res.json(problematicAccounts);
+  } catch (error) {
+    console.error("Error fetching problematic accounts:", error);
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ 
+      error: error.message || "Internal server error",
+      details: process.env.NODE_ENV === "development" ? error.stack : undefined
+    });
+  }
+});
+
 // GET /api/violations/:id - Get single violation
 router.get("/:id", async (req, res) => {
   try {
