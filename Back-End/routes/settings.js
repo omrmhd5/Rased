@@ -20,7 +20,7 @@ router.get("/", async (req, res) => {
 // PUT /api/settings - Update settings (singleton)
 router.put("/", async (req, res) => {
   try {
-    const { targetMins } = req.body;
+    const { targetMins, viewsThreshold, violationsThreshold } = req.body;
 
     // Validate targetMins if provided
     if (targetMins !== undefined) {
@@ -32,10 +32,36 @@ router.put("/", async (req, res) => {
       }
     }
 
+    // Validate viewsThreshold if provided
+    if (viewsThreshold !== undefined) {
+      const viewsThresholdNum = Number(viewsThreshold);
+      if (isNaN(viewsThresholdNum) || viewsThresholdNum < 0) {
+        return res.status(400).json({
+          error: "viewsThreshold must be a number greater than or equal to 0",
+        });
+      }
+    }
+
+    // Validate violationsThreshold if provided
+    if (violationsThreshold !== undefined) {
+      const violationsThresholdNum = Number(violationsThreshold);
+      if (isNaN(violationsThresholdNum) || violationsThresholdNum < 0) {
+        return res.status(400).json({
+          error: "violationsThreshold must be a number greater than or equal to 0",
+        });
+      }
+    }
+
     // Build update object
     const updates = {};
     if (targetMins !== undefined) {
       updates.targetMins = Number(targetMins);
+    }
+    if (viewsThreshold !== undefined) {
+      updates.viewsThreshold = Number(viewsThreshold);
+    }
+    if (violationsThreshold !== undefined) {
+      updates.violationsThreshold = Number(violationsThreshold);
     }
 
     // Update the singleton settings
@@ -53,7 +79,7 @@ router.put("/", async (req, res) => {
 // PATCH /api/settings - Partially update settings (singleton)
 router.patch("/", async (req, res) => {
   try {
-    const { targetMins } = req.body;
+    const { targetMins, viewsThreshold, violationsThreshold } = req.body;
 
     // Build update object (only include provided fields)
     const updates = {};
@@ -65,6 +91,24 @@ router.patch("/", async (req, res) => {
         });
       }
       updates.targetMins = targetMinsNum;
+    }
+    if (viewsThreshold !== undefined) {
+      const viewsThresholdNum = Number(viewsThreshold);
+      if (isNaN(viewsThresholdNum) || viewsThresholdNum < 0) {
+        return res.status(400).json({
+          error: "viewsThreshold must be a number greater than or equal to 0",
+        });
+      }
+      updates.viewsThreshold = viewsThresholdNum;
+    }
+    if (violationsThreshold !== undefined) {
+      const violationsThresholdNum = Number(violationsThreshold);
+      if (isNaN(violationsThresholdNum) || violationsThresholdNum < 0) {
+        return res.status(400).json({
+          error: "violationsThreshold must be a number greater than or equal to 0",
+        });
+      }
+      updates.violationsThreshold = violationsThresholdNum;
     }
 
     // If no updates provided, return current settings

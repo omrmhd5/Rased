@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
-import { Settings as SettingsIcon, Clock, Users, Plus, Edit2, Trash2, Save, X, Loader2 } from "lucide-react";
+import { Settings as SettingsIcon, Clock, Users, Plus, Edit2, Trash2, Save, X, Loader2, AlertTriangle } from "lucide-react";
 import { API_URL } from "@/components/MatchDashboard/types";
 
 interface User {
@@ -29,6 +29,12 @@ export default function Settings() {
   const [minutesInput, setMinutesInput] = useState<string>("15");
   const [hoursInput, setHoursInput] = useState<string>("0.25");
   const [focusedField, setFocusedField] = useState<"minutes" | "hours" | null>(null);
+  
+  // Threshold states
+  const [viewsThreshold, setViewsThreshold] = useState<number>(1000);
+  const [viewsThresholdInput, setViewsThresholdInput] = useState<string>("1000");
+  const [violationsThreshold, setViolationsThreshold] = useState<number>(5);
+  const [violationsThresholdInput, setViolationsThresholdInput] = useState<string>("5");
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -67,6 +73,14 @@ export default function Settings() {
         setTargetHours(hours);
         setMinutesInput(minutes.toString());
         setHoursInput(hours.toFixed(2));
+        
+        // Load thresholds
+        const viewsThresh = settings.viewsThreshold ?? 1000;
+        const violationsThresh = settings.violationsThreshold ?? 5;
+        setViewsThreshold(viewsThresh);
+        setViewsThresholdInput(viewsThresh.toLocaleString("en-US"));
+        setViolationsThreshold(violationsThresh);
+        setViolationsThresholdInput(violationsThresh.toString());
       } catch (error) {
         console.error("Error loading settings:", error);
         toast({
@@ -81,6 +95,12 @@ export default function Settings() {
         setTargetHours(hours);
         setMinutesInput(minutes.toString());
         setHoursInput(hours.toFixed(2));
+        
+        // Use default thresholds
+        setViewsThreshold(1000);
+        setViewsThresholdInput("1000");
+        setViolationsThreshold(5);
+        setViolationsThresholdInput("5");
       } finally {
         setLoadingSettings(false);
       }
@@ -175,6 +195,39 @@ export default function Settings() {
     }
   };
 
+  // Handle views threshold change
+  const handleViewsThresholdChange = (value: string) => {
+    // Remove commas and allow only numbers
+    const filtered = value.replace(/[^0-9]/g, "");
+    setViewsThresholdInput(filtered);
+    const num = parseInt(filtered);
+    if (!isNaN(num) && num >= 0) {
+      setViewsThreshold(num);
+    } else if (filtered === "") {
+      setViewsThreshold(0);
+    }
+  };
+
+  // Handle violations threshold change
+  const handleViolationsThresholdChange = (value: string) => {
+    // Allow only numbers
+    const filtered = value.replace(/[^0-9]/g, "");
+    setViolationsThresholdInput(filtered);
+    const num = parseInt(filtered);
+    if (!isNaN(num) && num >= 0) {
+      setViolationsThreshold(num);
+    } else if (filtered === "") {
+      setViolationsThreshold(0);
+    }
+  };
+
+  // Format views threshold on blur
+  const handleViewsThresholdBlur = () => {
+    if (viewsThreshold >= 0) {
+      setViewsThresholdInput(viewsThreshold.toLocaleString("en-US"));
+    }
+  };
+
   // Save target minutes to backend API
   const handleSaveTargetMinutes = async () => {
     if (targetMinutes < 1) {
@@ -221,6 +274,62 @@ export default function Settings() {
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to save settings",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Save thresholds to backend API
+  const handleSaveThresholds = async () => {
+    if (viewsThreshold < 0 || violationsThreshold < 0) {
+      toast({
+        title: "Validation Error",
+        description: "Thresholds must be greater than or equal to 0.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch(`${API_URL}/settings`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          viewsThreshold: viewsThreshold,
+          violationsThreshold: violationsThreshold,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to save thresholds");
+      }
+
+      const updatedSettings = await response.json();
+      
+      // Update local state with the response
+      const viewsThresh = updatedSettings.viewsThreshold ?? viewsThreshold;
+      const violationsThresh = updatedSettings.violationsThreshold ?? violationsThreshold;
+      setViewsThreshold(viewsThresh);
+      setViewsThresholdInput(viewsThresh.toLocaleString("en-US"));
+      setViolationsThreshold(violationsThresh);
+      setViolationsThresholdInput(violationsThresh.toString());
+
+      toast({
+        title: "Thresholds Saved",
+        description: `Views threshold: ${viewsThresh.toLocaleString("en-US")}, Violations threshold: ${violationsThresh}`,
+      });
+    } catch (error) {
+      console.error("Error saving thresholds:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save thresholds",
         variant: "destructive",
       });
     } finally {
@@ -450,6 +559,79 @@ export default function Settings() {
                     <>
                       <Save className="h-4 w-4 mr-2" />
                       Save Target Time
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Problematic Accounts Thresholds */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-primary" />
+              <CardTitle>Problematic Accounts Thresholds</CardTitle>
+            </div>
+            <CardDescription>
+              Set thresholds for views and violations. Accounts above these thresholds are considered problematic.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {loadingSettings ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="viewsThreshold">Views Threshold</Label>
+                    <Input
+                      id="viewsThreshold"
+                      type="text"
+                      value={viewsThresholdInput}
+                      onChange={(e) => handleViewsThresholdChange(e.target.value)}
+                      onBlur={handleViewsThresholdBlur}
+                      className="w-full"
+                      placeholder="0"
+                      disabled={saving}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Accounts with views above this number are considered problematic
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="violationsThreshold">Violations Threshold</Label>
+                    <Input
+                      id="violationsThreshold"
+                      type="text"
+                      value={violationsThresholdInput}
+                      onChange={(e) => handleViolationsThresholdChange(e.target.value)}
+                      className="w-full"
+                      placeholder="0"
+                      disabled={saving}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Accounts with violations above this number are considered problematic
+                    </p>
+                  </div>
+                </div>
+                <Button 
+                  onClick={handleSaveThresholds} 
+                  className="w-full sm:w-auto"
+                  disabled={saving || loadingSettings}
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Thresholds
                     </>
                   )}
                 </Button>

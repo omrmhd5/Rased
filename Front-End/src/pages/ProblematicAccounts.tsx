@@ -75,6 +75,11 @@ export default function ProblematicAccounts() {
     "violations"
   );
 
+  // Thresholds from settings
+  const [viewsThreshold, setViewsThreshold] = useState<number>(1000);
+  const [violationsThreshold, setViolationsThreshold] = useState<number>(5);
+  const [loadingThresholds, setLoadingThresholds] = useState(true);
+
   // Get platform operations for icons
   const platformOperations = getInitialPlatformOperations();
 
@@ -90,6 +95,32 @@ export default function ProblematicAccounts() {
     const platform = platformOperations.find((p) => p.name === platformName);
     return platform ? platform.color : "hsl(var(--muted-foreground))";
   };
+
+  // Fetch thresholds from settings
+  useEffect(() => {
+    const fetchThresholds = async () => {
+      try {
+        const response = await fetch(`${API_URL}/settings`, {
+          credentials: "include",
+        });
+
+        if (response.ok) {
+          const settings = await response.json();
+          setViewsThreshold(settings.viewsThreshold ?? 1000);
+          setViolationsThreshold(settings.violationsThreshold ?? 5);
+        }
+      } catch (error) {
+        console.error("Error fetching thresholds:", error);
+        // Use defaults if API fails
+        setViewsThreshold(1000);
+        setViolationsThreshold(5);
+      } finally {
+        setLoadingThresholds(false);
+      }
+    };
+
+    fetchThresholds();
+  }, [API_URL]);
 
   // Fetch problematic accounts
   useEffect(() => {
@@ -145,7 +176,19 @@ export default function ProblematicAccounts() {
         }
 
         const data = await response.json();
-        setAccounts(data || []);
+
+        // Filter accounts based on thresholds
+        // An account is problematic if it has views >= viewsThreshold OR violations >= violationsThreshold
+        const filteredData = (data || []).filter(
+          (account: ProblematicAccount) => {
+            return (
+              account.totalViews >= viewsThreshold ||
+              account.totalViolations >= violationsThreshold
+            );
+          }
+        );
+
+        setAccounts(filteredData);
       } catch (error) {
         console.error("Error fetching problematic accounts:", error);
       } finally {
@@ -153,7 +196,9 @@ export default function ProblematicAccounts() {
       }
     };
 
-    fetchProblematicAccounts();
+    if (!loadingThresholds) {
+      fetchProblematicAccounts();
+    }
   }, [
     league,
     weekFilterType,
@@ -165,6 +210,10 @@ export default function ProblematicAccounts() {
     stageRangeStart,
     stageRangeEnd,
     selectedPlatform,
+    viewsThreshold,
+    violationsThreshold,
+    loadingThresholds,
+    API_URL,
   ]);
 
   // Sort accounts
@@ -206,6 +255,13 @@ export default function ProblematicAccounts() {
           <p className="text-sm text-muted-foreground mt-1">
             Accounts and channels with the most violations
           </p>
+          {!loadingThresholds && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Showing accounts with views ≥{" "}
+              {viewsThreshold.toLocaleString("en-US")} or violations ≥{" "}
+              {violationsThreshold}
+            </p>
+          )}
         </div>
       </div>
 

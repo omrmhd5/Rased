@@ -14,6 +14,16 @@ const settingsSchema = new mongoose.Schema(
       default: 15,
       min: 1,
     },
+    viewsThreshold: {
+      type: Number,
+      default: 1000,
+      min: 0,
+    },
+    violationsThreshold: {
+      type: Number,
+      default: 5,
+      min: 0,
+    },
   },
   {
     timestamps: true, // Adds createdAt and updatedAt fields
@@ -24,7 +34,12 @@ const settingsSchema = new mongoose.Schema(
 settingsSchema.statics.getSingleton = async function () {
   let settings = await this.findOne({ identifier: "singleton" });
   if (!settings) {
-    settings = await this.create({ identifier: "singleton", targetMins: 15 });
+    settings = await this.create({ 
+      identifier: "singleton", 
+      targetMins: 15,
+      viewsThreshold: 1000,
+      violationsThreshold: 5,
+    });
   }
   return settings;
 };
