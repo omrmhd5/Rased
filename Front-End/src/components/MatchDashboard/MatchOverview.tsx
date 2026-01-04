@@ -119,8 +119,16 @@ export function MatchOverview({
             {match.team1} vs {match.team2}
           </h1>
           <p className="text-xs text-muted-foreground">
-            Week {match.week || "N/A"} • {getCompetitionName() || "N/A"} •{" "}
-            {match.stadium || "N/A"}
+            {(() => {
+              const isSuperCup =
+                match.league === "saudi-super-cup" ||
+                match.league === "spanish-super-cup";
+              if (isSuperCup) {
+                return `Stage ${match.stage || "N/A"}`;
+              }
+              return `Week ${match.week || "N/A"}`;
+            })()}{" "}
+            • {getCompetitionName() || "N/A"} • {match.stadium || "N/A"}
           </p>
         </div>
         <div className="text-right flex flex-col items-end gap-2">

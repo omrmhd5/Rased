@@ -89,15 +89,9 @@ const getPlatformColor = (name: string) => {
   }
 };
 
-// Format views helper
+// Format views helper (pure numbers with commas, no abbreviations)
 const formatViewsForDisplay = (views: number) => {
-  if (views >= 1000000) {
-    return `${(views / 1000000).toFixed(1)}M`;
-  }
-  if (views >= 1000) {
-    return `${(views / 1000).toFixed(1)}K`;
-  }
-  return views.toString();
+  return views.toLocaleString("en-US");
 };
 
 type ChartView = "views" | "violations" | "blocked";

@@ -50,6 +50,22 @@ export default function ProblematicAccounts() {
   const [singleWeek, setSingleWeek] = useState<string>("1");
   const [weekRangeStart, setWeekRangeStart] = useState<string>("1");
   const [weekRangeEnd, setWeekRangeEnd] = useState<string>("12");
+
+  // Stage filtering for Super Cups
+  const [stageFilterType, setStageFilterType] = useState<WeekFilterType>("all");
+  const [singleStage, setSingleStage] = useState<string>("");
+  const [stageRangeStart, setStageRangeStart] = useState<string>("");
+  const [stageRangeEnd, setStageRangeEnd] = useState<string>("");
+
+  // Hardcoded stages for Super Cups (similar to weeks for regular leagues)
+  const availableStages = [
+    "16th Finals",
+    "8th Finals",
+    "Quarter-finals",
+    "Semi-finals",
+    "Final",
+  ];
+
   const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
 
   // Data
@@ -80,18 +96,35 @@ export default function ProblematicAccounts() {
     const fetchProblematicAccounts = async () => {
       setLoading(true);
       try {
+        const isSuperCup =
+          league === "saudi-super-cup" || league === "spanish-super-cup";
         const params = new URLSearchParams();
         if (league) params.append("league", league);
         if (selectedPlatform && selectedPlatform !== "all") {
           params.append("platformId", selectedPlatform);
         }
-        if (weekFilterType !== "all") {
-          params.append("weekFilter", weekFilterType);
-          if (weekFilterType === "single") {
-            params.append("week", singleWeek);
-          } else if (weekFilterType === "range") {
-            params.append("weekStart", weekRangeStart);
-            params.append("weekEnd", weekRangeEnd);
+
+        if (isSuperCup) {
+          // Use stage filtering for Super Cups
+          if (stageFilterType !== "all") {
+            params.append("stageFilter", stageFilterType);
+            if (stageFilterType === "single") {
+              params.append("stage", singleStage);
+            } else if (stageFilterType === "range") {
+              params.append("stageStart", stageRangeStart);
+              params.append("stageEnd", stageRangeEnd);
+            }
+          }
+        } else {
+          // Use week filtering for regular leagues
+          if (weekFilterType !== "all") {
+            params.append("weekFilter", weekFilterType);
+            if (weekFilterType === "single") {
+              params.append("week", singleWeek);
+            } else if (weekFilterType === "range") {
+              params.append("weekStart", weekRangeStart);
+              params.append("weekEnd", weekRangeEnd);
+            }
           }
         }
         params.append("limit", "100");
@@ -127,6 +160,10 @@ export default function ProblematicAccounts() {
     singleWeek,
     weekRangeStart,
     weekRangeEnd,
+    stageFilterType,
+    singleStage,
+    stageRangeStart,
+    stageRangeEnd,
     selectedPlatform,
   ]);
 
@@ -141,14 +178,23 @@ export default function ProblematicAccounts() {
     }
   });
 
-  // Format views
+  // Format views (pure numbers with commas, no abbreviations)
   const formatViews = (views: number) => {
-    if (views >= 1000000) {
-      return `${(views / 1000000).toFixed(1)}M`;
-    } else if (views >= 1000) {
-      return `${(views / 1000).toFixed(1)}K`;
+    return views.toLocaleString("en-US");
+  };
+
+  // Helper to get league icon path
+  const getLeagueIcon = (league: League): string => {
+    switch (league) {
+      case "saudi":
+        return "/icons/Saudi_League.svg";
+      case "saudi-super-cup":
+        return "/icons/Saudi_Cup.png";
+      case "spanish-super-cup":
+        return "/icons/Spanish_Cup.svg";
+      default:
+        return "";
     }
-    return views.toLocaleString();
   };
 
   return (
@@ -177,15 +223,42 @@ export default function ProblematicAccounts() {
             onValueChange={(value) =>
               setLeague(value === "all" ? null : (value as League))
             }>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="League" />
+            <SelectTrigger className="w-[180px]">
+              <div className="flex items-center gap-2">
+                <SelectValue placeholder="League" />
+              </div>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Leagues</SelectItem>
-              <SelectItem value="saudi">Saudi Pro League</SelectItem>
-              <SelectItem value="saudi-super-cup">Saudi Super Cup</SelectItem>
+              <SelectItem value="saudi">
+                <div className="flex items-center gap-2">
+                  <img
+                    src="/icons/Saudi_League.svg"
+                    alt="Saudi Pro League"
+                    className="h-6 w-6 object-contain flex-shrink-0"
+                  />
+                  <span>Saudi Pro League</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="saudi-super-cup">
+                <div className="flex items-center gap-2">
+                  <img
+                    src="/icons/Saudi_Cup.png"
+                    alt="Saudi Super Cup"
+                    className="h-6 w-6 object-contain flex-shrink-0 rounded"
+                  />
+                  <span>Saudi Super Cup</span>
+                </div>
+              </SelectItem>
               <SelectItem value="spanish-super-cup">
-                Spanish Super Cup
+                <div className="flex items-center gap-2">
+                  <img
+                    src="/icons/Spanish_Cup.svg"
+                    alt="Spanish Super Cup"
+                    className="h-6 w-6 object-contain flex-shrink-0"
+                  />
+                  <span>Spanish Super Cup</span>
+                </div>
               </SelectItem>
             </SelectContent>
           </Select>
@@ -205,68 +278,161 @@ export default function ProblematicAccounts() {
             </SelectContent>
           </Select>
 
-          {/* Week Filter Type */}
-          <Select
-            value={weekFilterType}
-            onValueChange={(value) =>
-              setWeekFilterType(value as WeekFilterType)
-            }>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Week Filter" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Weeks</SelectItem>
-              <SelectItem value="single">Single Week</SelectItem>
-              <SelectItem value="range">Week Range</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Week/Stage Filter Type */}
+          {(() => {
+            const isSuperCup =
+              league === "saudi-super-cup" || league === "spanish-super-cup";
 
-          {/* Single Week */}
-          {weekFilterType === "single" && (
-            <Select value={singleWeek} onValueChange={setSingleWeek}>
-              <SelectTrigger className="w-[100px]">
-                <SelectValue placeholder="Week" />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 38 }, (_, i) => i + 1).map((week) => (
-                  <SelectItem key={week} value={week.toString()}>
-                    Week {week}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+            if (isSuperCup) {
+              // Stage filters for Super Cups
+              return (
+                <>
+                  <Select
+                    value={stageFilterType}
+                    onValueChange={(value) =>
+                      setStageFilterType(value as WeekFilterType)
+                    }>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Stage Filter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Stages</SelectItem>
+                      <SelectItem value="single">Single Stage</SelectItem>
+                      <SelectItem value="range">Stage Range</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-          {/* Week Range */}
-          {weekFilterType === "range" && (
-            <div className="flex items-center gap-2">
-              <Select value={weekRangeStart} onValueChange={setWeekRangeStart}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Start Week" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 38 }, (_, i) => i + 1).map((week) => (
-                    <SelectItem key={week} value={week.toString()}>
-                      Week {week}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span className="text-muted-foreground">to</span>
-              <Select value={weekRangeEnd} onValueChange={setWeekRangeEnd}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="End Week" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 38 }, (_, i) => i + 1).map((week) => (
-                    <SelectItem key={week} value={week.toString()}>
-                      Week {week}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+                  {/* Single Stage */}
+                  {stageFilterType === "single" && (
+                    <Select value={singleStage} onValueChange={setSingleStage}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Stage" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableStages.map((stage) => (
+                          <SelectItem key={stage} value={stage}>
+                            {stage}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {/* Stage Range */}
+                  {stageFilterType === "range" && (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={stageRangeStart}
+                        onValueChange={setStageRangeStart}>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Start Stage" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableStages.map((stage) => (
+                            <SelectItem key={stage} value={stage}>
+                              {stage}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-muted-foreground">to</span>
+                      <Select
+                        value={stageRangeEnd}
+                        onValueChange={setStageRangeEnd}>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="End Stage" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableStages.map((stage) => (
+                            <SelectItem key={stage} value={stage}>
+                              {stage}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </>
+              );
+            } else {
+              // Week filters for regular leagues
+              return (
+                <>
+                  <Select
+                    value={weekFilterType}
+                    onValueChange={(value) =>
+                      setWeekFilterType(value as WeekFilterType)
+                    }>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Week Filter" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Weeks</SelectItem>
+                      <SelectItem value="single">Single Week</SelectItem>
+                      <SelectItem value="range">Week Range</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Single Week */}
+                  {weekFilterType === "single" && (
+                    <Select value={singleWeek} onValueChange={setSingleWeek}>
+                      <SelectTrigger className="w-[100px]">
+                        <SelectValue placeholder="Week" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 38 }, (_, i) => i + 1).map(
+                          (week) => (
+                            <SelectItem key={week} value={week.toString()}>
+                              Week {week}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {/* Week Range */}
+                  {weekFilterType === "range" && (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={weekRangeStart}
+                        onValueChange={setWeekRangeStart}>
+                        <SelectTrigger className="w-[100px]">
+                          <SelectValue placeholder="Start Week" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 38 }, (_, i) => i + 1).map(
+                            (week) => (
+                              <SelectItem key={week} value={week.toString()}>
+                                Week {week}
+                              </SelectItem>
+                            )
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-muted-foreground">to</span>
+                      <Select
+                        value={weekRangeEnd}
+                        onValueChange={setWeekRangeEnd}>
+                        <SelectTrigger className="w-[100px]">
+                          <SelectValue placeholder="End Week" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 38 }, (_, i) => i + 1).map(
+                            (week) => (
+                              <SelectItem key={week} value={week.toString()}>
+                                Week {week}
+                              </SelectItem>
+                            )
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </>
+              );
+            }
+          })()}
 
           {/* Sort By */}
           <div className="ml-auto flex items-center gap-2">

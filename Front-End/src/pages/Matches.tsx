@@ -60,6 +60,20 @@ const leagueNames = {
   "spanish-super-cup": "Spanish Super Cup",
 };
 
+// Helper to get league icon path
+const getLeagueIcon = (league: League): string => {
+  switch (league) {
+    case "saudi":
+      return "/icons/Saudi_League.svg";
+    case "saudi-super-cup":
+      return "/icons/Saudi_Cup.png";
+    case "spanish-super-cup":
+      return "/icons/Spanish_Cup.svg";
+    default:
+      return "";
+  }
+};
+
 interface Competition {
   _id?: string;
   externalId: string;
@@ -83,10 +97,11 @@ interface Match {
   date: string;
   time: string;
   week: string;
+  stage?: string; // Stage for Super Cups
   competition?: Competition | string; // Can be populated object or string
   stadium?: string;
   status: "upcoming" | "live" | "finished" | "postponed";
-  league: "saudi" | "italian" | "spanish";
+  league: "saudi" | "saudi-super-cup" | "spanish-super-cup";
   winner?: "home" | "away" | "draw" | null;
   scores?: {
     home: number;
@@ -110,7 +125,17 @@ type MatchFilter = "all" | "live" | "upcoming" | "completed";
 export default function Matches() {
   const navigate = useNavigate();
   const [selectedWeek, setSelectedWeek] = useState("12");
+  const [selectedStage, setSelectedStage] = useState<string>("");
   const [selectedLeague, setSelectedLeague] = useState<League>(null);
+  
+  // Hardcoded stages for Super Cups (similar to weeks for regular leagues)
+  const availableStages = [
+    "16th Finals",
+    "8th Finals",
+    "Quarter-finals",
+    "Semi-finals",
+    "Final",
+  ];
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAddMatchOpen, setIsAddMatchOpen] = useState(false);
@@ -123,6 +148,7 @@ export default function Matches() {
   const [formDate, setFormDate] = useState("");
   const [formTime, setFormTime] = useState("");
   const [formWeek, setFormWeek] = useState("");
+  const [formStage, setFormStage] = useState("");
   const [formCompetition, setFormCompetition] = useState("");
   const [formTeam1, setFormTeam1] = useState("");
   const [formTeam2, setFormTeam2] = useState("");
@@ -137,7 +163,7 @@ export default function Matches() {
   const [formScoreHome, setFormScoreHome] = useState("");
   const [formScoreAway, setFormScoreAway] = useState("");
 
-  // Load selected league and week from localStorage on mount
+  // Load selected league and week/stage from localStorage on mount
   useEffect(() => {
     const savedLeague = localStorage.getItem("selectedLeague") as League;
     if (savedLeague && ["saudi", "saudi-super-cup", "spanish-super-cup"].includes(savedLeague)) {
@@ -147,18 +173,29 @@ export default function Matches() {
       navigate("/");
     }
 
-    const savedWeek = localStorage.getItem("selectedWeek");
-    if (savedWeek) {
-      setSelectedWeek(savedWeek);
+    const isSuperCup = savedLeague === "saudi-super-cup" || savedLeague === "spanish-super-cup";
+    if (isSuperCup) {
+      const savedStage = localStorage.getItem("selectedStage");
+      if (savedStage) {
+        setSelectedStage(savedStage);
+      }
+    } else {
+      const savedWeek = localStorage.getItem("selectedWeek");
+      if (savedWeek) {
+        setSelectedWeek(savedWeek);
+      }
     }
   }, [navigate]);
 
-  // Save selected week to localStorage whenever it changes
+  // Save selected week/stage to localStorage whenever it changes
   useEffect(() => {
-    if (selectedWeek) {
+    const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
+    if (isSuperCup && selectedStage) {
+      localStorage.setItem("selectedStage", selectedStage);
+    } else if (!isSuperCup && selectedWeek) {
       localStorage.setItem("selectedWeek", selectedWeek);
     }
-  }, [selectedWeek]);
+  }, [selectedWeek, selectedStage, selectedLeague]);
 
   // Fetch matches from database
   const fetchMatchesFromDB = useCallback(async () => {
@@ -166,13 +203,15 @@ export default function Matches() {
 
     setLoading(true);
     try {
+      const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
+      const url = isSuperCup
+        ? `${API_URL}/matches?league=${selectedLeague}&stage=${selectedStage}`
+        : `${API_URL}/matches?league=${selectedLeague}&week=${selectedWeek}`;
+      
       // Fetch matches directly from database
-      const response = await fetch(
-        `${API_URL}/matches?league=${selectedLeague}&week=${selectedWeek}`,
-        {
-          credentials: "include",
-        }
-      );
+      const response = await fetch(url, {
+        credentials: "include",
+      });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -217,29 +256,33 @@ export default function Matches() {
     } finally {
       setLoading(false);
     }
-  }, [selectedLeague, selectedWeek]);
+  }, [selectedLeague, selectedWeek, selectedStage]);
 
   // Sync matches from external API in the background (don't wait for it)
   const syncMatchesFromAPI = useCallback(async () => {
     if (!selectedLeague) return;
 
     try {
+      const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
+      // For Super Cups, we don't filter by stage in external API sync (fetch all)
+      const syncUrl = isSuperCup
+        ? `${API_URL}/matches/external?league=${selectedLeague}`
+        : `${API_URL}/matches/external?league=${selectedLeague}&week=${selectedWeek}`;
+      
       // Trigger API sync - don't wait for it, don't show loading
-      const response = await fetch(
-        `${API_URL}/matches/external?league=${selectedLeague}&week=${selectedWeek}`,
-        {
-          credentials: "include",
-        }
-      );
+      const response = await fetch(syncUrl, {
+        credentials: "include",
+      });
 
       if (response.ok) {
         // Sync completed successfully, refresh from DB
-        const refreshResponse = await fetch(
-          `${API_URL}/matches?league=${selectedLeague}&week=${selectedWeek}`,
-          {
-            credentials: "include",
-          }
-        );
+        const refreshUrl = isSuperCup
+          ? `${API_URL}/matches?league=${selectedLeague}&stage=${selectedStage}`
+          : `${API_URL}/matches?league=${selectedLeague}&week=${selectedWeek}`;
+        
+        const refreshResponse = await fetch(refreshUrl, {
+          credentials: "include",
+        });
 
         if (refreshResponse.ok) {
           const data = await refreshResponse.json();
@@ -269,7 +312,7 @@ export default function Matches() {
       // Silently fail - API sync errors shouldn't affect UI
       console.error("Error syncing matches from API:", error);
     }
-  }, [selectedLeague, selectedWeek]);
+  }, [selectedLeague, selectedWeek, selectedStage]);
 
   // Fetch matches from DB when league/week changes
   useEffect(() => {
@@ -288,6 +331,7 @@ export default function Matches() {
     setFormDate("");
     setFormTime("");
     setFormWeek("");
+    setFormStage("");
     setFormCompetition("");
     setFormTeam1("");
     setFormTeam2("");
@@ -343,6 +387,7 @@ export default function Matches() {
     setFormDate(match.date || "");
     setFormTime(convertTimeTo24Hour(match.time || ""));
     setFormWeek(match.week || "");
+    setFormStage(match.stage || "");
     
     // Map database competition names to frontend dropdown values
     const competitionName =
@@ -372,7 +417,10 @@ export default function Matches() {
   };
 
   const handleUpdateMatch = async () => {
-    if (!selectedMatch || !formDate || !formTime || !formTeam1 || !formTeam2 || !formWeek) {
+    const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
+    const requiredField = isSuperCup ? formStage : formWeek;
+    
+    if (!selectedMatch || !formDate || !formTime || !formTeam1 || !formTeam2 || !requiredField) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -382,13 +430,12 @@ export default function Matches() {
     }
 
     try {
-      const updateData = {
+      const updateData: any = {
             description: formDescription || undefined,
             team1: formTeam1,
             team2: formTeam2,
             date: formDate,
             time: convertTimeTo12Hour(formTime),
-            week: formWeek,
             competition: formCompetition || undefined,
             stadium: formVenue || undefined,
             league: formCompetition
@@ -413,6 +460,13 @@ export default function Matches() {
                   }
                 : undefined,
       };
+      
+      // Add week or stage based on league type
+      if (isSuperCup) {
+        updateData.stage = formStage;
+      } else {
+        updateData.week = formWeek;
+      }
 
       const response = await fetch(
         `${API_URL}/matches/${selectedMatch.externalMatchId}`,
@@ -515,7 +569,10 @@ export default function Matches() {
   };
 
   const handleAddMatch = async () => {
-    if (!formDate || !formTime || !formTeam1 || !formTeam2 || !formWeek) {
+    const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
+    const requiredField = isSuperCup ? formStage : formWeek;
+    
+    if (!formDate || !formTime || !formTeam1 || !formTeam2 || !requiredField) {
       toast({
         title: "Validation Error",
         description: "Please fill in all required fields",
@@ -534,28 +591,21 @@ export default function Matches() {
     }
 
     try {
-      const response = await fetch(`${API_URL}/matches`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include",
-        body: JSON.stringify({
+      const matchData: any = {
           description: formDescription || undefined,
           team1: formTeam1,
           team2: formTeam2,
           date: formDate,
           time: convertTimeTo12Hour(formTime),
-          week: formWeek,
           competition: formCompetition || undefined,
           stadium: formVenue || undefined,
           league: formCompetition
             ? formCompetition === "Saudi Pro League"
               ? "saudi"
-              : formCompetition === "Italian Serie A"
-              ? "italian"
-              : formCompetition === "Spanish La Liga"
-              ? "spanish"
+              : formCompetition === "Saudi Super Cup"
+              ? "saudi-super-cup"
+              : formCompetition === "Spanish Super Cup"
+              ? "spanish-super-cup"
               : selectedLeague
             : selectedLeague,
           status: formStatus,
@@ -570,7 +620,22 @@ export default function Matches() {
                   away: Number(formScoreAway),
                 }
               : undefined,
-        }),
+        };
+      
+      // Add week or stage based on league type
+      if (isSuperCup) {
+        matchData.stage = formStage;
+      } else {
+        matchData.week = formWeek;
+      }
+      
+      const response = await fetch(`${API_URL}/matches`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(matchData),
       });
 
       if (!response.ok) {
@@ -771,7 +836,16 @@ export default function Matches() {
                   match.status === "cancelled") &&
                   "Completed"}
               </Badge>
-              <Badge variant="outline">Week {match.week}</Badge>
+              {(() => {
+                const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
+                const stage = match.stage;
+                if (isSuperCup && stage) {
+                  return <Badge variant="outline">{stage}</Badge>;
+                } else if (match.week) {
+                  return <Badge variant="outline">Week {match.week}</Badge>;
+                }
+                return null;
+              })()}
                   {countdown && countdown.type === "countdown" && (
                     <Badge
                       variant="outline"
@@ -872,12 +946,31 @@ export default function Matches() {
         <div>
           <div className="flex items-center gap-3 mb-1">
           <h1 className="text-2xl font-bold">Matches</h1>
-            <Badge variant="secondary" className="text-sm">
+            <Badge variant="secondary" className="text-sm flex items-center gap-2">
+              <img
+                src={getLeagueIcon(selectedLeague!)}
+                alt={leagueNames[selectedLeague!]}
+                className="h-12 w-12 object-contain flex-shrink-0"
+              />
               {leagueNames[selectedLeague!]}
             </Badge>
-            <Badge className="bg-blue-500 text-white text-sm">
-              Week {selectedWeek}
-            </Badge>
+            {(() => {
+              const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
+              if (isSuperCup && selectedStage) {
+                return (
+                  <Badge className="bg-blue-500 text-white text-sm">
+                    {selectedStage}
+                  </Badge>
+                );
+              } else if (!isSuperCup && selectedWeek) {
+                return (
+                  <Badge className="bg-blue-500 text-white text-sm">
+                    Week {selectedWeek}
+                  </Badge>
+                );
+              }
+              return null;
+            })()}
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -891,18 +984,41 @@ export default function Matches() {
             <Plus className="h-4 w-4" />
             Add Match Manually
           </Button>
-          <Select value={selectedWeek} onValueChange={setSelectedWeek}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Array.from({ length: 38 }, (_, i) => i + 1).map((week) => (
-                <SelectItem key={week} value={week.toString()}>
-                  Week {week}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {(() => {
+            const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
+            
+            if (isSuperCup) {
+              return (
+                <Select value={selectedStage} onValueChange={setSelectedStage}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select Stage" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableStages.map((stage) => (
+                      <SelectItem key={stage} value={stage}>
+                        {stage}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              );
+            } else {
+              return (
+                <Select value={selectedWeek} onValueChange={setSelectedWeek}>
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 38 }, (_, i) => i + 1).map((week) => (
+                      <SelectItem key={week} value={week.toString()}>
+                        Week {week}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              );
+            }
+          })()}
         </div>
       </div>
 
@@ -915,7 +1031,15 @@ export default function Matches() {
       {!loading && matches.length === 0 && (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground mb-4">
-            No matches found for this league and week
+            {(() => {
+              const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
+              if (isSuperCup && selectedStage) {
+                return `No matches found for this league and stage (${selectedStage})`;
+              } else if (!isSuperCup && selectedWeek) {
+                return `No matches found for this league and week (${selectedWeek})`;
+              }
+              return "No matches found for this league";
+            })()}
           </p>
           <Button
             onClick={() => {
@@ -1141,18 +1265,44 @@ export default function Matches() {
               </>
             )}
 
-            {/* Week */}
-            <div className="space-y-2">
-              <Label htmlFor="week">Week *</Label>
-              <Input
-                id="week"
-                type="text"
-                placeholder="e.g., 12"
-                value={formWeek}
-                onChange={(e) => setFormWeek(e.target.value)}
-                required
-              />
-            </div>
+            {/* Week/Stage */}
+            {(() => {
+              const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
+              
+              if (isSuperCup) {
+                return (
+                  <div className="space-y-2">
+                    <Label htmlFor="stage">Stage *</Label>
+                    <Select value={formStage} onValueChange={setFormStage}>
+                      <SelectTrigger id="stage">
+                        <SelectValue placeholder="Select stage" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableStages.map((stage) => (
+                          <SelectItem key={stage} value={stage}>
+                            {stage}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="space-y-2">
+                    <Label htmlFor="week">Week *</Label>
+                    <Input
+                      id="week"
+                      type="text"
+                      placeholder="e.g., 12"
+                      value={formWeek}
+                      onChange={(e) => setFormWeek(e.target.value)}
+                      required
+                    />
+                  </div>
+                );
+              }
+            })()}
 
             {/* Date and Time */}
             <div className="grid grid-cols-2 gap-4">
@@ -1342,18 +1492,44 @@ export default function Matches() {
               </>
             )}
 
-            {/* Week */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-week">Week *</Label>
-              <Input
-                id="edit-week"
-                type="text"
-                placeholder="e.g., 12"
-                value={formWeek}
-                onChange={(e) => setFormWeek(e.target.value)}
-                required
-              />
-            </div>
+            {/* Week/Stage */}
+            {(() => {
+              const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
+              
+              if (isSuperCup) {
+                return (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-stage">Stage *</Label>
+                    <Select value={formStage} onValueChange={setFormStage}>
+                      <SelectTrigger id="edit-stage">
+                        <SelectValue placeholder="Select stage" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableStages.map((stage) => (
+                          <SelectItem key={stage} value={stage}>
+                            {stage}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                );
+              } else {
+                return (
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-week">Week *</Label>
+                    <Input
+                      id="edit-week"
+                      type="text"
+                      placeholder="e.g., 12"
+                      value={formWeek}
+                      onChange={(e) => setFormWeek(e.target.value)}
+                      required
+                    />
+                  </div>
+                );
+              }
+            })()}
 
             {/* Date and Time */}
             <div className="grid grid-cols-2 gap-4">

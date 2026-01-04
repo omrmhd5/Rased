@@ -1,54 +1,20 @@
 import { Card } from "@/components/ui/card";
-import { StatCard } from "@/components/StatCard";
-import { MiniSparkline } from "@/components/MiniSparkline";
 import {
-  ShoppingCart,
-  DollarSign,
-  Bell,
-  CreditCard,
   Eye,
-  Shield,
-  TrendingUp,
-  Twitter,
-  Facebook,
-  Youtube,
-  Instagram,
   Clock,
-  Zap,
-  CheckCircle,
   ExternalLink,
-  UserPlus,
-  AlertOctagon,
-  Hash,
   Activity,
   Link,
   BarChart3,
   Trophy,
   Loader2,
-  XCircle,
   FileQuestion,
-  Play,
   Download,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import * as htmlToImage from "html-to-image";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  Tooltip,
-  Legend,
-} from "recharts";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { mockMatches, mockViolations, Violation } from "@/data/mockData";
 import {
   Select,
   SelectContent,
@@ -77,138 +43,27 @@ import { getInitialPlatformOperations } from "@/components/MatchDashboard/consta
 type League = "saudi" | "saudi-super-cup" | "spanish-super-cup" | null;
 type WeekFilterType = "all" | "single" | "range";
 
-const platformData = [
-  {
-    name: "X/Twitter",
-    violations: 234,
-    views: 45600,
-    liveViolations: 156,
-    highlightsViolations: 78,
-    liveViews: 28900,
-    highlightsViews: 16700,
-    color: "hsl(203 89% 53%)",
-    successRate: 91,
-    avgBlockTime: 9.2,
-    blockedCount: 213,
-    activeCount: 21,
-  },
-  {
-    name: "YouTube",
-    violations: 189,
-    views: 78900,
-    liveViolations: 134,
-    highlightsViolations: 55,
-    liveViews: 52300,
-    highlightsViews: 26600,
-    color: "hsl(0 100% 50%)",
-    successRate: 89,
-    avgBlockTime: 11.4,
-    blockedCount: 168,
-    activeCount: 21,
-  },
-  {
-    name: "Facebook",
-    violations: 156,
-    views: 34200,
-    liveViolations: 98,
-    highlightsViolations: 58,
-    liveViews: 21400,
-    highlightsViews: 12800,
-    color: "hsl(221 44% 41%)",
-    successRate: 88,
-    avgBlockTime: 10.8,
-    blockedCount: 137,
-    activeCount: 19,
-  },
-  {
-    name: "TikTok",
-    violations: 145,
-    views: 56700,
-    liveViolations: 89,
-    highlightsViolations: 56,
-    liveViews: 35200,
-    highlightsViews: 21500,
-    color: "hsl(0 0% 0%)",
-    successRate: 93,
-    avgBlockTime: 6.1,
-    blockedCount: 135,
-    activeCount: 10,
-  },
-  {
-    name: "Instagram",
-    violations: 98,
-    views: 23400,
-    liveViolations: 62,
-    highlightsViolations: 36,
-    liveViews: 14800,
-    highlightsViews: 8600,
-    color: "hsl(329 100% 50%)",
-    successRate: 90,
-    avgBlockTime: 8.5,
-    blockedCount: 88,
-    activeCount: 10,
-  },
-  {
-    name: "Telegram",
-    violations: 87,
-    views: 12300,
-    liveViolations: 64,
-    highlightsViolations: 23,
-    liveViews: 9100,
-    highlightsViews: 3200,
-    color: "hsl(200 100% 48%)",
-    successRate: 67,
-    avgBlockTime: 18.3,
-    blockedCount: 58,
-    activeCount: 29,
-  },
-  {
-    name: "IPTV",
-    violations: 67,
-    views: 89000,
-    liveViolations: 51,
-    highlightsViolations: 16,
-    liveViews: 71200,
-    highlightsViews: 17800,
-    color: "hsl(271 76% 53%)",
-    successRate: 85,
-    avgBlockTime: 14.2,
-    blockedCount: 57,
-    activeCount: 10,
-  },
-  {
-    name: "Websites",
-    violations: 54,
-    views: 34500,
-    liveViolations: 38,
-    highlightsViolations: 16,
-    liveViews: 22300,
-    highlightsViews: 12200,
-    color: "hsl(142 71% 45%)",
-    successRate: 82,
-    avgBlockTime: 15.7,
-    blockedCount: 44,
-    activeCount: 10,
-  },
-];
-// Note: currentWeek and currentWeekMatches are now calculated from real data in the component
-
-// Helper to format views
+// Helper to format views (pure numbers with commas, no abbreviations)
 const formatViews = (views: number) => {
-  if (views >= 1000) return `${Math.round(views / 1000)}K`;
-  return views.toString();
+  return views.toLocaleString("en-US");
 };
 
-// Helper to calculate avg block time per match (mock calculation)
-const getAvgBlockTime = (matchId: number) => {
-  const times = [8.2, 9.4, 10.1, 11.5, 7.8, 12.3, 9.9];
-  return times[matchId % times.length];
+// Helper to get league icon path
+const getLeagueIcon = (league: League): string => {
+  switch (league) {
+    case "saudi":
+      return "/icons/Saudi_League.svg";
+    case "saudi-super-cup":
+      return "/icons/Saudi_Cup.png";
+    case "spanish-super-cup":
+      return "/icons/Spanish_Cup.svg";
+    default:
+      return "";
+  }
 };
+
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [platformSort, setPlatformSort] = useState<
-    "violations" | "response" | "active" | "success"
-  >("violations");
   const [isRoundReportOpen, setIsRoundReportOpen] = useState(false);
 
   // PlatformComparison sorting state
@@ -225,12 +80,27 @@ export default function Dashboard() {
     "desc" | "asc"
   >("desc");
 
-  // League and week filtering
+  // League and week/stage filtering
   const [selectedLeague, setSelectedLeague] = useState<League>(null);
   const [weekFilterType, setWeekFilterType] = useState<WeekFilterType>("all");
   const [singleWeek, setSingleWeek] = useState<string>("12");
   const [weekRangeStart, setWeekRangeStart] = useState<string>("1");
   const [weekRangeEnd, setWeekRangeEnd] = useState<string>("12");
+
+  // Stage filtering for Super Cups
+  const [stageFilterType, setStageFilterType] = useState<WeekFilterType>("all");
+  const [singleStage, setSingleStage] = useState<string>("");
+  const [stageRangeStart, setStageRangeStart] = useState<string>("");
+  const [stageRangeEnd, setStageRangeEnd] = useState<string>("");
+
+  // Hardcoded stages for Super Cups (similar to weeks for regular leagues)
+  const availableStages = [
+    "16th Finals",
+    "8th Finals",
+    "Quarter-finals",
+    "Semi-finals",
+    "Final",
+  ];
 
   // Dashboard stats
   const [dashboardStats, setDashboardStats] = useState({
@@ -303,8 +173,33 @@ export default function Dashboard() {
   const [statsLoading, setStatsLoading] = useState(true); // Start with true to show loading initially
 
   // Active Trouble List state
-  const [troubleListFilter, setTroubleListFilter] = useState<"Active" | "Under Review">("Active");
-  const [troubleListViolations, setTroubleListViolations] = useState<any[]>([]);
+  const [troubleListFilter, setTroubleListFilter] = useState<
+    "Active" | "Under Review"
+  >("Active");
+  const [troubleListViolations, setTroubleListViolations] = useState<
+    Array<{
+      _id?: string;
+      id?: string | number;
+      status: string;
+      contentType: string;
+      views?: string;
+      violationUrl: string;
+      accountChannel: string;
+      timeAdded: string;
+      blockedAt?: string;
+      matchId?:
+        | {
+            team1?: string;
+            team2?: string;
+            description?: string;
+            externalMatchId?: string;
+          }
+        | string;
+      matchName?: string;
+      platformName?: string;
+      platformId?: string;
+    }>
+  >([]);
   const [troubleListLoading, setTroubleListLoading] = useState(false);
 
   // Download state
@@ -327,7 +222,10 @@ export default function Dashboard() {
   // Load selected league from localStorage on mount
   useEffect(() => {
     const savedLeague = localStorage.getItem("selectedLeague") as League;
-    if (savedLeague && ["saudi", "saudi-super-cup", "spanish-super-cup"].includes(savedLeague)) {
+    if (
+      savedLeague &&
+      ["saudi", "saudi-super-cup", "spanish-super-cup"].includes(savedLeague)
+    ) {
       setSelectedLeague(savedLeague);
     } else {
       // If no league is selected, redirect to home
@@ -335,7 +233,7 @@ export default function Dashboard() {
     }
   }, [navigate]);
 
-  // Fetch dashboard stats when league or week filters change
+  // Fetch dashboard stats when league or week/stage filters change
   useEffect(() => {
     if (!selectedLeague) {
       setStatsLoading(false);
@@ -345,20 +243,39 @@ export default function Dashboard() {
     const fetchDashboardStats = async () => {
       setStatsLoading(true);
       try {
+        const isSuperCup =
+          selectedLeague === "saudi-super-cup" ||
+          selectedLeague === "spanish-super-cup";
         const params = new URLSearchParams({
           league: selectedLeague,
-          weekFilter: weekFilterType,
         });
 
-        if (weekFilterType === "single" && singleWeek) {
-          params.append("week", singleWeek);
-        } else if (
-          weekFilterType === "range" &&
-          weekRangeStart &&
-          weekRangeEnd
-        ) {
-          params.append("weekStart", weekRangeStart);
-          params.append("weekEnd", weekRangeEnd);
+        if (isSuperCup) {
+          // Use stage filtering for Super Cups
+          params.append("stageFilter", stageFilterType);
+          if (stageFilterType === "single" && singleStage) {
+            params.append("stage", singleStage);
+          } else if (
+            stageFilterType === "range" &&
+            stageRangeStart &&
+            stageRangeEnd
+          ) {
+            params.append("stageStart", stageRangeStart);
+            params.append("stageEnd", stageRangeEnd);
+          }
+        } else {
+          // Use week filtering for regular leagues
+          params.append("weekFilter", weekFilterType);
+          if (weekFilterType === "single" && singleWeek) {
+            params.append("week", singleWeek);
+          } else if (
+            weekFilterType === "range" &&
+            weekRangeStart &&
+            weekRangeEnd
+          ) {
+            params.append("weekStart", weekRangeStart);
+            params.append("weekEnd", weekRangeEnd);
+          }
         }
 
         const response = await fetch(
@@ -439,6 +356,10 @@ export default function Dashboard() {
     singleWeek,
     weekRangeStart,
     weekRangeEnd,
+    stageFilterType,
+    singleStage,
+    stageRangeStart,
+    stageRangeEnd,
     API_URL,
   ]);
 
@@ -452,23 +373,42 @@ export default function Dashboard() {
     const fetchTroubleListViolations = async () => {
       setTroubleListLoading(true);
       try {
+        const isSuperCup =
+          selectedLeague === "saudi-super-cup" ||
+          selectedLeague === "spanish-super-cup";
         const params = new URLSearchParams({
           league: selectedLeague,
-          weekFilter: weekFilterType,
           status: troubleListFilter,
           sort: "desc",
           limit: "500", // Get enough violations to display
         });
 
-        if (weekFilterType === "single" && singleWeek) {
-          params.append("week", singleWeek);
-        } else if (
-          weekFilterType === "range" &&
-          weekRangeStart &&
-          weekRangeEnd
-        ) {
-          params.append("weekStart", weekRangeStart);
-          params.append("weekEnd", weekRangeEnd);
+        if (isSuperCup) {
+          // Use stage filtering for Super Cups
+          params.append("stageFilter", stageFilterType);
+          if (stageFilterType === "single" && singleStage) {
+            params.append("stage", singleStage);
+          } else if (
+            stageFilterType === "range" &&
+            stageRangeStart &&
+            stageRangeEnd
+          ) {
+            params.append("stageStart", stageRangeStart);
+            params.append("stageEnd", stageRangeEnd);
+          }
+        } else {
+          // Use week filtering for regular leagues
+          params.append("weekFilter", weekFilterType);
+          if (weekFilterType === "single" && singleWeek) {
+            params.append("week", singleWeek);
+          } else if (
+            weekFilterType === "range" &&
+            weekRangeStart &&
+            weekRangeEnd
+          ) {
+            params.append("weekStart", weekRangeStart);
+            params.append("weekEnd", weekRangeEnd);
+          }
         }
 
         const response = await fetch(
@@ -493,23 +433,19 @@ export default function Dashboard() {
     };
 
     fetchTroubleListViolations();
-  }, [selectedLeague, weekFilterType, singleWeek, weekRangeStart, weekRangeEnd, troubleListFilter, API_URL]);
-
-  // Calculate match views data for sparkline (showing total views per match in thousands)
-  const matchViewsData = mockMatches
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .map((match) => Math.round(match.totalViews / 1000)); // Convert to thousands for better visualization
-
-  // Find top platform by views and fastest platform by block time
-  const topViewsPlatform = platformData.reduce(
-    (max, platform) => (platform.views > max.views ? platform : max),
-    platformData[0]
-  );
-  const fastestPlatform = platformData.reduce(
-    (min, platform) =>
-      platform.avgBlockTime < min.avgBlockTime ? platform : min,
-    platformData[0]
-  );
+  }, [
+    selectedLeague,
+    weekFilterType,
+    singleWeek,
+    weekRangeStart,
+    weekRangeEnd,
+    stageFilterType,
+    singleStage,
+    stageRangeStart,
+    stageRangeEnd,
+    troubleListFilter,
+    API_URL,
+  ]);
 
   // Get platform operations (for icon lookup)
   const platformOperations = getInitialPlatformOperations();
@@ -525,19 +461,17 @@ export default function Dashboard() {
   };
 
   // Get platform icon as JSX (for direct rendering)
-  const getPlatformIcon = (platformName: string, size: string = "h-3.5 w-3.5") => {
+  const getPlatformIcon = (
+    platformName: string,
+    size: string = "h-3.5 w-3.5"
+  ) => {
     const platform = platformOperations.find((p) => p.name === platformName);
     if (!platform) {
       // Fallback for platforms not in the list (e.g., Telegram)
       return <Activity className={size} />;
     }
     const IconComponent = platform.icon;
-    return (
-      <IconComponent
-        className={size}
-        style={{ color: platform.color }}
-      />
-    );
+    return <IconComponent className={size} style={{ color: platform.color }} />;
   };
 
   // Get platform color
@@ -660,17 +594,18 @@ export default function Dashboard() {
     const minutesSinceAdded = Math.floor(
       (new Date().getTime() - timeAdded.getTime()) / 60000
     );
-    
-    // Helper to process views (handle "K" suffix)
+
+    // Helper to process views (handle "K" suffix and comma separators)
     const processViews = (viewsStr: string | number | undefined): number => {
       if (!viewsStr || viewsStr === "0") return 0;
       if (typeof viewsStr === "number") return viewsStr;
       const upperViews = viewsStr.toUpperCase();
+      // Handle "K" suffix (e.g., "1.5K" = 1500) and comma separators (e.g., "1,000" = 1000)
       if (upperViews.includes("K")) {
-        const num = parseFloat(upperViews.replace(/[K]/g, "")) || 0;
+        const num = parseFloat(upperViews.replace(/[K,]/g, "")) || 0;
         return num * 1000;
       }
-      return parseFloat(viewsStr) || 0;
+      return parseFloat(viewsStr.replace(/,/g, "")) || 0;
     };
 
     // Get platform name (keep original case for icon matching)
@@ -734,22 +669,6 @@ export default function Dashboard() {
     return b.minutesSinceAdded - a.minutesSinceAdded;
   });
 
-  // Sort platforms based on selected criteria
-  const sortedPlatforms = [...platformData].sort((a, b) => {
-    switch (platformSort) {
-      case "violations":
-        return b.violations - a.violations;
-      case "response":
-        return b.avgBlockTime - a.avgBlockTime;
-      case "active":
-        return b.activeCount - a.activeCount;
-      case "success":
-        return a.successRate - b.successRate;
-      default:
-        return 0;
-    }
-  });
-
   // Download report as PNG
   const handleDownloadReport = async () => {
     setIsDownloading(true);
@@ -791,7 +710,7 @@ export default function Dashboard() {
         <div style="font-size: 18px; color: #666; line-height: 1.8;">
           <p style="margin: 0 0 8px 0;"><strong>League:</strong> ${leagueName}</p>
           <p style="margin: 0;"><strong>Period:</strong> ${weekInfo}</p>
-        </div>
+          </div>
       `;
 
       // Temporarily add to DOM for capture
@@ -865,9 +784,11 @@ export default function Dashboard() {
             element.style.width = originalWidth;
             element.style.maxWidth = originalMaxWidth;
           }
-          parentStyles.forEach(({ element: parentEl, originalStyle: origStyle }) => {
-            parentEl.style.cssText = origStyle;
-          });
+          parentStyles.forEach(
+            ({ element: parentEl, originalStyle: origStyle }) => {
+              parentEl.style.cssText = origStyle;
+            }
+          );
         }
       };
 
@@ -915,7 +836,9 @@ export default function Dashboard() {
 
       // Add content split chart if available
       if (contentSplitChartRef.current) {
-        const chartClone = contentSplitChartRef.current.cloneNode(true) as HTMLElement;
+        const chartClone = contentSplitChartRef.current.cloneNode(
+          true
+        ) as HTMLElement;
         chartClone.style.margin = "0";
         chartClone.style.width = "100%";
         chartClone.style.gridColumn = "1 / -1";
@@ -1050,11 +973,24 @@ export default function Dashboard() {
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
-            {weekFilterType === "all"
-              ? "All Weeks Overview"
-              : weekFilterType === "single"
-              ? `Week ${singleWeek} Overview`
-              : `Weeks ${weekRangeStart} - ${weekRangeEnd} Overview`}
+            {(() => {
+              const isSuperCup =
+                selectedLeague === "saudi-super-cup" ||
+                selectedLeague === "spanish-super-cup";
+              if (isSuperCup) {
+                return stageFilterType === "all"
+                  ? "All Stages Overview"
+                  : stageFilterType === "single"
+                  ? `${singleStage} Overview`
+                  : `${stageRangeStart} - ${stageRangeEnd} Overview`;
+              } else {
+                return weekFilterType === "all"
+                  ? "All Weeks Overview"
+                  : weekFilterType === "single"
+                  ? `Week ${singleWeek} Overview`
+                  : `Weeks ${weekRangeStart} - ${weekRangeEnd} Overview`;
+              }
+            })()}
           </p>
         </div>
 
@@ -1065,7 +1001,19 @@ export default function Dashboard() {
             <Badge
               variant="secondary"
               className="text-sm flex items-center gap-2">
-              <Trophy className="h-3 w-3" />
+              <img
+                src={getLeagueIcon(selectedLeague)}
+                alt={
+                  selectedLeague === "saudi"
+                    ? "Saudi Pro League"
+                    : selectedLeague === "saudi-super-cup"
+                    ? "Saudi Super Cup"
+                    : selectedLeague === "spanish-super-cup"
+                    ? "Spanish Super Cup"
+                    : "No League"
+                }
+                className="h-12 object-contain flex-shrink-0"
+              />
               {selectedLeague === "saudi"
                 ? "Saudi Pro League"
                 : selectedLeague === "saudi-super-cup"
@@ -1097,10 +1045,7 @@ export default function Dashboard() {
                 )}
               </Button>
             </HoverCardTrigger>
-            <HoverCardContent 
-              align="end" 
-              className="w-48 p-1"
-              sideOffset={5}>
+            <HoverCardContent align="end" className="w-48 p-1" sideOffset={5}>
               <div className="flex flex-col">
                 <Button
                   variant="ghost"
@@ -1121,68 +1066,162 @@ export default function Dashboard() {
             </HoverCardContent>
           </HoverCard>
 
-          {/* Week Filter Type */}
-          <Select
-            value={weekFilterType}
-            onValueChange={(value) =>
-              setWeekFilterType(value as WeekFilterType)
-            }>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Weeks</SelectItem>
-              <SelectItem value="single">Single Week</SelectItem>
-              <SelectItem value="range">Week Range</SelectItem>
-            </SelectContent>
-          </Select>
+          {/* Week/Stage Filter Type */}
+          {(() => {
+            const isSuperCup =
+              selectedLeague === "saudi-super-cup" ||
+              selectedLeague === "spanish-super-cup";
 
-          {/* Single Week Selector */}
-          {weekFilterType === "single" && (
-            <Select value={singleWeek} onValueChange={setSingleWeek}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 38 }, (_, i) => i + 1).map((week) => (
-                  <SelectItem key={week} value={week.toString()}>
-                    Week {week}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+            if (isSuperCup) {
+              // Stage filters for Super Cups
+              return (
+                <>
+                  <Select
+                    value={stageFilterType}
+                    onValueChange={(value) =>
+                      setStageFilterType(value as WeekFilterType)
+                    }>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Stages</SelectItem>
+                      <SelectItem value="single">Single Stage</SelectItem>
+                      <SelectItem value="range">Stage Range</SelectItem>
+                    </SelectContent>
+                  </Select>
 
-          {/* Week Range Selectors */}
-          {weekFilterType === "range" && (
-            <div className="flex items-center gap-2">
-              <Select value={weekRangeStart} onValueChange={setWeekRangeStart}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="Start Week" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 38 }, (_, i) => i + 1).map((week) => (
-                    <SelectItem key={week} value={week.toString()}>
-                      Week {week}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span className="text-muted-foreground">to</span>
-              <Select value={weekRangeEnd} onValueChange={setWeekRangeEnd}>
-                <SelectTrigger className="w-[100px]">
-                  <SelectValue placeholder="End Week" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 38 }, (_, i) => i + 1).map((week) => (
-                    <SelectItem key={week} value={week.toString()}>
-                      Week {week}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+                  {/* Single Stage Selector */}
+                  {stageFilterType === "single" && (
+                    <Select value={singleStage} onValueChange={setSingleStage}>
+                      <SelectTrigger className="w-[180px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableStages.map((stage) => (
+                          <SelectItem key={stage} value={stage}>
+                            {stage}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {/* Stage Range Selectors */}
+                  {stageFilterType === "range" && (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={stageRangeStart}
+                        onValueChange={setStageRangeStart}>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="Start Stage" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableStages.map((stage) => (
+                            <SelectItem key={stage} value={stage}>
+                              {stage}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-muted-foreground">to</span>
+                      <Select
+                        value={stageRangeEnd}
+                        onValueChange={setStageRangeEnd}>
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue placeholder="End Stage" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableStages.map((stage) => (
+                            <SelectItem key={stage} value={stage}>
+                              {stage}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </>
+              );
+            } else {
+              // Week filters for regular leagues
+              return (
+                <>
+                  <Select
+                    value={weekFilterType}
+                    onValueChange={(value) =>
+                      setWeekFilterType(value as WeekFilterType)
+                    }>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Weeks</SelectItem>
+                      <SelectItem value="single">Single Week</SelectItem>
+                      <SelectItem value="range">Week Range</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* Single Week Selector */}
+                  {weekFilterType === "single" && (
+                    <Select value={singleWeek} onValueChange={setSingleWeek}>
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 38 }, (_, i) => i + 1).map(
+                          (week) => (
+                            <SelectItem key={week} value={week.toString()}>
+                              Week {week}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {/* Week Range Selectors */}
+                  {weekFilterType === "range" && (
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={weekRangeStart}
+                        onValueChange={setWeekRangeStart}>
+                        <SelectTrigger className="w-[100px]">
+                          <SelectValue placeholder="Start Week" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 38 }, (_, i) => i + 1).map(
+                            (week) => (
+                              <SelectItem key={week} value={week.toString()}>
+                                Week {week}
+                              </SelectItem>
+                            )
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <span className="text-muted-foreground">to</span>
+                      <Select
+                        value={weekRangeEnd}
+                        onValueChange={setWeekRangeEnd}>
+                        <SelectTrigger className="w-[100px]">
+                          <SelectValue placeholder="End Week" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Array.from({ length: 38 }, (_, i) => i + 1).map(
+                            (week) => (
+                              <SelectItem key={week} value={week.toString()}>
+                                Week {week}
+                              </SelectItem>
+                            )
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </>
+              );
+            }
+          })()}
         </div>
       </div>
 
@@ -1214,7 +1253,9 @@ export default function Dashboard() {
         {/* Right Column: Stacked Small Cards (30% width) */}
         <div className="flex flex-col gap-3">
           {/* Total Views Card (Small) */}
-          <Card ref={totalViewsCardRef} className="p-4 bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-4/20 cursor-pointer">
+          <Card
+            ref={totalViewsCardRef}
+            className="p-4 bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-4/20 cursor-pointer">
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-[11px] font-medium text-muted-foreground">
                 Total Views
@@ -1229,9 +1270,7 @@ export default function Dashboard() {
             ) : (
               <div className="flex items-baseline gap-1.5">
                 <p className="text-2xl font-bold text-foreground">
-                  {dashboardStats.totalViews >= 1000
-                    ? `${(dashboardStats.totalViews / 1000).toFixed(1)}K`
-                    : dashboardStats.totalViews.toLocaleString()}
+                  {dashboardStats.totalViews.toLocaleString("en-US")}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
                   Across All Platforms
@@ -1241,7 +1280,9 @@ export default function Dashboard() {
           </Card>
 
           {/* Avg Block Time Card */}
-          <Card ref={avgBlockTimeCardRef} className="p-4 bg-gradient-to-br from-success/5 to-success/10 border border-success/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-success/20 cursor-pointer">
+          <Card
+            ref={avgBlockTimeCardRef}
+            className="p-4 bg-gradient-to-br from-success/5 to-success/10 border border-success/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-success/20 cursor-pointer">
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-[11px] font-medium text-muted-foreground">
                 Avg Block Time
@@ -1275,13 +1316,17 @@ export default function Dashboard() {
 
           {/* Top Platform Card */}
           {dashboardStats.topPlatform && (
-            <Card ref={topPlatformCardRef} className="p-4 bg-gradient-to-br from-chart-2/5 to-chart-2/10 border border-chart-2/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-2/20 cursor-pointer">
+            <Card
+              ref={topPlatformCardRef}
+              className="p-4 bg-gradient-to-br from-chart-2/5 to-chart-2/10 border border-chart-2/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-2/20 cursor-pointer">
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-[11px] font-medium text-muted-foreground">
                   Top Platform
                 </p>
                 {(() => {
-                  const Icon = getPlatformIconComponent(dashboardStats.topPlatform.name);
+                  const Icon = getPlatformIconComponent(
+                    dashboardStats.topPlatform.name
+                  );
                   return <Icon className="h-3.5 w-3.5 text-chart-2" />;
                 })()}
               </div>
@@ -1296,7 +1341,9 @@ export default function Dashboard() {
 
           {/* Top Match Card */}
           {dashboardStats.topMatch && (
-            <Card ref={topMatchCardRef} className="p-4 bg-gradient-to-br from-orange-500/5 to-orange-500/10 border border-orange-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer">
+            <Card
+              ref={topMatchCardRef}
+              className="p-4 bg-gradient-to-br from-orange-500/5 to-orange-500/10 border border-orange-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer">
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-[11px] font-medium text-muted-foreground">
                   Top Match
@@ -1483,7 +1530,8 @@ export default function Dashboard() {
                 variant="secondary"
                 className="h-5 px-2 bg-chart-1/10 text-chart-1 border-0">
                 <div className="w-1.5 h-1.5 rounded-full bg-chart-1 animate-pulse mr-1.5" />
-                {sortedActiveViolations.length} {troubleListFilter.toLowerCase()}
+                {sortedActiveViolations.length}{" "}
+                {troubleListFilter.toLowerCase()}
               </Badge>
             </div>
             <div className="flex items-center gap-1">
@@ -1495,7 +1543,9 @@ export default function Dashboard() {
                 Active
               </Button>
               <Button
-                variant={troubleListFilter === "Under Review" ? "default" : "outline"}
+                variant={
+                  troubleListFilter === "Under Review" ? "default" : "outline"
+                }
                 size="sm"
                 className="h-7 px-3 text-xs"
                 onClick={() => setTroubleListFilter("Under Review")}>
@@ -1511,101 +1561,107 @@ export default function Dashboard() {
             ) : sortedActiveViolations.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                 <FileQuestion className="h-8 w-8 mb-2 opacity-50" />
-                <p className="text-sm">No {troubleListFilter.toLowerCase()} violations found</p>
+                <p className="text-sm">
+                  No {troubleListFilter.toLowerCase()} violations found
+                </p>
               </div>
             ) : (
               sortedActiveViolations.map((violation) => {
-              const timeSinceAdded = getTimeSinceAdded(violation.reportedAt);
-              const warningLevel = getWarningLevelForViolation(
-                violation.minutesSinceAdded,
-                currentWeekMinutesSinceAdded
-              );
-              return (
-                <div
-                  key={violation.id}
-                  className="group flex items-center gap-3 h-[42px] border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors px-2">
-                  {/* Platform & Account - Fixed width */}
-                  <div className="flex items-center gap-2 w-[180px] flex-shrink-0">
-                    <div className="flex-shrink-0">
-                      {getPlatformIcon(violation.platform, "h-4 w-4")}
-                    </div>
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <span className="text-[13px] font-medium truncate">
-                        {violation.platform}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground truncate">
-                        {violation.account}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Match Information */}
-                  {violation.matchDescription && (
-                    <div className="w-[200px] flex-shrink-0">
-                      <div className="flex items-center gap-1.5 h-[26px] px-2 rounded-md bg-muted/30 border border-border/30">
-                        <Trophy className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                        <span className="text-[11px] font-medium text-foreground/80 truncate" title={violation.matchDescription}>
-                          {violation.matchDescription}
+                const timeSinceAdded = getTimeSinceAdded(violation.reportedAt);
+                const warningLevel = getWarningLevelForViolation(
+                  violation.minutesSinceAdded,
+                  currentWeekMinutesSinceAdded
+                );
+                return (
+                  <div
+                    key={violation.id}
+                    className="group flex items-center gap-3 h-[42px] border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors px-2">
+                    {/* Platform & Account - Fixed width */}
+                    <div className="flex items-center gap-2 w-[180px] flex-shrink-0">
+                      <div className="flex-shrink-0">
+                        {getPlatformIcon(violation.platform, "h-4 w-4")}
+                      </div>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-[13px] font-medium truncate">
+                          {violation.platform}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground truncate">
+                          {violation.account}
                         </span>
                       </div>
                     </div>
-                  )}
 
-                  {/* Link of Post - Fixed width in center */}
-                  <div className="w-[300px] flex-shrink-0">
-                    <a
-                      href={violation.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 h-[26px] px-3 rounded-md bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-primary/30 text-[11px] font-medium text-foreground/70 hover:text-primary transition-all w-full"
-                      title={violation.url}>
-                      <Link className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
-                      <span className="truncate flex-1">
-                        {formatUrlForDisplay(violation.url)}
+                    {/* Match Information */}
+                    {violation.matchDescription && (
+                      <div className="w-[200px] flex-shrink-0">
+                        <div className="flex items-center gap-1.5 h-[26px] px-2 rounded-md bg-muted/30 border border-border/30">
+                          <Trophy className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                          <span
+                            className="text-[11px] font-medium text-foreground/80 truncate"
+                            title={violation.matchDescription}>
+                            {violation.matchDescription}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Link of Post - Fixed width in center */}
+                    <div className="w-[300px] flex-shrink-0">
+                      <a
+                        href={violation.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 h-[26px] px-3 rounded-md bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-primary/30 text-[11px] font-medium text-foreground/70 hover:text-primary transition-all w-full"
+                        title={violation.url}>
+                        <Link className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
+                        <span className="truncate flex-1">
+                          {formatUrlForDisplay(violation.url)}
+                        </span>
+                        <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-50" />
+                      </a>
+                    </div>
+
+                    {/* Metrics - Right side */}
+                    <div className="flex items-center gap-1.5 flex-1 justify-end">
+                      <span className="inline-flex items-center gap-1 h-[22px] px-2 rounded-full bg-muted/40 text-[12px] font-medium tabular-nums">
+                        <Eye className="h-3 w-3 text-muted-foreground" />
+                        <span>{formatViews(violation.views)}</span>
                       </span>
-                      <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-50" />
-                    </a>
-                  </div>
-
-                  {/* Metrics - Right side */}
-                  <div className="flex items-center gap-1.5 flex-1 justify-end">
-                    <span className="inline-flex items-center gap-1 h-[22px] px-2 rounded-full bg-muted/40 text-[12px] font-medium tabular-nums">
-                      <Eye className="h-3 w-3 text-muted-foreground" />
-                      <span>{formatViews(violation.views)}</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1 h-[22px] px-2 rounded-full bg-muted/40 text-[12px] font-medium">
-                      <Clock className="h-3 w-3 text-muted-foreground" />
-                      <span>{timeSinceAdded}</span>
-                    </span>
-                    <Badge
-                      variant={
-                        violation.status === "active"
-                          ? "destructive"
-                          : violation.status === "under review"
-                          ? "default"
-                          : "secondary"
-                      }
-                      className="h-[18px] text-[10px] px-1.5">
-                      {violation.status === "under review" ? "under review" : violation.status}
-                    </Badge>
-                    {warningLevel === "urgent" && (
+                      <span className="inline-flex items-center gap-1 h-[22px] px-2 rounded-full bg-muted/40 text-[12px] font-medium">
+                        <Clock className="h-3 w-3 text-muted-foreground" />
+                        <span>{timeSinceAdded}</span>
+                      </span>
                       <Badge
-                        variant="destructive"
+                        variant={
+                          violation.status === "active"
+                            ? "destructive"
+                            : violation.status === "under review"
+                            ? "default"
+                            : "secondary"
+                        }
                         className="h-[18px] text-[10px] px-1.5">
-                        overdue
+                        {violation.status === "under review"
+                          ? "under review"
+                          : violation.status}
                       </Badge>
-                    )}
-                    {warningLevel === "warning" && (
-                      <Badge
-                        variant="secondary"
-                        className="h-[18px] text-[10px] px-1.5 bg-amber-500/10 text-amber-700 border-amber-500/20">
-                        slower
-                      </Badge>
-                    )}
+                      {warningLevel === "urgent" && (
+                        <Badge
+                          variant="destructive"
+                          className="h-[18px] text-[10px] px-1.5">
+                          overdue
+                        </Badge>
+                      )}
+                      {warningLevel === "warning" && (
+                        <Badge
+                          variant="secondary"
+                          className="h-[18px] text-[10px] px-1.5 bg-amber-500/10 text-amber-700 border-amber-500/20">
+                          slower
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })
+                );
+              })
             )}
           </div>
         </Card>
@@ -1633,10 +1689,38 @@ export default function Dashboard() {
         }
         fileName={
           weekFilterType === "all"
-            ? `Round-Report-${selectedLeague === "saudi" ? "Saudi-Pro-League" : selectedLeague === "saudi-super-cup" ? "Saudi-Super-Cup" : selectedLeague === "spanish-super-cup" ? "Spanish-Super-Cup" : "All-Leagues"}-All-Weeks-${new Date().toISOString().split("T")[0]}.png`
+            ? `Round-Report-${
+                selectedLeague === "saudi"
+                  ? "Saudi-Pro-League"
+                  : selectedLeague === "saudi-super-cup"
+                  ? "Saudi-Super-Cup"
+                  : selectedLeague === "spanish-super-cup"
+                  ? "Spanish-Super-Cup"
+                  : "All-Leagues"
+              }-All-Weeks-${new Date().toISOString().split("T")[0]}.png`
             : weekFilterType === "single"
-            ? `Round-Report-${selectedLeague === "saudi" ? "Saudi-Pro-League" : selectedLeague === "saudi-super-cup" ? "Saudi-Super-Cup" : selectedLeague === "spanish-super-cup" ? "Spanish-Super-Cup" : "All-Leagues"}-Week-${singleWeek}-${new Date().toISOString().split("T")[0]}.png`
-            : `Round-Report-${selectedLeague === "saudi" ? "Saudi-Pro-League" : selectedLeague === "saudi-super-cup" ? "Saudi-Super-Cup" : selectedLeague === "spanish-super-cup" ? "Spanish-Super-Cup" : "All-Leagues"}-Weeks-${weekRangeStart}-${weekRangeEnd}-${new Date().toISOString().split("T")[0]}.png`
+            ? `Round-Report-${
+                selectedLeague === "saudi"
+                  ? "Saudi-Pro-League"
+                  : selectedLeague === "saudi-super-cup"
+                  ? "Saudi-Super-Cup"
+                  : selectedLeague === "spanish-super-cup"
+                  ? "Spanish-Super-Cup"
+                  : "All-Leagues"
+              }-Week-${singleWeek}-${
+                new Date().toISOString().split("T")[0]
+              }.png`
+            : `Round-Report-${
+                selectedLeague === "saudi"
+                  ? "Saudi-Pro-League"
+                  : selectedLeague === "saudi-super-cup"
+                  ? "Saudi-Super-Cup"
+                  : selectedLeague === "spanish-super-cup"
+                  ? "Spanish-Super-Cup"
+                  : "All-Leagues"
+              }-Weeks-${weekRangeStart}-${weekRangeEnd}-${
+                new Date().toISOString().split("T")[0]
+              }.png`
         }
         liveMetrics={dashboardStats.platforms
           .filter((platform) => platform.contentSplit.live.violations > 0)
@@ -1647,10 +1731,12 @@ export default function Dashboard() {
             // Calculate blocked count for Live content type
             // Use overall success rate to estimate blocked count for Live
             const blocked = Math.round((detected * platform.successRate) / 100);
-            
+
             return {
               platform: platform.name,
-              icon: <Icon className="h-4 w-4" style={{ color: platformColor }} />,
+              icon: (
+                <Icon className="h-4 w-4" style={{ color: platformColor }} />
+              ),
               detected: detected,
               blocked: blocked,
               successRate: platform.successRate,
@@ -1667,10 +1753,12 @@ export default function Dashboard() {
             // Calculate blocked count for Highlights content type
             // Use overall success rate to estimate blocked count for Highlights
             const blocked = Math.round((detected * platform.successRate) / 100);
-            
+
             return {
               platform: platform.name,
-              icon: <Icon className="h-4 w-4" style={{ color: platformColor }} />,
+              icon: (
+                <Icon className="h-4 w-4" style={{ color: platformColor }} />
+              ),
               detected: detected,
               blocked: blocked,
               successRate: platform.successRate,

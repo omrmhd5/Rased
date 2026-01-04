@@ -8,13 +8,9 @@ export const formatViewsString = (viewsStr: string): string => {
   if (!viewsStr) return "0";
   if (viewsStr === "0") return "0";
 
-  let num = 0;
-  if (viewsStr.toUpperCase().includes("K")) {
-    const numStr = viewsStr.replace(/[^0-9.]/g, "");
-    num = parseFloat(numStr) * 1000;
-  } else {
-    num = parseFloat(viewsStr.replace(/[^0-9.]/g, ""));
-  }
+  // Remove all non-numeric characters except commas, then parse
+  const numStr = viewsStr.replace(/[^0-9,]/g, "").replace(/,/g, "");
+  const num = parseFloat(numStr) || 0;
 
   if (isNaN(num)) return viewsStr;
 
@@ -96,10 +92,10 @@ export const calculateBlockedCount = (violations: Violation[]): number => {
 export const calculateTotalViews = (violations: Violation[]): string => {
   const totalViews = violations.reduce((sum, v) => {
     if (!v.views) return sum;
-    const viewsStr = v.views.replace(/[^0-9.]/g, "");
-    const viewsNum = parseFloat(viewsStr) || 0;
-    const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
-    return sum + viewsNum * multiplier;
+    const viewsStr = v.views || "0";
+    // Remove all non-numeric characters except commas, then parse
+    const numStr = viewsStr.replace(/[^0-9,]/g, "").replace(/,/g, "");
+    return sum + (parseFloat(numStr) || 0);
   }, 0);
 
   return formatViews(totalViews);
@@ -431,9 +427,9 @@ export const calculateAndSavePlatformStats = async (
     const totalViews = violations.reduce((sum, v) => {
       if (!v.views || v.views === "0") return sum;
       const viewsStr = v.views.replace(/[^0-9.]/g, "");
-      const viewsNum = parseFloat(viewsStr) || 0;
-      const multiplier = v.views.toUpperCase().includes("K") ? 1000 : 1;
-      return sum + viewsNum * multiplier;
+      // Remove all non-numeric characters except commas, then parse
+      const numStr = viewsStr.replace(/[^0-9,]/g, "").replace(/,/g, "");
+      return sum + (parseFloat(numStr) || 0);
     }, 0);
 
     // Calculate status counts

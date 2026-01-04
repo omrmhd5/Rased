@@ -9,13 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Settings,
-  Trophy,
-  Calendar,
-  ArrowRight,
-  BarChart3,
-} from "lucide-react";
+import { Settings, Calendar, ArrowRight, BarChart3 } from "lucide-react";
 import { useState, useEffect } from "react";
 
 type League = "saudi" | "saudi-super-cup" | "spanish-super-cup" | null;
@@ -29,7 +23,10 @@ export default function Home() {
   // Load selected league from localStorage on mount
   useEffect(() => {
     const savedLeague = localStorage.getItem("selectedLeague") as League;
-    if (savedLeague && ["saudi", "saudi-super-cup", "spanish-super-cup"].includes(savedLeague)) {
+    if (
+      savedLeague &&
+      ["saudi", "saudi-super-cup", "spanish-super-cup"].includes(savedLeague)
+    ) {
       setSelectedLeague(savedLeague);
     } else {
       // If no league is selected, show the dialog
@@ -37,7 +34,9 @@ export default function Home() {
     }
   }, []);
 
-  const handleLeagueSelect = (league: "saudi" | "saudi-super-cup" | "spanish-super-cup") => {
+  const handleLeagueSelect = (
+    league: "saudi" | "saudi-super-cup" | "spanish-super-cup"
+  ) => {
     setSelectedLeague(league);
     localStorage.setItem("selectedLeague", league);
     setIsLeagueDialogOpen(false);
@@ -53,6 +52,19 @@ export default function Home() {
         return "Spanish Super Cup";
       default:
         return "No League Selected";
+    }
+  };
+
+  const getLeagueIcon = (league: League): string => {
+    switch (league) {
+      case "saudi":
+        return "/icons/Saudi_League.svg";
+      case "saudi-super-cup":
+        return "/icons/Saudi_Cup.png";
+      case "spanish-super-cup":
+        return "/icons/Spanish_Cup.svg";
+      default:
+        return "";
     }
   };
 
@@ -116,7 +128,13 @@ export default function Home() {
               onClick={() => setIsLeagueDialogOpen(true)}
               className="w-full sm:w-48 flex flex-col items-center gap-1 h-auto py-3">
               <div className="flex items-center">
-                <Trophy className="mr-2 h-4 w-4" />
+                {selectedLeague && (
+                  <img
+                    src={getLeagueIcon(selectedLeague)}
+                    alt={getLeagueName(selectedLeague)}
+                    className="mr-2 h-4 w-4 object-contain"
+                  />
+                )}
                 Change League
               </div>
               {selectedLeague && (
@@ -161,7 +179,11 @@ export default function Home() {
               className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
               onClick={() => handleLeagueSelect("saudi")}>
               <div className="flex items-center gap-3 w-full">
-                <Trophy className="h-6 w-6 text-chart-1" />
+                <img
+                  src="/icons/Saudi_League.svg"
+                  alt="Saudi Pro League"
+                  className="h-8 w-8 object-contain flex-shrink-0"
+                />
                 <div className="flex-1 text-left">
                   <div className="font-semibold text-lg">Saudi Pro League</div>
                   <div className="text-sm text-muted-foreground">
@@ -176,10 +198,16 @@ export default function Home() {
               className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
               onClick={() => handleLeagueSelect("saudi-super-cup")}>
               <div className="flex items-center gap-3 w-full">
-                <Trophy className="h-6 w-6 text-chart-2" />
+                <img
+                  src="/icons/Saudi_Cup.png"
+                  alt="Saudi Super Cup"
+                  className="h-12 object-contain flex-shrink-0 rounded"
+                />
                 <div className="flex-1 text-left">
                   <div className="font-semibold text-lg">Saudi Super Cup</div>
-                  <div className="text-sm text-muted-foreground">بطولة كاس السوبر السعودي</div>
+                  <div className="text-sm text-muted-foreground">
+                    بطولة كاس السوبر السعودي
+                  </div>
                 </div>
               </div>
             </Button>
@@ -189,10 +217,16 @@ export default function Home() {
               className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
               onClick={() => handleLeagueSelect("spanish-super-cup")}>
               <div className="flex items-center gap-3 w-full">
-                <Trophy className="h-6 w-6 text-chart-3" />
+                <img
+                  src="/icons/Spanish_Cup.svg"
+                  alt="Spanish Super Cup"
+                  className="h-8 w-8 object-contain flex-shrink-0"
+                />
                 <div className="flex-1 text-left">
                   <div className="font-semibold text-lg">Spanish Super Cup</div>
-                  <div className="text-sm text-muted-foreground">السوبر الاسباني</div>
+                  <div className="text-sm text-muted-foreground">
+                    السوبر الاسباني
+                  </div>
                 </div>
               </div>
             </Button>

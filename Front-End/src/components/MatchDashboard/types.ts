@@ -109,10 +109,11 @@ export interface Match {
   date: string;
   time: string;
   week: string;
+  stage?: string; // Stage for Super Cups
   competition?: string;
   stadium?: string;
   status: "upcoming" | "live" | "finished" | "cancelled" | "postponed";
-  league: "saudi" | "italian" | "spanish";
+  league: "saudi" | "italian" | "spanish" | "saudi-super-cup" | "spanish-super-cup";
   winner?: "home" | "away" | "draw" | null;
   scores?: {
     home: number;

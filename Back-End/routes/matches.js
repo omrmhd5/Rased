@@ -119,7 +119,7 @@ router.get("/external", async (req, res) => {
       if (jsonMatch) {
         const jsonData = JSON.parse(jsonMatch[1]);
         // Transform API response to match our Match model structure
-        const transformedMatches = transformApiMatches(jsonData);
+        const transformedMatches = transformApiMatches(jsonData, league);
 
         // Save/update matches in database
         await saveMatchesToDatabase(transformedMatches);
@@ -134,7 +134,7 @@ router.get("/external", async (req, res) => {
     const data = await response.json();
 
     // Transform API response to match our Match model structure
-    const transformedMatches = transformApiMatches(data);
+    const transformedMatches = transformApiMatches(data, league);
 
     // Save/update matches in database
     await saveMatchesToDatabase(transformedMatches);
@@ -148,7 +148,7 @@ router.get("/external", async (req, res) => {
 });
 
 // Helper function to transform API response to our Match format
-function transformApiMatches(apiData) {
+function transformApiMatches(apiData, leagueFromQuery = null) {
   if (!apiData || !apiData.match || !Array.isArray(apiData.match)) {
     return [];
   }
@@ -235,27 +235,43 @@ function transformApiMatches(apiData) {
       }
     }
 
-    // Determine league from competition name
-    // Note: League should be passed from the API call, but we can infer from competition name as fallback
-    let league = "saudi"; // Default
-    const competitionName = matchInfo.competition?.name || "";
-    if (
-      competitionName.toLowerCase().includes("super cup") ||
-      competitionName.toLowerCase().includes("سوبر")
-    ) {
-      if (
-        competitionName.toLowerCase().includes("saudi") ||
-        competitionName.toLowerCase().includes("سعودي")
-      ) {
-        league = "saudi-super-cup";
-      } else if (
-        competitionName.toLowerCase().includes("spanish") ||
-        competitionName.toLowerCase().includes("اسباني")
-      ) {
-        league = "spanish-super-cup";
+    // Use league from query parameter if provided, otherwise try to detect from competition
+    let league = leagueFromQuery || "saudi"; // Default to saudi if not provided
+
+    // Only try to detect league if not provided from query
+    if (!leagueFromQuery) {
+      const competitionName = matchInfo.competition?.name || "";
+      const competitionKnownName = matchInfo.competition?.knownName || "";
+      const countryName = matchInfo.competition?.country?.name || "";
+
+      // Check if it's a Super Cup
+      const isSuperCup =
+        competitionName.toLowerCase().includes("super cup") ||
+        competitionKnownName.toLowerCase().includes("super cup") ||
+        competitionKnownName.toLowerCase().includes("supercopa") ||
+        competitionName.toLowerCase().includes("سوبر");
+
+      if (isSuperCup) {
+        // Check for Saudi Super Cup
+        if (
+          competitionName.toLowerCase().includes("saudi") ||
+          competitionKnownName.toLowerCase().includes("saudi") ||
+          competitionKnownName.toLowerCase().includes("سعودي") ||
+          countryName.toLowerCase().includes("saudi")
+        ) {
+          league = "saudi-super-cup";
+        }
+        // Check for Spanish Super Cup
+        else if (
+          competitionName.toLowerCase().includes("spanish") ||
+          competitionKnownName.toLowerCase().includes("spanish") ||
+          competitionKnownName.toLowerCase().includes("spanish") ||
+          countryName.toLowerCase().includes("spain")
+        ) {
+          league = "spanish-super-cup";
+        }
       }
     }
-    // Default to saudi if no match
 
     return {
       externalMatchId: matchInfo.id, // Store external API match ID (primary identifier)
@@ -267,6 +283,7 @@ function transformApiMatches(apiData) {
       date: formattedDate, // Keep as date string (YYYY-MM-DD format)
       time: timeStr, // Formatted as 12-hour (e.g., "2:50 PM")
       week: matchInfo.week || "",
+      stage: matchInfo.stage?.name || "", // Extract stage name for Super Cups
       competitionData: matchInfo.competition
         ? {
             externalId: matchInfo.competition.id,
@@ -343,6 +360,7 @@ function hasChanges(existingMatch, newMatchData) {
     "team2",
     "time",
     "week",
+    "stage",
     "stadium",
     "status",
     "league",
@@ -423,6 +441,7 @@ async function saveMatchesToDatabase(transformedMatches) {
         date: matchDate,
         time: matchData.time || "", // Use empty string if time is missing
         week: matchData.week,
+        stage: matchData.stage || "", // Store stage for Super Cups
         competition: competitionRef,
         externalCompetitionId: externalCompetitionId,
         externalMatchId: matchData.externalMatchId,
@@ -482,7 +501,7 @@ async function saveMatchesToDatabase(transformedMatches) {
 // Helper function to return matches from database
 async function returnMatchesFromDatabase(req, res) {
   try {
-    const { status, league, week, limit, sort } = req.query;
+    const { status, league, week, stage, limit, sort } = req.query;
     const query = {};
 
     if (status) {
@@ -493,7 +512,13 @@ async function returnMatchesFromDatabase(req, res) {
       query.league = league;
     }
 
-    if (week) {
+    // For Super Cups, use stage filtering; for regular leagues, use week filtering
+    const isSuperCup =
+      league === "saudi-super-cup" || league === "spanish-super-cup";
+
+    if (isSuperCup && stage) {
+      query.stage = stage;
+    } else if (!isSuperCup && week) {
       query.week = week;
     }
 
@@ -1080,7 +1105,17 @@ router.delete("/:externalMatchId", async (req, res) => {
 // GET /api/matches/dashboard/stats - Get dashboard statistics aggregated by week/league
 router.get("/dashboard/stats", async (req, res) => {
   try {
-    const { league, weekFilter, week, weekStart, weekEnd } = req.query;
+    const {
+      league,
+      weekFilter,
+      week,
+      weekStart,
+      weekEnd,
+      stageFilter,
+      stage,
+      stageStart,
+      stageEnd,
+    } = req.query;
 
     // Validate league
     if (
@@ -1099,19 +1134,33 @@ router.get("/dashboard/stats", async (req, res) => {
       isDeleted: { $ne: true },
     };
 
-    // Add week filter based on weekFilter type
-    if (weekFilter === "single" && week) {
-      matchQuery.week = week.toString();
-    } else if (weekFilter === "range" && weekStart && weekEnd) {
-      const startWeek = parseInt(weekStart);
-      const endWeek = parseInt(weekEnd);
-      const weekArray = Array.from(
-        { length: endWeek - startWeek + 1 },
-        (_, i) => (startWeek + i).toString()
-      );
-      matchQuery.week = { $in: weekArray };
+    // For Super Cups, use stage filtering; for regular leagues, use week filtering
+    const isSuperCup =
+      league === "saudi-super-cup" || league === "spanish-super-cup";
+
+    if (isSuperCup) {
+      // Stage filtering for Super Cups
+      if (stageFilter === "single" && stage) {
+        matchQuery.stage = stage;
+      } else if (stageFilter === "range" && stageStart && stageEnd) {
+        const stages = [stageStart, stageEnd];
+        matchQuery.stage = { $in: stages };
+      }
+    } else {
+      // Week filtering for regular leagues
+      if (weekFilter === "single" && week) {
+        matchQuery.week = week.toString();
+      } else if (weekFilter === "range" && weekStart && weekEnd) {
+        const startWeek = parseInt(weekStart);
+        const endWeek = parseInt(weekEnd);
+        const weekArray = Array.from(
+          { length: endWeek - startWeek + 1 },
+          (_, i) => (startWeek + i).toString()
+        );
+        matchQuery.week = { $in: weekArray };
+      }
     }
-    // If weekFilter is "all" or not provided, no week filter is applied
+    // If filter is "all" or not provided, no filter is applied
 
     // Find all matches matching the criteria
     const matches = await Match.find(matchQuery)
@@ -1200,12 +1249,12 @@ router.get("/dashboard/stats", async (req, res) => {
     let totalViews = 0;
     violations.forEach((v) => {
       const viewsStr = v.views || "0";
-      // Handle "K" suffix (e.g., "1.5K" = 1500)
+      // Handle "K" suffix (e.g., "1.5K" = 1500) and comma separators (e.g., "1,000" = 1000)
       if (viewsStr.includes("K") || viewsStr.includes("k")) {
-        const num = parseFloat(viewsStr.replace(/[Kk]/g, "")) || 0;
+        const num = parseFloat(viewsStr.replace(/[Kk,]/g, "")) || 0;
         totalViews += num * 1000;
       } else {
-        totalViews += parseFloat(viewsStr) || 0;
+        totalViews += parseFloat(viewsStr.replace(/,/g, "")) || 0;
       }
     });
 
@@ -1246,11 +1295,12 @@ router.get("/dashboard/stats", async (req, res) => {
     const processViewsForPlatform = (viewsStr) => {
       if (!viewsStr || viewsStr === "0") return 0;
       const upperViews = viewsStr.toUpperCase();
+      // Handle "K" suffix (e.g., "1.5K" = 1500) and comma separators (e.g., "1,000" = 1000)
       if (upperViews.includes("K")) {
-        const num = parseFloat(upperViews.replace(/[K]/g, "")) || 0;
+        const num = parseFloat(upperViews.replace(/[K,]/g, "")) || 0;
         return num * 1000;
       }
-      return parseFloat(viewsStr) || 0;
+      return parseFloat(viewsStr.replace(/,/g, "")) || 0;
     };
 
     // Find top platform (platform with most violations)
@@ -1441,11 +1491,12 @@ router.get("/dashboard/stats", async (req, res) => {
         const processViews = (viewsStr) => {
           if (!viewsStr || viewsStr === "0") return 0;
           const upperViews = viewsStr.toUpperCase();
+          // Handle "K" suffix (e.g., "1.5K" = 1500) and comma separators (e.g., "1,000" = 1000)
           if (upperViews.includes("K")) {
-            const num = parseFloat(upperViews.replace(/[K]/g, "")) || 0;
+            const num = parseFloat(upperViews.replace(/[K,]/g, "")) || 0;
             return num * 1000;
           }
-          return parseFloat(viewsStr) || 0;
+          return parseFloat(viewsStr.replace(/,/g, "")) || 0;
         };
 
         const totalViews = matchViolations.reduce(
@@ -1535,15 +1586,16 @@ router.get("/dashboard/stats", async (req, res) => {
       }
     });
 
-    // Process views manually to handle "K" suffix
+    // Process views manually to handle "K" suffix and comma separators
     const processViews = (viewsStr) => {
       if (!viewsStr || viewsStr === "0") return 0;
       const upperViews = viewsStr.toUpperCase();
+      // Handle "K" suffix (e.g., "1.5K" = 1500) and comma separators (e.g., "1,000" = 1000)
       if (upperViews.includes("K")) {
-        const num = parseFloat(upperViews.replace(/[K]/g, "")) || 0;
+        const num = parseFloat(upperViews.replace(/[K,]/g, "")) || 0;
         return num * 1000;
       }
-      return parseFloat(viewsStr) || 0;
+      return parseFloat(viewsStr.replace(/,/g, "")) || 0;
     };
 
     // Calculate content split statistics (Live, Highlights, Others)
@@ -1695,8 +1747,13 @@ router.get("/:externalMatchId/stats", async (req, res) => {
     ).length;
 
     const totalViews = violations.reduce((sum, v) => {
-      const views = parseFloat(v.views.replace("K", "")) * 1000;
-      return sum + views;
+      const viewsStr = v.views || "0";
+      // Handle "K" suffix (e.g., "1.5K" = 1500) and comma separators (e.g., "1,000" = 1000)
+      if (viewsStr.includes("K") || viewsStr.includes("k")) {
+        const num = parseFloat(viewsStr.replace(/[Kk,]/g, "")) || 0;
+        return sum + num * 1000;
+      }
+      return sum + (parseFloat(viewsStr.replace(/,/g, "")) || 0);
     }, 0);
 
     const blockedRate =

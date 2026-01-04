@@ -69,26 +69,46 @@ router.get("/", async (req, res) => {
       week,
       weekStart,
       weekEnd,
+      stageFilter,
+      stage,
+      stageStart,
+      stageEnd,
     } = req.query;
 
-    // Build match query for league/week filtering
+    // Build match query for league/week/stage filtering
     const matchQuery = {};
     if (league && ["saudi", "saudi-super-cup", "spanish-super-cup"].includes(league)) {
       matchQuery.league = league;
       matchQuery.isDeleted = { $ne: true };
     }
 
-    // Add week filter based on weekFilter type
-    if (weekFilter === "single" && week) {
-      matchQuery.week = week.toString();
-    } else if (weekFilter === "range" && weekStart && weekEnd) {
-      const startWeek = parseInt(weekStart);
-      const endWeek = parseInt(weekEnd);
-      const weekArray = Array.from(
-        { length: endWeek - startWeek + 1 },
-        (_, i) => (startWeek + i).toString()
-      );
-      matchQuery.week = { $in: weekArray };
+    // For Super Cups, use stage filtering; for regular leagues, use week filtering
+    const isSuperCup = league === "saudi-super-cup" || league === "spanish-super-cup";
+    
+    if (isSuperCup) {
+      // Stage filtering for Super Cups
+      if (stageFilter === "single" && stage) {
+        matchQuery.stage = stage;
+      } else if (stageFilter === "range" && stageStart && stageEnd) {
+        // For range, we need to get all stages between start and end
+        // Since stages are strings, we'll need to fetch all matches and filter by stage names
+        // For now, we'll use $in with the provided stages
+        const stages = [stageStart, stageEnd];
+        matchQuery.stage = { $in: stages };
+      }
+    } else {
+      // Week filtering for regular leagues
+      if (weekFilter === "single" && week) {
+        matchQuery.week = week.toString();
+      } else if (weekFilter === "range" && weekStart && weekEnd) {
+        const startWeek = parseInt(weekStart);
+        const endWeek = parseInt(weekEnd);
+        const weekArray = Array.from(
+          { length: endWeek - startWeek + 1 },
+          (_, i) => (startWeek + i).toString()
+        );
+        matchQuery.week = { $in: weekArray };
+      }
     }
 
     // Find matching matches first if league/week filters are provided
@@ -232,7 +252,7 @@ router.delete("/:violationId/audit-log/:logEntryId", async (req, res) => {
 // IMPORTANT: This route must be defined BEFORE /:id route to avoid route conflicts
 router.get("/problematic-accounts", async (req, res) => {
   try {
-    const { league, weekFilter, week, weekStart, weekEnd, limit, platformId } = req.query;
+    const { league, weekFilter, week, weekStart, weekEnd, stageFilter, stage, stageStart, stageEnd, limit, platformId } = req.query;
     
     // Validate limit
     const limitNum = limit ? parseInt(limit) : 50;
@@ -243,7 +263,7 @@ router.get("/problematic-accounts", async (req, res) => {
       });
     }
 
-    // Build match filter based on league and week
+    // Build match filter based on league and week/stage
     const matchFilter = { isDeleted: { $ne: true } };
     if (league && league !== "all" && league !== "null") {
       if (!["saudi", "saudi-super-cup", "spanish-super-cup"].includes(league)) {
@@ -252,20 +272,34 @@ router.get("/problematic-accounts", async (req, res) => {
       matchFilter.league = league;
     }
 
-    // Handle week filtering
-    if (weekFilter === "single" && week) {
-      matchFilter.week = week.toString();
-    } else if (weekFilter === "range" && weekStart && weekEnd) {
-      const startNum = parseInt(weekStart);
-      const endNum = parseInt(weekEnd);
-      if (isNaN(startNum) || isNaN(endNum) || startNum < 1 || endNum < 1 || startNum > endNum) {
-        return res.status(400).json({ error: "Invalid week range. Start must be <= end and both must be >= 1." });
+    // For Super Cups, use stage filtering; for regular leagues, use week filtering
+    const isSuperCup = league === "saudi-super-cup" || league === "spanish-super-cup";
+    
+    if (isSuperCup) {
+      // Stage filtering for Super Cups
+      if (stageFilter === "single" && stage) {
+        matchFilter.stage = stage;
+      } else if (stageFilter === "range" && stageStart && stageEnd) {
+        // For range, we'll use $in with the provided stages
+        const stages = [stageStart, stageEnd];
+        matchFilter.stage = { $in: stages };
       }
-      const weekNumbers = [];
-      for (let w = startNum; w <= endNum; w++) {
-        weekNumbers.push(w.toString());
+    } else {
+      // Week filtering for regular leagues
+      if (weekFilter === "single" && week) {
+        matchFilter.week = week.toString();
+      } else if (weekFilter === "range" && weekStart && weekEnd) {
+        const startNum = parseInt(weekStart);
+        const endNum = parseInt(weekEnd);
+        if (isNaN(startNum) || isNaN(endNum) || startNum < 1 || endNum < 1 || startNum > endNum) {
+          return res.status(400).json({ error: "Invalid week range. Start must be <= end and both must be >= 1." });
+        }
+        const weekNumbers = [];
+        for (let w = startNum; w <= endNum; w++) {
+          weekNumbers.push(w.toString());
+        }
+        matchFilter.week = { $in: weekNumbers };
       }
-      matchFilter.week = { $in: weekNumbers };
     }
 
     // Get matches that match the filter

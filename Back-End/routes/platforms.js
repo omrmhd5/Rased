@@ -138,8 +138,13 @@ router.get('/:id/stats/:matchId', async (req, res) => {
     const stillActive = violations.filter(v => v.stillActive).length;
     
     const totalViews = violations.reduce((sum, v) => {
-      const views = parseFloat(v.views.replace('K', '')) * 1000;
-      return sum + views;
+      const viewsStr = v.views || "0";
+      // Handle "K" suffix (e.g., "1.5K" = 1500) and comma separators (e.g., "1,000" = 1000)
+      if (viewsStr.includes("K") || viewsStr.includes("k")) {
+        const num = parseFloat(viewsStr.replace(/[Kk,]/g, "")) || 0;
+        return sum + (num * 1000);
+      }
+      return sum + (parseFloat(viewsStr.replace(/,/g, "")) || 0);
     }, 0);
     
     const blockedRate = totalViolations > 0 
