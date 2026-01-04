@@ -37,8 +37,18 @@ FRONTEND_URL=http://localhost:5173
 JWT_SECRET=your-super-secret-jwt-key-change-this-in-production-min-32-characters
 
 # External API Configuration (Perform Feeds)
+# Base API URL (same for all leagues)
 EXTERNAL_API_URL=https://api.performfeeds.com/soccerdata/match/ft1tiv1inq7v1sk3y9tv12yh5/
-EXTERNAL_API_TMCL=6ru2ri6bqeg9l7av4ppdpdx5g
+
+# League-specific Tournament/Competition Codes (TMCL)
+# Saudi Pro League
+SAUDI_LEAGUE_TMCL=6ru2ri6bqeg9l7av4ppdpdx5g
+# Saudi Super Cup (بطولة كاس السوبر السعودي)
+SAUDI_SUPER_CUP_TMCL=8ymqh6ujwc4o85p95laao7l04
+# Spanish Super Cup (السوبر الاسباني)
+SPANISH_SUPER_CUP_TMCL=calfow53qyurf0wi9rr96m6tw
+
+# JSONP Configuration
 EXTERNAL_API_JSONP_CALLBACK=W33ea3696678db4fdef563c3095ccdc85f02d336e2
 EXTERNAL_API_REFERER=https://optaplayerstats.statsperform.com/
 ```
@@ -49,10 +59,19 @@ EXTERNAL_API_REFERER=https://optaplayerstats.statsperform.com/
 - **NODE_ENV**: Environment mode (development/production)
 - **MONGODB_URI**: MongoDB connection string (default: mongodb://localhost:27017/rased)
 - **FRONTEND_URL**: Frontend URL for CORS configuration
-- **EXTERNAL_API_URL**: External API endpoint URL for fetching matches
-- **EXTERNAL_API_TMCL**: External API tournament/competition code
+- **EXTERNAL_API_URL**: External API endpoint URL for fetching matches (base URL, same for all leagues)
+- **SAUDI_LEAGUE_TMCL**: Tournament/competition code for Saudi Pro League
+- **SAUDI_SUPER_CUP_TMCL**: Tournament/competition code for Saudi Super Cup (بطولة كاس السوبر السعودي)
+- **SPANISH_SUPER_CUP_TMCL**: Tournament/competition code for Spanish Super Cup (السوبر الاسباني)
 - **EXTERNAL_API_JSONP_CALLBACK**: JSONP callback function name
 - **EXTERNAL_API_REFERER**: Referer header value for API requests
+
+**Note**: The system supports three leagues:
+1. **Saudi Pro League** (`saudi`) - Uses `SAUDI_LEAGUE_TMCL`
+2. **Saudi Super Cup** (`saudi-super-cup`) - Uses `SAUDI_SUPER_CUP_TMCL`
+3. **Spanish Super Cup** (`spanish-super-cup`) - Uses `SPANISH_SUPER_CUP_TMCL`
+
+When fetching matches via `/api/matches/external?league=<league>`, the system automatically uses the correct TMCL value for the specified league.
 
 ## Running the Server
 

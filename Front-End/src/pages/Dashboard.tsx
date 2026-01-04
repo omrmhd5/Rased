@@ -74,7 +74,7 @@ import { PlatformData } from "@/components/MatchDashboard/types";
 import { formatViews as formatViewsUtil } from "@/components/MatchDashboard/utils";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
 
-type League = "saudi" | "italian" | "spanish" | null;
+type League = "saudi" | "saudi-super-cup" | "spanish-super-cup" | null;
 type WeekFilterType = "all" | "single" | "range";
 
 const platformData = [
@@ -327,7 +327,7 @@ export default function Dashboard() {
   // Load selected league from localStorage on mount
   useEffect(() => {
     const savedLeague = localStorage.getItem("selectedLeague") as League;
-    if (savedLeague && ["saudi", "italian", "spanish"].includes(savedLeague)) {
+    if (savedLeague && ["saudi", "saudi-super-cup", "spanish-super-cup"].includes(savedLeague)) {
       setSelectedLeague(savedLeague);
     } else {
       // If no league is selected, redirect to home
@@ -771,10 +771,10 @@ export default function Dashboard() {
       const leagueName =
         selectedLeague === "saudi"
           ? "Saudi Pro League"
-          : selectedLeague === "italian"
-          ? "Italian Serie A"
-          : selectedLeague === "spanish"
-          ? "Spanish La Liga"
+          : selectedLeague === "saudi-super-cup"
+          ? "Saudi Super Cup"
+          : selectedLeague === "spanish-super-cup"
+          ? "Spanish Super Cup"
           : "All Leagues";
 
       const weekInfo =
@@ -1008,9 +1008,9 @@ export default function Dashboard() {
         const leagueFormatted = selectedLeague
           ? selectedLeague === "saudi"
             ? "Saudi-Pro-League"
-            : selectedLeague === "italian"
-            ? "Italian-Serie-A"
-            : "Spanish-La-Liga"
+            : selectedLeague === "saudi-super-cup"
+            ? "Saudi-Super-Cup"
+            : "Spanish-Super-Cup"
           : "All-Leagues";
         const weekFormatted =
           weekFilterType === "all"
@@ -1068,10 +1068,10 @@ export default function Dashboard() {
               <Trophy className="h-3 w-3" />
               {selectedLeague === "saudi"
                 ? "Saudi Pro League"
-                : selectedLeague === "italian"
-                ? "Italian Serie A"
-                : selectedLeague === "spanish"
-                ? "Spanish La Liga"
+                : selectedLeague === "saudi-super-cup"
+                ? "Saudi Super Cup"
+                : selectedLeague === "spanish-super-cup"
+                ? "Spanish Super Cup"
                 : "No League"}
             </Badge>
           )}
@@ -1625,18 +1625,18 @@ export default function Dashboard() {
         competition={
           selectedLeague === "saudi"
             ? "Saudi Pro League"
-            : selectedLeague === "italian"
-            ? "Italian Serie A"
-            : selectedLeague === "spanish"
-            ? "Spanish La Liga"
+            : selectedLeague === "saudi-super-cup"
+            ? "Saudi Super Cup"
+            : selectedLeague === "spanish-super-cup"
+            ? "Spanish Super Cup"
             : "All Leagues"
         }
         fileName={
           weekFilterType === "all"
-            ? `Round-Report-${selectedLeague === "saudi" ? "Saudi-Pro-League" : selectedLeague === "italian" ? "Italian-Serie-A" : selectedLeague === "spanish" ? "Spanish-La-Liga" : "All-Leagues"}-All-Weeks-${new Date().toISOString().split("T")[0]}.png`
+            ? `Round-Report-${selectedLeague === "saudi" ? "Saudi-Pro-League" : selectedLeague === "saudi-super-cup" ? "Saudi-Super-Cup" : selectedLeague === "spanish-super-cup" ? "Spanish-Super-Cup" : "All-Leagues"}-All-Weeks-${new Date().toISOString().split("T")[0]}.png`
             : weekFilterType === "single"
-            ? `Round-Report-${selectedLeague === "saudi" ? "Saudi-Pro-League" : selectedLeague === "italian" ? "Italian-Serie-A" : selectedLeague === "spanish" ? "Spanish-La-Liga" : "All-Leagues"}-Week-${singleWeek}-${new Date().toISOString().split("T")[0]}.png`
-            : `Round-Report-${selectedLeague === "saudi" ? "Saudi-Pro-League" : selectedLeague === "italian" ? "Italian-Serie-A" : selectedLeague === "spanish" ? "Spanish-La-Liga" : "All-Leagues"}-Weeks-${weekRangeStart}-${weekRangeEnd}-${new Date().toISOString().split("T")[0]}.png`
+            ? `Round-Report-${selectedLeague === "saudi" ? "Saudi-Pro-League" : selectedLeague === "saudi-super-cup" ? "Saudi-Super-Cup" : selectedLeague === "spanish-super-cup" ? "Spanish-Super-Cup" : "All-Leagues"}-Week-${singleWeek}-${new Date().toISOString().split("T")[0]}.png`
+            : `Round-Report-${selectedLeague === "saudi" ? "Saudi-Pro-League" : selectedLeague === "saudi-super-cup" ? "Saudi-Super-Cup" : selectedLeague === "spanish-super-cup" ? "Spanish-Super-Cup" : "All-Leagues"}-Weeks-${weekRangeStart}-${weekRangeEnd}-${new Date().toISOString().split("T")[0]}.png`
         }
         liveMetrics={dashboardStats.platforms
           .filter((platform) => platform.contentSplit.live.violations > 0)

@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
 
-type League = "saudi" | "italian" | "spanish" | null;
+type League = "saudi" | "saudi-super-cup" | "spanish-super-cup" | null;
 type WeekFilterType = "all" | "single" | "range";
 
 interface ProblematicAccount {
@@ -55,7 +55,9 @@ export default function ProblematicAccounts() {
   // Data
   const [accounts, setAccounts] = useState<ProblematicAccount[]>([]);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<"violations" | "views" | "matches">("violations");
+  const [sortBy, setSortBy] = useState<"violations" | "views" | "matches">(
+    "violations"
+  );
 
   // Get platform operations for icons
   const platformOperations = getInitialPlatformOperations();
@@ -104,7 +106,8 @@ export default function ProblematicAccounts() {
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(
-            errorData.error || `Failed to fetch problematic accounts: ${response.status}`
+            errorData.error ||
+              `Failed to fetch problematic accounts: ${response.status}`
           );
         }
 
@@ -118,7 +121,14 @@ export default function ProblematicAccounts() {
     };
 
     fetchProblematicAccounts();
-  }, [league, weekFilterType, singleWeek, weekRangeStart, weekRangeEnd, selectedPlatform]);
+  }, [
+    league,
+    weekFilterType,
+    singleWeek,
+    weekRangeStart,
+    weekRangeEnd,
+    selectedPlatform,
+  ]);
 
   // Sort accounts
   const sortedAccounts = [...accounts].sort((a, b) => {
@@ -164,22 +174,24 @@ export default function ProblematicAccounts() {
           {/* League Filter */}
           <Select
             value={league || "all"}
-            onValueChange={(value) => setLeague(value === "all" ? null : (value as League))}>
+            onValueChange={(value) =>
+              setLeague(value === "all" ? null : (value as League))
+            }>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="League" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Leagues</SelectItem>
-              <SelectItem value="saudi">Saudi</SelectItem>
-              <SelectItem value="italian">Italian</SelectItem>
-              <SelectItem value="spanish">Spanish</SelectItem>
+              <SelectItem value="saudi">Saudi Pro League</SelectItem>
+              <SelectItem value="saudi-super-cup">Saudi Super Cup</SelectItem>
+              <SelectItem value="spanish-super-cup">
+                Spanish Super Cup
+              </SelectItem>
             </SelectContent>
           </Select>
 
           {/* Platform Filter */}
-          <Select
-            value={selectedPlatform}
-            onValueChange={setSelectedPlatform}>
+          <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
@@ -196,7 +208,9 @@ export default function ProblematicAccounts() {
           {/* Week Filter Type */}
           <Select
             value={weekFilterType}
-            onValueChange={(value) => setWeekFilterType(value as WeekFilterType)}>
+            onValueChange={(value) =>
+              setWeekFilterType(value as WeekFilterType)
+            }>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Week Filter" />
             </SelectTrigger>
@@ -257,7 +271,9 @@ export default function ProblematicAccounts() {
           {/* Sort By */}
           <div className="ml-auto flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Sort by:</span>
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+            <Select
+              value={sortBy}
+              onValueChange={(value) => setSortBy(value as typeof sortBy)}>
               <SelectTrigger className="w-[140px]">
                 <SelectValue />
               </SelectTrigger>
@@ -276,7 +292,9 @@ export default function ProblematicAccounts() {
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-            <span className="text-sm text-muted-foreground">Loading accounts...</span>
+            <span className="text-sm text-muted-foreground">
+              Loading accounts...
+            </span>
           </div>
         ) : sortedAccounts.length === 0 ? (
           <div className="flex items-center justify-center py-12">
@@ -288,18 +306,34 @@ export default function ProblematicAccounts() {
               <thead className="border-b border-border bg-muted/30">
                 <tr>
                   <th className="text-left p-4 text-sm font-semibold">Rank</th>
-                  <th className="text-left p-4 text-sm font-semibold">Account/Channel</th>
-                  <th className="text-left p-4 text-sm font-semibold">Platform</th>
-                  <th className="text-right p-4 text-sm font-semibold">Violations</th>
-                  <th className="text-right p-4 text-sm font-semibold">Total Views</th>
-                  <th className="text-right p-4 text-sm font-semibold">Matches</th>
-                  <th className="text-right p-4 text-sm font-semibold">Status</th>
-                  <th className="text-right p-4 text-sm font-semibold">Content Type</th>
+                  <th className="text-left p-4 text-sm font-semibold">
+                    Account/Channel
+                  </th>
+                  <th className="text-left p-4 text-sm font-semibold">
+                    Platform
+                  </th>
+                  <th className="text-right p-4 text-sm font-semibold">
+                    Violations
+                  </th>
+                  <th className="text-right p-4 text-sm font-semibold">
+                    Total Views
+                  </th>
+                  <th className="text-right p-4 text-sm font-semibold">
+                    Matches
+                  </th>
+                  <th className="text-right p-4 text-sm font-semibold">
+                    Status
+                  </th>
+                  <th className="text-right p-4 text-sm font-semibold">
+                    Content Type
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {sortedAccounts.map((account, index) => {
-                  const PlatformIcon = getPlatformIconComponent(account.platformName);
+                  const PlatformIcon = getPlatformIconComponent(
+                    account.platformName
+                  );
                   const platformColor = getPlatformColor(account.platformName);
                   const successRate =
                     account.totalViolations > 0
@@ -324,7 +358,9 @@ export default function ProblematicAccounts() {
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           <AlertTriangle className="h-4 w-4 text-destructive" />
-                          <span className="text-sm font-medium">{account.accountChannel}</span>
+                          <span className="text-sm font-medium">
+                            {account.accountChannel}
+                          </span>
                         </div>
                       </td>
                       <td className="p-4">
@@ -333,7 +369,9 @@ export default function ProblematicAccounts() {
                             className="h-4 w-4"
                             style={{ color: platformColor }}
                           />
-                          <span className="text-sm">{account.platformName}</span>
+                          <span className="text-sm">
+                            {account.platformName}
+                          </span>
                         </div>
                       </td>
                       <td className="p-4 text-right">
@@ -347,7 +385,9 @@ export default function ProblematicAccounts() {
                               className="text-[10px] px-1.5 py-0">
                               {account.activeCount} Active
                             </Badge>
-                            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            <Badge
+                              variant="secondary"
+                              className="text-[10px] px-1.5 py-0">
                               {account.blockedCount} Blocked
                             </Badge>
                           </div>
@@ -369,7 +409,9 @@ export default function ProblematicAccounts() {
                       <td className="p-4 text-right">
                         <div className="flex flex-col items-end gap-1">
                           <Badge
-                            variant={successRate >= 80 ? "default" : "secondary"}
+                            variant={
+                              successRate >= 80 ? "default" : "secondary"
+                            }
                             className="text-[10px] px-2 py-0">
                             {successRate}% Success
                           </Badge>
@@ -386,15 +428,25 @@ export default function ProblematicAccounts() {
                         <div className="flex flex-col items-end gap-1 text-[10px]">
                           <div className="flex items-center gap-1">
                             <span className="text-muted-foreground">Live:</span>
-                            <span className="font-medium">{account.liveCount}</span>
+                            <span className="font-medium">
+                              {account.liveCount}
+                            </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <span className="text-muted-foreground">Highlights:</span>
-                            <span className="font-medium">{account.highlightsCount}</span>
+                            <span className="text-muted-foreground">
+                              Highlights:
+                            </span>
+                            <span className="font-medium">
+                              {account.highlightsCount}
+                            </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            <span className="text-muted-foreground">Others:</span>
-                            <span className="font-medium">{account.othersCount}</span>
+                            <span className="text-muted-foreground">
+                              Others:
+                            </span>
+                            <span className="font-medium">
+                              {account.othersCount}
+                            </span>
                           </div>
                         </div>
                       </td>
@@ -409,4 +461,3 @@ export default function ProblematicAccounts() {
     </div>
   );
 }
-

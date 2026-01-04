@@ -73,7 +73,7 @@ router.get("/", async (req, res) => {
 
     // Build match query for league/week filtering
     const matchQuery = {};
-    if (league && ["saudi", "italian", "spanish"].includes(league)) {
+    if (league && ["saudi", "saudi-super-cup", "spanish-super-cup"].includes(league)) {
       matchQuery.league = league;
       matchQuery.isDeleted = { $ne: true };
     }
@@ -246,8 +246,8 @@ router.get("/problematic-accounts", async (req, res) => {
     // Build match filter based on league and week
     const matchFilter = { isDeleted: { $ne: true } };
     if (league && league !== "all" && league !== "null") {
-      if (!["saudi", "italian", "spanish"].includes(league)) {
-        return res.status(400).json({ error: "Invalid league. Must be saudi, italian, or spanish." });
+      if (!["saudi", "saudi-super-cup", "spanish-super-cup"].includes(league)) {
+        return res.status(400).json({ error: "Invalid league. Must be saudi, saudi-super-cup, or spanish-super-cup." });
       }
       matchFilter.league = league;
     }

@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
-type League = "saudi" | "italian" | "spanish" | null;
+type League = "saudi" | "saudi-super-cup" | "spanish-super-cup" | null;
 
 export default function Home() {
   const { user } = useAuth();
@@ -29,7 +29,7 @@ export default function Home() {
   // Load selected league from localStorage on mount
   useEffect(() => {
     const savedLeague = localStorage.getItem("selectedLeague") as League;
-    if (savedLeague && ["saudi", "italian", "spanish"].includes(savedLeague)) {
+    if (savedLeague && ["saudi", "saudi-super-cup", "spanish-super-cup"].includes(savedLeague)) {
       setSelectedLeague(savedLeague);
     } else {
       // If no league is selected, show the dialog
@@ -37,7 +37,7 @@ export default function Home() {
     }
   }, []);
 
-  const handleLeagueSelect = (league: "saudi" | "italian" | "spanish") => {
+  const handleLeagueSelect = (league: "saudi" | "saudi-super-cup" | "spanish-super-cup") => {
     setSelectedLeague(league);
     localStorage.setItem("selectedLeague", league);
     setIsLeagueDialogOpen(false);
@@ -47,10 +47,10 @@ export default function Home() {
     switch (league) {
       case "saudi":
         return "Saudi Pro League";
-      case "italian":
-        return "Italian Serie A";
-      case "spanish":
-        return "Spanish La Liga";
+      case "saudi-super-cup":
+        return "Saudi Super Cup";
+      case "spanish-super-cup":
+        return "Spanish Super Cup";
       default:
         return "No League Selected";
     }
@@ -174,12 +174,12 @@ export default function Home() {
             <Button
               variant="outline"
               className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
-              onClick={() => handleLeagueSelect("italian")}>
+              onClick={() => handleLeagueSelect("saudi-super-cup")}>
               <div className="flex items-center gap-3 w-full">
                 <Trophy className="h-6 w-6 text-chart-2" />
                 <div className="flex-1 text-left">
-                  <div className="font-semibold text-lg">Italian Serie A</div>
-                  <div className="text-sm text-muted-foreground">Italy</div>
+                  <div className="font-semibold text-lg">Saudi Super Cup</div>
+                  <div className="text-sm text-muted-foreground">بطولة كاس السوبر السعودي</div>
                 </div>
               </div>
             </Button>
@@ -187,12 +187,12 @@ export default function Home() {
             <Button
               variant="outline"
               className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
-              onClick={() => handleLeagueSelect("spanish")}>
+              onClick={() => handleLeagueSelect("spanish-super-cup")}>
               <div className="flex items-center gap-3 w-full">
                 <Trophy className="h-6 w-6 text-chart-3" />
                 <div className="flex-1 text-left">
-                  <div className="font-semibold text-lg">Spanish La Liga</div>
-                  <div className="text-sm text-muted-foreground">Spain</div>
+                  <div className="font-semibold text-lg">Spanish Super Cup</div>
+                  <div className="text-sm text-muted-foreground">السوبر الاسباني</div>
                 </div>
               </div>
             </Button>

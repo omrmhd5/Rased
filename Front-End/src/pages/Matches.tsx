@@ -52,12 +52,12 @@ import {
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 
-type League = "saudi" | "italian" | "spanish" | null;
+type League = "saudi" | "saudi-super-cup" | "spanish-super-cup" | null;
 
 const leagueNames = {
   saudi: "Saudi Pro League",
-  italian: "Italian Serie A",
-  spanish: "Spanish La Liga",
+  "saudi-super-cup": "Saudi Super Cup",
+  "spanish-super-cup": "Spanish Super Cup",
 };
 
 interface Competition {
@@ -67,7 +67,7 @@ interface Competition {
   knownName?: string;
   competitionCode?: string;
   competitionFormat?: string;
-  league: "saudi" | "italian" | "spanish";
+  league: "saudi" | "saudi-super-cup" | "spanish-super-cup";
   country?: {
     id?: string;
     name?: string;
@@ -103,7 +103,7 @@ interface Match {
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
-const competitions = ["Saudi Pro League", "Italian Serie A", "Spanish La Liga"];
+const competitions = ["Saudi Pro League", "Saudi Super Cup", "Spanish Super Cup"];
 
 type MatchFilter = "all" | "live" | "upcoming" | "completed";
 
@@ -140,7 +140,7 @@ export default function Matches() {
   // Load selected league and week from localStorage on mount
   useEffect(() => {
     const savedLeague = localStorage.getItem("selectedLeague") as League;
-    if (savedLeague && ["saudi", "italian", "spanish"].includes(savedLeague)) {
+    if (savedLeague && ["saudi", "saudi-super-cup", "spanish-super-cup"].includes(savedLeague)) {
       setSelectedLeague(savedLeague);
     } else {
       // If no league is selected, redirect to home
@@ -353,8 +353,8 @@ export default function Matches() {
     // Map database names to frontend dropdown values
     const competitionMap: Record<string, string> = {
       "Saudi League": "Saudi Pro League",
-      "Italian Serie A": "Italian Serie A",
-      "Spanish La Liga": "Spanish La Liga",
+      "Saudi Super Cup": "Saudi Super Cup",
+      "Spanish Super Cup": "Spanish Super Cup",
     };
     
     const mappedCompetition = competitionMap[competitionName] || competitionName;
@@ -394,10 +394,10 @@ export default function Matches() {
             league: formCompetition
               ? formCompetition === "Saudi Pro League"
                 ? "saudi"
-                : formCompetition === "Italian Serie A"
-                ? "italian"
-                : formCompetition === "Spanish La Liga"
-                ? "spanish"
+                : formCompetition === "Saudi Super Cup"
+                ? "saudi-super-cup"
+                : formCompetition === "Spanish Super Cup"
+                ? "spanish-super-cup"
                 : selectedLeague
               : selectedLeague,
             status: formStatus,

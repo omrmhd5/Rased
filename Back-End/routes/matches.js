@@ -15,7 +15,6 @@ const router = express.Router();
 
 // External API configuration from environment variables
 const EXTERNAL_API_URL = (process.env.EXTERNAL_API_URL || "").trim();
-const EXTERNAL_API_TMCL = (process.env.EXTERNAL_API_TMCL || "").trim();
 const EXTERNAL_API_JSONP_CALLBACK = (
   process.env.EXTERNAL_API_JSONP_CALLBACK || ""
 ).trim();
@@ -23,29 +22,56 @@ const EXTERNAL_API_REFERER = (process.env.EXTERNAL_API_REFERER || "").trim();
 const EXTERNAL_API_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
+// League-specific API configurations
+const LEAGUE_API_CONFIG = {
+  saudi: {
+    tmcl: (process.env.SAUDI_LEAGUE_TMCL || "").trim(),
+  },
+  "saudi-super-cup": {
+    tmcl: (process.env.SAUDI_SUPER_CUP_TMCL || "").trim(),
+  },
+  "spanish-super-cup": {
+    tmcl: (process.env.SPANISH_SUPER_CUP_TMCL || "").trim(),
+  },
+};
+
 // GET /api/matches/external - Fetch matches from external API
 router.get("/external", async (req, res) => {
   try {
     const { league, week } = req.query;
 
-    // Validate environment variables
-    if (!EXTERNAL_API_URL || !EXTERNAL_API_TMCL) {
+    // Validate league parameter
+    if (
+      !league ||
+      !["saudi", "saudi-super-cup", "spanish-super-cup"].includes(league)
+    ) {
+      return res.status(400).json({
+        error:
+          "Valid league parameter is required (saudi, saudi-super-cup, or spanish-super-cup)",
+      });
+    }
+
+    // Get league-specific API configuration
+    const leagueConfig = LEAGUE_API_CONFIG[league];
+    if (!leagueConfig || !leagueConfig.tmcl) {
       throw new Error(
-        "External API configuration is missing. Please check your .env file."
+        `External API configuration for ${league} is missing. Please check your .env file.`
+      );
+    }
+
+    // Validate base API URL
+    if (!EXTERNAL_API_URL) {
+      throw new Error(
+        "External API URL is missing. Please check your .env file."
       );
     }
 
     // Build query parameters for external API
     const params = new URLSearchParams({
-      tmcl: EXTERNAL_API_TMCL,
+      tmcl: leagueConfig.tmcl,
       _fmt: "json", // Try JSON format first
       _pgSz: "400",
     });
-
-    // Add league filter if provided (you may need to map league codes)
-    // if (league) {
-    //   params.append('league', league);
-    // }
 
     const apiUrl = `${EXTERNAL_API_URL}?${params.toString()}`;
 
@@ -65,7 +91,7 @@ router.get("/external", async (req, res) => {
       }
 
       const jsonpParams = new URLSearchParams({
-        tmcl: EXTERNAL_API_TMCL,
+        tmcl: leagueConfig.tmcl,
         _fmt: "jsonp",
         _clbk: EXTERNAL_API_JSONP_CALLBACK,
         _pgSz: "400",
@@ -210,19 +236,26 @@ function transformApiMatches(apiData) {
     }
 
     // Determine league from competition name
+    // Note: League should be passed from the API call, but we can infer from competition name as fallback
     let league = "saudi"; // Default
     const competitionName = matchInfo.competition?.name || "";
     if (
-      competitionName.toLowerCase().includes("italian") ||
-      competitionName.toLowerCase().includes("serie a")
+      competitionName.toLowerCase().includes("super cup") ||
+      competitionName.toLowerCase().includes("سوبر")
     ) {
-      league = "italian";
-    } else if (
-      competitionName.toLowerCase().includes("spanish") ||
-      competitionName.toLowerCase().includes("la liga")
-    ) {
-      league = "spanish";
+      if (
+        competitionName.toLowerCase().includes("saudi") ||
+        competitionName.toLowerCase().includes("سعودي")
+      ) {
+        league = "saudi-super-cup";
+      } else if (
+        competitionName.toLowerCase().includes("spanish") ||
+        competitionName.toLowerCase().includes("اسباني")
+      ) {
+        league = "spanish-super-cup";
+      }
     }
+    // Default to saudi if no match
 
     return {
       externalMatchId: matchInfo.id, // Store external API match ID (primary identifier)
@@ -580,28 +613,28 @@ router.post("/", async (req, res) => {
     let finalLeague = league;
     if (competition) {
       const competitionLower = competition.toLowerCase();
-      if (competitionLower.includes("saudi")) {
+      if (
+        competitionLower.includes("saudi super cup") ||
+        competitionLower.includes("كاس السوبر السعودي")
+      ) {
+        finalLeague = "saudi-super-cup";
+      } else if (
+        competitionLower.includes("spanish super cup") ||
+        competitionLower.includes("السوبر الاسباني")
+      ) {
+        finalLeague = "spanish-super-cup";
+      } else if (competitionLower.includes("saudi")) {
         finalLeague = "saudi";
-      } else if (
-        competitionLower.includes("italian") ||
-        competitionLower.includes("serie a")
-      ) {
-        finalLeague = "italian";
-      } else if (
-        competitionLower.includes("spanish") ||
-        competitionLower.includes("la liga")
-      ) {
-        finalLeague = "spanish";
       }
     }
 
     if (
       !finalLeague ||
-      !["saudi", "italian", "spanish"].includes(finalLeague)
+      !["saudi", "saudi-super-cup", "spanish-super-cup"].includes(finalLeague)
     ) {
       return res.status(400).json({
         error:
-          "Invalid league. Must be one of: saudi, italian, spanish. League can be determined from competition name or provided explicitly.",
+          "Invalid league. Must be one of: saudi, saudi-super-cup, spanish-super-cup. League can be determined from competition name or provided explicitly.",
       });
     }
 
@@ -787,18 +820,18 @@ router.put("/:externalMatchId", async (req, res) => {
 
     if (competition && !finalLeague) {
       const competitionLower = competition.toLowerCase();
-      if (competitionLower.includes("saudi")) {
+      if (
+        competitionLower.includes("saudi super cup") ||
+        competitionLower.includes("كاس السوبر السعودي")
+      ) {
+        finalLeague = "saudi-super-cup";
+      } else if (
+        competitionLower.includes("spanish super cup") ||
+        competitionLower.includes("السوبر الاسباني")
+      ) {
+        finalLeague = "spanish-super-cup";
+      } else if (competitionLower.includes("saudi")) {
         finalLeague = "saudi";
-      } else if (
-        competitionLower.includes("italian") ||
-        competitionLower.includes("serie a")
-      ) {
-        finalLeague = "italian";
-      } else if (
-        competitionLower.includes("spanish") ||
-        competitionLower.includes("la liga")
-      ) {
-        finalLeague = "spanish";
       }
     }
 
@@ -861,8 +894,10 @@ router.put("/:externalMatchId", async (req, res) => {
           // Map frontend competition names to database competition names
           const competitionNameMap = {
             "Saudi Pro League": "Saudi League",
-            "Italian Serie A": "Italian Serie A",
-            "Spanish La Liga": "Spanish La Liga",
+            "Saudi Super Cup": "Saudi Super Cup",
+            "بطولة كاس السوبر السعودي": "Saudi Super Cup",
+            "Spanish Super Cup": "Spanish Super Cup",
+            "السوبر الاسباني": "Spanish Super Cup",
           };
 
           const mappedName = competitionNameMap[competition];
@@ -898,9 +933,12 @@ router.put("/:externalMatchId", async (req, res) => {
       hasChanges = true;
     }
     if (finalLeague && finalLeague !== match.league) {
-      if (!["saudi", "italian", "spanish"].includes(finalLeague)) {
+      if (
+        !["saudi", "saudi-super-cup", "spanish-super-cup"].includes(finalLeague)
+      ) {
         return res.status(400).json({
-          error: "Invalid league. Must be one of: saudi, italian, spanish",
+          error:
+            "Invalid league. Must be one of: saudi, saudi-super-cup, spanish-super-cup",
         });
       }
       match.league = finalLeague;
@@ -1045,10 +1083,13 @@ router.get("/dashboard/stats", async (req, res) => {
     const { league, weekFilter, week, weekStart, weekEnd } = req.query;
 
     // Validate league
-    if (!league || !["saudi", "italian", "spanish"].includes(league)) {
+    if (
+      !league ||
+      !["saudi", "saudi-super-cup", "spanish-super-cup"].includes(league)
+    ) {
       return res.status(400).json({
         error:
-          "Valid league parameter is required (saudi, italian, or spanish)",
+          "Valid league parameter is required (saudi, saudi-super-cup, or spanish-super-cup)",
       });
     }
 
@@ -1178,12 +1219,12 @@ router.get("/dashboard/stats", async (req, res) => {
       blockedViolations.forEach((v) => {
         const timeAdded = new Date(v.timeAdded);
         const blockedAt = new Date(v.blockedAt);
-        
+
         // Validate dates are valid
         if (!isNaN(timeAdded.getTime()) && !isNaN(blockedAt.getTime())) {
           const diffMs = blockedAt.getTime() - timeAdded.getTime();
           const diffMinutes = diffMs / 60000;
-          
+
           // Only include reasonable block times (between 0 and 7 days = 10080 minutes)
           // This prevents absurd values from bad data
           if (diffMinutes >= 0 && diffMinutes <= 10080) {
@@ -1191,9 +1232,12 @@ router.get("/dashboard/stats", async (req, res) => {
           }
         }
       });
-      
+
       if (validBlockTimes.length > 0) {
-        const totalBlockTime = validBlockTimes.reduce((sum, time) => sum + time, 0);
+        const totalBlockTime = validBlockTimes.reduce(
+          (sum, time) => sum + time,
+          0
+        );
         avgBlockTime = Math.round(totalBlockTime / validBlockTimes.length);
       }
     }
@@ -1322,12 +1366,12 @@ router.get("/dashboard/stats", async (req, res) => {
           if (v.timeAdded && v.blockedAt) {
             const timeAdded = new Date(v.timeAdded);
             const blockedAt = new Date(v.blockedAt);
-            
+
             // Validate dates are valid
             if (!isNaN(timeAdded.getTime()) && !isNaN(blockedAt.getTime())) {
               const diffMs = blockedAt.getTime() - timeAdded.getTime();
               const diffMinutes = diffMs / 60000;
-              
+
               // Only include reasonable block times (between 0 and 7 days = 10080 minutes)
               // This prevents absurd values from bad data
               if (diffMinutes >= 0 && diffMinutes <= 10080) {
@@ -1336,9 +1380,12 @@ router.get("/dashboard/stats", async (req, res) => {
             }
           }
         });
-        
+
         if (validBlockTimes.length > 0) {
-          const totalBlockTime = validBlockTimes.reduce((sum, time) => sum + time, 0);
+          const totalBlockTime = validBlockTimes.reduce(
+            (sum, time) => sum + time,
+            0
+          );
           avgBlockTime = Math.round(totalBlockTime / validBlockTimes.length);
         }
       }
