@@ -9,6 +9,13 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import {
   HoverCard,
@@ -379,6 +386,26 @@ export default function MatchDashboard() {
     fetchSettings();
   }, []);
 
+  // Fetch whitelisted accounts on mount
+  useEffect(() => {
+    const fetchWhitelistedAccounts = async () => {
+      try {
+        const response = await fetch(`${API_URL}/whitelisted-accounts`, {
+          credentials: "include",
+        });
+
+        if (response.ok) {
+          const accounts = await response.json();
+          setWhitelistedAccounts(accounts || []);
+        }
+      } catch (error) {
+        console.error("Error fetching whitelisted accounts:", error);
+      }
+    };
+
+    fetchWhitelistedAccounts();
+  }, []);
+
   // Fetch match data
   useEffect(() => {
     const fetchMatch = async () => {
@@ -721,6 +748,30 @@ export default function MatchDashboard() {
     platformId: string;
     violation: Violation;
   } | null>(null);
+
+  // Whitelist confirmation dialog state
+  const [isWhitelistConfirmOpen, setIsWhitelistConfirmOpen] = useState(false);
+  const [pendingViolationData, setPendingViolationData] = useState<{
+    violationData: {
+      matchId: string;
+      matchName: string;
+      platformId: string;
+      platformName: string;
+      violationUrl: string;
+      accountChannel: string;
+      contentType: "Live" | "Highlights" | "Other";
+      status: "Active" | "Blocked" | "Removed" | "Under Review";
+      views?: string;
+      timeAdded: string;
+      blockedAt?: string | null;
+      notes: string[];
+    };
+    isEditMode: boolean;
+    editingViolation: Violation | null;
+  } | null>(null);
+  const [whitelistedAccounts, setWhitelistedAccounts] = useState<
+    Array<{ accountChannel: string; platforms: string[] }>
+  >([]);
 
   // Platform comparison state
   const [comparisonSort, setComparisonSort] = useState<
@@ -1160,91 +1211,45 @@ export default function MatchDashboard() {
     }
   };
 
-  // Save violation (add or edit)
-  const saveViolation = async () => {
-    if (!formUrl) {
-      toast({
-        title: "Validation Error",
-        description: "Violation URL is required",
-        variant: "destructive",
-      });
-      return;
-    }
+  // Check if account is whitelisted
+  const checkWhitelistedAccount = (
+    accountChannel: string,
+    platformId: string
+  ): boolean => {
+    return whitelistedAccounts.some(
+      (account) =>
+        account.accountChannel.toLowerCase() === accountChannel.toLowerCase() &&
+        account.platforms.includes(platformId)
+    );
+  };
 
-    if (!formAccountHandle) {
-      toast({
-        title: "Validation Error",
-        description: "Account / Channel is required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!match) {
-      toast({
-        title: "Error",
-        description: "Match not found",
-        variant: "destructive",
-      });
-      return;
-    }
+  // Actually save the violation (called after whitelist confirmation or if not whitelisted)
+  const actuallySaveViolation = async (
+    violationData: {
+      matchId: string;
+      matchName: string;
+      platformId: string;
+      platformName: string;
+      violationUrl: string;
+      accountChannel: string;
+      contentType: "Live" | "Highlights" | "Other";
+      status: "Active" | "Blocked" | "Removed" | "Under Review";
+      views?: string;
+      timeAdded: string;
+      blockedAt?: string | null;
+      notes: string[];
+    },
+    isEditMode: boolean,
+    editingViolation: Violation | null
+  ) => {
+    if (!match) return;
 
     const platform = platformOperations.find(
-      (p) => p.id === selectedPlatformForAdd
+      (p) => p.id === violationData.platformId
     );
     if (!platform) return;
 
     try {
-      // Map contentType to match backend schema exactly: "Live", "Highlights", or "Other"
-      let contentType: "Live" | "Highlights" | "Other" = "Other";
-      if (formContentType.toLowerCase() === "live") {
-        contentType = "Live";
-      } else if (formContentType.toLowerCase() === "highlights") {
-        contentType = "Highlights";
-      }
-
-      // Map status to match backend schema exactly: "Active", "Blocked", "Removed", "Under Review"
-      // formStatus is already capitalized, so we just use it directly or map if needed
-      const status: "Active" | "Blocked" | "Removed" | "Under Review" =
-        formStatus;
-
-      // Handle blockedAt:
-      // - Set it ONLY if status is Blocked (when changing TO Blocked)
-      // - Clear it if status is Active, Removed, or Under Review (when changing FROM Blocked to these)
-      // - Removed is a different status and should NOT have blockedAt
-      let blockedAtValue: string | null | undefined = undefined;
-      if (formStatus === "Blocked") {
-        // If blockedAt is provided, convert from KSA time to UTC; otherwise backend will set it to current time
-        blockedAtValue = formBlockedAt
-          ? convertKSATimeToUTC(formBlockedAt)
-          : undefined;
-      } else if (
-        formStatus === "Active" ||
-        formStatus === "Removed" ||
-        formStatus === "Under Review"
-      ) {
-        // For Active, Removed, or Under Review status, explicitly set to null to clear any existing blockedAt
-        blockedAtValue = null;
-      }
-
-      const violationData = {
-        matchId: match.externalMatchId,
-        matchName: `${match.team1} vs ${match.team2}`,
-        platformId: platform.id,
-        platformName: platform.name,
-        violationUrl: formUrl,
-        accountChannel: formAccountHandle,
-        contentType,
-        status,
-        views: formViews
-          ? parseInt(formViews.replace(/,/g, "")).toLocaleString("en-US")
-          : undefined,
-        // Convert timeAdded from KSA time (datetime-local) to UTC ISO string
-        timeAdded: convertKSATimeToUTC(formTimeAdded),
-        blockedAt: blockedAtValue,
-        notes: formNotes.filter((note) => note.trim() !== ""),
-      };
-
       if (isEditMode && editingViolation) {
         // Update existing violation - use _id if available, otherwise id
         const violationId =
@@ -1378,7 +1383,7 @@ export default function MatchDashboard() {
 
         toast({
           title: "Violation added",
-          description: `New violation added to ${platform.name}`,
+          description: `New violation added to ${violationData.platformName}`,
         });
       }
 
@@ -1392,6 +1397,115 @@ export default function MatchDashboard() {
         variant: "destructive",
       });
     }
+  };
+
+  // Save violation (add or edit) - with whitelist check
+  const saveViolation = async () => {
+    if (!formUrl) {
+      toast({
+        title: "Validation Error",
+        description: "Violation URL is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formAccountHandle) {
+      toast({
+        title: "Validation Error",
+        description: "Account / Channel is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!match) {
+      toast({
+        title: "Error",
+        description: "Match not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const platform = platformOperations.find(
+      (p) => p.id === selectedPlatformForAdd
+    );
+    if (!platform) return;
+
+    // Map contentType to match backend schema exactly: "Live", "Highlights", or "Other"
+    let contentType: "Live" | "Highlights" | "Other" = "Other";
+    if (formContentType.toLowerCase() === "live") {
+      contentType = "Live";
+    } else if (formContentType.toLowerCase() === "highlights") {
+      contentType = "Highlights";
+    }
+
+    // Map status to match backend schema exactly: "Active", "Blocked", "Removed", "Under Review"
+    const status: "Active" | "Blocked" | "Removed" | "Under Review" =
+      formStatus;
+
+    // Handle blockedAt:
+    let blockedAtValue: string | null | undefined = undefined;
+    if (formStatus === "Blocked") {
+      blockedAtValue = formBlockedAt
+        ? convertKSATimeToUTC(formBlockedAt)
+        : undefined;
+    } else if (
+      formStatus === "Active" ||
+      formStatus === "Removed" ||
+      formStatus === "Under Review"
+    ) {
+      blockedAtValue = null;
+    }
+
+    const violationData = {
+      matchId: match.externalMatchId,
+      matchName: `${match.team1} vs ${match.team2}`,
+      platformId: platform.id,
+      platformName: platform.name,
+      violationUrl: formUrl,
+      accountChannel: formAccountHandle,
+      contentType,
+      status,
+      views: formViews
+        ? parseInt(formViews.replace(/,/g, "")).toLocaleString("en-US")
+        : undefined,
+      timeAdded: convertKSATimeToUTC(formTimeAdded),
+      blockedAt: blockedAtValue,
+      notes: formNotes.filter((note) => note.trim() !== ""),
+    };
+
+    // Check if account is whitelisted (only for new violations, not edits)
+    if (
+      !isEditMode &&
+      checkWhitelistedAccount(formAccountHandle, platform.id)
+    ) {
+      // Show confirmation dialog
+      setPendingViolationData({
+        violationData,
+        isEditMode,
+        editingViolation,
+      });
+      setIsWhitelistConfirmOpen(true);
+      return;
+    }
+
+    // Not whitelisted or editing, proceed with save
+    await actuallySaveViolation(violationData, isEditMode, editingViolation);
+  };
+
+  // Confirm whitelist violation save
+  const confirmWhitelistSave = async () => {
+    if (!pendingViolationData) return;
+
+    setIsWhitelistConfirmOpen(false);
+    await actuallySaveViolation(
+      pendingViolationData.violationData,
+      pendingViolationData.isEditMode,
+      pendingViolationData.editingViolation
+    );
+    setPendingViolationData(null);
   };
 
   // Delete violation - show confirmation dialog
@@ -2128,6 +2242,36 @@ export default function MatchDashboard() {
         violation={noteViolation?.violation || null}
         onSave={saveNote}
       />
+
+      {/* Whitelist Confirmation Dialog */}
+      <Dialog
+        open={isWhitelistConfirmOpen}
+        onOpenChange={setIsWhitelistConfirmOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="text-destructive">
+              Whitelisted Account Warning
+            </DialogTitle>
+            <DialogDescription>
+              This account is whitelisted for this platform. Are you sure you
+              want to add a violation for this account?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsWhitelistConfirmOpen(false);
+                setPendingViolationData(null);
+              }}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmWhitelistSave}>
+              Yes, Add Violation
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Round Report Modal */}
       {match && (
