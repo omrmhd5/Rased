@@ -12,18 +12,13 @@ interface User {
   id: string;
   username: string;
   email: string;
+  role?: "superAdmin" | "admin" | "employee";
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (
-    username: string,
-    email: string,
-    password: string,
-    confirmPassword: string
-  ) => Promise<void>;
   logout: () => Promise<void>;
   verifyAuth: () => Promise<void>;
 }
@@ -99,36 +94,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   };
 
-  const register = async (
-    username: string,
-    email: string,
-    password: string,
-    confirmPassword: string
-  ) => {
-    try {
-      const response = await fetch(`${API_URL}/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        credentials: "include", // Include cookies
-        body: JSON.stringify({ username, email, password, confirmPassword }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Registration failed");
-      }
-
-      const data = await response.json();
-      setUser(data.user);
-      navigate("/");
-    } catch (error) {
-      console.error("Registration error:", error);
-      throw error;
-    }
-  };
-
   const logout = async () => {
     try {
       await fetch(`${API_URL}/auth/logout`, {
@@ -149,7 +114,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         user,
         loading,
         login,
-        register,
         logout,
         verifyAuth,
       }}>

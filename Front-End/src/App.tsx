@@ -13,11 +13,11 @@ import Home from "./pages/Home";
 import Matches from "./pages/Matches";
 import MatchDashboard from "./pages/MatchDashboard";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 import Settings from "./pages/Settings";
 import ProblematicAccounts from "./pages/ProblematicAccounts";
 import WhitelistedAccounts from "./pages/WhitelistedAccounts";
+import UsersRoles from "./pages/UsersRoles";
 
 const queryClient = new QueryClient();
 
@@ -39,7 +39,7 @@ const AuthenticatedLayout = () => {
                 <Route path="/problematic-accounts" element={<ProtectedRoute><ProblematicAccounts /></ProtectedRoute>} />
                 <Route path="/whitelisted-accounts" element={<ProtectedRoute><WhitelistedAccounts /></ProtectedRoute>} />
                 <Route path="/reports" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/users" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                <Route path="/users" element={<ProtectedRoute><UsersRoles /></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
                     {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                     <Route path="*" element={<NotFound />} />
@@ -62,7 +62,6 @@ const App = () => (
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
             
             {/* Protected routes with sidebar */}
             <Route path="/*" element={<AuthenticatedLayout />} />

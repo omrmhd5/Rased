@@ -97,7 +97,6 @@ The server will start on `http://localhost:5000` (or your configured PORT).
 
 ### Authentication
 
-- `POST /api/auth/register` - Register new user (requires: username, email, password, confirmPassword)
 - `POST /api/auth/login` - Login user (requires: email, password)
 - `POST /api/auth/logout` - Logout user (clears cookie)
 - `GET /api/auth/verify` - Verify token and get current user (requires authentication)

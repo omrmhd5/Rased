@@ -1,5 +1,6 @@
 import { Home, Calendar, FileText, Users, Settings, BarChart3, AlertTriangle, Shield } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Sidebar,
   SidebarContent,
@@ -23,15 +24,16 @@ const operationsItems = [
   { title: "Matches", url: "/matches", icon: Calendar },
 ];
 
-const managementItems = [
-  { title: "Reports", url: "/reports", icon: FileText },
-  { title: "Users & Roles", url: "/users", icon: Users },
-  { title: "Settings", url: "/settings", icon: Settings },
-];
-
 export function AppSidebar() {
   const { state } = useSidebar();
+  const { user } = useAuth();
   const isCollapsed = state === "collapsed";
+
+  const managementItems = [
+    { title: "Reports", url: "/reports", icon: FileText },
+    ...(user?.role === "superAdmin" ? [{ title: "Users & Roles", url: "/users", icon: Users }] : []),
+    { title: "Settings", url: "/settings", icon: Settings },
+  ];
 
   return (
     <Sidebar className="border-r border-sidebar-border z-50">

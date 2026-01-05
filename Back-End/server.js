@@ -10,6 +10,7 @@ import platformByMatchRoutes from "./routes/platformByMatch.js";
 import authRoutes from "./routes/auth.js";
 import settingsRoutes from "./routes/settings.js";
 import whitelistedAccountsRoutes from "./routes/whitelistedAccounts.js";
+import usersRoutes from "./routes/users.js";
 
 // Load environment variables
 dotenv.config();
@@ -65,6 +66,7 @@ app.use("/api/platforms", platformRoutes);
 app.use("/api/platform-by-match", platformByMatchRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/whitelisted-accounts", whitelistedAccountsRoutes);
+app.use("/api/users", usersRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
