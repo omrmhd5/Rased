@@ -155,162 +155,186 @@ function transformApiMatches(apiData, leagueFromQuery = null) {
     return [];
   }
 
-  return apiData.match.map((matchItem) => {
-    const matchInfo = matchItem.matchInfo;
-    const liveData = matchItem.liveData;
+  return apiData.match
+    .map((matchItem) => {
+      const matchInfo = matchItem.matchInfo;
+      const liveData = matchItem.liveData;
 
-    // Get contestants (teams)
-    const contestants = matchInfo.contestant || [];
-    const homeTeam = contestants.find((c) => c.position === "home");
-    const awayTeam = contestants.find((c) => c.position === "away");
+      // Get contestants (teams)
+      const contestants = matchInfo.contestant || [];
+      const homeTeam = contestants.find((c) => c.position === "home");
+      const awayTeam = contestants.find((c) => c.position === "away");
 
-    // Determine status based on liveData.matchDetails.matchStatus
-    let status = "upcoming";
-    let winner = null;
-    let scores = null;
+      // Skip matches where teams have probableTeams (not yet determined)
+      if (homeTeam?.probableTeams || awayTeam?.probableTeams) {
+        console.log(
+          `Skipping match ${matchInfo.id} - has probableTeams (teams not yet determined)`
+        );
+        return null;
+      }
 
-    // Check matchStatus from liveData if available
-    if (liveData && liveData.matchDetails) {
-      const matchStatus = liveData.matchDetails.matchStatus;
+      // Check if we have valid team names
+      const homeTeamName =
+        homeTeam?.officialName || homeTeam?.name || homeTeam?.shortName;
+      const awayTeamName =
+        awayTeam?.officialName || awayTeam?.name || awayTeam?.shortName;
 
-      // Normalize matchStatus (trim whitespace and handle case)
-      const normalizedStatus = matchStatus ? String(matchStatus).trim() : null;
+      if (!homeTeamName || !awayTeamName) {
+        console.log(
+          `Skipping match ${matchInfo.id} - missing team names (home: ${homeTeamName}, away: ${awayTeamName})`
+        );
+        return null;
+      }
 
-      if (normalizedStatus === "Fixture") {
-        status = "upcoming";
-      } else if (normalizedStatus === "Played") {
-        status = "finished";
-        winner = liveData.matchDetails.winner || null;
-        scores = liveData.matchDetails.scores?.total || null;
-      } else if (
-        normalizedStatus === "Live" ||
-        normalizedStatus === "InProgress" ||
-        normalizedStatus === "Playing"
-      ) {
-        status = "live";
-      } else if (normalizedStatus === "Postponed") {
-        status = "postponed";
-      } else if (normalizedStatus) {
-        // Default to finished if matchStatus indicates completion
-        status = "finished";
-        winner = liveData.matchDetails.winner || null;
-        scores = liveData.matchDetails.scores?.total || null;
+      // Determine status based on liveData.matchDetails.matchStatus
+      let status = "upcoming";
+      let winner = null;
+      let scores = null;
+
+      // Check matchStatus from liveData if available
+      if (liveData && liveData.matchDetails) {
+        const matchStatus = liveData.matchDetails.matchStatus;
+
+        // Normalize matchStatus (trim whitespace and handle case)
+        const normalizedStatus = matchStatus
+          ? String(matchStatus).trim()
+          : null;
+
+        if (normalizedStatus === "Fixture") {
+          status = "upcoming";
+        } else if (normalizedStatus === "Played") {
+          status = "finished";
+          winner = liveData.matchDetails.winner || null;
+          scores = liveData.matchDetails.scores?.total || null;
+        } else if (
+          normalizedStatus === "Live" ||
+          normalizedStatus === "InProgress" ||
+          normalizedStatus === "Playing"
+        ) {
+          status = "live";
+        } else if (normalizedStatus === "Postponed") {
+          status = "postponed";
+        } else if (normalizedStatus) {
+          // Default to finished if matchStatus indicates completion
+          status = "finished";
+          winner = liveData.matchDetails.winner || null;
+          scores = liveData.matchDetails.scores?.total || null;
+        } else {
+          // No matchStatus - default to upcoming
+          status = "upcoming";
+        }
       } else {
-        // No matchStatus - default to upcoming
+        // No liveData - default to upcoming
         status = "upcoming";
       }
-    } else {
-      // No liveData - default to upcoming
-      status = "upcoming";
-    }
 
-    // Extract date and time (use localDate/localTime for KSA time, fallback to date/time)
-    const dateStr = matchInfo.localDate || matchInfo.date || "";
-    let timeStr = matchInfo.localTime || matchInfo.time || "";
+      // Extract date and time (use localDate/localTime for KSA time, fallback to date/time)
+      const dateStr = matchInfo.localDate || matchInfo.date || "";
+      let timeStr = matchInfo.localTime || matchInfo.time || "";
 
-    // Format date (remove Z if present)
-    let formattedDate = dateStr;
-    if (dateStr.endsWith("Z")) {
-      formattedDate = dateStr.replace("Z", "");
-    }
-
-    // Format time to 12-hour format if present
-    if (timeStr) {
-      // Remove Z suffix if present
-      if (timeStr.endsWith("Z")) {
-        timeStr = timeStr.replace("Z", "");
+      // Format date (remove Z if present)
+      let formattedDate = dateStr;
+      if (dateStr.endsWith("Z")) {
+        formattedDate = dateStr.replace("Z", "");
       }
 
-      // Parse 24-hour time and convert to 12-hour format
-      try {
-        const [hours, minutes] = timeStr.split(":").map(Number);
-        if (!isNaN(hours) && !isNaN(minutes)) {
-          const period = hours >= 12 ? "PM" : "AM";
-          const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-          timeStr = `${hours12}:${minutes
-            .toString()
-            .padStart(2, "0")} ${period}`;
+      // Format time to 12-hour format if present
+      if (timeStr) {
+        // Remove Z suffix if present
+        if (timeStr.endsWith("Z")) {
+          timeStr = timeStr.replace("Z", "");
         }
-      } catch (e) {
-        // If parsing fails, keep original time string
-        console.warn("Failed to parse time:", timeStr);
-      }
-    }
 
-    // Use league from query parameter if provided, otherwise try to detect from competition
-    let league = leagueFromQuery || "saudi"; // Default to saudi if not provided
-
-    // Only try to detect league if not provided from query
-    if (!leagueFromQuery) {
-      const competitionName = matchInfo.competition?.name || "";
-      const competitionKnownName = matchInfo.competition?.knownName || "";
-      const countryName = matchInfo.competition?.country?.name || "";
-
-      // Check if it's a Super Cup
-      const isSuperCup =
-        competitionName.toLowerCase().includes("super cup") ||
-        competitionKnownName.toLowerCase().includes("super cup") ||
-        competitionKnownName.toLowerCase().includes("supercopa") ||
-        competitionName.toLowerCase().includes("سوبر");
-
-      if (isSuperCup) {
-        // Check for Saudi Super Cup
-        if (
-          competitionName.toLowerCase().includes("saudi") ||
-          competitionKnownName.toLowerCase().includes("saudi") ||
-          competitionKnownName.toLowerCase().includes("سعودي") ||
-          countryName.toLowerCase().includes("saudi")
-        ) {
-          league = "saudi-super-cup";
-        }
-        // Check for Spanish Super Cup
-        else if (
-          competitionName.toLowerCase().includes("spanish") ||
-          competitionKnownName.toLowerCase().includes("spanish") ||
-          competitionKnownName.toLowerCase().includes("spanish") ||
-          countryName.toLowerCase().includes("spain")
-        ) {
-          league = "spanish-super-cup";
-        }
-      }
-    }
-
-    return {
-      externalMatchId: matchInfo.id, // Store external API match ID (primary identifier)
-      description:
-        matchInfo.description ||
-        `${homeTeam?.officialName || ""} vs ${awayTeam?.officialName || ""}`,
-      team1: homeTeam?.officialName || "",
-      team2: awayTeam?.officialName || "",
-      date: formattedDate, // Keep as date string (YYYY-MM-DD format)
-      time: timeStr, // Formatted as 12-hour (e.g., "2:50 PM")
-      week: matchInfo.week || "",
-      stage: matchInfo.stage?.name || "", // Extract stage name for Super Cups
-      competitionData: matchInfo.competition
-        ? {
-            externalId: matchInfo.competition.id,
-            name: matchInfo.competition.name,
-            knownName: matchInfo.competition.knownName,
-            competitionCode: matchInfo.competition.competitionCode,
-            competitionFormat: matchInfo.competition.competitionFormat,
-            league: league,
-            country: matchInfo.competition.country,
+        // Parse 24-hour time and convert to 12-hour format
+        try {
+          const [hours, minutes] = timeStr.split(":").map(Number);
+          if (!isNaN(hours) && !isNaN(minutes)) {
+            const period = hours >= 12 ? "PM" : "AM";
+            const hours12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+            timeStr = `${hours12}:${minutes
+              .toString()
+              .padStart(2, "0")} ${period}`;
           }
-        : null,
-      stadium: matchInfo.venue?.longName || "",
-      status: status,
-      league: league,
-      // Match result data (if finished)
-      winner: winner,
-      scores: scores,
-      // Store original API data for reference
-      originalData: {
-        matchId: matchInfo.id,
-        competitionId: matchInfo.competition?.id,
-        venueId: matchInfo.venue?.id,
-      },
-    };
-  });
+        } catch (e) {
+          // If parsing fails, keep original time string
+          console.warn("Failed to parse time:", timeStr);
+        }
+      }
+
+      // Use league from query parameter if provided, otherwise try to detect from competition
+      let league = leagueFromQuery || "saudi"; // Default to saudi if not provided
+
+      // Only try to detect league if not provided from query
+      if (!leagueFromQuery) {
+        const competitionName = matchInfo.competition?.name || "";
+        const competitionKnownName = matchInfo.competition?.knownName || "";
+        const countryName = matchInfo.competition?.country?.name || "";
+
+        // Check if it's a Super Cup
+        const isSuperCup =
+          competitionName.toLowerCase().includes("super cup") ||
+          competitionKnownName.toLowerCase().includes("super cup") ||
+          competitionKnownName.toLowerCase().includes("supercopa") ||
+          competitionName.toLowerCase().includes("سوبر");
+
+        if (isSuperCup) {
+          // Check for Saudi Super Cup
+          if (
+            competitionName.toLowerCase().includes("saudi") ||
+            competitionKnownName.toLowerCase().includes("saudi") ||
+            competitionKnownName.toLowerCase().includes("سعودي") ||
+            countryName.toLowerCase().includes("saudi")
+          ) {
+            league = "saudi-super-cup";
+          }
+          // Check for Spanish Super Cup
+          else if (
+            competitionName.toLowerCase().includes("spanish") ||
+            competitionKnownName.toLowerCase().includes("spanish") ||
+            competitionKnownName.toLowerCase().includes("spanish") ||
+            countryName.toLowerCase().includes("spain")
+          ) {
+            league = "spanish-super-cup";
+          }
+        }
+      }
+
+      return {
+        externalMatchId: matchInfo.id, // Store external API match ID (primary identifier)
+        description:
+          matchInfo.description || `${homeTeamName} vs ${awayTeamName}`,
+        team1: homeTeamName,
+        team2: awayTeamName,
+        date: formattedDate, // Keep as date string (YYYY-MM-DD format)
+        time: timeStr, // Formatted as 12-hour (e.g., "2:50 PM")
+        week: matchInfo.week || "",
+        stage: matchInfo.stage?.name || "", // Extract stage name for Super Cups
+        competitionData: matchInfo.competition
+          ? {
+              externalId: matchInfo.competition.id,
+              name: matchInfo.competition.name,
+              knownName: matchInfo.competition.knownName,
+              competitionCode: matchInfo.competition.competitionCode,
+              competitionFormat: matchInfo.competition.competitionFormat,
+              league: league,
+              country: matchInfo.competition.country,
+            }
+          : null,
+        stadium: matchInfo.venue?.longName || "",
+        status: status,
+        league: league,
+        // Match result data (if finished)
+        winner: winner,
+        scores: scores,
+        // Store original API data for reference
+        originalData: {
+          matchId: matchInfo.id,
+          competitionId: matchInfo.competition?.id,
+          venueId: matchInfo.venue?.id,
+        },
+      };
+    })
+    .filter((match) => match !== null); // Remove null entries (skipped matches)
 }
 
 // Helper function to save/update competitions in database
@@ -518,8 +542,17 @@ async function returnMatchesFromDatabase(req, res) {
     const isSuperCup =
       league === "saudi-super-cup" || league === "spanish-super-cup";
 
-    if (isSuperCup && stage) {
-      query.stage = stage;
+    if (isSuperCup) {
+      // For Super Cups, if stage is provided, filter by it
+      // Also include matches without stage (manually created matches might not have stage initially)
+      if (stage) {
+        query.$or = [
+          { stage: stage },
+          { stage: { $exists: false } },
+          { stage: "" },
+          { stage: null },
+        ];
+      }
     } else if (!isSuperCup && week) {
       query.week = week;
     }
@@ -647,6 +680,7 @@ router.post("/", authenticateToken, requireSuperAdmin, async (req, res) => {
       time,
       status,
       week,
+      stage,
       competition,
       competitionId,
       stadium,
@@ -755,6 +789,7 @@ router.post("/", authenticateToken, requireSuperAdmin, async (req, res) => {
       time,
       status: status || "upcoming",
       week,
+      stage, // Add stage for Super Cups
       competition: competitionRef,
       externalCompetitionId: externalCompetitionId,
       stadium,
@@ -820,308 +855,328 @@ router.post("/", authenticateToken, requireSuperAdmin, async (req, res) => {
 });
 
 // PUT /api/matches/:externalMatchId - Update match (superAdmin only)
-router.put("/:externalMatchId", authenticateToken, requireSuperAdmin, async (req, res) => {
-  try {
-    const externalMatchIdParam = req.params.externalMatchId;
+router.put(
+  "/:externalMatchId",
+  authenticateToken,
+  requireSuperAdmin,
+  async (req, res) => {
+    try {
+      const externalMatchIdParam = req.params.externalMatchId;
 
-    const {
-      description,
-      team1,
-      team2,
-      date,
-      time,
-      status,
-      week,
-      competition,
-      stadium,
-      league,
-      topPlatformId,
-      mostViews,
-      winner,
-      scores,
-    } = req.body;
+      const {
+        description,
+        team1,
+        team2,
+        date,
+        time,
+        status,
+        week,
+        stage,
+        competition,
+        stadium,
+        league,
+        topPlatformId,
+        mostViews,
+        winner,
+        scores,
+      } = req.body;
 
-    // Try to find match by externalMatchId first (exclude deleted matches)
-    let match = await Match.findOne({
-      externalMatchId: externalMatchIdParam,
-      isDeleted: { $ne: true },
-    });
+      // Try to find match by externalMatchId first (exclude deleted matches)
+      let match = await Match.findOne({
+        externalMatchId: externalMatchIdParam,
+        isDeleted: { $ne: true },
+      });
 
-    // If not found, try by _id (for manually created matches where externalMatchId = _id)
-    if (!match) {
-      // Check if the parameter looks like a MongoDB ObjectId
-      const isObjectId = /^[0-9a-fA-F]{24}$/.test(externalMatchIdParam);
+      // If not found, try by _id (for manually created matches where externalMatchId = _id)
+      if (!match) {
+        // Check if the parameter looks like a MongoDB ObjectId
+        const isObjectId = /^[0-9a-fA-F]{24}$/.test(externalMatchIdParam);
 
-      if (isObjectId) {
-        match = await Match.findById(externalMatchIdParam);
-      }
-    }
-
-    if (!match) {
-      return res.status(404).json({ error: "Match not found" });
-    }
-
-    // Determine league from competition name if league is not provided or invalid
-    let finalLeague = league || match.league;
-
-    if (competition && !finalLeague) {
-      const competitionLower = competition.toLowerCase();
-      if (
-        competitionLower.includes("saudi super cup") ||
-        competitionLower.includes("كاس السوبر السعودي")
-      ) {
-        finalLeague = "saudi-super-cup";
-      } else if (
-        competitionLower.includes("spanish super cup") ||
-        competitionLower.includes("السوبر الاسباني")
-      ) {
-        finalLeague = "spanish-super-cup";
-      } else if (competitionLower.includes("saudi")) {
-        finalLeague = "saudi";
-      }
-    }
-
-    // Track if any actual changes are being made
-    let hasChanges = false;
-
-    // Update fields
-    if (description !== undefined && description !== match.description) {
-      match.description = description;
-      hasChanges = true;
-    }
-    if (team1 !== undefined && team1 !== match.team1) {
-      match.team1 = team1;
-      hasChanges = true;
-    }
-    if (team2 !== undefined && team2 !== match.team2) {
-      match.team2 = team2;
-      hasChanges = true;
-    }
-    if (date !== undefined) {
-      const newDate = new Date(date);
-      if (newDate.getTime() !== new Date(match.date).getTime()) {
-        match.date = newDate;
-        hasChanges = true;
-      }
-    }
-    if (time !== undefined && time !== match.time) {
-      match.time = time;
-      hasChanges = true;
-    }
-    if (week !== undefined && week !== match.week) {
-      match.week = week;
-      hasChanges = true;
-    }
-    if (competition !== undefined) {
-      let competitionRef = null;
-      let externalCompetitionId = null;
-
-      if (competition) {
-        let comp = null;
-
-        // Only try ObjectId lookup if it's a valid ObjectId format
-        const isObjectId = /^[0-9a-fA-F]{24}$/.test(competition);
         if (isObjectId) {
-          comp = await Competition.findById(competition);
-        }
-
-        // If not found by ObjectId, try by externalId
-        if (!comp) {
-          comp = await Competition.findOne({ externalId: competition });
-        }
-
-        // If still not found, try by exact name match
-        if (!comp) {
-          comp = await Competition.findOne({ name: competition });
-        }
-
-        // If still not found, try to find by league and known name variations
-        if (!comp) {
-          // Map frontend competition names to database competition names
-          const competitionNameMap = {
-            "Saudi Pro League": "Saudi League",
-            "Saudi Super Cup": "Saudi Super Cup",
-            "بطولة كاس السوبر السعودي": "Saudi Super Cup",
-            "Spanish Super Cup": "Spanish Super Cup",
-            "السوبر الاسباني": "Spanish Super Cup",
-          };
-
-          const mappedName = competitionNameMap[competition];
-          if (mappedName) {
-            comp = await Competition.findOne({ name: mappedName });
-          }
-
-          // If still not found, try to find by league only (for the specific league)
-          if (!comp && finalLeague) {
-            comp = await Competition.findOne({ league: finalLeague });
-          } else if (!comp && match.league) {
-            comp = await Competition.findOne({ league: match.league });
-          }
-        }
-
-        if (comp) {
-          competitionRef = comp._id;
-          externalCompetitionId = comp.externalId;
+          match = await Match.findById(externalMatchIdParam);
         }
       }
 
-      const competitionChanged =
-        String(match.competition) !== String(competitionRef) ||
-        match.externalCompetitionId !== externalCompetitionId;
-      if (competitionChanged) {
-        match.competition = competitionRef;
-        match.externalCompetitionId = externalCompetitionId;
+      if (!match) {
+        return res.status(404).json({ error: "Match not found" });
+      }
+
+      // Determine league from competition name if league is not provided or invalid
+      let finalLeague = league || match.league;
+
+      if (competition && !finalLeague) {
+        const competitionLower = competition.toLowerCase();
+        if (
+          competitionLower.includes("saudi super cup") ||
+          competitionLower.includes("كاس السوبر السعودي")
+        ) {
+          finalLeague = "saudi-super-cup";
+        } else if (
+          competitionLower.includes("spanish super cup") ||
+          competitionLower.includes("السوبر الاسباني")
+        ) {
+          finalLeague = "spanish-super-cup";
+        } else if (competitionLower.includes("saudi")) {
+          finalLeague = "saudi";
+        }
+      }
+
+      // Track if any actual changes are being made
+      let hasChanges = false;
+
+      // Update fields
+      if (description !== undefined && description !== match.description) {
+        match.description = description;
         hasChanges = true;
       }
-    }
-    if (stadium !== undefined && stadium !== match.stadium) {
-      match.stadium = stadium;
-      hasChanges = true;
-    }
-    if (finalLeague && finalLeague !== match.league) {
-      if (
-        !["saudi", "saudi-super-cup", "spanish-super-cup"].includes(finalLeague)
-      ) {
-        return res.status(400).json({
-          error:
-            "Invalid league. Must be one of: saudi, saudi-super-cup, spanish-super-cup",
+      if (team1 !== undefined && team1 !== match.team1) {
+        match.team1 = team1;
+        hasChanges = true;
+      }
+      if (team2 !== undefined && team2 !== match.team2) {
+        match.team2 = team2;
+        hasChanges = true;
+      }
+      if (date !== undefined) {
+        const newDate = new Date(date);
+        if (newDate.getTime() !== new Date(match.date).getTime()) {
+          match.date = newDate;
+          hasChanges = true;
+        }
+      }
+      if (time !== undefined && time !== match.time) {
+        match.time = time;
+        hasChanges = true;
+      }
+      if (week !== undefined && week !== match.week) {
+        match.week = week;
+        hasChanges = true;
+      }
+      if (stage !== undefined && stage !== match.stage) {
+        match.stage = stage;
+        hasChanges = true;
+      }
+      if (competition !== undefined) {
+        let competitionRef = null;
+        let externalCompetitionId = null;
+
+        if (competition) {
+          let comp = null;
+
+          // Only try ObjectId lookup if it's a valid ObjectId format
+          const isObjectId = /^[0-9a-fA-F]{24}$/.test(competition);
+          if (isObjectId) {
+            comp = await Competition.findById(competition);
+          }
+
+          // If not found by ObjectId, try by externalId
+          if (!comp) {
+            comp = await Competition.findOne({ externalId: competition });
+          }
+
+          // If still not found, try by exact name match
+          if (!comp) {
+            comp = await Competition.findOne({ name: competition });
+          }
+
+          // If still not found, try to find by league and known name variations
+          if (!comp) {
+            // Map frontend competition names to database competition names
+            const competitionNameMap = {
+              "Saudi Pro League": "Saudi League",
+              "Saudi Super Cup": "Saudi Super Cup",
+              "بطولة كاس السوبر السعودي": "Saudi Super Cup",
+              "Spanish Super Cup": "Spanish Super Cup",
+              "السوبر الاسباني": "Spanish Super Cup",
+            };
+
+            const mappedName = competitionNameMap[competition];
+            if (mappedName) {
+              comp = await Competition.findOne({ name: mappedName });
+            }
+
+            // If still not found, try to find by league only (for the specific league)
+            if (!comp && finalLeague) {
+              comp = await Competition.findOne({ league: finalLeague });
+            } else if (!comp && match.league) {
+              comp = await Competition.findOne({ league: match.league });
+            }
+          }
+
+          if (comp) {
+            competitionRef = comp._id;
+            externalCompetitionId = comp.externalId;
+          }
+        }
+
+        const competitionChanged =
+          String(match.competition) !== String(competitionRef) ||
+          match.externalCompetitionId !== externalCompetitionId;
+        if (competitionChanged) {
+          match.competition = competitionRef;
+          match.externalCompetitionId = externalCompetitionId;
+          hasChanges = true;
+        }
+      }
+      if (stadium !== undefined && stadium !== match.stadium) {
+        match.stadium = stadium;
+        hasChanges = true;
+      }
+      if (finalLeague && finalLeague !== match.league) {
+        if (
+          !["saudi", "saudi-super-cup", "spanish-super-cup"].includes(
+            finalLeague
+          )
+        ) {
+          return res.status(400).json({
+            error:
+              "Invalid league. Must be one of: saudi, saudi-super-cup, spanish-super-cup",
+          });
+        }
+        match.league = finalLeague;
+        hasChanges = true;
+      }
+
+      // Handle status change
+      if (status !== undefined && status !== match.status) {
+        match.status = status;
+        hasChanges = true;
+        if (!match.statusHistory) {
+          match.statusHistory = [];
+        }
+        match.statusHistory.push({
+          status,
+          changedAt: new Date(),
         });
       }
-      match.league = finalLeague;
-      hasChanges = true;
-    }
 
-    // Handle status change
-    if (status !== undefined && status !== match.status) {
-      match.status = status;
-      hasChanges = true;
-      if (!match.statusHistory) {
-        match.statusHistory = [];
-      }
-      match.statusHistory.push({
-        status,
-        changedAt: new Date(),
-      });
-    }
-
-    // Update top platform fields (these are usually auto-updated, but check for changes)
-    if (topPlatformId !== undefined && topPlatformId !== match.topPlatformId) {
-      match.topPlatformId = topPlatformId;
-      hasChanges = true;
-    }
-    if (mostViews !== undefined && mostViews !== match.mostViews) {
-      match.mostViews = mostViews;
-      hasChanges = true;
-    }
-
-    // Update winner and scores
-    // Clear winner and scores if status is anything other than "finished"
-    const finalStatus = status !== undefined ? status : match.status;
-
-    if (finalStatus !== "finished") {
-      // Status is not "finished" - clear winner and scores
-      if (match.winner !== null || match.scores !== null) {
-        match.winner = null;
-        match.scores = null;
+      // Update top platform fields (these are usually auto-updated, but check for changes)
+      if (
+        topPlatformId !== undefined &&
+        topPlatformId !== match.topPlatformId
+      ) {
+        match.topPlatformId = topPlatformId;
         hasChanges = true;
       }
-    } else if (status === "finished") {
-      // Status is "finished", update winner and scores if provided
-      if (winner !== undefined) {
-        const winnerChanged = (winner || null) !== match.winner;
-        if (winnerChanged) {
-          match.winner = winner || null;
+      if (mostViews !== undefined && mostViews !== match.mostViews) {
+        match.mostViews = mostViews;
+        hasChanges = true;
+      }
+
+      // Update winner and scores
+      // Clear winner and scores if status is anything other than "finished"
+      const finalStatus = status !== undefined ? status : match.status;
+
+      if (finalStatus !== "finished") {
+        // Status is not "finished" - clear winner and scores
+        if (match.winner !== null || match.scores !== null) {
+          match.winner = null;
+          match.scores = null;
           hasChanges = true;
         }
-      }
-      if (scores !== undefined) {
-        const scoresChanged =
-          JSON.stringify(scores || null) !== JSON.stringify(match.scores);
-        if (scoresChanged) {
-          match.scores = scores || null;
-          hasChanges = true;
+      } else if (status === "finished") {
+        // Status is "finished", update winner and scores if provided
+        if (winner !== undefined) {
+          const winnerChanged = (winner || null) !== match.winner;
+          if (winnerChanged) {
+            match.winner = winner || null;
+            hasChanges = true;
+          }
+        }
+        if (scores !== undefined) {
+          const scoresChanged =
+            JSON.stringify(scores || null) !== JSON.stringify(match.scores);
+          if (scoresChanged) {
+            match.scores = scores || null;
+            hasChanges = true;
+          }
         }
       }
-    }
 
-    const updatedMatch = await match.save();
+      const updatedMatch = await match.save();
 
-    // Populate competition and format response
-    const populatedMatch = await Match.findById(updatedMatch._id)
-      .populate("competition")
-      .lean();
+      // Populate competition and format response
+      const populatedMatch = await Match.findById(updatedMatch._id)
+        .populate("competition")
+        .lean();
 
-    // Format competition to string name for frontend
-    let competitionName = "";
-    if (populatedMatch.competition) {
-      if (
-        typeof populatedMatch.competition === "object" &&
-        populatedMatch.competition.name
-      ) {
-        competitionName = populatedMatch.competition.name;
-      } else if (typeof populatedMatch.competition === "string") {
-        competitionName = populatedMatch.competition;
+      // Format competition to string name for frontend
+      let competitionName = "";
+      if (populatedMatch.competition) {
+        if (
+          typeof populatedMatch.competition === "object" &&
+          populatedMatch.competition.name
+        ) {
+          competitionName = populatedMatch.competition.name;
+        } else if (typeof populatedMatch.competition === "string") {
+          competitionName = populatedMatch.competition;
+        }
       }
-    }
 
-    // Format date to string
-    const formattedMatch = {
-      ...populatedMatch,
-      date: populatedMatch.date
-        ? new Date(populatedMatch.date).toISOString().split("T")[0]
-        : "",
-      competition: competitionName,
-    };
+      // Format date to string
+      const formattedMatch = {
+        ...populatedMatch,
+        date: populatedMatch.date
+          ? new Date(populatedMatch.date).toISOString().split("T")[0]
+          : "",
+        competition: competitionName,
+      };
 
-    res.json(formattedMatch);
-  } catch (error) {
-    if (error.name === "CastError") {
-      return res.status(400).json({ error: "Invalid match ID" });
+      res.json(formattedMatch);
+    } catch (error) {
+      if (error.name === "CastError") {
+        return res.status(400).json({ error: "Invalid match ID" });
+      }
+      res.status(500).json({ error: error.message });
     }
-    res.status(500).json({ error: error.message });
   }
-});
+);
 
 // DELETE /api/matches/:externalMatchId - Delete match (superAdmin only)
-router.delete("/:externalMatchId", authenticateToken, requireSuperAdmin, async (req, res) => {
-  try {
-    const match = await Match.findOne({
-      externalMatchId: req.params.externalMatchId,
-      isDeleted: { $ne: true },
-    });
+router.delete(
+  "/:externalMatchId",
+  authenticateToken,
+  requireSuperAdmin,
+  async (req, res) => {
+    try {
+      const match = await Match.findOne({
+        externalMatchId: req.params.externalMatchId,
+        isDeleted: { $ne: true },
+      });
 
-    if (!match) {
-      return res.status(404).json({ error: "Match not found" });
+      if (!match) {
+        return res.status(404).json({ error: "Match not found" });
+      }
+
+      // Delete associated violations
+      await Violation.deleteMany({ matchId: match._id });
+
+      // Delete associated platformByMatch documents
+      await PlatformByMatch.deleteMany({
+        $or: [
+          { matchId: match._id },
+          { externalMatchId: req.params.externalMatchId },
+        ],
+      });
+
+      // Delete associated deleted violation logs
+      await DeletedViolationLog.deleteMany({
+        externalMatchId: req.params.externalMatchId,
+      });
+
+      // Soft delete: Set isDeleted to true instead of actually deleting the match
+      match.isDeleted = true;
+      await match.save();
+
+      res.json({
+        message:
+          "Match marked as deleted. Associated violations, platform stats, and deleted violation logs have been removed.",
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
-
-    // Delete associated violations
-    await Violation.deleteMany({ matchId: match._id });
-
-    // Delete associated platformByMatch documents
-    await PlatformByMatch.deleteMany({
-      $or: [
-        { matchId: match._id },
-        { externalMatchId: req.params.externalMatchId },
-      ],
-    });
-
-    // Delete associated deleted violation logs
-    await DeletedViolationLog.deleteMany({
-      externalMatchId: req.params.externalMatchId,
-    });
-
-    // Soft delete: Set isDeleted to true instead of actually deleting the match
-    match.isDeleted = true;
-    await match.save();
-
-    res.json({
-      message:
-        "Match marked as deleted. Associated violations, platform stats, and deleted violation logs have been removed.",
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
   }
-});
+);
 
 // GET /api/matches/dashboard/stats - Get dashboard statistics aggregated by week/league
 router.get("/dashboard/stats", async (req, res) => {
