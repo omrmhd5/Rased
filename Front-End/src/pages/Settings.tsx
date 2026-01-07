@@ -346,39 +346,39 @@ export default function Settings() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <SettingsIcon className="h-8 w-8" />
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2">
+          <SettingsIcon className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8" />
           Settings
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
           Manage application settings
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-2">
         {/* Target Minutes Setting */}
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4 sm:p-6">
             <div className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-primary" />
-              <CardTitle>Target Block Time</CardTitle>
+              <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <CardTitle className="text-lg sm:text-xl">Target Block Time</CardTitle>
             </div>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Set the target time (in minutes) for blocking violations
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-4 sm:p-6 space-y-3 sm:space-y-4">
             {loadingSettings ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <div className="flex items-center justify-center py-6 sm:py-8">
+                <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="targetMinutes">Minutes</Label>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="targetMinutes" className="text-xs sm:text-sm">Minutes</Label>
                     <Input
                       id="targetMinutes"
                       type="text"
@@ -386,13 +386,13 @@ export default function Settings() {
                       onChange={(e) => handleMinutesChange(e.target.value)}
                       onFocus={() => setFocusedField("minutes")}
                       onBlur={handleMinutesBlur}
-                      className="w-full"
+                      className="w-full h-9 sm:h-10 text-sm"
                       placeholder="0"
                       disabled={saving}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="targetHours">Hours</Label>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="targetHours" className="text-xs sm:text-sm">Hours</Label>
                     <Input
                       id="targetHours"
                       type="text"
@@ -400,28 +400,28 @@ export default function Settings() {
                       onChange={(e) => handleHoursChange(e.target.value)}
                       onFocus={() => setFocusedField("hours")}
                       onBlur={handleHoursBlur}
-                      className="w-full"
+                      className="w-full h-9 sm:h-10 text-sm"
                       placeholder="0"
                       disabled={saving}
                     />
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   Enter time in either minutes or hours - values will
                   auto-convert
                 </p>
                 <Button
                   onClick={handleSaveTargetMinutes}
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm touch-manipulation"
                   disabled={saving || loadingSettings}>
                   {saving ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
                       Saving...
                     </>
                   ) : (
                     <>
-                      <Save className="h-4 w-4 mr-2" />
+                      <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                       Save Target Time
                     </>
                   )}
@@ -433,26 +433,26 @@ export default function Settings() {
 
         {/* Problematic Accounts Thresholds */}
         <Card>
-          <CardHeader>
+          <CardHeader className="p-4 sm:p-6">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-primary" />
-              <CardTitle>Problematic Accounts Thresholds</CardTitle>
+              <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <CardTitle className="text-lg sm:text-xl">Problematic Accounts Thresholds</CardTitle>
             </div>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               Set thresholds for views and violations. Accounts above these
               thresholds are considered problematic.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-4 sm:p-6 space-y-3 sm:space-y-4">
             {loadingSettings ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <div className="flex items-center justify-center py-6 sm:py-8">
+                <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground" />
               </div>
             ) : (
               <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="viewsThreshold">Views Threshold</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="viewsThreshold" className="text-xs sm:text-sm">Views Threshold</Label>
                     <Input
                       id="viewsThreshold"
                       type="text"
@@ -461,17 +461,17 @@ export default function Settings() {
                         handleViewsThresholdChange(e.target.value)
                       }
                       onBlur={handleViewsThresholdBlur}
-                      className="w-full"
+                      className="w-full h-9 sm:h-10 text-sm"
                       placeholder="0"
                       disabled={saving}
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
                       Accounts with views above this number are considered
                       problematic
                     </p>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="violationsThreshold">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="violationsThreshold" className="text-xs sm:text-sm">
                       Violations Threshold
                     </Label>
                     <Input
@@ -481,11 +481,11 @@ export default function Settings() {
                       onChange={(e) =>
                         handleViolationsThresholdChange(e.target.value)
                       }
-                      className="w-full"
+                      className="w-full h-9 sm:h-10 text-sm"
                       placeholder="0"
                       disabled={saving}
                     />
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
                       Accounts with violations above this number are considered
                       problematic
                     </p>
@@ -493,16 +493,16 @@ export default function Settings() {
                 </div>
                 <Button
                   onClick={handleSaveThresholds}
-                  className="w-full sm:w-auto"
+                  className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm touch-manipulation"
                   disabled={saving || loadingSettings}>
                   {saving ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
                       Saving...
                     </>
                   ) : (
                     <>
-                      <Save className="h-4 w-4 mr-2" />
+                      <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                       Save Thresholds
                     </>
                   )}

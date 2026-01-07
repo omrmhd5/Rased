@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
 import { useAuth } from "@/contexts/AuthContext";
+import { ProblematicAccountsMobile } from "./ProblematicAccountsMobile";
 
 type League = "saudi" | "saudi-super-cup" | "spanish-super-cup" | null;
 type WeekFilterType = "all" | "single" | "range";
@@ -346,16 +347,16 @@ export default function ProblematicAccounts() {
   }, [user, availableLeagues, league]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Most Problematic Accounts</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold">Most Problematic Accounts</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Accounts and channels with the most violations
           </p>
           {!loadingThresholds && (
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
               Showing accounts with views ≥{" "}
               {viewsThreshold.toLocaleString("en-US")} or violations ≥{" "}
               {violationsThreshold}
@@ -365,16 +366,16 @@ export default function ProblematicAccounts() {
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Filters:</span>
+      <Card className="p-3 sm:p-4">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
+            <span className="text-xs sm:text-sm font-medium">Filters:</span>
           </div>
 
           {/* League Filter */}
           {availableLeagues.length === 0 ? (
-            <div className="text-sm text-muted-foreground">
+            <div className="text-xs sm:text-sm text-muted-foreground">
               No leagues available
             </div>
           ) : (
@@ -393,7 +394,7 @@ export default function ProblematicAccounts() {
                   setLeague(value as League);
                 }
               }}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                 <div className="flex items-center gap-2">
                   <SelectValue placeholder="League" />
                 </div>
@@ -401,39 +402,39 @@ export default function ProblematicAccounts() {
               <SelectContent>
                 {/* Show "All Leagues" only if user has access to multiple leagues */}
                 {availableLeagues.length > 1 && (
-                  <SelectItem value="all">All Leagues</SelectItem>
+                  <SelectItem value="all" className="text-xs sm:text-sm">All Leagues</SelectItem>
                 )}
                 {availableLeagues.includes("saudi") && (
-                  <SelectItem value="saudi">
+                  <SelectItem value="saudi" className="text-xs sm:text-sm">
                     <div className="flex items-center gap-2">
                       <img
                         src="/icons/Saudi_League.svg"
                         alt="Saudi Pro League"
-                        className="h-6 w-6 object-contain flex-shrink-0"
+                        className="h-5 w-5 sm:h-6 sm:w-6 object-contain flex-shrink-0"
                       />
                       <span>Saudi Pro League</span>
                     </div>
                   </SelectItem>
                 )}
                 {availableLeagues.includes("saudi-super-cup") && (
-                  <SelectItem value="saudi-super-cup">
+                  <SelectItem value="saudi-super-cup" className="text-xs sm:text-sm">
                     <div className="flex items-center gap-2">
                       <img
                         src="/icons/Saudi_Cup.png"
                         alt="Saudi Super Cup"
-                        className="h-6 w-6 object-contain flex-shrink-0 rounded"
+                        className="h-5 w-5 sm:h-6 sm:w-6 object-contain flex-shrink-0 rounded"
                       />
                       <span>Saudi Super Cup</span>
                     </div>
                   </SelectItem>
                 )}
                 {availableLeagues.includes("spanish-super-cup") && (
-                  <SelectItem value="spanish-super-cup">
+                  <SelectItem value="spanish-super-cup" className="text-xs sm:text-sm">
                     <div className="flex items-center gap-2">
                       <img
                         src="/icons/Spanish_Cup.svg"
                         alt="Spanish Super Cup"
-                        className="h-6 w-6 object-contain flex-shrink-0"
+                        className="h-5 w-5 sm:h-6 sm:w-6 object-contain flex-shrink-0"
                       />
                       <span>Spanish Super Cup</span>
                     </div>
@@ -445,13 +446,13 @@ export default function ProblematicAccounts() {
 
           {/* Platform Filter */}
           <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
-            <SelectTrigger className="w-[160px]">
+            <SelectTrigger className="w-full sm:w-[160px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Platforms</SelectItem>
+              <SelectItem value="all" className="text-xs sm:text-sm">All Platforms</SelectItem>
               {platformOperations.map((platform) => (
-                <SelectItem key={platform.id} value={platform.id}>
+                <SelectItem key={platform.id} value={platform.id} className="text-xs sm:text-sm">
                   {platform.name}
                 </SelectItem>
               ))}
@@ -472,25 +473,25 @@ export default function ProblematicAccounts() {
                     onValueChange={(value) =>
                       setStageFilterType(value as WeekFilterType)
                     }>
-                    <SelectTrigger className="w-[140px]">
+                    <SelectTrigger className="w-full sm:w-[140px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                       <SelectValue placeholder="Stage Filter" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Stages</SelectItem>
-                      <SelectItem value="single">Single Stage</SelectItem>
-                      <SelectItem value="range">Stage Range</SelectItem>
+                      <SelectItem value="all" className="text-xs sm:text-sm">All Stages</SelectItem>
+                      <SelectItem value="single" className="text-xs sm:text-sm">Single Stage</SelectItem>
+                      <SelectItem value="range" className="text-xs sm:text-sm">Stage Range</SelectItem>
                     </SelectContent>
                   </Select>
 
                   {/* Single Stage */}
                   {stageFilterType === "single" && (
                     <Select value={singleStage} onValueChange={setSingleStage}>
-                      <SelectTrigger className="w-[180px]">
+                      <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                         <SelectValue placeholder="Stage" />
                       </SelectTrigger>
                       <SelectContent>
                         {availableStages.map((stage) => (
-                          <SelectItem key={stage} value={stage}>
+                          <SelectItem key={stage} value={stage} className="text-xs sm:text-sm">
                             {stage}
                           </SelectItem>
                         ))}
@@ -500,31 +501,31 @@ export default function ProblematicAccounts() {
 
                   {/* Stage Range */}
                   {stageFilterType === "range" && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       <Select
                         value={stageRangeStart}
                         onValueChange={setStageRangeStart}>
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                           <SelectValue placeholder="Start Stage" />
                         </SelectTrigger>
                         <SelectContent>
                           {availableStages.map((stage) => (
-                            <SelectItem key={stage} value={stage}>
+                            <SelectItem key={stage} value={stage} className="text-xs sm:text-sm">
                               {stage}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      <span className="text-muted-foreground">to</span>
+                      <span className="text-muted-foreground text-xs sm:text-sm text-center sm:text-left">to</span>
                       <Select
                         value={stageRangeEnd}
                         onValueChange={setStageRangeEnd}>
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                           <SelectValue placeholder="End Stage" />
                         </SelectTrigger>
                         <SelectContent>
                           {availableStages.map((stage) => (
-                            <SelectItem key={stage} value={stage}>
+                            <SelectItem key={stage} value={stage} className="text-xs sm:text-sm">
                               {stage}
                             </SelectItem>
                           ))}
@@ -543,26 +544,26 @@ export default function ProblematicAccounts() {
                     onValueChange={(value) =>
                       setWeekFilterType(value as WeekFilterType)
                     }>
-                    <SelectTrigger className="w-[140px]">
+                    <SelectTrigger className="w-full sm:w-[140px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                       <SelectValue placeholder="Week Filter" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Weeks</SelectItem>
-                      <SelectItem value="single">Single Week</SelectItem>
-                      <SelectItem value="range">Week Range</SelectItem>
+                      <SelectItem value="all" className="text-xs sm:text-sm">All Weeks</SelectItem>
+                      <SelectItem value="single" className="text-xs sm:text-sm">Single Week</SelectItem>
+                      <SelectItem value="range" className="text-xs sm:text-sm">Week Range</SelectItem>
                     </SelectContent>
                   </Select>
 
                   {/* Single Week */}
                   {weekFilterType === "single" && (
                     <Select value={singleWeek} onValueChange={setSingleWeek}>
-                      <SelectTrigger className="w-[100px]">
+                      <SelectTrigger className="w-full sm:w-[100px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                         <SelectValue placeholder="Week" />
                       </SelectTrigger>
                       <SelectContent>
                         {Array.from({ length: 38 }, (_, i) => i + 1).map(
                           (week) => (
-                            <SelectItem key={week} value={week.toString()}>
+                            <SelectItem key={week} value={week.toString()} className="text-xs sm:text-sm">
                               Week {week}
                             </SelectItem>
                           )
@@ -573,34 +574,34 @@ export default function ProblematicAccounts() {
 
                   {/* Week Range */}
                   {weekFilterType === "range" && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       <Select
                         value={weekRangeStart}
                         onValueChange={setWeekRangeStart}>
-                        <SelectTrigger className="w-[100px]">
+                        <SelectTrigger className="w-full sm:w-[100px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                           <SelectValue placeholder="Start Week" />
                         </SelectTrigger>
                         <SelectContent>
                           {Array.from({ length: 38 }, (_, i) => i + 1).map(
                             (week) => (
-                              <SelectItem key={week} value={week.toString()}>
+                              <SelectItem key={week} value={week.toString()} className="text-xs sm:text-sm">
                                 Week {week}
                               </SelectItem>
                             )
                           )}
                         </SelectContent>
                       </Select>
-                      <span className="text-muted-foreground">to</span>
+                      <span className="text-muted-foreground text-xs sm:text-sm text-center sm:text-left">to</span>
                       <Select
                         value={weekRangeEnd}
                         onValueChange={setWeekRangeEnd}>
-                        <SelectTrigger className="w-[100px]">
+                        <SelectTrigger className="w-full sm:w-[100px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                           <SelectValue placeholder="End Week" />
                         </SelectTrigger>
                         <SelectContent>
                           {Array.from({ length: 38 }, (_, i) => i + 1).map(
                             (week) => (
-                              <SelectItem key={week} value={week.toString()}>
+                              <SelectItem key={week} value={week.toString()} className="text-xs sm:text-sm">
                                 Week {week}
                               </SelectItem>
                             )
@@ -615,18 +616,18 @@ export default function ProblematicAccounts() {
           })()}
 
           {/* Sort By */}
-          <div className="ml-auto flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">Sort by:</span>
+          <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2">
+            <span className="text-xs sm:text-sm text-muted-foreground">Sort by:</span>
             <Select
               value={sortBy}
               onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-full sm:w-[140px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="violations">Violations</SelectItem>
-                <SelectItem value="views">Views</SelectItem>
-                <SelectItem value="matches">Matches</SelectItem>
+                <SelectItem value="violations" className="text-xs sm:text-sm">Violations</SelectItem>
+                <SelectItem value="views" className="text-xs sm:text-sm">Views</SelectItem>
+                <SelectItem value="matches" className="text-xs sm:text-sm">Matches</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -634,47 +635,57 @@ export default function ProblematicAccounts() {
       </Card>
 
       {/* Accounts Table */}
-      <Card className="p-0">
+      {/* Mobile Version */}
+      <div className="md:hidden">
+        <ProblematicAccountsMobile
+          accounts={sortedAccounts}
+          loading={loading}
+          sortBy={sortBy}
+        />
+      </div>
+
+      {/* Desktop Version */}
+      <Card className="hidden md:block p-0">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center justify-center py-8 sm:py-12">
+            <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground mr-2" />
+            <span className="text-xs sm:text-sm text-muted-foreground">
               Loading accounts...
             </span>
           </div>
         ) : sortedAccounts.length === 0 ? (
-          <div className="flex items-center justify-center py-12">
-            <p className="text-sm text-muted-foreground">No accounts found</p>
+          <div className="flex items-center justify-center py-8 sm:py-12">
+            <p className="text-xs sm:text-sm text-muted-foreground">No accounts found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b border-border bg-muted/30">
-                <tr>
-                  <th className="text-left p-4 text-sm font-semibold">Rank</th>
-                  <th className="text-left p-4 text-sm font-semibold">
-                    Account/Channel
-                  </th>
-                  <th className="text-left p-4 text-sm font-semibold">
-                    Platform
-                  </th>
-                  <th className="text-right p-4 text-sm font-semibold">
-                    Violations
-                  </th>
-                  <th className="text-right p-4 text-sm font-semibold">
-                    Total Views
-                  </th>
-                  <th className="text-right p-4 text-sm font-semibold">
-                    Matches
-                  </th>
-                  <th className="text-right p-4 text-sm font-semibold">
-                    Status
-                  </th>
-                  <th className="text-right p-4 text-sm font-semibold">
-                    Content Type
-                  </th>
-                </tr>
-              </thead>
+          <div className="overflow-x-auto w-full">
+            <table className="w-full min-w-[800px]">
+                <thead className="border-b border-border bg-muted/30">
+                  <tr>
+                    <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-semibold">Rank</th>
+                    <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                      Account/Channel
+                    </th>
+                    <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                      Platform
+                    </th>
+                    <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                      Violations
+                    </th>
+                    <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                      Total Views
+                    </th>
+                    <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                      Matches
+                    </th>
+                    <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                      Status
+                    </th>
+                    <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                      Content Type
+                    </th>
+                  </tr>
+                </thead>
               <tbody>
                 {sortedAccounts.map((account, index) => {
                   const PlatformIcon = getPlatformIconComponent(
@@ -694,74 +705,74 @@ export default function ProblematicAccounts() {
                     <tr
                       key={`${account.accountChannel}-${account.platformId}`}
                       className="border-b border-border/40 hover:bg-muted/20 transition-colors">
-                      <td className="p-4">
+                      <td className="p-3 sm:p-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-muted-foreground">
+                          <span className="text-xs sm:text-sm font-bold text-muted-foreground">
                             #{index + 1}
                           </span>
                         </div>
                       </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4 text-destructive" />
-                          <span className="text-sm font-medium">
+                      <td className="p-3 sm:p-4">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive flex-shrink-0" />
+                          <span className="text-xs sm:text-sm font-medium truncate">
                             {account.accountChannel}
                           </span>
                         </div>
                       </td>
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
+                      <td className="p-3 sm:p-4">
+                        <div className="flex items-center gap-2 min-w-0">
                           <PlatformIcon
-                            className="h-4 w-4"
+                            className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0"
                             style={{ color: platformColor }}
                           />
-                          <span className="text-sm">
+                          <span className="text-xs sm:text-sm truncate">
                             {account.platformName}
                           </span>
                         </div>
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-3 sm:p-4 text-right">
                         <div className="flex flex-col items-end">
-                          <span className="text-base font-bold">
+                          <span className="text-sm sm:text-base font-bold">
                             {account.totalViolations.toLocaleString()}
                           </span>
-                          <div className="flex items-center gap-2 mt-1">
+                          <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap justify-end">
                             <Badge
                               variant="destructive"
-                              className="text-[10px] px-1.5 py-0">
+                              className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0">
                               {account.activeCount} Active
                             </Badge>
                             <Badge
                               variant="secondary"
-                              className="text-[10px] px-1.5 py-0">
+                              className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0">
                               {account.blockedCount} Blocked
                             </Badge>
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-3 sm:p-4 text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span className="text-sm font-semibold">
+                          <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-muted-foreground flex-shrink-0" />
+                          <span className="text-xs sm:text-sm font-semibold">
                             {formatViews(account.totalViews)}
                           </span>
                         </div>
                       </td>
-                      <td className="p-4 text-right">
-                        <span className="text-sm font-medium">
+                      <td className="p-3 sm:p-4 text-right">
+                        <span className="text-xs sm:text-sm font-medium">
                           {account.matchesAffected}
                         </span>
                       </td>
-                      <td className="p-4 text-right">
+                      <td className="p-3 sm:p-4 text-right">
                         <div className="flex flex-col items-end gap-1">
                           <Badge
                             variant={
                               successRate >= 80 ? "default" : "secondary"
                             }
-                            className="text-[10px] px-2 py-0">
+                            className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0">
                             {successRate}% Success
                           </Badge>
-                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <div className="flex items-center gap-1 text-[9px] sm:text-[10px] text-muted-foreground flex-wrap justify-end">
                             <span>{account.blockedCount} Blocked</span>
                             <span>•</span>
                             <span>{account.removedCount} Removed</span>
@@ -770,8 +781,8 @@ export default function ProblematicAccounts() {
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 text-right">
-                        <div className="flex flex-col items-end gap-1 text-[10px]">
+                      <td className="p-3 sm:p-4 text-right">
+                        <div className="flex flex-col items-end gap-0.5 sm:gap-1 text-[9px] sm:text-[10px]">
                           <div className="flex items-center gap-1">
                             <span className="text-muted-foreground">Live:</span>
                             <span className="font-medium">

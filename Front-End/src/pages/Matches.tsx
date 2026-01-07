@@ -794,92 +794,92 @@ export default function Matches() {
         : null;
     
     return (
-      <Card className="p-6 hover:shadow-lg transition-shadow">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <div className="flex items-start justify-between mb-2">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
+      <Card className="p-4 sm:p-6 hover:shadow-lg transition-shadow">
+        <div className="flex items-start justify-between mb-3 sm:mb-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between mb-2 gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-2">
                   <Badge
-                className={
-                  match.status === "live"
-                    ? "bg-red-500 text-white"
-                    : match.status === "upcoming"
-                    ? "bg-blue-500 text-white"
-                    : match.status === "finished"
-                    ? "bg-green-500 text-white"
-                    : match.status === "postponed"
-                    ? "bg-yellow-500 text-white"
-                    : ""
-                }
-                variant={
-                  match.status === "live" ||
-                  match.status === "upcoming" ||
-                  match.status === "finished" ||
-                  match.status === "postponed"
-                    ? "default"
-                    : "outline"
-              }>
-                {match.status === "live" && "● LIVE"}
-                {match.status === "upcoming" && "Upcoming"}
-                {match.status === "postponed" && "Postponed"}
-                {(match.status === "finished" ||
-                  match.status === "cancelled") &&
-                  "Completed"}
-              </Badge>
-              {(() => {
-                const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
-                const stage = match.stage;
-                if (isSuperCup && stage) {
-                  return <Badge variant="outline">{stage}</Badge>;
-                } else if (match.week) {
-                  return <Badge variant="outline">Week {match.week}</Badge>;
-                }
-                return null;
-              })()}
+                    className={`text-[10px] sm:text-xs ${
+                      match.status === "live"
+                        ? "bg-red-500 text-white"
+                        : match.status === "upcoming"
+                        ? "bg-blue-500 text-white"
+                        : match.status === "finished"
+                        ? "bg-green-500 text-white"
+                        : match.status === "postponed"
+                        ? "bg-yellow-500 text-white"
+                        : ""
+                    }`}
+                    variant={
+                      match.status === "live" ||
+                      match.status === "upcoming" ||
+                      match.status === "finished" ||
+                      match.status === "postponed"
+                        ? "default"
+                        : "outline"
+                    }>
+                    {match.status === "live" && "● LIVE"}
+                    {match.status === "upcoming" && "Upcoming"}
+                    {match.status === "postponed" && "Postponed"}
+                    {(match.status === "finished" ||
+                      match.status === "cancelled") &&
+                      "Completed"}
+                  </Badge>
+                  {(() => {
+                    const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
+                    const stage = match.stage;
+                    if (isSuperCup && stage) {
+                      return <Badge variant="outline" className="text-[10px] sm:text-xs">{stage}</Badge>;
+                    } else if (match.week) {
+                      return <Badge variant="outline" className="text-[10px] sm:text-xs">Week {match.week}</Badge>;
+                    }
+                    return null;
+                  })()}
                   {countdown && countdown.type === "countdown" && (
                     <Badge
                       variant="outline"
-                      className="bg-chart-1/10 text-chart-1 animate-pulse">
-                  <Clock className="h-3 w-3 mr-1" />
+                      className="bg-chart-1/10 text-chart-1 animate-pulse text-[10px] sm:text-xs">
+                      <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
                       Starts in {countdown.text}
-                </Badge>
-              )}
+                    </Badge>
+                  )}
                 </div>
               </div>
               {isSuperAdmin && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 touch-manipulation flex-shrink-0">
                       <MoreVertical className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => handleEditMatch(match)}>
-                      <Edit className="mr-2 h-4 w-4" />
+                  <DropdownMenuContent align="end" className="w-40 sm:w-48">
+                    <DropdownMenuItem onClick={() => handleEditMatch(match)} className="text-xs sm:text-sm touch-manipulation">
+                      <Edit className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       Edit
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
-                      className="text-destructive"
+                      className="text-destructive text-xs sm:text-sm touch-manipulation"
                       onClick={() => handleDeleteMatch(match)}>
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
             </div>
-            <h3 className="text-xl font-bold mb-2">
+            <h3 className="text-lg sm:text-xl font-bold mb-2 break-words">
               {match.team1} vs {match.team2}
             </h3>
             {match.scores && (
-              <div className="text-2xl font-bold mb-2">
+              <div className="text-xl sm:text-2xl font-bold mb-2">
                 {match.scores.home} - {match.scores.away}
               </div>
             )}
             {match.winner && match.winner !== "draw" && (
-              <div className="text-sm text-muted-foreground mb-2">
+              <div className="text-xs sm:text-sm text-muted-foreground mb-2">
                 Winner:{" "}
                 <span className="font-semibold">
                   {match.winner === "home" ? match.team1 : match.team2}
@@ -887,29 +887,29 @@ export default function Matches() {
               </div>
             )}
             {match.winner === "draw" && (
-              <div className="text-sm text-muted-foreground font-semibold mb-2">
+              <div className="text-xs sm:text-sm text-muted-foreground font-semibold mb-2">
                 Draw
               </div>
             )}
-            <div className="space-y-1 text-sm text-muted-foreground">
+            <div className="space-y-1 text-xs sm:text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                <span>
+                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span className="break-words">
                   {dateStr} • {match.time}
                 </span>
               </div>
               {match.stadium && (
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                  <span>{match.stadium}</span>
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                  <span className="break-words">{match.stadium}</span>
                 </div>
               )}
               {match.competition && (
-                <div className="text-xs text-muted-foreground/70">
+                <div className="text-[10px] sm:text-xs text-muted-foreground/70">
                   {typeof match.competition === "string"
                     ? match.competition
                     : (match.competition as Competition).name}
-              </div>
+                </div>
               )}
             </div>
           </div>
@@ -918,9 +918,9 @@ export default function Matches() {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            className="flex-1"
+            className="flex-1 h-9 sm:h-10 text-xs sm:text-sm touch-manipulation"
             onClick={() => navigate(`/match/${match.externalMatchId}`)}>
-            <TrendingUp className="h-4 w-4 mr-2" />
+            <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
             Match Dashboard
           </Button>
         </div>
@@ -934,39 +934,41 @@ export default function Matches() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-          <h1 className="text-2xl font-bold">Matches</h1>
-            <Badge variant="secondary" className="text-sm flex items-center gap-2">
-              <img
-                src={getLeagueIcon(selectedLeague!)}
-                alt={leagueNames[selectedLeague!]}
-                className="h-12 w-12 object-contain flex-shrink-0"
-              />
-              {leagueNames[selectedLeague!]}
-            </Badge>
-            {(() => {
-              const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
-              if (isSuperCup && selectedStage) {
-                return (
-                  <Badge className="bg-blue-500 text-white text-sm">
-                    {selectedStage}
-                  </Badge>
-                );
-              } else if (!isSuperCup && selectedWeek) {
-                return (
-                  <Badge className="bg-blue-500 text-white text-sm">
-                    Week {selectedWeek}
-                  </Badge>
-                );
-              }
-              return null;
-            })()}
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="flex-1 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-1">
+            <h1 className="text-xl sm:text-2xl font-bold">Matches</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="secondary" className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2">
+                <img
+                  src={getLeagueIcon(selectedLeague!)}
+                  alt={leagueNames[selectedLeague!]}
+                  className="h-8 sm:h-12 w-8 sm:w-12 object-contain flex-shrink-0"
+                />
+                <span className="hidden xs:inline">{leagueNames[selectedLeague!]}</span>
+              </Badge>
+              {(() => {
+                const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
+                if (isSuperCup && selectedStage) {
+                  return (
+                    <Badge className="bg-blue-500 text-white text-xs sm:text-sm">
+                      {selectedStage}
+                    </Badge>
+                  );
+                } else if (!isSuperCup && selectedWeek) {
+                  return (
+                    <Badge className="bg-blue-500 text-white text-xs sm:text-sm">
+                      Week {selectedWeek}
+                    </Badge>
+                  );
+                }
+                return null;
+              })()}
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {isSuperAdmin && (
             <Button
               size="sm"
@@ -974,9 +976,10 @@ export default function Matches() {
                 resetForm();
                 setIsAddMatchOpen(true);
               }}
-              className="gap-2">
-              <Plus className="h-4 w-4" />
-              Add Match Manually
+              className="gap-1.5 sm:gap-2 h-8 sm:h-9 text-xs sm:text-sm touch-manipulation">
+              <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Add Match Manually</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           )}
           {(() => {
@@ -985,12 +988,12 @@ export default function Matches() {
             if (isSuperCup) {
               return (
                 <Select value={selectedStage} onValueChange={setSelectedStage}>
-                  <SelectTrigger className="w-[180px]">
+                  <SelectTrigger className="w-full sm:w-[180px] h-8 sm:h-9 text-xs sm:text-sm touch-manipulation">
                     <SelectValue placeholder="Select Stage" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableStages.map((stage) => (
-                      <SelectItem key={stage} value={stage}>
+                      <SelectItem key={stage} value={stage} className="text-xs sm:text-sm">
                         {stage}
                       </SelectItem>
                     ))}
@@ -1000,12 +1003,12 @@ export default function Matches() {
             } else {
               return (
                 <Select value={selectedWeek} onValueChange={setSelectedWeek}>
-                  <SelectTrigger className="w-[140px]">
+                  <SelectTrigger className="w-full sm:w-[140px] h-8 sm:h-9 text-xs sm:text-sm touch-manipulation">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: 38 }, (_, i) => i + 1).map((week) => (
-                      <SelectItem key={week} value={week.toString()}>
+                      <SelectItem key={week} value={week.toString()} className="text-xs sm:text-sm">
                         Week {week}
                       </SelectItem>
                     ))}
@@ -1018,14 +1021,14 @@ export default function Matches() {
       </div>
 
       {loading && (
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground">Loading matches...</p>
+        <Card className="p-6 sm:p-8 text-center">
+          <p className="text-sm sm:text-base text-muted-foreground">Loading matches...</p>
         </Card>
       )}
 
       {!loading && matches.length === 0 && (
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground mb-4">
+        <Card className="p-6 sm:p-8 text-center">
+          <p className="text-xs sm:text-sm text-muted-foreground mb-4">
             {(() => {
               const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
               if (isSuperCup && selectedStage) {
@@ -1041,7 +1044,8 @@ export default function Matches() {
               onClick={() => {
                 resetForm();
                 setIsAddMatchOpen(true);
-              }}>
+              }}
+              className="touch-manipulation">
               <Plus className="h-4 w-4 mr-2" />
               Add Match Manually
             </Button>
@@ -1052,57 +1056,58 @@ export default function Matches() {
       {!loading && matches.length > 0 && (
         <div>
           {/* Filter Buttons */}
-          <div className="flex gap-2 mb-6 flex-wrap">
+          <div className="flex gap-2 mb-4 sm:mb-6 flex-wrap">
             <Button
               variant={matchFilter === "all" ? "default" : "outline"}
               size="sm"
-              onClick={() => setMatchFilter("all")}>
+              onClick={() => setMatchFilter("all")}
+              className="h-8 sm:h-9 text-xs sm:text-sm touch-manipulation">
               All
             </Button>
             <Button
               variant={matchFilter === "live" ? "default" : "outline"}
               size="sm"
               onClick={() => setMatchFilter("live")}
-              className={
+              className={`h-8 sm:h-9 text-xs sm:text-sm touch-manipulation ${
                 matchFilter === "live"
                   ? "bg-red-500 text-white hover:bg-red-600"
                   : ""
-              }>
+              }`}>
               Live
             </Button>
             <Button
               variant={matchFilter === "upcoming" ? "default" : "outline"}
               size="sm"
               onClick={() => setMatchFilter("upcoming")}
-              className={
+              className={`h-8 sm:h-9 text-xs sm:text-sm touch-manipulation ${
                 matchFilter === "upcoming"
                   ? "bg-blue-500 text-white hover:bg-blue-600"
                   : ""
-              }>
+              }`}>
               Upcoming
             </Button>
             <Button
               variant={matchFilter === "completed" ? "default" : "outline"}
               size="sm"
               onClick={() => setMatchFilter("completed")}
-              className={
+              className={`h-8 sm:h-9 text-xs sm:text-sm touch-manipulation ${
                 matchFilter === "completed"
                   ? "bg-green-500 text-white hover:bg-green-600"
                   : ""
-              }>
+              }`}>
               Completed
             </Button>
           </div>
 
           {/* Filtered Matches Grouped by Day */}
           {filteredMatches.length > 0 ? (
-            <div className="space-y-8">
+            <div className="space-y-6 sm:space-y-8">
               {sortedDays.map((dayKey) => (
-                <div key={dayKey} className="space-y-4">
-                  <h2 className="text-xl font-semibold text-foreground border-b pb-2">
+                <div key={dayKey} className="space-y-3 sm:space-y-4">
+                  <h2 className="text-lg sm:text-xl font-semibold text-foreground border-b pb-2">
                     {formatDayHeader(dayKey)}
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {matchesByDay[dayKey].map((match) => (
                       <MatchCard key={match.externalMatchId} match={match} />
                     ))}
@@ -1111,8 +1116,8 @@ export default function Matches() {
             ))}
           </div>
           ) : (
-            <Card className="p-8 text-center">
-              <p className="text-muted-foreground">
+            <Card className="p-6 sm:p-8 text-center">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 No matches found for the selected filter
               </p>
             </Card>
@@ -1139,17 +1144,17 @@ export default function Matches() {
             }
           }
         }}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Add Match Manually</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Add Match Manually</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Create a new match for {leagueNames[selectedLeague!]}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
             {/* Team 1 Name */}
-            <div className="space-y-2">
-              <Label htmlFor="team1">Team 1 Name *</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="team1" className="text-xs sm:text-sm">Team 1 Name *</Label>
               <Input
                 id="team1"
                 type="text"
@@ -1157,12 +1162,13 @@ export default function Matches() {
                 value={formTeam1}
                 onChange={(e) => setFormTeam1(e.target.value)}
                 required
+                className="h-9 sm:h-10 text-sm"
               />
             </div>
 
             {/* Team 2 Name */}
-            <div className="space-y-2">
-              <Label htmlFor="team2">Team 2 Name *</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="team2" className="text-xs sm:text-sm">Team 2 Name *</Label>
               <Input
                 id="team2"
                 type="text"
@@ -1170,12 +1176,13 @@ export default function Matches() {
                 value={formTeam2}
                 onChange={(e) => setFormTeam2(e.target.value)}
                 required
+                className="h-9 sm:h-10 text-sm"
               />
             </div>
 
             {/* Status */}
-            <div className="space-y-2">
-              <Label htmlFor="status">Status *</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="status" className="text-xs sm:text-sm">Status *</Label>
               <Select
                 value={formStatus}
                 onValueChange={(value) =>
@@ -1187,14 +1194,14 @@ export default function Matches() {
                       | "postponed"
                   )
                 }>
-                <SelectTrigger id="status">
+                <SelectTrigger id="status" className="h-9 sm:h-10 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="upcoming">Upcoming</SelectItem>
-                  <SelectItem value="live">Live</SelectItem>
-                  <SelectItem value="finished">Completed</SelectItem>
-                  <SelectItem value="postponed">Postponed</SelectItem>
+                  <SelectItem value="upcoming" className="text-sm">Upcoming</SelectItem>
+                  <SelectItem value="live" className="text-sm">Live</SelectItem>
+                  <SelectItem value="finished" className="text-sm">Completed</SelectItem>
+                  <SelectItem value="postponed" className="text-sm">Postponed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1202,31 +1209,31 @@ export default function Matches() {
             {/* Status-dependent fields (Winner and Scores) */}
             {formStatus === "finished" && (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="winner">Winner *</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="winner" className="text-xs sm:text-sm">Winner *</Label>
                   <Select
                     value={formWinner}
                     onValueChange={(value) =>
                       setFormWinner(value as "home" | "away" | "draw" | "")
                     }>
-                    <SelectTrigger id="winner">
+                    <SelectTrigger id="winner" className="h-9 sm:h-10 text-sm">
                       <SelectValue placeholder="Select winner" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="home">
+                      <SelectItem value="home" className="text-sm">
                         {formTeam1 || "Team 1"}
                       </SelectItem>
-                      <SelectItem value="away">
+                      <SelectItem value="away" className="text-sm">
                         {formTeam2 || "Team 2"}
                       </SelectItem>
-                      <SelectItem value="draw">Draw</SelectItem>
+                      <SelectItem value="draw" className="text-sm">Draw</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="scoreHome">Team 1 Score *</Label>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="scoreHome" className="text-xs sm:text-sm">Team 1 Score *</Label>
                     <Input
                       id="scoreHome"
                       type="number"
@@ -1235,10 +1242,11 @@ export default function Matches() {
                       value={formScoreHome}
                       onChange={(e) => setFormScoreHome(e.target.value)}
                       required
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="scoreAway">Team 2 Score *</Label>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="scoreAway" className="text-xs sm:text-sm">Team 2 Score *</Label>
                     <Input
                       id="scoreAway"
                       type="number"
@@ -1247,6 +1255,7 @@ export default function Matches() {
                       value={formScoreAway}
                       onChange={(e) => setFormScoreAway(e.target.value)}
                       required
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
                 </div>
@@ -1259,15 +1268,15 @@ export default function Matches() {
               
               if (isSuperCup) {
                 return (
-                  <div className="space-y-2">
-                    <Label htmlFor="stage">Stage *</Label>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="stage" className="text-xs sm:text-sm">Stage *</Label>
                     <Select value={formStage} onValueChange={setFormStage}>
-                      <SelectTrigger id="stage">
+                      <SelectTrigger id="stage" className="h-9 sm:h-10 text-sm">
                         <SelectValue placeholder="Select stage" />
                       </SelectTrigger>
                       <SelectContent>
                         {availableStages.map((stage) => (
-                          <SelectItem key={stage} value={stage}>
+                          <SelectItem key={stage} value={stage} className="text-sm">
                             {stage}
                           </SelectItem>
                         ))}
@@ -1277,8 +1286,8 @@ export default function Matches() {
                 );
               } else {
                 return (
-                  <div className="space-y-2">
-                    <Label htmlFor="week">Week *</Label>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="week" className="text-xs sm:text-sm">Week *</Label>
                     <Input
                       id="week"
                       type="text"
@@ -1286,6 +1295,7 @@ export default function Matches() {
                       value={formWeek}
                       onChange={(e) => setFormWeek(e.target.value)}
                       required
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
                 );
@@ -1293,47 +1303,52 @@ export default function Matches() {
             })()}
 
             {/* Date and Time */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="date">Date *</Label>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="date" className="text-xs sm:text-sm">Date *</Label>
                 <Input
                   id="date"
                   type="date"
                   value={formDate}
                   onChange={(e) => setFormDate(e.target.value)}
                   required
+                  className="h-9 sm:h-10 text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="time">Time *</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="time" className="text-xs sm:text-sm">Time *</Label>
                 <Input
                   id="time"
                   type="time"
                   value={formTime}
                   onChange={(e) => setFormTime(e.target.value)}
                   required
+                  className="h-9 sm:h-10 text-sm"
                 />
-        </div>
-      </div>
+              </div>
+            </div>
 
             {/* Optional fields */}
-            <div className="space-y-2">
-              <Label htmlFor="venue">Venue (Optional)</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="venue" className="text-xs sm:text-sm">Venue (Optional)</Label>
               <Input
                 id="venue"
                 type="text"
                 placeholder="e.g., King Fahd International Stadium"
                 value={formVenue}
                 onChange={(e) => setFormVenue(e.target.value)}
+                className="h-9 sm:h-10 text-sm"
               />
             </div>
 
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddMatchOpen(false)}>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setIsAddMatchOpen(false)} className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               Cancel
             </Button>
-            <Button onClick={handleAddMatch}>Add Match</Button>
+            <Button onClick={handleAddMatch} className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
+              Add Match
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1347,17 +1362,17 @@ export default function Matches() {
             resetForm();
           }
         }}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Edit Match</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Edit Match</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Update match details for {leagueNames[selectedLeague!]}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
             {/* Team 1 Name */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-team1">Team 1 Name *</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="edit-team1" className="text-xs sm:text-sm">Team 1 Name *</Label>
               <Input
                 id="edit-team1"
                 type="text"
@@ -1365,12 +1380,13 @@ export default function Matches() {
                 value={formTeam1}
                 onChange={(e) => setFormTeam1(e.target.value)}
                 required
+                className="h-9 sm:h-10 text-sm"
               />
             </div>
 
             {/* Team 2 Name */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-team2">Team 2 Name *</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="edit-team2" className="text-xs sm:text-sm">Team 2 Name *</Label>
               <Input
                 id="edit-team2"
                 type="text"
@@ -1378,12 +1394,13 @@ export default function Matches() {
                 value={formTeam2}
                 onChange={(e) => setFormTeam2(e.target.value)}
                 required
+                className="h-9 sm:h-10 text-sm"
               />
             </div>
 
             {/* Status */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-status">Status *</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="edit-status" className="text-xs sm:text-sm">Status *</Label>
               <Select
                 value={formStatus}
                 onValueChange={(value) =>
@@ -1395,14 +1412,14 @@ export default function Matches() {
                       | "postponed"
                   )
                 }>
-                <SelectTrigger id="edit-status">
+                <SelectTrigger id="edit-status" className="h-9 sm:h-10 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="upcoming">Upcoming</SelectItem>
-                  <SelectItem value="live">Live</SelectItem>
-                  <SelectItem value="finished">Completed</SelectItem>
-                  <SelectItem value="postponed">Postponed</SelectItem>
+                  <SelectItem value="upcoming" className="text-sm">Upcoming</SelectItem>
+                  <SelectItem value="live" className="text-sm">Live</SelectItem>
+                  <SelectItem value="finished" className="text-sm">Completed</SelectItem>
+                  <SelectItem value="postponed" className="text-sm">Postponed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1410,31 +1427,31 @@ export default function Matches() {
             {/* Status-dependent fields (Winner and Scores) */}
             {formStatus === "finished" && (
               <>
-                <div className="space-y-2">
-                  <Label htmlFor="edit-winner">Winner *</Label>
+                <div className="space-y-1.5 sm:space-y-2">
+                  <Label htmlFor="edit-winner" className="text-xs sm:text-sm">Winner *</Label>
                   <Select
                     value={formWinner}
                     onValueChange={(value) =>
                       setFormWinner(value as "home" | "away" | "draw" | "")
                     }>
-                    <SelectTrigger id="edit-winner">
+                    <SelectTrigger id="edit-winner" className="h-9 sm:h-10 text-sm">
                       <SelectValue placeholder="Select winner" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="home">
+                      <SelectItem value="home" className="text-sm">
                         {formTeam1 || "Team 1"}
                       </SelectItem>
-                      <SelectItem value="away">
+                      <SelectItem value="away" className="text-sm">
                         {formTeam2 || "Team 2"}
                       </SelectItem>
-                      <SelectItem value="draw">Draw</SelectItem>
+                      <SelectItem value="draw" className="text-sm">Draw</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-scoreHome">Team 1 Score *</Label>
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="edit-scoreHome" className="text-xs sm:text-sm">Team 1 Score *</Label>
                     <Input
                       id="edit-scoreHome"
                       type="number"
@@ -1443,10 +1460,11 @@ export default function Matches() {
                       value={formScoreHome}
                       onChange={(e) => setFormScoreHome(e.target.value)}
                       required
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-scoreAway">Team 2 Score *</Label>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="edit-scoreAway" className="text-xs sm:text-sm">Team 2 Score *</Label>
                     <Input
                       id="edit-scoreAway"
                       type="number"
@@ -1455,6 +1473,7 @@ export default function Matches() {
                       value={formScoreAway}
                       onChange={(e) => setFormScoreAway(e.target.value)}
                       required
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
                 </div>
@@ -1467,15 +1486,15 @@ export default function Matches() {
               
               if (isSuperCup) {
                 return (
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-stage">Stage *</Label>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="edit-stage" className="text-xs sm:text-sm">Stage *</Label>
                     <Select value={formStage} onValueChange={setFormStage}>
-                      <SelectTrigger id="edit-stage">
+                      <SelectTrigger id="edit-stage" className="h-9 sm:h-10 text-sm">
                         <SelectValue placeholder="Select stage" />
                       </SelectTrigger>
                       <SelectContent>
                         {availableStages.map((stage) => (
-                          <SelectItem key={stage} value={stage}>
+                          <SelectItem key={stage} value={stage} className="text-sm">
                             {stage}
                           </SelectItem>
                         ))}
@@ -1485,8 +1504,8 @@ export default function Matches() {
                 );
               } else {
                 return (
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-week">Week *</Label>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="edit-week" className="text-xs sm:text-sm">Week *</Label>
                     <Input
                       id="edit-week"
                       type="text"
@@ -1494,6 +1513,7 @@ export default function Matches() {
                       value={formWeek}
                       onChange={(e) => setFormWeek(e.target.value)}
                       required
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
                 );
@@ -1501,62 +1521,68 @@ export default function Matches() {
             })()}
 
             {/* Date and Time */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="edit-date">Date *</Label>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="edit-date" className="text-xs sm:text-sm">Date *</Label>
                 <Input
                   id="edit-date"
                   type="date"
                   value={formDate}
                   onChange={(e) => setFormDate(e.target.value)}
                   required
+                  className="h-9 sm:h-10 text-sm"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-time">Time *</Label>
+              <div className="space-y-1.5 sm:space-y-2">
+                <Label htmlFor="edit-time" className="text-xs sm:text-sm">Time *</Label>
                 <Input
                   id="edit-time"
                   type="time"
                   value={formTime}
                   onChange={(e) => setFormTime(e.target.value)}
                   required
+                  className="h-9 sm:h-10 text-sm"
                 />
-        </div>
-      </div>
+              </div>
+            </div>
 
             {/* Optional fields */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-venue">Venue (Optional)</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="edit-venue" className="text-xs sm:text-sm">Venue (Optional)</Label>
               <Input
                 id="edit-venue"
                 type="text"
                 placeholder="e.g., King Fahd International Stadium"
                 value={formVenue}
                 onChange={(e) => setFormVenue(e.target.value)}
+                className="h-9 sm:h-10 text-sm"
               />
             </div>
 
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => {
                 resetForm();
                 setIsEditMatchOpen(false);
-              }}>
+              }}
+              className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               Cancel
             </Button>
-            <Button onClick={handleUpdateMatch}>Update Match</Button>
+            <Button onClick={handleUpdateMatch} className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
+              Update Match
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="w-[95vw] sm:w-full">
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogTitle className="text-lg sm:text-xl">Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription className="text-xs sm:text-sm">
               This will permanently delete the match{" "}
               {selectedMatch && (
                 <span className="font-semibold">
@@ -1566,13 +1592,13 @@ export default function Matches() {
               and all associated violations. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setSelectedMatch(null)}>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel onClick={() => setSelectedMatch(null)} className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDeleteMatch}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

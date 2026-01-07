@@ -34,8 +34,8 @@ export function PlatformFilters({
   );
 
   return (
-    <div className="flex items-center justify-between gap-4 flex-wrap">
-      <div className="flex gap-2 items-center">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+      <div className="flex gap-2 items-center flex-wrap">
         <TooltipProvider>
           {selectedSlots.map((platformId) => {
             const platform = allPlatforms.find(
@@ -48,14 +48,14 @@ export function PlatformFilters({
               <Badge
                 key={platformId}
                 variant="default"
-                className="cursor-pointer px-3 py-1.5 flex items-center gap-2">
+                className="cursor-pointer px-2.5 sm:px-3 py-1 sm:py-1.5 flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm touch-manipulation active:scale-[0.98]">
                 <IconComponent
-                  className="h-3.5 w-3.5"
+                  className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0"
                   style={{ color: platform.color }}
                 />
-                <span>{platform.name}</span>
+                <span className="truncate max-w-[80px] sm:max-w-none">{platform.name}</span>
                 <X
-                  className="h-3 w-3 ml-1 hover:text-destructive"
+                  className="h-3 w-3 ml-0.5 sm:ml-1 hover:text-destructive flex-shrink-0 touch-manipulation"
                   onClick={(e) => {
                     e.stopPropagation();
                     onRemovePlatform(platformId);
@@ -69,22 +69,23 @@ export function PlatformFilters({
         {availablePlatforms.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <Plus className="h-3.5 w-3.5" />
-                Add platform
+              <Button variant="outline" size="sm" className="gap-1 sm:gap-1.5 h-8 sm:h-9 text-xs sm:text-sm touch-manipulation">
+                <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                <span className="hidden xs:inline">Add platform</span>
+                <span className="xs:hidden">Add</span>
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
+            <DropdownMenuContent align="start" className="w-48 sm:w-56">
               {availablePlatforms.map((platform) => {
                 const IconComponent = platform.icon;
                 return (
                   <DropdownMenuItem
                     key={platform.id}
                     onClick={() => onAddPlatform(platform.id)}
-                    className="gap-2">
+                    className="gap-2 text-xs sm:text-sm touch-manipulation">
                     <IconComponent
-                      className="h-4 w-4"
+                      className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0"
                       style={{ color: platform.color }}
                     />
                     {platform.name}
@@ -96,16 +97,16 @@ export function PlatformFilters({
         )}
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-1.5 sm:gap-2 flex-wrap">
         <Badge
           variant={contentTypeFilter === "all" ? "default" : "outline"}
-          className="cursor-pointer text-xs"
+          className="cursor-pointer text-[10px] sm:text-xs px-2 sm:px-2.5 py-1 touch-manipulation active:scale-[0.98]"
           onClick={() => onContentTypeFilterChange("all")}>
           All types
         </Badge>
         <Badge
           variant={contentTypeFilter === "live" ? "default" : "outline"}
-          className="cursor-pointer text-xs"
+          className="cursor-pointer text-[10px] sm:text-xs px-2 sm:px-2.5 py-1 touch-manipulation active:scale-[0.98]"
           onClick={() => onContentTypeFilterChange("live")}>
           Live
         </Badge>
@@ -113,13 +114,13 @@ export function PlatformFilters({
           variant={
             contentTypeFilter === "highlights" ? "default" : "outline"
           }
-          className="cursor-pointer text-xs"
+          className="cursor-pointer text-[10px] sm:text-xs px-2 sm:px-2.5 py-1 touch-manipulation active:scale-[0.98]"
           onClick={() => onContentTypeFilterChange("highlights")}>
           Highlights
         </Badge>
         <Badge
           variant={contentTypeFilter === "other" ? "default" : "outline"}
-          className="cursor-pointer text-xs"
+          className="cursor-pointer text-[10px] sm:text-xs px-2 sm:px-2.5 py-1 touch-manipulation active:scale-[0.98]"
           onClick={() => onContentTypeFilterChange("other")}>
           Other
         </Badge>

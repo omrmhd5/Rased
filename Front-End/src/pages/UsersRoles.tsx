@@ -13,6 +13,7 @@ import { Users, Plus, Edit2, Trash2, Save, Loader2, AlertTriangle } from "lucide
 import { API_URL } from "@/components/MatchDashboard/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
+import { UsersRolesMobile } from "./UsersRolesMobile";
 
 type League = "saudi" | "saudi-super-cup" | "spanish-super-cup";
 
@@ -359,57 +360,59 @@ export default function UsersRoles() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Users className="h-8 w-8" />
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2">
+          <Users className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8" />
           Users & Roles
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
           Manage user accounts and roles (SuperAdmin only)
         </p>
       </div>
 
       {/* User Management Card */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              <CardTitle>User Management</CardTitle>
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <CardTitle className="text-lg sm:text-xl">User Management</CardTitle>
             </div>
             <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
               <DialogTrigger asChild>
-                <Button size="sm" onClick={() => resetForm()}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add User
+                <Button size="sm" onClick={() => resetForm()} className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
+                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden xs:inline">Add User</span>
+                  <span className="xs:hidden">Add</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
-                  <DialogTitle>Add New User</DialogTitle>
-                  <DialogDescription>
+                  <DialogTitle className="text-lg sm:text-xl">Add New User</DialogTitle>
+                  <DialogDescription className="text-xs sm:text-sm">
                     Create a new user account. All fields are required.
                   </DialogDescription>
                 </DialogHeader>
-                <div className="space-y-4 py-4">
+                <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
                   {formError && (
                     <Alert variant="destructive">
                       <AlertDescription>{formError}</AlertDescription>
                     </Alert>
                   )}
                   <div className="space-y-2">
-                    <Label htmlFor="add-username">Username</Label>
+                    <Label htmlFor="add-username" className="text-xs sm:text-sm">Username</Label>
                     <Input
                       id="add-username"
                       value={formUsername}
                       onChange={(e) => setFormUsername(e.target.value)}
                       placeholder="Enter username"
                       disabled={saving}
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="add-email">Email</Label>
+                    <Label htmlFor="add-email" className="text-xs sm:text-sm">Email</Label>
                     <Input
                       id="add-email"
                       type="email"
@@ -417,10 +420,11 @@ export default function UsersRoles() {
                       onChange={(e) => setFormEmail(e.target.value)}
                       placeholder="Enter email"
                       disabled={saving}
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="add-password">Password</Label>
+                    <Label htmlFor="add-password" className="text-xs sm:text-sm">Password</Label>
                     <Input
                       id="add-password"
                       type="password"
@@ -428,10 +432,11 @@ export default function UsersRoles() {
                       onChange={(e) => setFormPassword(e.target.value)}
                       placeholder="Enter password (min 6 characters)"
                       disabled={saving}
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="add-confirm-password">Confirm Password</Label>
+                    <Label htmlFor="add-confirm-password" className="text-xs sm:text-sm">Confirm Password</Label>
                     <Input
                       id="add-confirm-password"
                       type="password"
@@ -439,10 +444,11 @@ export default function UsersRoles() {
                       onChange={(e) => setFormConfirmPassword(e.target.value)}
                       placeholder="Confirm password"
                       disabled={saving}
+                      className="h-9 sm:h-10 text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="add-role">Role</Label>
+                    <Label htmlFor="add-role" className="text-xs sm:text-sm">Role</Label>
                     <Select
                       value={formRole}
                       onValueChange={(value: "viewer" | "employee") => {
@@ -452,64 +458,65 @@ export default function UsersRoles() {
                         }
                       }}
                       disabled={saving}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="viewer">Viewer</SelectItem>
-                        <SelectItem value="employee">Employee</SelectItem>
+                        <SelectItem value="viewer" className="text-xs sm:text-sm">Viewer</SelectItem>
+                        <SelectItem value="employee" className="text-xs sm:text-sm">Employee</SelectItem>
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[10px] sm:text-xs text-muted-foreground">
                       SuperAdmin role cannot be assigned to new users
                     </p>
                   </div>
                   {formRole === "employee" && (
                     <div className="space-y-2">
-                      <Label>Leagues (Select at least one)</Label>
-                      <div className="space-y-3 border rounded-md p-4">
+                      <Label className="text-xs sm:text-sm">Leagues (Select at least one)</Label>
+                      <div className="space-y-2 sm:space-y-3 border rounded-md p-3 sm:p-4">
                         {availableLeagues.map((league) => (
-                          <div key={league.value} className="flex items-center space-x-3">
+                          <div key={league.value} className="flex items-center space-x-2 sm:space-x-3">
                             <Checkbox
                               id={`add-league-${league.value}`}
                               checked={formLeagues.includes(league.value)}
                               onCheckedChange={() => handleLeagueToggle(league.value)}
                               disabled={saving}
+                              className="touch-manipulation"
                             />
                             <label
                               htmlFor={`add-league-${league.value}`}
-                              className="flex items-center gap-2 cursor-pointer flex-1">
+                              className="flex items-center gap-2 cursor-pointer flex-1 text-xs sm:text-sm">
                               <img
                                 src={league.icon}
                                 alt={league.label}
-                                className="h-5 w-5 object-contain"
+                                className="h-4 w-4 sm:h-5 sm:w-5 object-contain flex-shrink-0"
                               />
-                              <span className="text-sm font-medium">{league.label}</span>
+                              <span className="font-medium">{league.label}</span>
                             </label>
                           </div>
                         ))}
                       </div>
                       {formLeagues.length === 0 && (
-                        <p className="text-xs text-destructive">
+                        <p className="text-[10px] sm:text-xs text-destructive">
                           At least one league must be selected for employees
                         </p>
                       )}
                     </div>
                   )}
                 </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => { setIsAddUserOpen(false); resetForm(); }} disabled={saving}>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button variant="outline" onClick={() => { setIsAddUserOpen(false); resetForm(); }} disabled={saving} className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                     Cancel
                   </Button>
-                  <Button onClick={handleAddUser} disabled={saving}>
+                  <Button onClick={handleAddUser} disabled={saving} className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                     {saving ? (
                       <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
                         Adding...
                       </>
                     ) : (
                       <>
-                        <Plus className="h-4 w-4 mr-2" />
+                        <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                         Add User
                       </>
                     )}
@@ -518,26 +525,39 @@ export default function UsersRoles() {
               </DialogContent>
             </Dialog>
           </div>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             Manage user accounts and assign roles
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-              <span className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-center py-8 sm:py-12">
+              <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground mr-2" />
+              <span className="text-xs sm:text-sm text-muted-foreground">
                 Loading users...
               </span>
             </div>
           ) : users.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>No users found. Add your first user to get started.</p>
+            <div className="text-center py-8 sm:py-12 text-muted-foreground">
+              <Users className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
+              <p className="text-xs sm:text-sm">No users found. Add your first user to get started.</p>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
+            <>
+              {/* Mobile Version */}
+              <div className="md:hidden">
+                <UsersRolesMobile
+                  users={users}
+                  currentUserId={currentUser?.id}
+                  onEdit={openEditDialog}
+                  onDelete={openDeleteDialog}
+                  saving={saving}
+                />
+              </div>
+
+              {/* Desktop Version */}
+              <div className="hidden md:block rounded-md border overflow-x-auto">
+                <Table className="min-w-[800px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Username</TableHead>
@@ -616,38 +636,40 @@ export default function UsersRoles() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
       {/* Edit User Dialog */}
       <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
-              <DialogDescription>
+              <DialogTitle className="text-lg sm:text-xl">Edit User</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm">
                 Update user information. To change password, enter old password first. {editingUser?.role === "superAdmin" && "SuperAdmin role cannot be changed."}
               </DialogDescription>
             </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
             {formError && (
               <Alert variant="destructive">
                 <AlertDescription>{formError}</AlertDescription>
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="edit-username">Username</Label>
+              <Label htmlFor="edit-username" className="text-xs sm:text-sm">Username</Label>
               <Input
                 id="edit-username"
                 value={formUsername}
                 onChange={(e) => setFormUsername(e.target.value)}
                 placeholder="Enter username"
                 disabled={saving}
+                className="h-9 sm:h-10 text-sm"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-email">Email</Label>
+              <Label htmlFor="edit-email" className="text-xs sm:text-sm">Email</Label>
               <Input
                 id="edit-email"
                 type="email"
@@ -655,10 +677,11 @@ export default function UsersRoles() {
                 onChange={(e) => setFormEmail(e.target.value)}
                 placeholder="Enter email"
                 disabled={saving}
+                className="h-9 sm:h-10 text-sm"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-password">New Password (Optional)</Label>
+              <Label htmlFor="edit-password" className="text-xs sm:text-sm">New Password (Optional)</Label>
               <Input
                 id="edit-password"
                 type="password"
@@ -666,12 +689,13 @@ export default function UsersRoles() {
                 onChange={(e) => setFormPassword(e.target.value)}
                 placeholder="Leave empty to keep current password"
                 disabled={saving}
+                className="h-9 sm:h-10 text-sm"
               />
             </div>
             {formPassword && (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-old-password">Old Password *</Label>
+                  <Label htmlFor="edit-old-password" className="text-xs sm:text-sm">Old Password *</Label>
                   <Input
                     id="edit-old-password"
                     type="password"
@@ -679,10 +703,11 @@ export default function UsersRoles() {
                     onChange={(e) => setFormOldPassword(e.target.value)}
                     placeholder="Enter old password"
                     disabled={saving}
+                    className="h-9 sm:h-10 text-sm"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-confirm-password">Confirm New Password *</Label>
+                  <Label htmlFor="edit-confirm-password" className="text-xs sm:text-sm">Confirm New Password *</Label>
                   <Input
                     id="edit-confirm-password"
                     type="password"
@@ -690,12 +715,13 @@ export default function UsersRoles() {
                     onChange={(e) => setFormConfirmPassword(e.target.value)}
                     placeholder="Confirm new password"
                     disabled={saving}
+                    className="h-9 sm:h-10 text-sm"
                   />
                 </div>
               </>
             )}
             <div className="space-y-2">
-              <Label htmlFor="edit-role">Role</Label>
+              <Label htmlFor="edit-role" className="text-xs sm:text-sm">Role</Label>
               <Select
                 value={formRole}
                 onValueChange={(value: "viewer" | "employee") => {
@@ -705,71 +731,72 @@ export default function UsersRoles() {
                   }
                 }}
                 disabled={saving || editingUser?.role === "superAdmin"}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                  <SelectItem value="employee">Employee</SelectItem>
+                  <SelectItem value="viewer" className="text-xs sm:text-sm">Viewer</SelectItem>
+                  <SelectItem value="employee" className="text-xs sm:text-sm">Employee</SelectItem>
                 </SelectContent>
               </Select>
               {editingUser?.role === "superAdmin" && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   SuperAdmin role cannot be changed
                 </p>
               )}
               {editingUser?.role !== "superAdmin" && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
                   SuperAdmin role cannot be assigned
                 </p>
               )}
             </div>
             {formRole === "employee" && (
               <div className="space-y-2">
-                <Label>Leagues (Select at least one)</Label>
-                <div className="space-y-3 border rounded-md p-4">
+                <Label className="text-xs sm:text-sm">Leagues (Select at least one)</Label>
+                <div className="space-y-2 sm:space-y-3 border rounded-md p-3 sm:p-4">
                   {availableLeagues.map((league) => (
-                    <div key={league.value} className="flex items-center space-x-3">
+                    <div key={league.value} className="flex items-center space-x-2 sm:space-x-3">
                       <Checkbox
                         id={`edit-league-${league.value}`}
                         checked={formLeagues.includes(league.value)}
                         onCheckedChange={() => handleLeagueToggle(league.value)}
                         disabled={saving}
+                        className="touch-manipulation"
                       />
                       <label
                         htmlFor={`edit-league-${league.value}`}
-                        className="flex items-center gap-2 cursor-pointer flex-1">
+                        className="flex items-center gap-2 cursor-pointer flex-1 text-xs sm:text-sm">
                         <img
                           src={league.icon}
                           alt={league.label}
-                          className="h-5 w-5 object-contain"
+                          className="h-4 w-4 sm:h-5 sm:w-5 object-contain flex-shrink-0"
                         />
-                        <span className="text-sm font-medium">{league.label}</span>
+                        <span className="font-medium">{league.label}</span>
                       </label>
                     </div>
                   ))}
                 </div>
                 {formLeagues.length === 0 && (
-                  <p className="text-xs text-destructive">
+                  <p className="text-[10px] sm:text-xs text-destructive">
                     At least one league must be selected for employees
                   </p>
                 )}
               </div>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsEditUserOpen(false); resetForm(); setEditingUser(null); }} disabled={saving}>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setIsEditUserOpen(false); resetForm(); setEditingUser(null); }} disabled={saving} className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               Cancel
             </Button>
-            <Button onClick={handleEditUser} disabled={saving}>
+            <Button onClick={handleEditUser} disabled={saving} className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               {saving ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
                   Saving...
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                   Save Changes
                 </>
               )}
@@ -780,35 +807,35 @@ export default function UsersRoles() {
 
       {/* Delete User Dialog */}
       <Dialog open={isDeleteUserOpen} onOpenChange={setIsDeleteUserOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Delete User</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Delete User</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Are you sure you want to delete this user? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           {deletingUser && (
-            <div className="py-4">
+            <div className="py-3 sm:py-4">
               <Alert variant="destructive">
-                <AlertDescription>
+                <AlertDescription className="text-xs sm:text-sm">
                   <strong>{deletingUser.username}</strong> ({deletingUser.email}) will be permanently deleted.
                 </AlertDescription>
               </Alert>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setIsDeleteUserOpen(false); setDeletingUser(null); }} disabled={saving}>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => { setIsDeleteUserOpen(false); setDeletingUser(null); }} disabled={saving} className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteUser} disabled={saving}>
+            <Button variant="destructive" onClick={handleDeleteUser} disabled={saving} className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               {saving ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
                   Deleting...
                 </>
               ) : (
                 <>
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                   Delete User
                 </>
               )}

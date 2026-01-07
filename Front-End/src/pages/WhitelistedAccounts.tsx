@@ -52,6 +52,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useAuth } from "@/contexts/AuthContext";
+import { WhitelistedAccountsMobile } from "./WhitelistedAccountsMobile";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -510,60 +511,62 @@ export default function WhitelistedAccounts() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <Shield className="h-8 w-8" />
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2">
+          <Shield className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8" />
           Whitelisted Accounts
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
           Manage accounts that are whitelisted across platforms
         </p>
       </div>
 
       {/* Add Account Card */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              <CardTitle>Whitelisted Accounts</CardTitle>
+              <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <CardTitle className="text-lg sm:text-xl">Whitelisted Accounts</CardTitle>
             </div>
             {isSuperAdmin && (
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={() => resetForm()}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Account
+                  <Button onClick={() => resetForm()} className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
+                    <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                    <span className="hidden xs:inline">Add Account</span>
+                    <span className="xs:hidden">Add</span>
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="w-[95vw] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle>Add Whitelisted Account</DialogTitle>
-                    <DialogDescription>
+                    <DialogTitle className="text-lg sm:text-xl">Add Whitelisted Account</DialogTitle>
+                    <DialogDescription className="text-xs sm:text-sm">
                       Add an account to the whitelist. Select the platforms
                       where this account should be whitelisted.
                     </DialogDescription>
                   </DialogHeader>
-                  <div className="space-y-4 py-4">
+                  <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
                     {formError && (
                       <Alert variant="destructive">
                         <AlertDescription>{formError}</AlertDescription>
                       </Alert>
                     )}
                     <div className="space-y-2">
-                      <Label htmlFor="account-channel">Account Channel</Label>
+                      <Label htmlFor="account-channel" className="text-xs sm:text-sm">Account Channel</Label>
                       <Input
                         id="account-channel"
                         value={accountChannel}
                         onChange={(e) => setAccountChannel(e.target.value)}
                         placeholder="Enter account channel name (e.g., @username)"
+                        className="h-9 sm:h-10 text-sm"
                       />
                     </div>
-                    <div className="space-y-3">
-                      <Label>Select Platforms</Label>
-                      <div className="space-y-3 p-4 border rounded-lg">
+                    <div className="space-y-2 sm:space-y-3">
+                      <Label className="text-xs sm:text-sm">Select Platforms</Label>
+                      <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 border rounded-lg">
                         {platformOperations.map((platform) => {
                           const PlatformIcon = platform.icon;
                           const isSelected = selectedPlatforms.includes(
@@ -582,19 +585,19 @@ export default function WhitelistedAccounts() {
                                 />
                                 <Label
                                   htmlFor={`platform-${platform.id}`}
-                                  className="flex items-center gap-2 cursor-pointer flex-1">
+                                  className="flex items-center gap-2 cursor-pointer flex-1 text-xs sm:text-sm">
                                   <PlatformIcon
-                                    className="h-4 w-4"
+                                    className="h-3.5 w-3.5 sm:h-4 sm:w-4"
                                     style={{ color: platform.color }}
                                   />
                                   <span>{platform.name}</span>
                                 </Label>
                               </div>
                               {isSelected && (
-                                <div className="ml-6 space-y-1">
+                                <div className="ml-5 sm:ml-6 space-y-1">
                                   <Label
                                     htmlFor={`platform-name-${platform.id}`}
-                                    className="text-xs text-muted-foreground">
+                                    className="text-[10px] sm:text-xs text-muted-foreground">
                                     Account name for {platform.name} (leave
                                     empty to use main name)
                                   </Label>
@@ -610,7 +613,7 @@ export default function WhitelistedAccounts() {
                                     placeholder={
                                       accountChannel || "Same as main name"
                                     }
-                                    className="h-8 text-sm"
+                                    className="h-8 sm:h-9 text-xs sm:text-sm"
                                   />
                                 </div>
                               )}
@@ -625,34 +628,36 @@ export default function WhitelistedAccounts() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="notes">Notes (Optional)</Label>
+                      <Label htmlFor="notes" className="text-xs sm:text-sm">Notes (Optional)</Label>
                       <Textarea
                         id="notes"
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
                         placeholder="Add any notes about this account..."
                         rows={3}
+                        className="text-sm"
                       />
                     </div>
                   </div>
-                  <DialogFooter>
+                  <DialogFooter className="gap-2 sm:gap-0">
                     <Button
                       variant="outline"
                       onClick={() => {
                         setIsAddDialogOpen(false);
                         resetForm();
-                      }}>
+                      }}
+                      className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                       Cancel
                     </Button>
-                    <Button onClick={handleAddAccount} disabled={saving}>
+                    <Button onClick={handleAddAccount} disabled={saving} className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                       {saving ? (
                         <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
                           Saving...
                         </>
                       ) : (
                         <>
-                          <Save className="h-4 w-4 mr-2" />
+                          <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                           Add Account
                         </>
                       )}
@@ -662,29 +667,46 @@ export default function WhitelistedAccounts() {
               </Dialog>
             )}
           </div>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             Accounts in the whitelist are exempt from violation tracking
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-              <span className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-center py-8 sm:py-12">
+              <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground mr-2" />
+              <span className="text-xs sm:text-sm text-muted-foreground">
                 Loading whitelisted accounts...
               </span>
             </div>
           ) : accounts.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>
+            <div className="text-center py-8 sm:py-12 text-muted-foreground">
+              <Shield className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
+              <p className="text-xs sm:text-sm">
                 No whitelisted accounts found. Add your first account to get
                 started.
               </p>
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
+            <>
+              {/* Mobile Version */}
+              <div className="md:hidden">
+                <WhitelistedAccountsMobile
+                  accounts={accounts}
+                  accountViolations={accountViolations}
+                  loadingViolations={loadingViolations}
+                  expandedAccounts={expandedAccounts}
+                  isSuperAdmin={isSuperAdmin}
+                  onToggleExpanded={toggleAccountExpanded}
+                  onEdit={openEditDialog}
+                  onDelete={openDeleteDialog}
+                  getAccountNameForPlatform={getAccountNameForPlatform}
+                />
+              </div>
+
+              {/* Desktop Version */}
+              <div className="hidden md:block rounded-md border overflow-x-auto">
+                <Table className="min-w-[800px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Account Channel</TableHead>
@@ -955,38 +977,40 @@ export default function WhitelistedAccounts() {
                   })}
                 </TableBody>
               </Table>
-            </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
 
       {/* Edit Account Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Whitelisted Account</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Edit Whitelisted Account</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Update the account channel and platform selections.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
             {formError && (
               <Alert variant="destructive">
                 <AlertDescription>{formError}</AlertDescription>
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="edit-account-channel">Account Channel</Label>
+              <Label htmlFor="edit-account-channel" className="text-xs sm:text-sm">Account Channel</Label>
               <Input
                 id="edit-account-channel"
                 value={accountChannel}
                 onChange={(e) => setAccountChannel(e.target.value)}
                 placeholder="Enter account channel name"
+                className="h-9 sm:h-10 text-sm"
               />
             </div>
-            <div className="space-y-3">
-              <Label>Select Platforms</Label>
-              <div className="space-y-3 p-4 border rounded-lg">
+            <div className="space-y-2 sm:space-y-3">
+              <Label className="text-xs sm:text-sm">Select Platforms</Label>
+              <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 border rounded-lg">
                 {platformOperations.map((platform) => {
                   const PlatformIcon = platform.icon;
                   const isSelected = selectedPlatforms.includes(platform.id);
@@ -1003,19 +1027,19 @@ export default function WhitelistedAccounts() {
                         />
                         <Label
                           htmlFor={`edit-platform-${platform.id}`}
-                          className="flex items-center gap-2 cursor-pointer flex-1">
+                          className="flex items-center gap-2 cursor-pointer flex-1 text-xs sm:text-sm">
                           <PlatformIcon
-                            className="h-4 w-4"
+                            className="h-3.5 w-3.5 sm:h-4 sm:w-4"
                             style={{ color: platform.color }}
                           />
                           <span>{platform.name}</span>
                         </Label>
                       </div>
                       {isSelected && (
-                        <div className="ml-6 space-y-1">
+                        <div className="ml-5 sm:ml-6 space-y-1">
                           <Label
                             htmlFor={`edit-platform-name-${platform.id}`}
-                            className="text-xs text-muted-foreground">
+                            className="text-[10px] sm:text-xs text-muted-foreground">
                             Account name for {platform.name} (leave empty to use
                             main name)
                           </Label>
@@ -1029,7 +1053,7 @@ export default function WhitelistedAccounts() {
                               )
                             }
                             placeholder={accountChannel || "Same as main name"}
-                            className="h-8 text-sm"
+                            className="h-8 sm:h-9 text-xs sm:text-sm"
                           />
                         </div>
                       )}
@@ -1044,35 +1068,37 @@ export default function WhitelistedAccounts() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-notes">Notes (Optional)</Label>
+              <Label htmlFor="edit-notes" className="text-xs sm:text-sm">Notes (Optional)</Label>
               <Textarea
                 id="edit-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Add any notes about this account..."
                 rows={3}
+                className="text-sm"
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => {
                 setIsEditDialogOpen(false);
                 resetForm();
                 setEditingAccount(null);
-              }}>
+              }}
+              className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               Cancel
             </Button>
-            <Button onClick={handleEditAccount} disabled={saving}>
+            <Button onClick={handleEditAccount} disabled={saving} className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               {saving ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
                   Saving...
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4 mr-2" />
+                  <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                   Save Changes
                 </>
               )}
@@ -1083,45 +1109,47 @@ export default function WhitelistedAccounts() {
 
       {/* Delete Account Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Remove from Whitelist</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-lg sm:text-xl">Remove from Whitelist</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Are you sure you want to remove this account from the whitelist?
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           {deletingAccount && (
-            <div className="py-4">
+            <div className="py-3 sm:py-4">
               <Alert variant="destructive">
-                <AlertDescription>
+                <AlertDescription className="text-xs sm:text-sm">
                   <strong>{deletingAccount.accountChannel}</strong> will be
                   removed from the whitelist.
                 </AlertDescription>
               </Alert>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => {
                 setIsDeleteDialogOpen(false);
                 setDeletingAccount(null);
-              }}>
+              }}
+              className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleDeleteAccount}
-              disabled={saving}>
+              disabled={saving}
+              className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               {saving ? (
                 <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
                   Deleting...
                 </>
               ) : (
                 <>
-                  <Trash2 className="h-4 w-4 mr-2" />
+                  <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                   Remove from Whitelist
                 </>
               )}

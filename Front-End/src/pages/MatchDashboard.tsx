@@ -56,6 +56,7 @@ import {
   type DeletedViolationLog,
   API_URL,
 } from "@/components/MatchDashboard";
+import { PlatformComparisonMobile } from "@/components/MatchDashboard/PlatformComparisonMobile";
 
 export default function MatchDashboard() {
   const { id } = useParams<{ id: string }>();
@@ -1717,10 +1718,12 @@ export default function MatchDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-48 sm:h-64">
         <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Loading match data...</p>
+          <RefreshCw className="h-6 w-6 sm:h-8 sm:w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Loading match data...
+          </p>
         </div>
       </div>
     );
@@ -1728,10 +1731,12 @@ export default function MatchDashboard() {
 
   if (!match) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center h-48 sm:h-64">
         <div className="text-center">
-          <AlertCircle className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Match not found</p>
+          <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 text-muted-foreground" />
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Match not found
+          </p>
         </div>
       </div>
     );
@@ -2066,7 +2071,7 @@ export default function MatchDashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div ref={matchOverviewRef}>
         <MatchOverview
           match={match}
@@ -2101,26 +2106,28 @@ export default function MatchDashboard() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div ref={contentSplitRef}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div ref={contentSplitRef} className="lg:col-span-1">
           <ContentSplitChart data={contentSplitData} />
         </div>
-        <ActivityLog
-          log={activityLog}
-          filter={logFilter}
-          onFilterChange={setLogFilter}
-          getPlatformColor={getPlatformColor}
-          getPlatformIcon={getPlatformIcon}
-          violations={platformOperations.flatMap((p) => p.violations)}
-          platformOperations={platformOperations}
-          deletedViolationLogs={deletedViolationLogs}
-          onRefetch={() => refetchAllData(true)}
-          platformFilter={platformFilter}
-          onPlatformFilterChange={setPlatformFilter}
-          userFilter={userFilter}
-          onUserFilterChange={setUserFilter}
-          isSuperAdmin={isSuperAdmin}
-        />
+        <div className="lg:col-span-2">
+          <ActivityLog
+            log={activityLog}
+            filter={logFilter}
+            onFilterChange={setLogFilter}
+            getPlatformColor={getPlatformColor}
+            getPlatformIcon={getPlatformIcon}
+            violations={platformOperations.flatMap((p) => p.violations)}
+            platformOperations={platformOperations}
+            deletedViolationLogs={deletedViolationLogs}
+            onRefetch={() => refetchAllData(true)}
+            platformFilter={platformFilter}
+            onPlatformFilterChange={setPlatformFilter}
+            userFilter={userFilter}
+            onUserFilterChange={setUserFilter}
+            isSuperAdmin={isSuperAdmin}
+          />
+        </div>
       </div>
 
       <BlockConfirmDialog
@@ -2136,9 +2143,9 @@ export default function MatchDashboard() {
       />
 
       {/* Platform Operations Section */}
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">
+          <h2 className="text-base sm:text-lg font-semibold">
             Platform Operations (This Match)
           </h2>
         </div>
@@ -2155,8 +2162,8 @@ export default function MatchDashboard() {
         <div
           className={
             selectedSlots.length === 1
-              ? "grid grid-cols-1 gap-6"
-              : "grid grid-cols-1 lg:grid-cols-2 gap-6"
+              ? "grid grid-cols-1 gap-4 sm:gap-6"
+              : "grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6"
           }>
           {platformOperations
             .filter((platform) => selectedSlots.includes(platform.id))
@@ -2201,17 +2208,37 @@ export default function MatchDashboard() {
       </div>
 
       <div ref={platformComparisonRef}>
-        <PlatformComparison
-          platformOperations={platformOperations}
-          contentTypeFilter={contentTypeFilter}
-          comparisonSort={comparisonSort}
-          comparisonSortDirection={comparisonSortDirection}
-          selectedSlots={selectedSlots}
-          onSortChange={setComparisonSort}
-          onSortDirectionChange={setComparisonSortDirection}
-          onSelectedSlotsChange={setSelectedSlots}
-          targetMins={targetMins}
-        />
+        {/* Mobile Version */}
+        <div className="md:hidden">
+          <PlatformComparisonMobile
+            platformOperations={platformOperations}
+            contentTypeFilter={contentTypeFilter}
+            comparisonSort={comparisonSort}
+            comparisonSortDirection={comparisonSortDirection}
+            selectedSlots={selectedSlots}
+            onSortChange={setComparisonSort}
+            onSortDirectionChange={setComparisonSortDirection}
+            onSelectedSlotsChange={setSelectedSlots}
+            targetMins={targetMins}
+            title="Platform Comparison (This Match)"
+            description="Compare platforms for this match"
+            showCard={true}
+          />
+        </div>
+        {/* Desktop Version */}
+        <div className="hidden md:block">
+          <PlatformComparison
+            platformOperations={platformOperations}
+            contentTypeFilter={contentTypeFilter}
+            comparisonSort={comparisonSort}
+            comparisonSortDirection={comparisonSortDirection}
+            selectedSlots={selectedSlots}
+            onSortChange={setComparisonSort}
+            onSortDirectionChange={setComparisonSortDirection}
+            onSelectedSlotsChange={setSelectedSlots}
+            targetMins={targetMins}
+          />
+        </div>
       </div>
 
       <AddViolationSheet
@@ -2274,26 +2301,30 @@ export default function MatchDashboard() {
       <Dialog
         open={isWhitelistConfirmOpen}
         onOpenChange={setIsWhitelistConfirmOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[95vw] sm:w-full sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="text-destructive">
+            <DialogTitle className="text-lg sm:text-xl text-destructive">
               Whitelisted Account Warning
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-xs sm:text-sm">
               This account is whitelisted for this platform. Are you sure you
               want to add a violation for this account?
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end gap-3 mt-4">
+          <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 mt-4">
             <Button
               variant="outline"
               onClick={() => {
                 setIsWhitelistConfirmOpen(false);
                 setPendingViolationData(null);
-              }}>
+              }}
+              className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation w-full sm:w-auto">
               Cancel
             </Button>
-            <Button variant="destructive" onClick={confirmWhitelistSave}>
+            <Button
+              variant="destructive"
+              onClick={confirmWhitelistSave}
+              className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation w-full sm:w-auto">
               Yes, Add Violation
             </Button>
           </div>

@@ -95,27 +95,25 @@ export function ViolationItem({
     return () => clearInterval(interval);
   }, []);
 
-  const truncatedUrl =
-    (violation.violationUrl || violation.url) &&
-    (violation.violationUrl || violation.url)!.length > 45
-      ? (violation.violationUrl || violation.url)!.slice(0, 42) + "..."
-      : violation.violationUrl || violation.url || "";
+  // Truncate URL for display - shorter on mobile
+  const url = violation.violationUrl || violation.url || "";
+  const truncatedUrl = url.length > 25 ? url.slice(0, 22) + "..." : url;
 
   return (
-    <div className="group rounded-md border bg-card p-2.5 hover:bg-accent/50 transition-colors">
+    <div className="group rounded-md border bg-card p-2 sm:p-2.5 hover:bg-accent/50 transition-colors overflow-hidden">
       {/* Line 1: Status icon + time + status pill + actions */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="text-muted-foreground">
+      <div className="flex items-start justify-between gap-2 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+          <div className="text-muted-foreground flex-shrink-0">
             {getStatusIcon(violation.statusBadge || "Active")}
           </div>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
             {violation.time}
           </span>
           <Badge
             variant="outline"
             className={cn(
-              "text-xs",
+              "text-[9px] sm:text-xs px-1.5 sm:px-2 py-0 flex-shrink-0",
               (violation.statusBadge === "Active" ||
                 violation.statusBadge === "Reported") &&
                 "bg-red-100 text-red-700 hover:bg-red-200 border-red-300 dark:bg-red-900/30 dark:text-red-400",
@@ -130,17 +128,17 @@ export function ViolationItem({
             {violation.statusBadge}
           </Badge>
         </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7"
+                className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0"
                 onClick={() =>
                   onCopyUrl(violation.violationUrl || violation.url || "")
                 }>
-                <Copy className="h-3.5 w-3.5" />
+                <Copy className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Copy link</TooltipContent>
@@ -153,9 +151,9 @@ export function ViolationItem({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0"
                     onClick={() => onEdit(platform.id, violation)}>
-                    <Edit className="h-3.5 w-3.5" />
+                    <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Edit</TooltipContent>
@@ -166,9 +164,9 @@ export function ViolationItem({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7"
+                    className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0"
                     onClick={() => onToggleStatus(platform.id, violation.id)}>
-                    <Lock className="h-3.5 w-3.5" />
+                    <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -180,19 +178,20 @@ export function ViolationItem({
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7">
-                    <MoreHorizontal className="h-3.5 w-3.5" />
+                  <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0">
+                    <MoreHorizontal className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" className="w-48 sm:w-56">
                   <DropdownMenuItem
-                    onClick={() => onAddNote(platform.id, violation)}>
+                    onClick={() => onAddNote(platform.id, violation)}
+                    className="text-xs sm:text-sm touch-manipulation">
                     <FileEdit className="mr-2 h-4 w-4" />
                     Add note
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="text-destructive"
+                    className="text-destructive text-xs sm:text-sm touch-manipulation"
                     onClick={() => onDelete(platform.id, violation.id)}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     Delete
@@ -205,15 +204,15 @@ export function ViolationItem({
       </div>
 
       {/* Line 2: Platform icon + account handle + URL + views */}
-      <div className="flex items-center justify-between gap-2 mt-1.5">
-        <div className="flex items-center gap-2 min-w-0 flex-1 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between gap-2 mt-1.5 min-w-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 text-[10px] sm:text-xs text-muted-foreground overflow-hidden">
           <span className="shrink-0">{getPlatformIcon(platform.name)}</span>
           {(violation.accountChannel || violation.accountHandle) && (
             <>
-              <span className="font-medium shrink-0">
+              <span className="font-medium shrink-0 truncate max-w-[50px] xs:max-w-[80px] sm:max-w-none">
                 {violation.accountChannel || violation.accountHandle}
               </span>
-              <span className="shrink-0">•</span>
+              <span className="shrink-0 hidden sm:inline">•</span>
             </>
           )}
           <Tooltip>
@@ -225,25 +224,25 @@ export function ViolationItem({
                     "_blank"
                   )
                 }
-                className="flex items-center gap-1.5 min-w-0 hover:text-foreground transition-colors rounded px-1.5 py-0.5 hover:bg-accent">
-                <LinkIcon className="h-3 w-3 shrink-0" />
-                <span className="truncate">{truncatedUrl}</span>
-                <ExternalLink className="h-3 w-3 shrink-0 opacity-0 group-hover:opacity-100" />
+                className="flex items-center gap-1 sm:gap-1.5 min-w-0 flex-1 hover:text-foreground transition-colors rounded px-1 sm:px-1.5 py-0.5 hover:bg-accent touch-manipulation overflow-hidden max-w-full">
+                <LinkIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
+                <span className="truncate min-w-0 max-w-[120px] xs:max-w-[180px] sm:max-w-none">{truncatedUrl}</span>
+                <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0 opacity-0 sm:group-hover:opacity-100" />
               </button>
             </TooltipTrigger>
-            <TooltipContent>{violation.url}</TooltipContent>
+            <TooltipContent className="text-xs max-w-xs break-all">{violation.url}</TooltipContent>
           </Tooltip>
         </div>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-          <Eye className="h-3.5 w-3.5" />
-          <span className="font-medium">
+        <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground shrink-0">
+          <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+          <span className="font-medium whitespace-nowrap">
             {formatViewsString(violation.views || "0")}
           </span>
         </div>
       </div>
 
       {/* Line 3: Meta text */}
-      <p className="text-xs text-muted-foreground mt-1">
+      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 break-words overflow-wrap-anywhere">
         {formatBlockedViolationText(violation)}
       </p>
 
@@ -254,9 +253,9 @@ export function ViolationItem({
             {violation.notes.map((note, index) => (
               <p
                 key={index}
-                className="text-xs text-muted-foreground flex items-start gap-1.5">
+                className="text-[10px] sm:text-xs text-muted-foreground flex items-start gap-1.5">
                 <span className="text-muted-foreground/50 shrink-0">•</span>
-                <span className="flex-1">{note}</span>
+                <span className="flex-1 break-words">{note}</span>
               </p>
             ))}
           </div>
@@ -269,13 +268,13 @@ export function ViolationItem({
           open={isAuditLogOpen}
           onOpenChange={setIsAuditLogOpen}
           className="mt-2 pt-2 border-t border-border/50">
-          <CollapsibleTrigger className="flex items-center gap-2 w-full text-xs text-muted-foreground hover:text-foreground transition-colors">
-            <History className="h-3.5 w-3.5" />
+          <CollapsibleTrigger className="flex items-center gap-2 w-full text-[10px] sm:text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation">
+            <History className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
             <span>Change History ({violation.auditLog.length})</span>
             {isAuditLogOpen ? (
-              <ChevronUp className="h-3.5 w-3.5 ml-auto" />
+              <ChevronUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 ml-auto" />
             ) : (
-              <ChevronDown className="h-3.5 w-3.5 ml-auto" />
+              <ChevronDown className="h-3 w-3 sm:h-3.5 sm:w-3.5 ml-auto" />
             )}
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-2 space-y-2">
@@ -302,13 +301,13 @@ export function ViolationItem({
                   description = (
                     <>
                       Violation created on{" "}
-                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                      <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                         {platformName}
                       </code>
                       {accountName && (
                         <>
                           {" "}for channel/user{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {accountName}
                           </code>
                         </>
@@ -317,12 +316,12 @@ export function ViolationItem({
                         <>
                           {" "}
                           with{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {formatViewsString(views)} views
                           </code>
                           {" "}
                           and status:{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {status}
                           </code>
                         </>
@@ -331,7 +330,7 @@ export function ViolationItem({
                         <>
                           {" "}
                           with{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {formatViewsString(views)} views
                           </code>
                         </>
@@ -340,7 +339,7 @@ export function ViolationItem({
                         <>
                           {" "}
                           with status:{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {status}
                           </code>
                         </>
@@ -381,16 +380,16 @@ export function ViolationItem({
                     description = (
                       <>
                         Status changed from{" "}
-                        <code className={`text-xs ${getStatusColorClasses(oldStatus)} px-1.5 py-0.5 rounded font-mono`}>
+                        <code className={`text-[9px] sm:text-xs ${getStatusColorClasses(oldStatus)} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {oldStatus}
                         </code>{" "}
                         to{" "}
-                        <code className={`text-xs ${getStatusColorClasses(newStatus)} px-1.5 py-0.5 rounded font-mono`}>
+                        <code className={`text-[9px] sm:text-xs ${getStatusColorClasses(newStatus)} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {newStatus}
                         </code>
-                        <div className="mt-1 text-xs text-muted-foreground">
+                        <div className="mt-1 text-[10px] sm:text-xs text-muted-foreground">
                           Blocked at time added:{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {blockedAtTime}
                           </code>
                         </div>
@@ -400,14 +399,14 @@ export function ViolationItem({
                     description = (
                       <>
                         Status changed from{" "}
-                        <code className={`text-xs ${getStatusColorClasses(oldStatus)} px-1.5 py-0.5 rounded font-mono`}>
+                        <code className={`text-[9px] sm:text-xs ${getStatusColorClasses(oldStatus)} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {oldStatus}
                         </code>{" "}
                         to{" "}
-                        <code className={`text-xs ${getStatusColorClasses(newStatus)} px-1.5 py-0.5 rounded font-mono`}>
+                        <code className={`text-[9px] sm:text-xs ${getStatusColorClasses(newStatus)} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {newStatus}
                         </code>
-                        <div className="mt-1 text-xs text-muted-foreground">
+                        <div className="mt-1 text-[10px] sm:text-xs text-muted-foreground">
                           Blocked at time removed
                         </div>
                       </>
@@ -416,11 +415,11 @@ export function ViolationItem({
                     description = (
                       <>
                         Status changed from{" "}
-                        <code className={`text-xs ${getStatusColorClasses(oldStatus)} px-1.5 py-0.5 rounded font-mono`}>
+                        <code className={`text-[9px] sm:text-xs ${getStatusColorClasses(oldStatus)} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {oldStatus}
                         </code>{" "}
                         to{" "}
-                        <code className={`text-xs ${getStatusColorClasses(newStatus)} px-1.5 py-0.5 rounded font-mono`}>
+                        <code className={`text-[9px] sm:text-xs ${getStatusColorClasses(newStatus)} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {newStatus}
                         </code>
                       </>
@@ -478,11 +477,11 @@ export function ViolationItem({
                       description = (
                         <>
                           Account Channel changed from{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {oldChannel}
                           </code>{" "}
                           to{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {newChannel}
                           </code>
                         </>
@@ -493,11 +492,11 @@ export function ViolationItem({
                       description = (
                         <>
                           Content Type changed from{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {oldType}
                           </code>{" "}
                           to{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {newType}
                           </code>
                         </>
@@ -508,11 +507,11 @@ export function ViolationItem({
                       description = (
                         <>
                           Views changed from{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {oldViews}
                           </code>{" "}
                           to{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {newViews}
                           </code>
                         </>
@@ -541,11 +540,11 @@ export function ViolationItem({
                       description = (
                         <>
                           Time Added changed from{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {oldTime}
                           </code>{" "}
                           to{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {newTime}
                           </code>
                         </>
@@ -562,7 +561,7 @@ export function ViolationItem({
                         description = (
                           <>
                             Blocked At time added:{" "}
-                            <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                            <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                               {newBlocked}
                             </code>
                           </>
@@ -594,11 +593,11 @@ export function ViolationItem({
                         description = (
                           <>
                             Blocked At changed from{" "}
-                            <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                            <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                               {oldBlocked}
                             </code>{" "}
                             to{" "}
-                            <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                            <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                               {newBlocked}
                             </code>
                           </>
@@ -618,11 +617,11 @@ export function ViolationItem({
                           description = (
                             <>
                               Note changed from{" "}
-                              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                                 {firstEdit.old}
                               </code>{" "}
                               to{" "}
-                              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                                 {firstEdit.new}
                               </code>
                             </>
@@ -639,11 +638,11 @@ export function ViolationItem({
                       description = (
                         <>
                           {fieldName} changed from{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {oldVal}
                           </code>{" "}
                           to{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {newVal}
                           </code>
                         </>
@@ -664,19 +663,19 @@ export function ViolationItem({
               return (
                 <div
                   key={index}
-                  className="text-xs bg-muted/30 rounded-md p-2 space-y-1">
-                  <div className="flex items-center justify-between">
+                  className="text-[10px] sm:text-xs bg-muted/30 rounded-md p-2 space-y-1">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
                     <div className="flex items-center gap-1.5">
-                      <User className="h-3 w-3 text-muted-foreground" />
+                      <User className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground" />
                       <span className="font-medium text-foreground">
                         {entry.userName}
                       </span>
                     </div>
-                    <span className="text-muted-foreground/70">
+                    <span className="text-[9px] sm:text-xs text-muted-foreground/70">
                       {formattedDate} at {formattedTime} • {timeAgo}
                     </span>
                   </div>
-                  <div className="text-muted-foreground break-words">
+                  <div className="text-[10px] sm:text-xs text-muted-foreground break-words">
                     {description}
                   </div>
                 </div>
