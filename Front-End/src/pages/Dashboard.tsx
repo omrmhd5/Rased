@@ -35,7 +35,9 @@ import { MatchStatsOverview } from "@/components/Dashboard/MatchStatsOverview";
 import { TopMatchByViolations } from "@/components/Dashboard/TopMatchByViolations";
 import { ContentSplitChart } from "@/components/MatchDashboard/ContentSplitChart";
 import { PlatformsOverview } from "@/components/Dashboard/PlatformsOverview";
+import { PlatformsOverviewMobile } from "@/components/Dashboard/PlatformsOverviewMobile";
 import { PlatformComparison } from "@/components/MatchDashboard/PlatformComparison";
+import { PlatformComparisonMobile } from "@/components/MatchDashboard/PlatformComparisonMobile";
 import { PlatformData } from "@/components/MatchDashboard/types";
 import { formatViews as formatViewsUtil } from "@/components/MatchDashboard/utils";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
@@ -967,12 +969,12 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             {(() => {
               const isSuperCup =
                 selectedLeague === "saudi-super-cup" ||
@@ -995,12 +997,12 @@ export default function Dashboard() {
         </div>
 
         {/* League and Week Filters */}
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           {/* League Display */}
           {selectedLeague && (
             <Badge
               variant="secondary"
-              className="text-sm flex items-center gap-2">
+              className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 justify-center sm:justify-start px-2 sm:px-3 py-1.5 sm:py-2">
               <img
                 src={getLeagueIcon(selectedLeague)}
                 alt={
@@ -1012,15 +1014,17 @@ export default function Dashboard() {
                     ? "Spanish Super Cup"
                     : "No League"
                 }
-                className="h-12 object-contain flex-shrink-0"
+                className="h-8 sm:h-12 object-contain flex-shrink-0"
               />
-              {selectedLeague === "saudi"
-                ? "Saudi Pro League"
-                : selectedLeague === "saudi-super-cup"
-                ? "Saudi Super Cup"
-                : selectedLeague === "spanish-super-cup"
-                ? "Spanish Super Cup"
-                : "No League"}
+              <span className="hidden xs:inline">
+                {selectedLeague === "saudi"
+                  ? "Saudi Pro League"
+                  : selectedLeague === "saudi-super-cup"
+                  ? "Saudi Super Cup"
+                  : selectedLeague === "spanish-super-cup"
+                  ? "Spanish Super Cup"
+                  : "No League"}
+              </span>
             </Badge>
           )}
 
@@ -1030,17 +1034,19 @@ export default function Dashboard() {
               <Button
                 size="sm"
                 variant="default"
-                className="h-7 text-[11px] bg-blue-600 hover:bg-blue-700 text-white"
+                className="h-8 sm:h-7 text-[10px] sm:text-[11px] bg-blue-600 hover:bg-blue-700 text-white touch-manipulation"
                 disabled={isDownloading}>
                 {isDownloading ? (
                   <>
-                    <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                    Downloading...
+                    <Loader2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 animate-spin" />
+                    <span className="hidden sm:inline">Downloading...</span>
+                    <span className="sm:hidden">Loading...</span>
                   </>
                 ) : (
                   <>
-                    <Download className="h-3.5 w-3.5 mr-1.5" />
-                    Download
+                    <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
+                    <span className="hidden sm:inline">Download</span>
+                    <span className="sm:hidden">DL</span>
                   </>
                 )}
               </Button>
@@ -1049,7 +1055,7 @@ export default function Dashboard() {
               <div className="flex flex-col">
                 <Button
                   variant="ghost"
-                  className="w-full justify-start h-9 text-xs font-normal"
+                  className="w-full justify-start h-9 text-xs font-normal touch-manipulation"
                   onClick={handleDownloadReport}
                   disabled={isDownloading}>
                   <Download className="mr-2 h-4 w-4" />
@@ -1057,7 +1063,7 @@ export default function Dashboard() {
                 </Button>
                 <Button
                   variant="ghost"
-                  className="w-full justify-start h-9 text-xs font-normal"
+                  className="w-full justify-start h-9 text-xs font-normal touch-manipulation"
                   onClick={() => setIsRoundReportOpen(true)}>
                   <BarChart3 className="mr-2 h-4 w-4" />
                   Round Report
@@ -1081,25 +1087,34 @@ export default function Dashboard() {
                     onValueChange={(value) =>
                       setStageFilterType(value as WeekFilterType)
                     }>
-                    <SelectTrigger className="w-[140px]">
+                    <SelectTrigger className="w-full sm:w-[140px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Stages</SelectItem>
-                      <SelectItem value="single">Single Stage</SelectItem>
-                      <SelectItem value="range">Stage Range</SelectItem>
+                      <SelectItem value="all" className="text-xs sm:text-sm">
+                        All Stages
+                      </SelectItem>
+                      <SelectItem value="single" className="text-xs sm:text-sm">
+                        Single Stage
+                      </SelectItem>
+                      <SelectItem value="range" className="text-xs sm:text-sm">
+                        Stage Range
+                      </SelectItem>
                     </SelectContent>
                   </Select>
 
                   {/* Single Stage Selector */}
                   {stageFilterType === "single" && (
                     <Select value={singleStage} onValueChange={setSingleStage}>
-                      <SelectTrigger className="w-[180px]">
+                      <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {availableStages.map((stage) => (
-                          <SelectItem key={stage} value={stage}>
+                          <SelectItem
+                            key={stage}
+                            value={stage}
+                            className="text-xs sm:text-sm">
                             {stage}
                           </SelectItem>
                         ))}
@@ -1109,31 +1124,39 @@ export default function Dashboard() {
 
                   {/* Stage Range Selectors */}
                   {stageFilterType === "range" && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       <Select
                         value={stageRangeStart}
                         onValueChange={setStageRangeStart}>
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                           <SelectValue placeholder="Start Stage" />
                         </SelectTrigger>
                         <SelectContent>
                           {availableStages.map((stage) => (
-                            <SelectItem key={stage} value={stage}>
+                            <SelectItem
+                              key={stage}
+                              value={stage}
+                              className="text-xs sm:text-sm">
                               {stage}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      <span className="text-muted-foreground">to</span>
+                      <span className="text-muted-foreground text-xs sm:text-sm text-center sm:text-left">
+                        to
+                      </span>
                       <Select
                         value={stageRangeEnd}
                         onValueChange={setStageRangeEnd}>
-                        <SelectTrigger className="w-[180px]">
+                        <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                           <SelectValue placeholder="End Stage" />
                         </SelectTrigger>
                         <SelectContent>
                           {availableStages.map((stage) => (
-                            <SelectItem key={stage} value={stage}>
+                            <SelectItem
+                              key={stage}
+                              value={stage}
+                              className="text-xs sm:text-sm">
                               {stage}
                             </SelectItem>
                           ))}
@@ -1152,26 +1175,35 @@ export default function Dashboard() {
                     onValueChange={(value) =>
                       setWeekFilterType(value as WeekFilterType)
                     }>
-                    <SelectTrigger className="w-[140px]">
+                    <SelectTrigger className="w-full sm:w-[140px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">All Weeks</SelectItem>
-                      <SelectItem value="single">Single Week</SelectItem>
-                      <SelectItem value="range">Week Range</SelectItem>
+                      <SelectItem value="all" className="text-xs sm:text-sm">
+                        All Weeks
+                      </SelectItem>
+                      <SelectItem value="single" className="text-xs sm:text-sm">
+                        Single Week
+                      </SelectItem>
+                      <SelectItem value="range" className="text-xs sm:text-sm">
+                        Week Range
+                      </SelectItem>
                     </SelectContent>
                   </Select>
 
                   {/* Single Week Selector */}
                   {weekFilterType === "single" && (
                     <Select value={singleWeek} onValueChange={setSingleWeek}>
-                      <SelectTrigger className="w-[140px]">
+                      <SelectTrigger className="w-full sm:w-[140px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {Array.from({ length: 38 }, (_, i) => i + 1).map(
                           (week) => (
-                            <SelectItem key={week} value={week.toString()}>
+                            <SelectItem
+                              key={week}
+                              value={week.toString()}
+                              className="text-xs sm:text-sm">
                               Week {week}
                             </SelectItem>
                           )
@@ -1182,34 +1214,42 @@ export default function Dashboard() {
 
                   {/* Week Range Selectors */}
                   {weekFilterType === "range" && (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       <Select
                         value={weekRangeStart}
                         onValueChange={setWeekRangeStart}>
-                        <SelectTrigger className="w-[100px]">
+                        <SelectTrigger className="w-full sm:w-[100px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                           <SelectValue placeholder="Start Week" />
                         </SelectTrigger>
                         <SelectContent>
                           {Array.from({ length: 38 }, (_, i) => i + 1).map(
                             (week) => (
-                              <SelectItem key={week} value={week.toString()}>
+                              <SelectItem
+                                key={week}
+                                value={week.toString()}
+                                className="text-xs sm:text-sm">
                                 Week {week}
                               </SelectItem>
                             )
                           )}
                         </SelectContent>
                       </Select>
-                      <span className="text-muted-foreground">to</span>
+                      <span className="text-muted-foreground text-xs sm:text-sm text-center sm:text-left">
+                        to
+                      </span>
                       <Select
                         value={weekRangeEnd}
                         onValueChange={setWeekRangeEnd}>
-                        <SelectTrigger className="w-[100px]">
+                        <SelectTrigger className="w-full sm:w-[100px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                           <SelectValue placeholder="End Week" />
                         </SelectTrigger>
                         <SelectContent>
                           {Array.from({ length: 38 }, (_, i) => i + 1).map(
                             (week) => (
-                              <SelectItem key={week} value={week.toString()}>
+                              <SelectItem
+                                key={week}
+                                value={week.toString()}
+                                className="text-xs sm:text-sm">
                                 Week {week}
                               </SelectItem>
                             )
@@ -1226,9 +1266,9 @@ export default function Dashboard() {
       </div>
 
       {/* Row 1: Main Overview Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[2.5fr_1fr] gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[2.5fr_1fr] gap-3 sm:gap-4 items-start">
         {/* Left: Violations Overview and Match Stats Overview */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 sm:gap-4">
           {/* Violations Overview Component */}
           <div ref={violationsOverviewRef}>
             <ViolationsOverview
@@ -1251,28 +1291,28 @@ export default function Dashboard() {
         </div>
 
         {/* Right Column: Stacked Small Cards (30% width) */}
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-2 lg:flex lg:flex-col gap-2 sm:gap-3">
           {/* Total Views Card (Small) */}
           <Card
             ref={totalViewsCardRef}
-            className="p-4 bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-4/20 cursor-pointer">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-[11px] font-medium text-muted-foreground">
+            className="p-3 sm:p-4 bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-chart-4/20 cursor-pointer touch-manipulation">
+            <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+              <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground">
                 Total Views
               </p>
-              <Eye className="h-3.5 w-3.5 text-chart-4" />
+              <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-chart-4" />
             </div>
 
             {statsLoading ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+              <div className="flex items-center justify-center py-4 sm:py-6">
+                <Loader2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <div className="flex items-baseline gap-1.5">
-                <p className="text-2xl font-bold text-foreground">
+              <div className="flex items-baseline gap-1 sm:gap-1.5">
+                <p className="text-xl sm:text-2xl font-bold text-foreground">
                   {dashboardStats.totalViews.toLocaleString("en-US")}
                 </p>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[10px] sm:text-[11px] text-muted-foreground hidden sm:inline">
                   Across All Platforms
                 </p>
               </div>
@@ -1282,28 +1322,28 @@ export default function Dashboard() {
           {/* Avg Block Time Card */}
           <Card
             ref={avgBlockTimeCardRef}
-            className="p-4 bg-gradient-to-br from-success/5 to-success/10 border border-success/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-success/20 cursor-pointer">
-            <div className="flex items-center justify-between mb-1.5">
-              <p className="text-[11px] font-medium text-muted-foreground">
+            className="p-3 sm:p-4 bg-gradient-to-br from-success/5 to-success/10 border border-success/20 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-success/20 cursor-pointer touch-manipulation">
+            <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+              <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground">
                 Avg Block Time
               </p>
-              <Clock className="h-3.5 w-3.5 text-success" />
+              <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-success" />
             </div>
             {statsLoading ? (
-              <div className="flex items-center justify-center py-3">
-                <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+              <div className="flex items-center justify-center py-2 sm:py-3">
+                <Loader2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 animate-spin text-muted-foreground" />
               </div>
             ) : (
-              <p className="text-xl font-bold text-foreground">
+              <p className="text-lg sm:text-xl font-bold text-foreground">
                 {(() => {
                   const minutes = dashboardStats.avgBlockTime || 0;
                   const hours = minutes / 60;
                   return (
                     <>
                       {minutes}
-                      <span className="text-sm text-muted-foreground ml-1">
+                      <span className="text-xs sm:text-sm text-muted-foreground ml-1">
                         min{" "}
-                        <span className="text-medium text-muted-foreground">
+                        <span className="text-medium text-muted-foreground hidden sm:inline">
                           ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}hrs)
                         </span>
                       </span>
@@ -1318,22 +1358,24 @@ export default function Dashboard() {
           {dashboardStats.topPlatform && (
             <Card
               ref={topPlatformCardRef}
-              className="p-4 bg-gradient-to-br from-chart-2/5 to-chart-2/10 border border-chart-2/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-chart-2/20 cursor-pointer">
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-[11px] font-medium text-muted-foreground">
+              className="p-3 sm:p-4 bg-gradient-to-br from-chart-2/5 to-chart-2/10 border border-chart-2/20 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-chart-2/20 cursor-pointer touch-manipulation">
+              <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+                <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground">
                   Top Platform
                 </p>
                 {(() => {
                   const Icon = getPlatformIconComponent(
                     dashboardStats.topPlatform.name
                   );
-                  return <Icon className="h-3.5 w-3.5 text-chart-2" />;
+                  return (
+                    <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-chart-2" />
+                  );
                 })()}
               </div>
-              <p className="text-base font-bold text-foreground mb-0.5">
+              <p className="text-sm sm:text-base font-bold text-foreground mb-0.5 truncate">
                 {dashboardStats.topPlatform.name}
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground">
                 {dashboardStats.topPlatform.violations} violations
               </p>
             </Card>
@@ -1343,17 +1385,17 @@ export default function Dashboard() {
           {dashboardStats.topMatch && (
             <Card
               ref={topMatchCardRef}
-              className="p-4 bg-gradient-to-br from-orange-500/5 to-orange-500/10 border border-orange-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer">
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-[11px] font-medium text-muted-foreground">
+              className="p-3 sm:p-4 bg-gradient-to-br from-orange-500/5 to-orange-500/10 border border-orange-500/20 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer touch-manipulation">
+              <div className="flex items-center justify-between mb-1 sm:mb-1.5">
+                <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground">
                   Top Match
                 </p>
-                <Trophy className="h-3.5 w-3.5 text-orange-600" />
+                <Trophy className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-orange-600" />
               </div>
-              <p className="text-base font-bold text-foreground mb-0.5">
+              <p className="text-sm sm:text-base font-bold text-foreground mb-0.5 truncate">
                 {dashboardStats.topMatch.teams}
               </p>
-              <p className="text-[11px] text-muted-foreground">
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground">
                 Week {dashboardStats.topMatch.week} •{" "}
                 {dashboardStats.topMatch.violations} violations
               </p>
@@ -1361,7 +1403,9 @@ export default function Dashboard() {
           )}
 
           {/* Content Split Chart */}
-          <div ref={contentSplitChartRef} className="mt-4">
+          <div
+            ref={contentSplitChartRef}
+            className="mt-4 col-span-2 lg:col-span-1">
             {(() => {
               // Calculate total views for Total Violations entry
               const totalViews =
@@ -1406,40 +1450,67 @@ export default function Dashboard() {
 
       {/* Row 2: Violations & Views by Platform */}
       <div ref={platformsOverviewRef}>
-        <PlatformsOverview
-          platforms={dashboardStats.platforms}
-          statsLoading={statsLoading}
-        />
+        {/* Mobile Version */}
+        <div className="md:hidden">
+          <PlatformsOverviewMobile
+            platforms={dashboardStats.platforms}
+            statsLoading={statsLoading}
+          />
+        </div>
+        {/* Desktop Version */}
+        <div className="hidden md:block">
+          <PlatformsOverview
+            platforms={dashboardStats.platforms}
+            statsLoading={statsLoading}
+          />
+        </div>
       </div>
 
       {/* Platform Comparison - Shows all platforms */}
       {statsLoading ? (
-        <Card className="p-6">
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mr-2" />
-            <span className="text-sm text-muted-foreground">
+        <Card className="p-4 sm:p-6">
+          <div className="flex items-center justify-center py-6 sm:py-8">
+            <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground mr-2" />
+            <span className="text-xs sm:text-sm text-muted-foreground">
               Loading platform comparison...
             </span>
           </div>
         </Card>
       ) : dashboardStats.platforms.length > 0 ? (
-        <div ref={platformComparisonRef}>
-          <PlatformComparison
-            platformOperations={transformPlatformsToPlatformData()}
-            comparisonSort={comparisonSort}
-            comparisonSortDirection={comparisonSortDirection}
-            onSortChange={setComparisonSort}
-            onSortDirectionChange={setComparisonSortDirection}
-            targetMins={15}
-            title="Platform Comparison"
-            description="Compare platform performance across all matches"
-            showCard={true}
-          />
-        </div>
+        <>
+          {/* Mobile Version */}
+          <div ref={platformComparisonRef} className="md:hidden">
+            <PlatformComparisonMobile
+              platformOperations={transformPlatformsToPlatformData()}
+              comparisonSort={comparisonSort}
+              comparisonSortDirection={comparisonSortDirection}
+              onSortChange={setComparisonSort}
+              onSortDirectionChange={setComparisonSortDirection}
+              targetMins={15}
+              title="Platform Comparison"
+              description="Compare platform performance across all matches"
+              showCard={true}
+            />
+          </div>
+          {/* Desktop Version */}
+          <div ref={platformComparisonRef} className="hidden md:block">
+            <PlatformComparison
+              platformOperations={transformPlatformsToPlatformData()}
+              comparisonSort={comparisonSort}
+              comparisonSortDirection={comparisonSortDirection}
+              onSortChange={setComparisonSort}
+              onSortDirectionChange={setComparisonSortDirection}
+              targetMins={15}
+              title="Platform Comparison"
+              description="Compare platform performance across all matches"
+              showCard={true}
+            />
+          </div>
+        </>
       ) : null}
 
       {/* Row 3: Top Match by Violations and Matches Leaderboard */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
         {/* Top Match by Violations - Takes 2 columns (wider) */}
         <div ref={topMatchByViolationsRef} className="lg:col-span-2">
           <TopMatchByViolations
@@ -1449,19 +1520,21 @@ export default function Dashboard() {
         </div>
 
         {/* Matches Leaderboard - Modern Redesign */}
-        <Card className="h-[500px] flex flex-col p-4">
-          <div className="flex-shrink-0 mb-3">
-            <div className="flex items-center justify-between">
+        <Card className="h-[400px] sm:h-[500px] flex flex-col p-3 sm:p-4">
+          <div className="flex-shrink-0 mb-2 sm:mb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
               <div>
-                <h3 className="text-[15px] font-semibold">
+                <h3 className="text-sm sm:text-[15px] font-semibold">
                   Matches Leaderboard
                 </h3>
-                <p className="text-[11px] text-muted-foreground mt-1">
+                <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 sm:mt-1">
                   Matches ranked by violations
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="h-5 px-2 text-[10px]">
+                <Badge
+                  variant="secondary"
+                  className="h-5 px-2 text-[9px] sm:text-[10px]">
                   {weekFilterType === "all"
                     ? "All Weeks"
                     : weekFilterType === "single"
@@ -1471,13 +1544,13 @@ export default function Dashboard() {
               </div>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto space-y-2">
+          <div className="flex-1 overflow-y-auto space-y-1.5 sm:space-y-2">
             {statsLoading ? (
               <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground" />
               </div>
             ) : dashboardStats.matches.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-sm text-muted-foreground">
+              <div className="flex items-center justify-center h-full text-xs sm:text-sm text-muted-foreground">
                 No matches found
               </div>
             ) : (
@@ -1485,29 +1558,31 @@ export default function Dashboard() {
                 return (
                   <div
                     key={match.id}
-                    className="flex items-center justify-between p-4 rounded-lg border border-border/40 hover:border-primary/30 hover:bg-muted/20 transition-all cursor-pointer"
+                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-3 sm:p-4 rounded-lg border border-border/40 hover:border-primary/30 hover:bg-muted/20 transition-all cursor-pointer touch-manipulation active:scale-[0.98]"
                     onClick={() => navigate(`/match/${match.id}`)}>
                     {/* Match Title */}
-                    <h4 className="text-[14px] font-semibold flex-1 min-w-0 truncate pr-4">
+                    <h4 className="text-xs sm:text-[14px] font-semibold flex-1 min-w-0 truncate sm:pr-4">
                       {match.description}
                     </h4>
 
                     {/* Metrics */}
-                    <div className="flex items-center gap-4 flex-shrink-0">
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-[16px] font-bold tabular-nums">
+                    <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                      <div className="flex items-baseline gap-1 sm:gap-1.5">
+                        <span className="text-sm sm:text-[16px] font-bold tabular-nums">
                           {match.violations}
                         </span>
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-[10px] sm:text-[11px] text-muted-foreground">
                           Violations
                         </span>
                       </div>
-                      <span className="text-muted-foreground/30">•</span>
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="text-[16px] font-bold tabular-nums">
+                      <span className="text-muted-foreground/30 hidden sm:inline">
+                        •
+                      </span>
+                      <div className="flex items-baseline gap-1 sm:gap-1.5">
+                        <span className="text-sm sm:text-[16px] font-bold tabular-nums">
                           {formatViews(match.totalViews)}
                         </span>
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-[10px] sm:text-[11px] text-muted-foreground">
                           Views
                         </span>
                       </div>
@@ -1520,15 +1595,15 @@ export default function Dashboard() {
         </Card>
 
         {/* Active Trouble List */}
-        <Card className="lg:col-span-3 h-[340px] flex flex-col p-4">
-          <div className="flex items-center justify-between mb-3 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <h3 className="text-[15px] font-semibold">
+        <Card className="lg:col-span-3 h-[400px] sm:h-[340px] flex flex-col p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-3 flex-shrink-0 gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <h3 className="text-sm sm:text-[15px] font-semibold">
                 Active Trouble List (Live)
               </h3>
               <Badge
                 variant="secondary"
-                className="h-5 px-2 bg-chart-1/10 text-chart-1 border-0">
+                className="h-5 px-2 bg-chart-1/10 text-chart-1 border-0 text-[9px] sm:text-[10px] w-fit">
                 <div className="w-1.5 h-1.5 rounded-full bg-chart-1 animate-pulse mr-1.5" />
                 {sortedActiveViolations.length}{" "}
                 {troubleListFilter.toLowerCase()}
@@ -1538,7 +1613,7 @@ export default function Dashboard() {
               <Button
                 variant={troubleListFilter === "Active" ? "default" : "outline"}
                 size="sm"
-                className="h-7 px-3 text-xs"
+                className="h-8 sm:h-7 px-2 sm:px-3 text-[10px] sm:text-xs touch-manipulation"
                 onClick={() => setTroubleListFilter("Active")}>
                 Active
               </Button>
@@ -1547,21 +1622,21 @@ export default function Dashboard() {
                   troubleListFilter === "Under Review" ? "default" : "outline"
                 }
                 size="sm"
-                className="h-7 px-3 text-xs"
+                className="h-8 sm:h-7 px-2 sm:px-3 text-[10px] sm:text-xs touch-manipulation"
                 onClick={() => setTroubleListFilter("Under Review")}>
                 Under Review
               </Button>
             </div>
           </div>
-          <div className="flex-1 overflow-y-auto space-y-1.5">
+          <div className="flex-1 overflow-y-auto space-y-1 sm:space-y-1.5">
             {troubleListLoading ? (
               <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-muted-foreground" />
               </div>
             ) : sortedActiveViolations.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                <FileQuestion className="h-8 w-8 mb-2 opacity-50" />
-                <p className="text-sm">
+                <FileQuestion className="h-6 w-6 sm:h-8 sm:w-8 mb-2 opacity-50" />
+                <p className="text-xs sm:text-sm">
                   No {troubleListFilter.toLowerCase()} violations found
                 </p>
               </div>
@@ -1575,17 +1650,20 @@ export default function Dashboard() {
                 return (
                   <div
                     key={violation.id}
-                    className="group flex items-center gap-3 h-[42px] border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors px-2">
-                    {/* Platform & Account - Fixed width */}
-                    <div className="flex items-center gap-2 w-[180px] flex-shrink-0">
+                    className="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-h-[42px] sm:h-[42px] border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors px-2 py-2 sm:py-0">
+                    {/* Platform & Account */}
+                    <div className="flex items-center gap-2 flex-1 sm:w-[180px] sm:flex-shrink-0 min-w-0">
                       <div className="flex-shrink-0">
-                        {getPlatformIcon(violation.platform, "h-4 w-4")}
+                        {getPlatformIcon(
+                          violation.platform,
+                          "h-3.5 w-3.5 sm:h-4 sm:w-4"
+                        )}
                       </div>
                       <div className="flex flex-col min-w-0 flex-1">
-                        <span className="text-[13px] font-medium truncate">
+                        <span className="text-xs sm:text-[13px] font-medium truncate">
                           {violation.platform}
                         </span>
-                        <span className="text-[11px] text-muted-foreground truncate">
+                        <span className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
                           {violation.account}
                         </span>
                       </div>
@@ -1593,11 +1671,11 @@ export default function Dashboard() {
 
                     {/* Match Information */}
                     {violation.matchDescription && (
-                      <div className="w-[200px] flex-shrink-0">
-                        <div className="flex items-center gap-1.5 h-[26px] px-2 rounded-md bg-muted/30 border border-border/30">
-                          <Trophy className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      <div className="flex-1 sm:w-[200px] sm:flex-shrink-0 min-w-0">
+                        <div className="flex items-center gap-1.5 h-[24px] sm:h-[26px] px-2 rounded-md bg-muted/30 border border-border/30">
+                          <Trophy className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground flex-shrink-0" />
                           <span
-                            className="text-[11px] font-medium text-foreground/80 truncate"
+                            className="text-[10px] sm:text-[11px] font-medium text-foreground/80 truncate"
                             title={violation.matchDescription}>
                             {violation.matchDescription}
                           </span>
@@ -1605,30 +1683,30 @@ export default function Dashboard() {
                       </div>
                     )}
 
-                    {/* Link of Post - Fixed width in center */}
-                    <div className="w-[300px] flex-shrink-0">
+                    {/* Link of Post */}
+                    <div className="flex-1 sm:w-[300px] sm:flex-shrink-0 min-w-0">
                       <a
                         href={violation.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 h-[26px] px-3 rounded-md bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-primary/30 text-[11px] font-medium text-foreground/70 hover:text-primary transition-all w-full"
+                        className="flex items-center gap-1.5 sm:gap-2 h-[24px] sm:h-[26px] px-2 sm:px-3 rounded-md bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-primary/30 text-[10px] sm:text-[11px] font-medium text-foreground/70 hover:text-primary transition-all w-full touch-manipulation"
                         title={violation.url}>
-                        <Link className="h-3 w-3 flex-shrink-0 text-muted-foreground" />
+                        <Link className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0 text-muted-foreground" />
                         <span className="truncate flex-1">
                           {formatUrlForDisplay(violation.url)}
                         </span>
-                        <ExternalLink className="h-3 w-3 flex-shrink-0 opacity-50" />
+                        <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0 opacity-50" />
                       </a>
                     </div>
 
                     {/* Metrics - Right side */}
-                    <div className="flex items-center gap-1.5 flex-1 justify-end">
-                      <span className="inline-flex items-center gap-1 h-[22px] px-2 rounded-full bg-muted/40 text-[12px] font-medium tabular-nums">
-                        <Eye className="h-3 w-3 text-muted-foreground" />
+                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap sm:flex-nowrap sm:flex-1 sm:justify-end">
+                      <span className="inline-flex items-center gap-1 h-[20px] sm:h-[22px] px-1.5 sm:px-2 rounded-full bg-muted/40 text-[10px] sm:text-[12px] font-medium tabular-nums">
+                        <Eye className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground" />
                         <span>{formatViews(violation.views)}</span>
                       </span>
-                      <span className="inline-flex items-center gap-1 h-[22px] px-2 rounded-full bg-muted/40 text-[12px] font-medium">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
+                      <span className="inline-flex items-center gap-1 h-[20px] sm:h-[22px] px-1.5 sm:px-2 rounded-full bg-muted/40 text-[10px] sm:text-[12px] font-medium">
+                        <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground" />
                         <span>{timeSinceAdded}</span>
                       </span>
                       <Badge
@@ -1639,7 +1717,7 @@ export default function Dashboard() {
                             ? "default"
                             : "secondary"
                         }
-                        className="h-[18px] text-[10px] px-1.5">
+                        className="h-[16px] sm:h-[18px] text-[9px] sm:text-[10px] px-1 sm:px-1.5">
                         {violation.status === "under review"
                           ? "under review"
                           : violation.status}
@@ -1647,14 +1725,14 @@ export default function Dashboard() {
                       {warningLevel === "urgent" && (
                         <Badge
                           variant="destructive"
-                          className="h-[18px] text-[10px] px-1.5">
+                          className="h-[16px] sm:h-[18px] text-[9px] sm:text-[10px] px-1 sm:px-1.5">
                           overdue
                         </Badge>
                       )}
                       {warningLevel === "warning" && (
                         <Badge
                           variant="secondary"
-                          className="h-[18px] text-[10px] px-1.5 bg-amber-500/10 text-amber-700 border-amber-500/20">
+                          className="h-[16px] sm:h-[18px] text-[9px] sm:text-[10px] px-1 sm:px-1.5 bg-amber-500/10 text-amber-700 border-amber-500/20">
                           slower
                         </Badge>
                       )}
