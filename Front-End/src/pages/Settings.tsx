@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -20,8 +21,11 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { API_URL } from "@/components/MatchDashboard/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Settings() {
+  const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
   const [targetMinutes, setTargetMinutes] = useState<number>(15);
   const [targetHours, setTargetHours] = useState<number>(15 / 60);
   const [minutesInput, setMinutesInput] = useState<string>("15");
@@ -41,8 +45,24 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(true);
 
+  // Check if user is superAdmin
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== "superAdmin") {
+      toast({
+        title: "Access Denied",
+        description: "Only superAdmin can access this page.",
+        variant: "destructive",
+      });
+      navigate("/");
+    }
+  }, [currentUser, navigate]);
+
   // Load settings from backend API on mount
   useEffect(() => {
+    // Only fetch settings if user is superAdmin
+    if (!currentUser || currentUser.role !== "superAdmin") {
+      return;
+    }
     const fetchSettings = async () => {
       setLoadingSettings(true);
       try {
@@ -95,7 +115,12 @@ export default function Settings() {
     };
 
     fetchSettings();
-  }, []);
+  }, [currentUser]);
+
+  // Don't render if not superAdmin
+  if (!currentUser || currentUser.role !== "superAdmin") {
+    return null;
+  }
 
   // Handle minutes change - auto-calculate hours (only allow numbers)
   const handleMinutesChange = (value: string) => {

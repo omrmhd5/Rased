@@ -1,4 +1,4 @@
-import { Home, Calendar, FileText, Users, Settings, BarChart3, AlertTriangle, Shield } from "lucide-react";
+import { Home, Calendar, Users, Settings, BarChart3, AlertTriangle, Shield } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -30,9 +30,12 @@ export function AppSidebar() {
   const isCollapsed = state === "collapsed";
 
   const managementItems = [
-    { title: "Reports", url: "/reports", icon: FileText },
-    ...(user?.role === "superAdmin" ? [{ title: "Users & Roles", url: "/users", icon: Users }] : []),
-    { title: "Settings", url: "/settings", icon: Settings },
+    ...(user?.role === "superAdmin" 
+      ? [
+          { title: "Users & Roles", url: "/users", icon: Users },
+          { title: "Settings", url: "/settings", icon: Settings },
+        ]
+      : []),
   ];
 
   return (
@@ -87,29 +90,31 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground px-3 mb-2">
-            MANAGEMENT
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {managementItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
-                    <NavLink
-                      to={item.url}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
-                      activeClassName="bg-primary/10 text-primary font-medium"
-                    >
-                      <item.icon className="h-5 w-5" />
-                      {!isCollapsed && <span>{item.title}</span>}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {managementItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground px-3 mb-2">
+              MANAGEMENT
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {managementItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild>
+                      <NavLink
+                        to={item.url}
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                        activeClassName="bg-primary/10 text-primary font-medium"
+                      >
+                        <item.icon className="h-5 w-5" />
+                        {!isCollapsed && <span>{item.title}</span>}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
       </SidebarContent>
     </Sidebar>
   );

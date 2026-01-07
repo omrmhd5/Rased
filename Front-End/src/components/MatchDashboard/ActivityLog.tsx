@@ -90,6 +90,7 @@ interface ActivityLogProps {
   onPlatformFilterChange?: (platform: string) => void; // Platform filter change handler
   userFilter?: string; // User filter value
   onUserFilterChange?: (user: string) => void; // User filter change handler
+  isSuperAdmin?: boolean; // Whether the current user is a superAdmin
 }
 
 const getEventIcon = (type: string) => {
@@ -140,6 +141,7 @@ export function ActivityLog({
   onPlatformFilterChange,
   userFilter = "all",
   onUserFilterChange,
+  isSuperAdmin = false,
 }: ActivityLogProps) {
   const [deleteConfirmItem, setDeleteConfirmItem] =
     useState<ActivityLogItem | null>(null);
@@ -1016,16 +1018,17 @@ export function ActivityLog({
                           </span>
                         </div>
                       )}
-                      {/* Delete button - appears on hover, after userName */}
-                      {(item.deletedLogId ||
-                        (item.violationId && item.logEntryId)) && (
-                        <button
-                          onClick={() => handleDeleteLog(item)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                          title="Delete log entry">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
-                      )}
+                      {/* Delete button - appears on hover, after userName - only for superAdmin */}
+                      {isSuperAdmin &&
+                        (item.deletedLogId ||
+                          (item.violationId && item.logEntryId)) && (
+                          <button
+                            onClick={() => handleDeleteLog(item)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                            title="Delete log entry">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                     </div>
                     <div className="text-sm leading-relaxed text-foreground break-words">
                       {item.description}

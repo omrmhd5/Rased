@@ -47,6 +47,7 @@ interface PlatformCardProps {
   onCopyUrl: (url: string) => void;
   onAddNote: (platformId: string, violation: Violation) => void;
   getPlatformIcon: (platformName: string) => React.ReactNode;
+  canModifyViolations?: boolean; // Whether user can modify violations
 }
 
 export function PlatformCard({
@@ -63,6 +64,7 @@ export function PlatformCard({
   onCopyUrl,
   onAddNote,
   getPlatformIcon,
+  canModifyViolations = true,
 }: PlatformCardProps) {
   const [isMaximized, setIsMaximized] = useState(false);
   const IconComponent = platform.icon;
@@ -302,10 +304,12 @@ export function PlatformCard({
               <p className="text-sm text-muted-foreground mb-4">
                 No violations found matching your filters.
               </p>
-              <Button size="sm" variant="outline" onClick={onAddViolation}>
-                <Plus className="h-3 w-3 mr-1.5" />
-                Add violation
-              </Button>
+              {canModifyViolations && (
+                <Button size="sm" variant="outline" onClick={onAddViolation}>
+                  <Plus className="h-3 w-3 mr-1.5" />
+                  Add violation
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-2">
@@ -320,6 +324,7 @@ export function PlatformCard({
                   onCopyUrl={onCopyUrl}
                   onAddNote={onAddNote}
                   getPlatformIcon={getPlatformIcon}
+                  canModifyViolations={canModifyViolations}
                 />
               ))}
             </div>
@@ -333,10 +338,12 @@ export function PlatformCard({
               <p className="text-sm text-muted-foreground mb-4">
                 No violations found matching your filters.
               </p>
-              <Button size="sm" variant="outline" onClick={onAddViolation}>
-                <Plus className="h-3 w-3 mr-1.5" />
-                Add violation
-              </Button>
+              {canModifyViolations && (
+                <Button size="sm" variant="outline" onClick={onAddViolation}>
+                  <Plus className="h-3 w-3 mr-1.5" />
+                  Add violation
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-2">
@@ -351,6 +358,7 @@ export function PlatformCard({
                   onCopyUrl={onCopyUrl}
                   onAddNote={onAddNote}
                   getPlatformIcon={getPlatformIcon}
+                  canModifyViolations={canModifyViolations}
                 />
               ))}
             </div>
@@ -384,10 +392,12 @@ export function PlatformCard({
               title="Maximize">
               <Maximize2 className="h-4 w-4" />
             </button>
-            <Button size="sm" className="text-xs" onClick={onAddViolation}>
-              <Plus className="h-3 w-3 mr-1.5" />
-              Add violation
-            </Button>
+            {canModifyViolations && (
+              <Button size="sm" className="text-xs" onClick={onAddViolation}>
+                <Plus className="h-3 w-3 mr-1.5" />
+                Add violation
+              </Button>
+            )}
           </div>
         </div>
 
@@ -406,10 +416,12 @@ export function PlatformCard({
                 <DialogTitle>{platform.name}</DialogTitle>
               </div>
               <div className="flex items-center gap-2">
-                <Button size="sm" className="text-xs" onClick={onAddViolation}>
-                  <Plus className="h-3 w-3 mr-1.5" />
-                  Add violation
-                </Button>
+                {canModifyViolations && (
+                  <Button size="sm" className="text-xs" onClick={onAddViolation}>
+                    <Plus className="h-3 w-3 mr-1.5" />
+                    Add violation
+                  </Button>
+                )}
                 <button
                   onClick={() => setIsMaximized(false)}
                   className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"

@@ -20,26 +20,57 @@ export default function Home() {
   const [selectedLeague, setSelectedLeague] = useState<League>(null);
   const [isLeagueDialogOpen, setIsLeagueDialogOpen] = useState(false);
 
+  // Get available leagues based on user role
+  const getAvailableLeagues = (): League[] => {
+    if (!user) return [];
+    
+    // SuperAdmin and Viewer can access all leagues
+    if (user.role === "superAdmin" || user.role === "viewer") {
+      return ["saudi", "saudi-super-cup", "spanish-super-cup"];
+    }
+    
+    // Employees can only access their assigned leagues
+    if (user.role === "employee" && user.leagues) {
+      return user.leagues;
+    }
+    
+    return [];
+  };
+
   // Load selected league from localStorage on mount
   useEffect(() => {
+    if (!user) return;
+    
+    const availableLeagues = getAvailableLeagues();
     const savedLeague = localStorage.getItem("selectedLeague") as League;
+    
     if (
       savedLeague &&
-      ["saudi", "saudi-super-cup", "spanish-super-cup"].includes(savedLeague)
+      availableLeagues.includes(savedLeague)
     ) {
       setSelectedLeague(savedLeague);
-    } else {
-      // If no league is selected, show the dialog
-      setIsLeagueDialogOpen(true);
+    } else if (availableLeagues.length > 0) {
+      // If saved league is not in available leagues, select the first available
+      if (savedLeague && !availableLeagues.includes(savedLeague)) {
+        setSelectedLeague(availableLeagues[0]);
+        localStorage.setItem("selectedLeague", availableLeagues[0]);
+      } else if (!savedLeague) {
+        // If no league is selected, show the dialog
+        setIsLeagueDialogOpen(true);
+      }
     }
-  }, []);
+  }, [user]);
 
   const handleLeagueSelect = (
     league: "saudi" | "saudi-super-cup" | "spanish-super-cup"
   ) => {
-    setSelectedLeague(league);
-    localStorage.setItem("selectedLeague", league);
-    setIsLeagueDialogOpen(false);
+    const availableLeagues = getAvailableLeagues();
+    // Only allow selecting from available leagues
+    if (availableLeagues.includes(league)) {
+      setSelectedLeague(league);
+      localStorage.setItem("selectedLeague", league);
+      setIsLeagueDialogOpen(false);
+    }
   };
 
   const getLeagueName = (league: League): string => {
@@ -143,14 +174,16 @@ export default function Home() {
                 </span>
               )}
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => navigate("/settings")}
-              className="w-full sm:w-48 h-auto py-3 border-2">
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </Button>
+            {user?.role === "superAdmin" && (
+              <Button
+                size="lg"
+                variant="outline"
+                onClick={() => navigate("/settings")}
+                className="w-full sm:w-48 h-auto py-3 border-2">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -174,62 +207,82 @@ export default function Home() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-4">
-            <Button
-              variant="outline"
-              className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
-              onClick={() => handleLeagueSelect("saudi")}>
-              <div className="flex items-center gap-3 w-full">
-                <img
-                  src="/icons/Saudi_League.svg"
-                  alt="Saudi Pro League"
-                  className="h-8 w-8 object-contain flex-shrink-0"
-                />
-                <div className="flex-1 text-left">
-                  <div className="font-semibold text-lg">Saudi Pro League</div>
-                  <div className="text-sm text-muted-foreground">
-                    Saudi Arabia
+            {(() => {
+              const availableLeagues = getAvailableLeagues();
+              if (availableLeagues.length === 0) {
+                return (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <p>No leagues available. Please contact an administrator.</p>
                   </div>
-                </div>
-              </div>
-            </Button>
+                );
+              }
+              return (
+                <>
+                  {availableLeagues.includes("saudi") && (
+                  <Button
+                    variant="outline"
+                    className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
+                    onClick={() => handleLeagueSelect("saudi")}>
+                    <div className="flex items-center gap-3 w-full">
+                      <img
+                        src="/icons/Saudi_League.svg"
+                        alt="Saudi Pro League"
+                        className="h-8 w-8 object-contain flex-shrink-0"
+                      />
+                      <div className="flex-1 text-left">
+                        <div className="font-semibold text-lg">Saudi Pro League</div>
+                        <div className="text-sm text-muted-foreground">
+                          Saudi Arabia
+                        </div>
+                      </div>
+                    </div>
+                  </Button>
+                  )}
 
-            <Button
-              variant="outline"
-              className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
-              onClick={() => handleLeagueSelect("saudi-super-cup")}>
-              <div className="flex items-center gap-3 w-full">
-                <img
-                  src="/icons/Saudi_Cup.png"
-                  alt="Saudi Super Cup"
-                  className="h-12 object-contain flex-shrink-0 rounded"
-                />
-                <div className="flex-1 text-left">
-                  <div className="font-semibold text-lg">Saudi Super Cup</div>
-                  <div className="text-sm text-muted-foreground">
-                    بطولة كاس السوبر السعودي
-                  </div>
-                </div>
-              </div>
-            </Button>
+                  {availableLeagues.includes("saudi-super-cup") && (
+                  <Button
+                    variant="outline"
+                    className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
+                    onClick={() => handleLeagueSelect("saudi-super-cup")}>
+                    <div className="flex items-center gap-3 w-full">
+                      <img
+                        src="/icons/Saudi_Cup.png"
+                        alt="Saudi Super Cup"
+                        className="h-12 object-contain flex-shrink-0 rounded"
+                      />
+                      <div className="flex-1 text-left">
+                        <div className="font-semibold text-lg">Saudi Super Cup</div>
+                        <div className="text-sm text-muted-foreground">
+                          بطولة كاس السوبر السعودي
+                        </div>
+                      </div>
+                    </div>
+                  </Button>
+                )}
 
-            <Button
-              variant="outline"
-              className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
-              onClick={() => handleLeagueSelect("spanish-super-cup")}>
-              <div className="flex items-center gap-3 w-full">
-                <img
-                  src="/icons/Spanish_Cup.svg"
-                  alt="Spanish Super Cup"
-                  className="h-8 w-8 object-contain flex-shrink-0"
-                />
-                <div className="flex-1 text-left">
-                  <div className="font-semibold text-lg">Spanish Super Cup</div>
-                  <div className="text-sm text-muted-foreground">
-                    السوبر الاسباني
-                  </div>
-                </div>
-              </div>
-            </Button>
+                {availableLeagues.includes("spanish-super-cup") && (
+                  <Button
+                    variant="outline"
+                    className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
+                    onClick={() => handleLeagueSelect("spanish-super-cup")}>
+                    <div className="flex items-center gap-3 w-full">
+                      <img
+                        src="/icons/Spanish_Cup.svg"
+                        alt="Spanish Super Cup"
+                        className="h-8 w-8 object-contain flex-shrink-0"
+                      />
+                      <div className="flex-1 text-left">
+                        <div className="font-semibold text-lg">Spanish Super Cup</div>
+                        <div className="text-sm text-muted-foreground">
+                          السوبر الاسباني
+                        </div>
+                      </div>
+                    </div>
+                  </Button>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </DialogContent>
       </Dialog>

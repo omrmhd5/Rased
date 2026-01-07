@@ -19,6 +19,11 @@ const whitelistedAccountSchema = new mongoose.Schema(
         message: "At least one platform must be selected",
       },
     },
+    platformNames: {
+      type: Map,
+      of: String,
+      default: {},
+    },
     notes: {
       type: String,
       trim: true,

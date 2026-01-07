@@ -51,6 +51,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
 type League = "saudi" | "saudi-super-cup" | "spanish-super-cup" | null;
 
@@ -124,6 +125,8 @@ type MatchFilter = "all" | "live" | "upcoming" | "completed";
 
 export default function Matches() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "superAdmin";
   const [selectedWeek, setSelectedWeek] = useState("12");
   const [selectedStage, setSelectedStage] = useState<string>("");
   const [selectedLeague, setSelectedLeague] = useState<League>(null);
@@ -149,7 +152,6 @@ export default function Matches() {
   const [formTime, setFormTime] = useState("");
   const [formWeek, setFormWeek] = useState("");
   const [formStage, setFormStage] = useState("");
-  const [formCompetition, setFormCompetition] = useState("");
   const [formTeam1, setFormTeam1] = useState("");
   const [formTeam2, setFormTeam2] = useState("");
   const [formVenue, setFormVenue] = useState("");
@@ -332,7 +334,6 @@ export default function Matches() {
     setFormTime("");
     setFormWeek("");
     setFormStage("");
-    setFormCompetition("");
     setFormTeam1("");
     setFormTeam2("");
     setFormVenue("");
@@ -389,21 +390,7 @@ export default function Matches() {
     setFormWeek(match.week || "");
     setFormStage(match.stage || "");
     
-    // Map database competition names to frontend dropdown values
-    const competitionName =
-      typeof match.competition === "string"
-        ? match.competition
-        : (match.competition as Competition)?.name || "";
-    
-    // Map database names to frontend dropdown values
-    const competitionMap: Record<string, string> = {
-      "Saudi League": "Saudi Pro League",
-      "Saudi Super Cup": "Saudi Super Cup",
-      "Spanish Super Cup": "Spanish Super Cup",
-    };
-    
-    const mappedCompetition = competitionMap[competitionName] || competitionName;
-    setFormCompetition(mappedCompetition);
+    // Competition is automatically determined from selectedLeague, no need to set it
     
     setFormTeam1(match.team1 || "");
     setFormTeam2(match.team2 || "");
@@ -430,23 +417,25 @@ export default function Matches() {
     }
 
     try {
+      // Automatically determine competition from selected league
+      let competitionName = "";
+      if (selectedLeague === "saudi") {
+        competitionName = "Saudi Pro League";
+      } else if (selectedLeague === "saudi-super-cup") {
+        competitionName = "Saudi Super Cup";
+      } else if (selectedLeague === "spanish-super-cup") {
+        competitionName = "Spanish Super Cup";
+      }
+
       const updateData: any = {
             description: formDescription || undefined,
             team1: formTeam1,
             team2: formTeam2,
             date: formDate,
             time: convertTimeTo12Hour(formTime),
-            competition: formCompetition || undefined,
+            competition: competitionName || undefined,
             stadium: formVenue || undefined,
-            league: formCompetition
-              ? formCompetition === "Saudi Pro League"
-                ? "saudi"
-                : formCompetition === "Saudi Super Cup"
-                ? "saudi-super-cup"
-                : formCompetition === "Spanish Super Cup"
-                ? "spanish-super-cup"
-                : selectedLeague
-              : selectedLeague,
+            league: selectedLeague,
             status: formStatus,
             winner:
               formStatus === "finished" && formWinner ? formWinner : undefined,
@@ -591,23 +580,25 @@ export default function Matches() {
     }
 
     try {
+      // Automatically determine competition from selected league
+      let competitionName = "";
+      if (selectedLeague === "saudi") {
+        competitionName = "Saudi Pro League";
+      } else if (selectedLeague === "saudi-super-cup") {
+        competitionName = "Saudi Super Cup";
+      } else if (selectedLeague === "spanish-super-cup") {
+        competitionName = "Spanish Super Cup";
+      }
+
       const matchData: any = {
           description: formDescription || undefined,
           team1: formTeam1,
           team2: formTeam2,
           date: formDate,
           time: convertTimeTo12Hour(formTime),
-          competition: formCompetition || undefined,
+          competition: competitionName || undefined,
           stadium: formVenue || undefined,
-          league: formCompetition
-            ? formCompetition === "Saudi Pro League"
-              ? "saudi"
-              : formCompetition === "Saudi Super Cup"
-              ? "saudi-super-cup"
-              : formCompetition === "Spanish Super Cup"
-              ? "spanish-super-cup"
-              : selectedLeague
-            : selectedLeague,
+          league: selectedLeague,
           status: formStatus,
           winner:
             formStatus === "finished" && formWinner ? formWinner : undefined,
@@ -646,7 +637,7 @@ export default function Matches() {
       const newMatch = await response.json();
       // Format date to string if it's a Date object
       // Handle competition - ensure it's a string
-      const competitionName =
+      const formattedCompetitionName =
         typeof newMatch.competition === "object" && newMatch.competition !== null
           ? (newMatch.competition as Competition).name
           : typeof newMatch.competition === "string"
@@ -659,7 +650,7 @@ export default function Matches() {
           typeof newMatch.date === "string"
             ? newMatch.date
             : new Date(newMatch.date).toISOString().split("T")[0],
-        competition: competitionName,
+        competition: formattedCompetitionName,
       };
       setMatches([...matches, formattedMatch]);
       toast({
@@ -856,26 +847,28 @@ export default function Matches() {
               )}
                 </div>
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleEditMatch(match)}>
-                    <Edit className="mr-2 h-4 w-4" />
-                    Edit
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive"
-                    onClick={() => handleDeleteMatch(match)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {isSuperAdmin && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => handleEditMatch(match)}>
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive"
+                      onClick={() => handleDeleteMatch(match)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
             <h3 className="text-xl font-bold mb-2">
               {match.team1} vs {match.team2}
@@ -974,16 +967,18 @@ export default function Matches() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={() => {
-              resetForm();
-              setIsAddMatchOpen(true);
-            }}
-            className="gap-2">
-            <Plus className="h-4 w-4" />
-            Add Match Manually
-          </Button>
+          {isSuperAdmin && (
+            <Button
+              size="sm"
+              onClick={() => {
+                resetForm();
+                setIsAddMatchOpen(true);
+              }}
+              className="gap-2">
+              <Plus className="h-4 w-4" />
+              Add Match Manually
+            </Button>
+          )}
           {(() => {
             const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
             
@@ -1041,14 +1036,16 @@ export default function Matches() {
               return "No matches found for this league";
             })()}
           </p>
-          <Button
-            onClick={() => {
-              resetForm();
-              setIsAddMatchOpen(true);
-            }}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Match Manually
-          </Button>
+          {isSuperAdmin && (
+            <Button
+              onClick={() => {
+                resetForm();
+                setIsAddMatchOpen(true);
+              }}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Match Manually
+            </Button>
+          )}
         </Card>
       )}
 
@@ -1130,6 +1127,16 @@ export default function Matches() {
           setIsAddMatchOpen(open);
           if (!open) {
             resetForm();
+          } else {
+            // Auto-fill stage/week based on selected league when opening dialog
+            if (selectedLeague) {
+              const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
+              if (isSuperCup && selectedStage) {
+                setFormStage(selectedStage);
+              } else if (!isSuperCup && selectedWeek) {
+                setFormWeek(selectedWeek);
+              }
+            }
           }
         }}>
         <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
@@ -1140,25 +1147,6 @@ export default function Matches() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {/* Competition */}
-            <div className="space-y-2">
-              <Label htmlFor="competition">Competition</Label>
-              <Select
-                value={formCompetition}
-                onValueChange={setFormCompetition}>
-                <SelectTrigger id="competition">
-                  <SelectValue placeholder="Select competition" />
-                </SelectTrigger>
-                <SelectContent>
-                  {competitions.map((comp) => (
-                    <SelectItem key={comp} value={comp}>
-                      {comp}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Team 1 Name */}
             <div className="space-y-2">
               <Label htmlFor="team1">Team 1 Name *</Label>
@@ -1367,25 +1355,6 @@ export default function Matches() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {/* Competition */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-competition">Competition</Label>
-              <Select
-                value={formCompetition}
-                onValueChange={setFormCompetition}>
-                <SelectTrigger id="edit-competition">
-                  <SelectValue placeholder="Select competition" />
-                </SelectTrigger>
-                <SelectContent>
-                  {competitions.map((comp) => (
-                    <SelectItem key={comp} value={comp}>
-                      {comp}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             {/* Team 1 Name */}
             <div className="space-y-2">
               <Label htmlFor="edit-team1">Team 1 Name *</Label>

@@ -8,11 +8,14 @@ import {
 import { useNavigate } from "react-router-dom";
 import { API_URL } from "@/components/MatchDashboard/types";
 
+type League = "saudi" | "saudi-super-cup" | "spanish-super-cup";
+
 interface User {
   id: string;
   username: string;
   email: string;
-  role?: "superAdmin" | "admin" | "employee";
+  role?: "superAdmin" | "viewer" | "employee";
+  leagues?: League[];
 }
 
 interface AuthContextType {

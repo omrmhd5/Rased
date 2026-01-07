@@ -51,6 +51,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { useAuth } from "@/contexts/AuthContext";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -58,6 +59,7 @@ interface WhitelistedAccount {
   _id: string;
   accountChannel: string;
   platforms: string[];
+  platformNames?: { [key: string]: string };
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -85,6 +87,8 @@ interface Violation {
 
 export default function WhitelistedAccounts() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "superAdmin";
   const [accounts, setAccounts] = useState<WhitelistedAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -103,6 +107,9 @@ export default function WhitelistedAccounts() {
   // Form states
   const [accountChannel, setAccountChannel] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+  const [platformNames, setPlatformNames] = useState<{ [key: string]: string }>(
+    {}
+  );
   const [notes, setNotes] = useState("");
   const [formError, setFormError] = useState("");
 
@@ -131,6 +138,17 @@ export default function WhitelistedAccounts() {
       });
     }
   }, [accounts]);
+
+  // Get account name for a platform (main name or platform-specific)
+  const getAccountNameForPlatform = (
+    account: WhitelistedAccount,
+    platformId: string
+  ): string => {
+    if (account.platformNames && account.platformNames[platformId]) {
+      return account.platformNames[platformId];
+    }
+    return account.accountChannel;
+  };
 
   const fetchAccounts = async () => {
     setLoading(true);
@@ -165,10 +183,15 @@ export default function WhitelistedAccounts() {
     try {
       // Fetch violations for each platform that this account is whitelisted on
       const violationPromises = account.platforms.map(async (platformId) => {
+        // Get the account name for this platform (main name or platform-specific)
+        const accountNameForPlatform = getAccountNameForPlatform(
+          account,
+          platformId
+        );
+
+        // Fetch all violations for this platform (without search to avoid regex/contains)
         const response = await fetch(
-          `${API_URL}/violations?search=${encodeURIComponent(
-            account.accountChannel
-          )}&platformId=${platformId}&limit=100`,
+          `${API_URL}/violations?platformId=${platformId}&limit=1000`,
           {
             credentials: "include",
           }
@@ -179,13 +202,22 @@ export default function WhitelistedAccounts() {
         }
 
         const violations = await response.json();
-        // Filter to only exact accountChannel matches (search is case-insensitive regex)
-        return violations.filter(
-          (v: Violation) =>
-            v.accountChannel.toLowerCase() ===
-              account.accountChannel.toLowerCase() &&
-            v.platformId === platformId
-        );
+        // Filter to only EXACT accountChannel matches (case-insensitive)
+        // If platform-specific name exists, ONLY check that name (not the main name)
+        // Otherwise, check the main account name
+        return violations.filter((v: Violation) => {
+          if (!v.accountChannel || v.platformId !== platformId) {
+            return false;
+          }
+
+          const violationName = v.accountChannel.trim().toLowerCase();
+          const platformName = accountNameForPlatform.trim().toLowerCase();
+
+          // Exact match only - no contains/substring matching
+          // Since accountNameForPlatform already returns platform-specific name if it exists,
+          // or main name if it doesn't, we just need to check against that
+          return violationName === platformName;
+        });
       });
 
       const violationsArrays = await Promise.all(violationPromises);
@@ -226,14 +258,34 @@ export default function WhitelistedAccounts() {
   const resetForm = () => {
     setAccountChannel("");
     setSelectedPlatforms([]);
+    setPlatformNames({});
     setNotes("");
     setFormError("");
+  };
+
+  // Handle platform name change
+  const handlePlatformNameChange = (platformId: string, name: string) => {
+    setPlatformNames((prev) => {
+      const updated = { ...prev };
+      if (name.trim()) {
+        updated[platformId] = name.trim();
+      } else {
+        delete updated[platformId];
+      }
+      return updated;
+    });
   };
 
   // Handle platform checkbox change
   const handlePlatformToggle = (platformId: string) => {
     setSelectedPlatforms((prev) => {
       if (prev.includes(platformId)) {
+        // Remove platform name when unchecking
+        setPlatformNames((names) => {
+          const updated = { ...names };
+          delete updated[platformId];
+          return updated;
+        });
         return prev.filter((id) => id !== platformId);
       } else {
         return [...prev, platformId];
@@ -266,6 +318,7 @@ export default function WhitelistedAccounts() {
         body: JSON.stringify({
           accountChannel: accountChannel.trim(),
           platforms: selectedPlatforms,
+          platformNames: platformNames,
           notes: notes.trim(),
         }),
       });
@@ -330,6 +383,7 @@ export default function WhitelistedAccounts() {
           body: JSON.stringify({
             accountChannel: accountChannel.trim(),
             platforms: selectedPlatforms,
+            platformNames: platformNames,
             notes: notes.trim(),
           }),
         }
@@ -417,6 +471,7 @@ export default function WhitelistedAccounts() {
     setEditingAccount(account);
     setAccountChannel(account.accountChannel);
     setSelectedPlatforms([...account.platforms]);
+    setPlatformNames(account.platformNames || {});
     setNotes(account.notes || "");
     setFormError("");
     setIsEditDialogOpen(true);
@@ -475,107 +530,137 @@ export default function WhitelistedAccounts() {
               <Shield className="h-5 w-5 text-primary" />
               <CardTitle>Whitelisted Accounts</CardTitle>
             </div>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={() => resetForm()}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Account
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl">
-                <DialogHeader>
-                  <DialogTitle>Add Whitelisted Account</DialogTitle>
-                  <DialogDescription>
-                    Add an account to the whitelist. Select the platforms where
-                    this account should be whitelisted.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4 py-4">
-                  {formError && (
-                    <Alert variant="destructive">
-                      <AlertDescription>{formError}</AlertDescription>
-                    </Alert>
-                  )}
-                  <div className="space-y-2">
-                    <Label htmlFor="account-channel">Account Channel</Label>
-                    <Input
-                      id="account-channel"
-                      value={accountChannel}
-                      onChange={(e) => setAccountChannel(e.target.value)}
-                      placeholder="Enter account channel name (e.g., @username)"
-                    />
-                  </div>
-                  <div className="space-y-3">
-                    <Label>Select Platforms</Label>
-                    <div className="grid grid-cols-2 gap-3 p-4 border rounded-lg">
-                      {platformOperations.map((platform) => {
-                        const PlatformIcon = platform.icon;
-                        return (
-                          <div
-                            key={platform.id}
-                            className="flex items-center space-x-2">
-                            <Checkbox
-                              id={`platform-${platform.id}`}
-                              checked={selectedPlatforms.includes(platform.id)}
-                              onCheckedChange={() =>
-                                handlePlatformToggle(platform.id)
-                              }
-                            />
-                            <Label
-                              htmlFor={`platform-${platform.id}`}
-                              className="flex items-center gap-2 cursor-pointer flex-1">
-                              <PlatformIcon
-                                className="h-4 w-4"
-                                style={{ color: platform.color }}
-                              />
-                              <span>{platform.name}</span>
-                            </Label>
-                          </div>
-                        );
-                      })}
+            {isSuperAdmin && (
+              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => resetForm()}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Account
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                  <DialogHeader>
+                    <DialogTitle>Add Whitelisted Account</DialogTitle>
+                    <DialogDescription>
+                      Add an account to the whitelist. Select the platforms
+                      where this account should be whitelisted.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    {formError && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{formError}</AlertDescription>
+                      </Alert>
+                    )}
+                    <div className="space-y-2">
+                      <Label htmlFor="account-channel">Account Channel</Label>
+                      <Input
+                        id="account-channel"
+                        value={accountChannel}
+                        onChange={(e) => setAccountChannel(e.target.value)}
+                        placeholder="Enter account channel name (e.g., @username)"
+                      />
                     </div>
-                    {selectedPlatforms.length === 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        At least one platform must be selected
-                      </p>
-                    )}
+                    <div className="space-y-3">
+                      <Label>Select Platforms</Label>
+                      <div className="space-y-3 p-4 border rounded-lg">
+                        {platformOperations.map((platform) => {
+                          const PlatformIcon = platform.icon;
+                          const isSelected = selectedPlatforms.includes(
+                            platform.id
+                          );
+                          const platformName = platformNames[platform.id] || "";
+                          return (
+                            <div key={platform.id} className="space-y-2">
+                              <div className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`platform-${platform.id}`}
+                                  checked={isSelected}
+                                  onCheckedChange={() =>
+                                    handlePlatformToggle(platform.id)
+                                  }
+                                />
+                                <Label
+                                  htmlFor={`platform-${platform.id}`}
+                                  className="flex items-center gap-2 cursor-pointer flex-1">
+                                  <PlatformIcon
+                                    className="h-4 w-4"
+                                    style={{ color: platform.color }}
+                                  />
+                                  <span>{platform.name}</span>
+                                </Label>
+                              </div>
+                              {isSelected && (
+                                <div className="ml-6 space-y-1">
+                                  <Label
+                                    htmlFor={`platform-name-${platform.id}`}
+                                    className="text-xs text-muted-foreground">
+                                    Account name for {platform.name} (leave
+                                    empty to use main name)
+                                  </Label>
+                                  <Input
+                                    id={`platform-name-${platform.id}`}
+                                    value={platformName}
+                                    onChange={(e) =>
+                                      handlePlatformNameChange(
+                                        platform.id,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder={
+                                      accountChannel || "Same as main name"
+                                    }
+                                    className="h-8 text-sm"
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {selectedPlatforms.length === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          At least one platform must be selected
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="notes">Notes (Optional)</Label>
+                      <Textarea
+                        id="notes"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        placeholder="Add any notes about this account..."
+                        rows={3}
+                      />
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Notes (Optional)</Label>
-                    <Textarea
-                      id="notes"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      placeholder="Add any notes about this account..."
-                      rows={3}
-                    />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setIsAddDialogOpen(false);
-                      resetForm();
-                    }}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleAddAccount} disabled={saving}>
-                    {saving ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4 mr-2" />
-                        Add Account
-                      </>
-                    )}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsAddDialogOpen(false);
+                        resetForm();
+                      }}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleAddAccount} disabled={saving}>
+                      {saving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Add Account
+                        </>
+                      )}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
           <CardDescription>
             Accounts in the whitelist are exempt from violation tracking
@@ -638,18 +723,36 @@ export default function WhitelistedAccounts() {
                                     (p) => p.id === platformId
                                   );
                                   const PlatformIcon = platform?.icon;
+                                  const accountNameForPlatform =
+                                    getAccountNameForPlatform(
+                                      account,
+                                      platformId
+                                    );
+                                  const hasCustomName =
+                                    account.platformNames &&
+                                    account.platformNames[platformId];
                                   return (
                                     <Badge
                                       key={platformId}
                                       variant="secondary"
-                                      className="flex items-center gap-1">
+                                      className="flex items-center gap-1"
+                                      title={
+                                        hasCustomName
+                                          ? `Account name: ${accountNameForPlatform}`
+                                          : undefined
+                                      }>
                                       {PlatformIcon && (
                                         <PlatformIcon
                                           className="h-3 w-3"
                                           style={{ color: platform.color }}
                                         />
                                       )}
-                                      {getPlatformName(platformId)}
+                                      <span>{getPlatformName(platformId)}</span>
+                                      {hasCustomName && (
+                                        <span className="text-xs opacity-70 ml-1">
+                                          ({accountNameForPlatform})
+                                        </span>
+                                      )}
                                     </Badge>
                                   );
                                 })}
@@ -705,22 +808,29 @@ export default function WhitelistedAccounts() {
                                 : "N/A"}
                             </TableCell>
                             <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => openEditDialog(account)}
-                                  className="h-8 w-8">
-                                  <Edit2 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => openDeleteDialog(account)}
-                                  className="h-8 w-8 text-destructive hover:text-destructive">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
+                              {isSuperAdmin && (
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => openEditDialog(account)}
+                                    className="h-8 w-8">
+                                    <Edit2 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => openDeleteDialog(account)}
+                                    className="h-8 w-8 text-destructive hover:text-destructive">
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              )}
+                              {!isSuperAdmin && (
+                                <span className="text-sm text-muted-foreground">
+                                  View only
+                                </span>
+                              )}
                             </TableCell>
                           </TableRow>
                           {violationCount > 0 && (
@@ -852,7 +962,7 @@ export default function WhitelistedAccounts() {
 
       {/* Edit Account Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Whitelisted Account</DialogTitle>
             <DialogDescription>
@@ -876,29 +986,53 @@ export default function WhitelistedAccounts() {
             </div>
             <div className="space-y-3">
               <Label>Select Platforms</Label>
-              <div className="grid grid-cols-2 gap-3 p-4 border rounded-lg">
+              <div className="space-y-3 p-4 border rounded-lg">
                 {platformOperations.map((platform) => {
                   const PlatformIcon = platform.icon;
+                  const isSelected = selectedPlatforms.includes(platform.id);
+                  const platformName = platformNames[platform.id] || "";
                   return (
-                    <div
-                      key={platform.id}
-                      className="flex items-center space-x-2">
-                      <Checkbox
-                        id={`edit-platform-${platform.id}`}
-                        checked={selectedPlatforms.includes(platform.id)}
-                        onCheckedChange={() =>
-                          handlePlatformToggle(platform.id)
-                        }
-                      />
-                      <Label
-                        htmlFor={`edit-platform-${platform.id}`}
-                        className="flex items-center gap-2 cursor-pointer flex-1">
-                        <PlatformIcon
-                          className="h-4 w-4"
-                          style={{ color: platform.color }}
+                    <div key={platform.id} className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`edit-platform-${platform.id}`}
+                          checked={isSelected}
+                          onCheckedChange={() =>
+                            handlePlatformToggle(platform.id)
+                          }
                         />
-                        <span>{platform.name}</span>
-                      </Label>
+                        <Label
+                          htmlFor={`edit-platform-${platform.id}`}
+                          className="flex items-center gap-2 cursor-pointer flex-1">
+                          <PlatformIcon
+                            className="h-4 w-4"
+                            style={{ color: platform.color }}
+                          />
+                          <span>{platform.name}</span>
+                        </Label>
+                      </div>
+                      {isSelected && (
+                        <div className="ml-6 space-y-1">
+                          <Label
+                            htmlFor={`edit-platform-name-${platform.id}`}
+                            className="text-xs text-muted-foreground">
+                            Account name for {platform.name} (leave empty to use
+                            main name)
+                          </Label>
+                          <Input
+                            id={`edit-platform-name-${platform.id}`}
+                            value={platformName}
+                            onChange={(e) =>
+                              handlePlatformNameChange(
+                                platform.id,
+                                e.target.value
+                              )
+                            }
+                            placeholder={accountChannel || "Same as main name"}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      )}
                     </div>
                   );
                 })}

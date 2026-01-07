@@ -26,9 +26,14 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["superAdmin", "admin", "employee"],
+      enum: ["superAdmin", "viewer", "employee"],
       default: "employee",
       required: true,
+    },
+    leagues: {
+      type: [String],
+      enum: ["saudi", "saudi-super-cup", "spanish-super-cup"],
+      default: [],
     },
   },
   {

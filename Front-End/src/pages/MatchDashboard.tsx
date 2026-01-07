@@ -8,6 +8,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -58,6 +59,10 @@ import {
 
 export default function MatchDashboard() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "superAdmin";
+  const canModifyViolations =
+    user?.role === "superAdmin" || user?.role === "employee";
   const [logFilter, setLogFilter] = useState<
     | "all"
     | "added"
@@ -770,7 +775,11 @@ export default function MatchDashboard() {
     editingViolation: Violation | null;
   } | null>(null);
   const [whitelistedAccounts, setWhitelistedAccounts] = useState<
-    Array<{ accountChannel: string; platforms: string[] }>
+    Array<{
+      accountChannel: string;
+      platforms: string[];
+      platformNames?: { [key: string]: string };
+    }>
   >([]);
 
   // Platform comparison state
@@ -1211,16 +1220,32 @@ export default function MatchDashboard() {
     }
   };
 
-  // Check if account is whitelisted
+  // Check if account is whitelisted (exact match only, no contains/substring)
+  // If platform-specific name exists, ONLY check that name for that platform
+  // Otherwise, check the main account name
   const checkWhitelistedAccount = (
     accountChannel: string,
     platformId: string
   ): boolean => {
-    return whitelistedAccounts.some(
-      (account) =>
-        account.accountChannel.toLowerCase() === accountChannel.toLowerCase() &&
-        account.platforms.includes(platformId)
-    );
+    const normalizedInput = accountChannel.trim().toLowerCase();
+
+    return whitelistedAccounts.some((account) => {
+      if (!account.platforms.includes(platformId)) {
+        return false;
+      }
+
+      // If platform-specific name exists, ONLY check that name (not the main name)
+      if (account.platformNames && account.platformNames[platformId]) {
+        const platformName = account.platformNames[platformId]
+          .trim()
+          .toLowerCase();
+        return platformName === normalizedInput;
+      }
+
+      // No platform-specific name, check main account name
+      const mainName = account.accountChannel.trim().toLowerCase();
+      return mainName === normalizedInput;
+    });
   };
 
   // Actually save the violation (called after whitelist confirmation or if not whitelisted)
@@ -2094,6 +2119,7 @@ export default function MatchDashboard() {
           onPlatformFilterChange={setPlatformFilter}
           userFilter={userFilter}
           onUserFilterChange={setUserFilter}
+          isSuperAdmin={isSuperAdmin}
         />
       </div>
 
@@ -2167,6 +2193,7 @@ export default function MatchDashboard() {
                   onCopyUrl={copyViolationUrl}
                   onAddNote={openAddNoteDialog}
                   getPlatformIcon={getPlatformIcon}
+                  canModifyViolations={canModifyViolations}
                 />
               );
             })}

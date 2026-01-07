@@ -5,8 +5,10 @@ import Competition from "../models/Competition.js";
 import Violation from "../models/Violation.js";
 import PlatformByMatch from "../models/PlatformByMatch.js";
 import DeletedViolationLog from "../models/DeletedViolationLog.js";
+import User from "../models/User.js";
 import fetch from "node-fetch";
 import dotenv from "dotenv";
+import { authenticateToken } from "../middleware/auth.js";
 
 // Load environment variables (in case routes are loaded before server.js)
 dotenv.config();
@@ -615,8 +617,27 @@ router.get("/:externalMatchId", async (req, res) => {
   }
 });
 
-// POST /api/matches - Create new match
-router.post("/", async (req, res) => {
+// Middleware to check if user is superAdmin
+const requireSuperAdmin = async (req, res, next) => {
+  try {
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    const user = await User.findById(req.user.userId).select("-password");
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    if (user.role !== "superAdmin") {
+      return res.status(403).json({ error: "Access denied. SuperAdmin only." });
+    }
+    next();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// POST /api/matches - Create new match (superAdmin only)
+router.post("/", authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const {
       description,
@@ -798,8 +819,8 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PUT /api/matches/:externalMatchId - Update match
-router.put("/:externalMatchId", async (req, res) => {
+// PUT /api/matches/:externalMatchId - Update match (superAdmin only)
+router.put("/:externalMatchId", authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const externalMatchIdParam = req.params.externalMatchId;
 
@@ -1061,8 +1082,8 @@ router.put("/:externalMatchId", async (req, res) => {
   }
 });
 
-// DELETE /api/matches/:externalMatchId - Delete match
-router.delete("/:externalMatchId", async (req, res) => {
+// DELETE /api/matches/:externalMatchId - Delete match (superAdmin only)
+router.delete("/:externalMatchId", authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const match = await Match.findOne({
       externalMatchId: req.params.externalMatchId,

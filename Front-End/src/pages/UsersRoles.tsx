@@ -7,18 +7,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
 import { Users, Plus, Edit2, Trash2, Save, Loader2, AlertTriangle } from "lucide-react";
 import { API_URL } from "@/components/MatchDashboard/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
+type League = "saudi" | "saudi-super-cup" | "spanish-super-cup";
+
 interface User {
   id: string;
   _id?: string;
   username: string;
   email: string;
-  role: "superAdmin" | "admin" | "employee";
+  role: "superAdmin" | "viewer" | "employee";
+  leagues?: League[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -43,8 +47,15 @@ export default function UsersRoles() {
   const [formOldPassword, setFormOldPassword] = useState("");
   const [formPassword, setFormPassword] = useState("");
   const [formConfirmPassword, setFormConfirmPassword] = useState("");
-  const [formRole, setFormRole] = useState<"superAdmin" | "admin" | "employee">("employee");
+  const [formRole, setFormRole] = useState<"superAdmin" | "viewer" | "employee">("employee");
+  const [formLeagues, setFormLeagues] = useState<League[]>([]);
   const [formError, setFormError] = useState("");
+
+  const availableLeagues: { value: League; label: string; icon: string }[] = [
+    { value: "saudi", label: "Saudi Pro League", icon: "/icons/Saudi_League.svg" },
+    { value: "saudi-super-cup", label: "Saudi Super Cup", icon: "/icons/Saudi_Cup.png" },
+    { value: "spanish-super-cup", label: "Spanish Super Cup", icon: "/icons/Spanish_Cup.svg" },
+  ];
 
   // Check if user is superAdmin
   useEffect(() => {
@@ -101,6 +112,7 @@ export default function UsersRoles() {
     setFormPassword("");
     setFormConfirmPassword("");
     setFormRole("employee");
+    setFormLeagues([]);
     setFormError("");
   };
 
@@ -133,6 +145,14 @@ export default function UsersRoles() {
       return;
     }
 
+    // Validate leagues for employees
+    if (formRole === "employee") {
+      if (formLeagues.length === 0) {
+        setFormError("Employees must have at least one league assigned.");
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const response = await fetch(`${API_URL}/users`, {
@@ -147,6 +167,7 @@ export default function UsersRoles() {
           password: formPassword,
           confirmPassword: formConfirmPassword,
           role: formRole,
+          leagues: formRole === "employee" ? formLeagues : [],
         }),
       });
 
@@ -196,6 +217,14 @@ export default function UsersRoles() {
       return;
     }
 
+    // Validate leagues for employees
+    if (formRole === "employee") {
+      if (formLeagues.length === 0) {
+        setFormError("Employees must have at least one league assigned.");
+        return;
+      }
+    }
+
     // If password is provided, require old password
     if (formPassword) {
       if (!formOldPassword) {
@@ -228,6 +257,7 @@ export default function UsersRoles() {
           password: formPassword || undefined,
           confirmPassword: formPassword ? formConfirmPassword : undefined,
           role: editingUser?.role === "superAdmin" ? "superAdmin" : formRole,
+          leagues: formRole === "employee" ? formLeagues : [],
         }),
       });
 
@@ -303,8 +333,18 @@ export default function UsersRoles() {
     setFormPassword("");
     setFormConfirmPassword("");
     setFormRole(user.role);
+    setFormLeagues(user.leagues || []);
     setFormError("");
     setIsEditUserOpen(true);
+  };
+
+  // Handle league toggle
+  const handleLeagueToggle = (league: League) => {
+    if (formLeagues.includes(league)) {
+      setFormLeagues(formLeagues.filter((l) => l !== league));
+    } else {
+      setFormLeagues([...formLeagues, league]);
+    }
   };
 
   // Open delete dialog
@@ -405,13 +445,18 @@ export default function UsersRoles() {
                     <Label htmlFor="add-role">Role</Label>
                     <Select
                       value={formRole}
-                      onValueChange={(value: "admin" | "employee") => setFormRole(value as "admin" | "employee")}
+                      onValueChange={(value: "viewer" | "employee") => {
+                        setFormRole(value as "viewer" | "employee");
+                        if (value !== "employee") {
+                          setFormLeagues([]);
+                        }
+                      }}
                       disabled={saving}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select role" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="viewer">Viewer</SelectItem>
                         <SelectItem value="employee">Employee</SelectItem>
                       </SelectContent>
                     </Select>
@@ -419,6 +464,38 @@ export default function UsersRoles() {
                       SuperAdmin role cannot be assigned to new users
                     </p>
                   </div>
+                  {formRole === "employee" && (
+                    <div className="space-y-2">
+                      <Label>Leagues (Select at least one)</Label>
+                      <div className="space-y-3 border rounded-md p-4">
+                        {availableLeagues.map((league) => (
+                          <div key={league.value} className="flex items-center space-x-3">
+                            <Checkbox
+                              id={`add-league-${league.value}`}
+                              checked={formLeagues.includes(league.value)}
+                              onCheckedChange={() => handleLeagueToggle(league.value)}
+                              disabled={saving}
+                            />
+                            <label
+                              htmlFor={`add-league-${league.value}`}
+                              className="flex items-center gap-2 cursor-pointer flex-1">
+                              <img
+                                src={league.icon}
+                                alt={league.label}
+                                className="h-5 w-5 object-contain"
+                              />
+                              <span className="text-sm font-medium">{league.label}</span>
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      {formLeagues.length === 0 && (
+                        <p className="text-xs text-destructive">
+                          At least one league must be selected for employees
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => { setIsAddUserOpen(false); resetForm(); }} disabled={saving}>
@@ -466,6 +543,7 @@ export default function UsersRoles() {
                     <TableHead>Username</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Leagues</TableHead>
                     <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -479,12 +557,35 @@ export default function UsersRoles() {
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                           user.role === "superAdmin"
                             ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                            : user.role === "admin"
+                            : user.role === "viewer"
                             ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                             : "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400"
                         }`}>
-                          {user.role === "superAdmin" ? "Super Admin" : user.role === "admin" ? "Admin" : "Employee"}
+                          {user.role === "superAdmin" ? "Super Admin" : user.role === "viewer" ? "Viewer" : "Employee"}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        {user.role === "employee" && user.leagues && user.leagues.length > 0 ? (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {user.leagues.map((league) => {
+                              const leagueInfo = availableLeagues.find((l) => l.value === league);
+                              return leagueInfo ? (
+                                <div key={league} className="flex items-center gap-1">
+                                  <img
+                                    src={leagueInfo.icon}
+                                    alt={leagueInfo.label}
+                                    className="h-4 w-4 object-contain"
+                                  />
+                                  <span className="text-xs text-muted-foreground">
+                                    {leagueInfo.label}
+                                  </span>
+                                </div>
+                              ) : null;
+                            })}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {user.createdAt
@@ -597,14 +698,18 @@ export default function UsersRoles() {
               <Label htmlFor="edit-role">Role</Label>
               <Select
                 value={formRole}
-                onValueChange={(value: "superAdmin" | "admin" | "employee") => setFormRole(value)}
+                onValueChange={(value: "viewer" | "employee") => {
+                  setFormRole(value as "viewer" | "employee");
+                  if (value !== "employee") {
+                    setFormLeagues([]);
+                  }
+                }}
                 disabled={saving || editingUser?.role === "superAdmin"}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="superAdmin">Super Admin</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="viewer">Viewer</SelectItem>
                   <SelectItem value="employee">Employee</SelectItem>
                 </SelectContent>
               </Select>
@@ -613,7 +718,44 @@ export default function UsersRoles() {
                   SuperAdmin role cannot be changed
                 </p>
               )}
+              {editingUser?.role !== "superAdmin" && (
+                <p className="text-xs text-muted-foreground">
+                  SuperAdmin role cannot be assigned
+                </p>
+              )}
             </div>
+            {formRole === "employee" && (
+              <div className="space-y-2">
+                <Label>Leagues (Select at least one)</Label>
+                <div className="space-y-3 border rounded-md p-4">
+                  {availableLeagues.map((league) => (
+                    <div key={league.value} className="flex items-center space-x-3">
+                      <Checkbox
+                        id={`edit-league-${league.value}`}
+                        checked={formLeagues.includes(league.value)}
+                        onCheckedChange={() => handleLeagueToggle(league.value)}
+                        disabled={saving}
+                      />
+                      <label
+                        htmlFor={`edit-league-${league.value}`}
+                        className="flex items-center gap-2 cursor-pointer flex-1">
+                        <img
+                          src={league.icon}
+                          alt={league.label}
+                          className="h-5 w-5 object-contain"
+                        />
+                        <span className="text-sm font-medium">{league.label}</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                {formLeagues.length === 0 && (
+                  <p className="text-xs text-destructive">
+                    At least one league must be selected for employees
+                  </p>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setIsEditUserOpen(false); resetForm(); setEditingUser(null); }} disabled={saving}>

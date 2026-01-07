@@ -2,8 +2,32 @@ import express from "express";
 import Violation from "../models/Violation.js";
 import Match from "../models/Match.js";
 import DeletedViolationLog from "../models/DeletedViolationLog.js";
-import { optionalAuth } from "../middleware/auth.js";
+import User from "../models/User.js";
+import { optionalAuth, authenticateToken } from "../middleware/auth.js";
 import { logViolationChange } from "../utils/violationLogger.js";
+
+// Middleware to check if user is superAdmin or employee (not viewer)
+const requireSuperAdminOrEmployee = async (req, res, next) => {
+  try {
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    const user = await User.findById(req.user.userId).select("-password");
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    if (user.role === "viewer") {
+      return res.status(403).json({ error: "Access denied. Viewers cannot modify violations." });
+    }
+    // Allow superAdmin and employee
+    if (user.role !== "superAdmin" && user.role !== "employee") {
+      return res.status(403).json({ error: "Access denied." });
+    }
+    next();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
 const router = express.Router();
 
@@ -199,8 +223,27 @@ router.get("/deleted-logs/:externalMatchId", async (req, res) => {
   }
 });
 
-// DELETE /api/violations/deleted-logs/:logId - Delete a deleted violation log entry
-router.delete("/deleted-logs/:logId", async (req, res) => {
+// Middleware to check if user is superAdmin
+const requireSuperAdmin = async (req, res, next) => {
+  try {
+    if (!req.user || !req.user.userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+    const user = await User.findById(req.user.userId).select("-password");
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    if (user.role !== "superAdmin") {
+      return res.status(403).json({ error: "Access denied. SuperAdmin only." });
+    }
+    next();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// DELETE /api/violations/deleted-logs/:logId - Delete a deleted violation log entry (superAdmin only)
+router.delete("/deleted-logs/:logId", authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { logId } = req.params;
 
@@ -219,8 +262,8 @@ router.delete("/deleted-logs/:logId", async (req, res) => {
   }
 });
 
-// DELETE /api/violations/:violationId/audit-log/:logEntryId - Delete an audit log entry from a violation
-router.delete("/:violationId/audit-log/:logEntryId", async (req, res) => {
+// DELETE /api/violations/:violationId/audit-log/:logEntryId - Delete an audit log entry from a violation (superAdmin only)
+router.delete("/:violationId/audit-log/:logEntryId", authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const { violationId, logEntryId } = req.params;
 
@@ -442,8 +485,8 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// POST /api/violations - Create new violation
-router.post("/", async (req, res) => {
+// POST /api/violations - Create new violation (superAdmin and employee only)
+router.post("/", authenticateToken, requireSuperAdminOrEmployee, async (req, res) => {
   try {
     const {
       matchId,
@@ -576,8 +619,8 @@ router.post("/", async (req, res) => {
   }
 });
 
-// PUT /api/violations/:id - Update violation
-router.put("/:id", async (req, res) => {
+// PUT /api/violations/:id - Update violation (superAdmin and employee only)
+router.put("/:id", authenticateToken, requireSuperAdminOrEmployee, async (req, res) => {
   try {
     const {
       matchName,
@@ -981,8 +1024,8 @@ router.put("/:id", async (req, res) => {
   }
 });
 
-// PATCH /api/violations/:id/status - Update violation status only
-router.patch("/:id/status", async (req, res) => {
+// PATCH /api/violations/:id/status - Update violation status only (superAdmin and employee only)
+router.patch("/:id/status", authenticateToken, requireSuperAdminOrEmployee, async (req, res) => {
   try {
     const { status, blockedAt } = req.body;
 
@@ -1079,8 +1122,8 @@ router.patch("/:id/status", async (req, res) => {
   }
 });
 
-// DELETE /api/violations/:id - Delete violation
-router.delete("/:id", async (req, res) => {
+// DELETE /api/violations/:id - Delete violation (superAdmin and employee only)
+router.delete("/:id", authenticateToken, requireSuperAdminOrEmployee, async (req, res) => {
   try {
     const violation = await Violation.findById(req.params.id);
 

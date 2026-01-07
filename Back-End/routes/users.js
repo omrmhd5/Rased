@@ -33,7 +33,7 @@ router.get("/", authenticateToken, requireSuperAdmin, async (req, res) => {
 // POST /api/users - Create new user (superAdmin only)
 router.post("/", authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { username, email, password, confirmPassword, role } = req.body;
+    const { username, email, password, confirmPassword, role, leagues } = req.body;
 
     // Validation
     if (!username || !email || !password || !confirmPassword || !role) {
@@ -55,9 +55,32 @@ router.post("/", authenticateToken, requireSuperAdmin, async (req, res) => {
       });
     }
 
-    if (!["admin", "employee"].includes(role)) {
+    if (!["viewer", "employee"].includes(role)) {
       return res.status(400).json({
-        error: "Invalid role. Must be one of: admin, employee. SuperAdmin role cannot be assigned to new users.",
+        error: "Invalid role. Must be one of: viewer, employee. SuperAdmin role cannot be assigned to new users.",
+      });
+    }
+
+    // Validate leagues for employees
+    const validLeagues = ["saudi", "saudi-super-cup", "spanish-super-cup"];
+    if (role === "employee") {
+      if (!leagues || !Array.isArray(leagues) || leagues.length === 0) {
+        return res.status(400).json({
+          error: "Employees must have at least one league assigned",
+        });
+      }
+      // Validate each league
+      const invalidLeagues = leagues.filter(
+        (league) => !validLeagues.includes(league)
+      );
+      if (invalidLeagues.length > 0) {
+        return res.status(400).json({
+          error: `Invalid leagues: ${invalidLeagues.join(", ")}. Valid leagues are: ${validLeagues.join(", ")}`,
+        });
+      }
+    } else if (leagues && Array.isArray(leagues) && leagues.length > 0) {
+      return res.status(400).json({
+        error: "Leagues can only be assigned to employees",
       });
     }
 
@@ -81,6 +104,7 @@ router.post("/", authenticateToken, requireSuperAdmin, async (req, res) => {
       email,
       password, // Will be hashed by pre-save hook
       role,
+      leagues: role === "employee" ? leagues : [],
     });
 
     await user.save();
@@ -93,6 +117,7 @@ router.post("/", authenticateToken, requireSuperAdmin, async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        leagues: user.leagues || [],
         createdAt: user.createdAt,
       },
     });
@@ -114,7 +139,7 @@ router.post("/", authenticateToken, requireSuperAdmin, async (req, res) => {
 // PUT /api/users/:id - Update user (superAdmin only)
 router.put("/:id", authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { username, email, password, confirmPassword, role } = req.body;
+    const { username, email, password, confirmPassword, role, leagues } = req.body;
     const userId = req.params.id;
 
     // Validation
@@ -124,9 +149,32 @@ router.put("/:id", authenticateToken, requireSuperAdmin, async (req, res) => {
       });
     }
 
-    if (!["superAdmin", "admin", "employee"].includes(role)) {
+    if (!["superAdmin", "viewer", "employee"].includes(role)) {
       return res.status(400).json({
-        error: "Invalid role. Must be one of: superAdmin, admin, employee",
+        error: "Invalid role. Must be one of: superAdmin, viewer, employee",
+      });
+    }
+
+    // Validate leagues for employees
+    const validLeagues = ["saudi", "saudi-super-cup", "spanish-super-cup"];
+    if (role === "employee") {
+      if (!leagues || !Array.isArray(leagues) || leagues.length === 0) {
+        return res.status(400).json({
+          error: "Employees must have at least one league assigned",
+        });
+      }
+      // Validate each league
+      const invalidLeagues = leagues.filter(
+        (league) => !validLeagues.includes(league)
+      );
+      if (invalidLeagues.length > 0) {
+        return res.status(400).json({
+          error: `Invalid leagues: ${invalidLeagues.join(", ")}. Valid leagues are: ${validLeagues.join(", ")}`,
+        });
+      }
+    } else if (leagues && Array.isArray(leagues) && leagues.length > 0) {
+      return res.status(400).json({
+        error: "Leagues can only be assigned to employees",
       });
     }
 
@@ -197,6 +245,12 @@ router.put("/:id", authenticateToken, requireSuperAdmin, async (req, res) => {
     if (user.role !== "superAdmin") {
       user.role = role;
     }
+    // Update leagues based on role
+    if (role === "employee") {
+      user.leagues = leagues;
+    } else {
+      user.leagues = [];
+    }
     if (password) {
       user.password = password; // Will be hashed by pre-save hook
     }
@@ -211,6 +265,7 @@ router.put("/:id", authenticateToken, requireSuperAdmin, async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        leagues: user.leagues || [],
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
       },

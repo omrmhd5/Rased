@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +19,7 @@ import {
   Filter,
 } from "lucide-react";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
+import { useAuth } from "@/contexts/AuthContext";
 
 type League = "saudi" | "saudi-super-cup" | "spanish-super-cup" | null;
 type WeekFilterType = "all" | "single" | "range";
@@ -40,9 +41,28 @@ interface ProblematicAccount {
   latestViolation: string;
 }
 
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
 export default function ProblematicAccounts() {
   const navigate = useNavigate();
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+  const { user } = useAuth();
+
+  // Get available leagues based on user role (memoized to prevent infinite loops)
+  const availableLeagues = useMemo((): League[] => {
+    if (!user) return [];
+
+    // SuperAdmin and Viewer can access all leagues
+    if (user.role === "superAdmin" || user.role === "viewer") {
+      return ["saudi", "saudi-super-cup", "spanish-super-cup"];
+    }
+
+    // Employees can only access their assigned leagues
+    if (user.role === "employee" && user.leagues) {
+      return user.leagues;
+    }
+
+    return [];
+  }, [user]);
 
   // Filters
   const [league, setLeague] = useState<League>(null);
@@ -120,66 +140,123 @@ export default function ProblematicAccounts() {
     };
 
     fetchThresholds();
-  }, [API_URL]);
+  }, []);
 
   // Fetch problematic accounts
   useEffect(() => {
     const fetchProblematicAccounts = async () => {
       setLoading(true);
       try {
-        const isSuperCup =
-          league === "saudi-super-cup" || league === "spanish-super-cup";
-        const params = new URLSearchParams();
-        if (league) params.append("league", league);
-        if (selectedPlatform && selectedPlatform !== "all") {
-          params.append("platformId", selectedPlatform);
+        // For employees, when "All Leagues" is selected, fetch from all their assigned leagues
+        const leaguesToFetch: League[] = [];
+        if (league) {
+          // Single league selected
+          leaguesToFetch.push(league);
+        } else if (user?.role === "employee" && availableLeagues.length > 0) {
+          // "All Leagues" selected for employee - use all their assigned leagues
+          leaguesToFetch.push(...availableLeagues);
+        } else if (user?.role === "superAdmin" || user?.role === "viewer") {
+          // "All Leagues" selected for superAdmin/viewer - fetch all leagues
+          leaguesToFetch.push("saudi", "saudi-super-cup", "spanish-super-cup");
         }
 
-        if (isSuperCup) {
-          // Use stage filtering for Super Cups
-          if (stageFilterType !== "all") {
-            params.append("stageFilter", stageFilterType);
-            if (stageFilterType === "single") {
-              params.append("stage", singleStage);
-            } else if (stageFilterType === "range") {
-              params.append("stageStart", stageRangeStart);
-              params.append("stageEnd", stageRangeEnd);
-            }
-          }
-        } else {
-          // Use week filtering for regular leagues
-          if (weekFilterType !== "all") {
-            params.append("weekFilter", weekFilterType);
-            if (weekFilterType === "single") {
-              params.append("week", singleWeek);
-            } else if (weekFilterType === "range") {
-              params.append("weekStart", weekRangeStart);
-              params.append("weekEnd", weekRangeEnd);
-            }
-          }
+        // If no leagues to fetch, return empty array
+        if (leaguesToFetch.length === 0) {
+          setAccounts([]);
+          setLoading(false);
+          return;
         }
-        params.append("limit", "100");
 
-        const response = await fetch(
-          `${API_URL}/violations/problematic-accounts?${params.toString()}`,
-          {
-            credentials: "include",
+        // Fetch accounts for each league and combine results
+        const allAccounts: ProblematicAccount[] = [];
+        const accountMap = new Map<string, ProblematicAccount>();
+
+        for (const leagueToFetch of leaguesToFetch) {
+          const isSuperCup =
+            leagueToFetch === "saudi-super-cup" ||
+            leagueToFetch === "spanish-super-cup";
+          const params = new URLSearchParams();
+          params.append("league", leagueToFetch);
+          if (selectedPlatform && selectedPlatform !== "all") {
+            params.append("platformId", selectedPlatform);
           }
-        );
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(
-            errorData.error ||
-              `Failed to fetch problematic accounts: ${response.status}`
+          if (isSuperCup) {
+            // Use stage filtering for Super Cups
+            if (stageFilterType !== "all") {
+              params.append("stageFilter", stageFilterType);
+              if (stageFilterType === "single") {
+                params.append("stage", singleStage);
+              } else if (stageFilterType === "range") {
+                params.append("stageStart", stageRangeStart);
+                params.append("stageEnd", stageRangeEnd);
+              }
+            }
+          } else {
+            // Use week filtering for regular leagues
+            if (weekFilterType !== "all") {
+              params.append("weekFilter", weekFilterType);
+              if (weekFilterType === "single") {
+                params.append("week", singleWeek);
+              } else if (weekFilterType === "range") {
+                params.append("weekStart", weekRangeStart);
+                params.append("weekEnd", weekRangeEnd);
+              }
+            }
+          }
+          params.append("limit", "100");
+
+          const response = await fetch(
+            `${API_URL}/violations/problematic-accounts?${params.toString()}`,
+            {
+              credentials: "include",
+            }
           );
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(
+              errorData.error ||
+                `Failed to fetch problematic accounts: ${response.status}`
+            );
+          }
+
+          const data = await response.json();
+
+          // Combine accounts by accountChannel + platformId
+          // If same account appears in multiple leagues, aggregate the stats
+          (data || []).forEach((account: ProblematicAccount) => {
+            const key = `${account.accountChannel}-${account.platformId}`;
+            const existing = accountMap.get(key);
+
+            if (existing) {
+              // Aggregate stats for the same account across leagues
+              existing.totalViolations += account.totalViolations;
+              existing.totalViews += account.totalViews;
+              existing.activeCount += account.activeCount;
+              existing.blockedCount += account.blockedCount;
+              existing.removedCount += account.removedCount;
+              existing.underReviewCount += account.underReviewCount;
+              existing.liveCount += account.liveCount;
+              existing.highlightsCount += account.highlightsCount;
+              existing.othersCount += account.othersCount;
+              existing.matchesAffected += account.matchesAffected;
+              // Keep the latest violation date
+              if (account.latestViolation > existing.latestViolation) {
+                existing.latestViolation = account.latestViolation;
+              }
+            } else {
+              accountMap.set(key, { ...account });
+            }
+          });
         }
 
-        const data = await response.json();
+        // Convert map to array
+        const combinedAccounts = Array.from(accountMap.values());
 
         // Filter accounts based on thresholds
         // An account is problematic if it has views >= viewsThreshold OR violations >= violationsThreshold
-        const filteredData = (data || []).filter(
+        const filteredData = combinedAccounts.filter(
           (account: ProblematicAccount) => {
             return (
               account.totalViews >= viewsThreshold ||
@@ -213,7 +290,8 @@ export default function ProblematicAccounts() {
     viewsThreshold,
     violationsThreshold,
     loadingThresholds,
-    API_URL,
+    user?.role,
+    availableLeagues,
   ]);
 
   // Sort accounts
@@ -246,6 +324,27 @@ export default function ProblematicAccounts() {
     }
   };
 
+  // Helper to get league name
+  const getLeagueName = (league: League): string => {
+    switch (league) {
+      case "saudi":
+        return "Saudi Pro League";
+      case "saudi-super-cup":
+        return "Saudi Super Cup";
+      case "spanish-super-cup":
+        return "Spanish Super Cup";
+      default:
+        return "";
+    }
+  };
+
+  // Auto-select first available league for employees if they have only one league
+  useEffect(() => {
+    if (user?.role === "employee" && availableLeagues.length === 1 && !league) {
+      setLeague(availableLeagues[0]);
+    }
+  }, [user, availableLeagues, league]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -274,50 +373,75 @@ export default function ProblematicAccounts() {
           </div>
 
           {/* League Filter */}
-          <Select
-            value={league || "all"}
-            onValueChange={(value) =>
-              setLeague(value === "all" ? null : (value as League))
-            }>
-            <SelectTrigger className="w-[180px]">
-              <div className="flex items-center gap-2">
-                <SelectValue placeholder="League" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Leagues</SelectItem>
-              <SelectItem value="saudi">
+          {availableLeagues.length === 0 ? (
+            <div className="text-sm text-muted-foreground">
+              No leagues available
+            </div>
+          ) : (
+            <Select
+              value={
+                league ||
+                (availableLeagues.length === 1 ? availableLeagues[0] : "all")
+              }
+              onValueChange={(value) => {
+                if (value === "all") {
+                  // Only allow "all" if user has access to multiple leagues
+                  if (availableLeagues.length > 1) {
+                    setLeague(null);
+                  }
+                } else {
+                  setLeague(value as League);
+                }
+              }}>
+              <SelectTrigger className="w-[180px]">
                 <div className="flex items-center gap-2">
-                  <img
-                    src="/icons/Saudi_League.svg"
-                    alt="Saudi Pro League"
-                    className="h-6 w-6 object-contain flex-shrink-0"
-                  />
-                  <span>Saudi Pro League</span>
+                  <SelectValue placeholder="League" />
                 </div>
-              </SelectItem>
-              <SelectItem value="saudi-super-cup">
-                <div className="flex items-center gap-2">
-                  <img
-                    src="/icons/Saudi_Cup.png"
-                    alt="Saudi Super Cup"
-                    className="h-6 w-6 object-contain flex-shrink-0 rounded"
-                  />
-                  <span>Saudi Super Cup</span>
-                </div>
-              </SelectItem>
-              <SelectItem value="spanish-super-cup">
-                <div className="flex items-center gap-2">
-                  <img
-                    src="/icons/Spanish_Cup.svg"
-                    alt="Spanish Super Cup"
-                    className="h-6 w-6 object-contain flex-shrink-0"
-                  />
-                  <span>Spanish Super Cup</span>
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+              </SelectTrigger>
+              <SelectContent>
+                {/* Show "All Leagues" only if user has access to multiple leagues */}
+                {availableLeagues.length > 1 && (
+                  <SelectItem value="all">All Leagues</SelectItem>
+                )}
+                {availableLeagues.includes("saudi") && (
+                  <SelectItem value="saudi">
+                    <div className="flex items-center gap-2">
+                      <img
+                        src="/icons/Saudi_League.svg"
+                        alt="Saudi Pro League"
+                        className="h-6 w-6 object-contain flex-shrink-0"
+                      />
+                      <span>Saudi Pro League</span>
+                    </div>
+                  </SelectItem>
+                )}
+                {availableLeagues.includes("saudi-super-cup") && (
+                  <SelectItem value="saudi-super-cup">
+                    <div className="flex items-center gap-2">
+                      <img
+                        src="/icons/Saudi_Cup.png"
+                        alt="Saudi Super Cup"
+                        className="h-6 w-6 object-contain flex-shrink-0 rounded"
+                      />
+                      <span>Saudi Super Cup</span>
+                    </div>
+                  </SelectItem>
+                )}
+                {availableLeagues.includes("spanish-super-cup") && (
+                  <SelectItem value="spanish-super-cup">
+                    <div className="flex items-center gap-2">
+                      <img
+                        src="/icons/Spanish_Cup.svg"
+                        alt="Spanish Super Cup"
+                        className="h-6 w-6 object-contain flex-shrink-0"
+                      />
+                      <span>Spanish Super Cup</span>
+                    </div>
+                  </SelectItem>
+                )}
+              </SelectContent>
+            </Select>
+          )}
 
           {/* Platform Filter */}
           <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>

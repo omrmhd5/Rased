@@ -53,6 +53,7 @@ interface ViolationItemProps {
   onCopyUrl: (url: string) => void;
   onAddNote: (platformId: string, violation: Violation) => void;
   getPlatformIcon: (platformName: string) => React.ReactNode;
+  canModifyViolations?: boolean; // Whether user can modify violations
 }
 
 const getStatusIcon = (status: string) => {
@@ -80,6 +81,7 @@ export function ViolationItem({
   onCopyUrl,
   onAddNote,
   getPlatformIcon,
+  canModifyViolations = true,
 }: ViolationItemProps) {
   // Force re-render every minute to update time displays
   const [, setRefresh] = useState(0);
@@ -144,57 +146,61 @@ export function ViolationItem({
             <TooltipContent>Copy link</TooltipContent>
           </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => onEdit(platform.id, violation)}>
-                <Edit className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Edit</TooltipContent>
-          </Tooltip>
+          {canModifyViolations && (
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => onEdit(platform.id, violation)}>
+                    <Edit className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Edit</TooltipContent>
+              </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => onToggleStatus(platform.id, violation.id)}>
-                <Lock className="h-3.5 w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {violation.status === "Blocked" || violation.status === "Removed"
-                ? "Set to Active"
-                : "Mark as blocked"}
-            </TooltipContent>
-          </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    onClick={() => onToggleStatus(platform.id, violation.id)}>
+                    <Lock className="h-3.5 w-3.5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {violation.status === "Blocked" || violation.status === "Removed"
+                    ? "Set to Active"
+                    : "Mark as blocked"}
+                </TooltipContent>
+              </Tooltip>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <MoreHorizontal className="h-3.5 w-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                onClick={() => onAddNote(platform.id, violation)}>
-                <FileEdit className="mr-2 h-4 w-4" />
-                Add note
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                className="text-destructive"
-                onClick={() => onDelete(platform.id, violation.id)}>
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-7 w-7">
+                    <MoreHorizontal className="h-3.5 w-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() => onAddNote(platform.id, violation)}>
+                    <FileEdit className="mr-2 h-4 w-4" />
+                    Add note
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive"
+                    onClick={() => onDelete(platform.id, violation.id)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
         </div>
       </div>
 

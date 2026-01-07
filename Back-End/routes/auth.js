@@ -52,6 +52,7 @@ router.post("/login", async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        leagues: user.leagues || [],
       },
     });
   } catch (error) {
@@ -78,6 +79,7 @@ router.get("/verify", authenticateToken, async (req, res) => {
         username: user.username,
         email: user.email,
         role: user.role,
+        leagues: user.leagues || [],
       },
     });
   } catch (error) {
