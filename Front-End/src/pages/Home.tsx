@@ -104,11 +104,11 @@ export default function Home() {
       <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center p-4 sm:p-6">
         <div className="w-full max-w-2xl space-y-6">
           {/* Welcome Header */}
-          <div className="text-center space-y-3">
-            <h1 className="text-4xl sm:text-5xl font-bold">
+          <div className="text-center space-y-2 sm:space-y-3 px-2 sm:px-0">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold break-words">
               Hey {user?.username || "User"} 👋
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-base sm:text-lg text-muted-foreground px-2 sm:px-0">
               Ready to monitor and manage your matches? Let's get started!
             </p>
           </div>
@@ -117,59 +117,59 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* View Matches */}
             <Card
-              className="p-6 hover:shadow-md transition-shadow cursor-pointer"
+              className="p-4 sm:p-6 hover:shadow-md transition-shadow cursor-pointer touch-manipulation active:scale-[0.98]"
               onClick={() => navigate("/matches")}>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-primary" />
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">View Matches</h3>
-                  <p className="text-sm text-muted-foreground">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-base sm:text-lg truncate">View Matches</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
                     Browse and manage all matches
                   </p>
                 </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
               </div>
             </Card>
 
             {/* View Dashboard */}
             <Card
-              className="p-6 hover:shadow-md transition-shadow cursor-pointer"
+              className="p-4 sm:p-6 hover:shadow-md transition-shadow cursor-pointer touch-manipulation active:scale-[0.98]"
               onClick={() => navigate("/dashboard")}>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <BarChart3 className="h-6 w-6 text-primary" />
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg">View Dashboard</h3>
-                  <p className="text-sm text-muted-foreground">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-base sm:text-lg truncate">View Dashboard</h3>
+                  <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
                     View analytics and insights
                   </p>
                 </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground flex-shrink-0" />
               </div>
             </Card>
           </div>
 
           {/* Quick Actions */}
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center px-2 sm:px-0">
             <Button
               size="lg"
               onClick={() => setIsLeagueDialogOpen(true)}
-              className="w-full sm:w-48 flex flex-col items-center gap-1 h-auto py-3">
+              className="w-full sm:w-48 flex flex-col items-center gap-1 h-auto py-3 sm:py-2.5 text-sm sm:text-base touch-manipulation">
               <div className="flex items-center">
                 {selectedLeague && (
                   <img
                     src={getLeagueIcon(selectedLeague)}
                     alt={getLeagueName(selectedLeague)}
-                    className="mr-2 h-4 w-4 object-contain"
+                    className="mr-2 h-4 w-4 sm:h-5 sm:w-5 object-contain"
                   />
                 )}
                 Change League
               </div>
               {selectedLeague && (
-                <span className="text-xs opacity-80">
+                <span className="text-xs sm:text-sm opacity-80 truncate max-w-full px-2">
                   {getLeagueName(selectedLeague)}
                 </span>
               )}
@@ -179,8 +179,8 @@ export default function Home() {
                 size="lg"
                 variant="outline"
                 onClick={() => navigate("/settings")}
-                className="w-full sm:w-48 h-auto py-3 border-2">
-                <Settings className="mr-2 h-4 w-4" />
+                className="w-full sm:w-48 h-auto py-3 sm:py-2.5 border-2 text-sm sm:text-base touch-manipulation">
+                <Settings className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
                 Settings
               </Button>
             )}
@@ -197,22 +197,22 @@ export default function Home() {
             setIsLeagueDialogOpen(open);
           }
         }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-2xl text-center">
+        <DialogContent className="w-[95vw] max-w-md mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="px-1 sm:px-0">
+            <DialogTitle className="text-xl sm:text-2xl text-center">
               Select League
             </DialogTitle>
-            <DialogDescription className="text-center">
+            <DialogDescription className="text-center text-sm sm:text-base">
               Choose a league to view matches
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3 py-4">
+          <div className="space-y-2 sm:space-y-3 py-2 sm:py-4 px-1 sm:px-0">
             {(() => {
               const availableLeagues = getAvailableLeagues();
               if (availableLeagues.length === 0) {
                 return (
-                  <div className="text-center py-4 text-muted-foreground">
-                    <p>No leagues available. Please contact an administrator.</p>
+                  <div className="text-center py-4 sm:py-6 text-muted-foreground px-2">
+                    <p className="text-sm sm:text-base">No leagues available. Please contact an administrator.</p>
                   </div>
                 );
               }
@@ -221,19 +221,17 @@ export default function Home() {
                   {availableLeagues.includes("saudi") && (
                   <Button
                     variant="outline"
-                    className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
+                    className="w-full h-auto p-4 sm:p-6 flex items-center gap-3 hover:bg-accent transition-colors touch-manipulation min-h-[64px] sm:min-h-[80px]"
                     onClick={() => handleLeagueSelect("saudi")}>
-                    <div className="flex items-center gap-3 w-full">
-                      <img
-                        src="/icons/Saudi_League.svg"
-                        alt="Saudi Pro League"
-                        className="h-8 w-8 object-contain flex-shrink-0"
-                      />
-                      <div className="flex-1 text-left">
-                        <div className="font-semibold text-lg">Saudi Pro League</div>
-                        <div className="text-sm text-muted-foreground">
-                          Saudi Arabia
-                        </div>
+                    <img
+                      src="/icons/Saudi_League.svg"
+                      alt="Saudi Pro League"
+                      className="h-7 w-7 sm:h-8 sm:w-8 object-contain flex-shrink-0"
+                    />
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="font-semibold text-base sm:text-lg truncate">Saudi Pro League</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground truncate">
+                        Saudi Arabia
                       </div>
                     </div>
                   </Button>
@@ -242,19 +240,17 @@ export default function Home() {
                   {availableLeagues.includes("saudi-super-cup") && (
                   <Button
                     variant="outline"
-                    className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
+                    className="w-full h-auto p-4 sm:p-6 flex items-center gap-3 hover:bg-accent transition-colors touch-manipulation min-h-[64px] sm:min-h-[80px]"
                     onClick={() => handleLeagueSelect("saudi-super-cup")}>
-                    <div className="flex items-center gap-3 w-full">
-                      <img
-                        src="/icons/Saudi_Cup.png"
-                        alt="Saudi Super Cup"
-                        className="h-12 object-contain flex-shrink-0 rounded"
-                      />
-                      <div className="flex-1 text-left">
-                        <div className="font-semibold text-lg">Saudi Super Cup</div>
-                        <div className="text-sm text-muted-foreground">
-                          بطولة كاس السوبر السعودي
-                        </div>
+                    <img
+                      src="/icons/Saudi_Cup.png"
+                      alt="Saudi Super Cup"
+                      className="h-10 w-10 sm:h-12 sm:w-12 object-contain flex-shrink-0 rounded"
+                    />
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="font-semibold text-base sm:text-lg truncate">Saudi Super Cup</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground truncate">
+                        بطولة كاس السوبر السعودي
                       </div>
                     </div>
                   </Button>
@@ -263,19 +259,17 @@ export default function Home() {
                 {availableLeagues.includes("spanish-super-cup") && (
                   <Button
                     variant="outline"
-                    className="w-full h-auto p-6 flex flex-col items-start gap-3 hover:bg-accent transition-colors"
+                    className="w-full h-auto p-4 sm:p-6 flex items-center gap-3 hover:bg-accent transition-colors touch-manipulation min-h-[64px] sm:min-h-[80px]"
                     onClick={() => handleLeagueSelect("spanish-super-cup")}>
-                    <div className="flex items-center gap-3 w-full">
-                      <img
-                        src="/icons/Spanish_Cup.svg"
-                        alt="Spanish Super Cup"
-                        className="h-8 w-8 object-contain flex-shrink-0"
-                      />
-                      <div className="flex-1 text-left">
-                        <div className="font-semibold text-lg">Spanish Super Cup</div>
-                        <div className="text-sm text-muted-foreground">
-                          السوبر الاسباني
-                        </div>
+                    <img
+                      src="/icons/Spanish_Cup.svg"
+                      alt="Spanish Super Cup"
+                      className="h-7 w-7 sm:h-8 sm:w-8 object-contain flex-shrink-0"
+                    />
+                    <div className="flex-1 text-left min-w-0">
+                      <div className="font-semibold text-base sm:text-lg truncate">Spanish Super Cup</div>
+                      <div className="text-xs sm:text-sm text-muted-foreground truncate">
+                        السوبر الاسباني
                       </div>
                     </div>
                   </Button>
