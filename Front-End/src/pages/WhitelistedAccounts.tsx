@@ -263,9 +263,14 @@ export default function WhitelistedAccounts() {
       const violationsArrays = await Promise.all(violationPromises);
       const allViolations = violationsArrays.flat();
 
+      // Deduplicate violations by _id to prevent duplicates from manual leagues or overlapping queries
+      const uniqueViolations = Array.from(
+        new Map(allViolations.map((v: Violation) => [v._id, v])).values()
+      );
+
       setAccountViolations((prev) => ({
         ...prev,
-        [key]: allViolations,
+        [key]: uniqueViolations,
       }));
     } catch (error) {
       console.error(

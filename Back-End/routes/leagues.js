@@ -101,18 +101,7 @@ router.get("/:slug", async (req, res) => {
 // POST /api/leagues - Create new league (superAdmin only)
 router.post("/", authenticateToken, requireSuperAdmin, upload.single("icon"), async (req, res) => {
   try {
-    const { slug, apiUrl, referer, arabicName } = req.body;
-
-    // Validate required fields
-    if (!slug || !apiUrl || !referer) {
-      // Delete uploaded file if validation fails
-      if (req.file) {
-        fs.unlinkSync(req.file.path);
-      }
-      return res.status(400).json({
-        error: "slug, apiUrl, and referer are required",
-      });
-    }
+    const { slug, apiUrl, referer, arabicName, isManual, name } = req.body;
 
     // Check if league with this slug already exists
     const existingLeague = await Competition.findOne({ league: slug });
@@ -123,6 +112,63 @@ router.post("/", authenticateToken, requireSuperAdmin, upload.single("icon"), as
       }
       return res.status(400).json({
         error: `League with slug "${slug}" already exists`,
+      });
+    }
+
+    // Handle manual league creation
+    if (isManual === "true" || isManual === true) {
+      // Validate required fields for manual league
+      if (!slug || !name) {
+        // Delete uploaded file if validation fails
+        if (req.file) {
+          fs.unlinkSync(req.file.path);
+        }
+        return res.status(400).json({
+          error: "slug and name are required for manual leagues",
+        });
+      }
+
+      // Generate ObjectId for manual league
+      const mongoose = (await import("mongoose")).default;
+      const leagueId = new mongoose.Types.ObjectId();
+
+      // Get icon URL if file was uploaded
+      let iconUrl = "";
+      if (req.file) {
+        iconUrl = `/uploads/icons/${req.file.filename}`;
+      }
+
+      // Create manual league with externalId same as _id
+      // Note: apiUrl and referer are required by schema, so we use placeholder values for manual leagues
+      const competition = new Competition({
+        _id: leagueId,
+        externalId: leagueId.toString(), // externalId should be the same as _id
+        name: name.trim(),
+        arabicName: arabicName ? arabicName.trim() : "",
+        league: slug.trim(),
+        competitionCode: "manual", // Always "manual" for manual leagues
+        apiUrl: "manual", // Placeholder value for manual leagues (required by schema)
+        referer: "manual", // Placeholder value for manual leagues (required by schema)
+        knownName: null, // null for manual leagues
+        competitionFormat: null, // null for manual leagues
+        country: null, // null for manual leagues
+        iconUrl,
+        isHidden: false, // Always false for manual leagues
+      });
+
+      const savedCompetition = await competition.save();
+      return res.status(201).json(savedCompetition);
+    }
+
+    // Handle regular league creation (from API)
+    // Validate required fields
+    if (!slug || !apiUrl || !referer) {
+      // Delete uploaded file if validation fails
+      if (req.file) {
+        fs.unlinkSync(req.file.path);
+      }
+      return res.status(400).json({
+        error: "slug, apiUrl, and referer are required",
       });
     }
 

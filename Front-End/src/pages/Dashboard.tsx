@@ -56,6 +56,18 @@ export default function Dashboard() {
   const { leagues } = useAuth();
   const [isRoundReportOpen, setIsRoundReportOpen] = useState(false);
 
+  // Helper to get league name from leagues array
+  const getLeagueName = (leagueSlug: League): string => {
+    if (!leagueSlug) return "All Leagues";
+    const leagueInfo = leagues?.find((l) => l.league === leagueSlug);
+    return (
+      leagueInfo?.knownName ||
+      leagueInfo?.name ||
+      leagueInfo?.arabicName ||
+      leagueSlug
+    );
+  };
+
   // PlatformComparison sorting state
   const [comparisonSort, setComparisonSort] = useState<
     | "views"
@@ -677,14 +689,7 @@ export default function Dashboard() {
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       `;
 
-      const leagueName =
-        selectedLeague === "saudi"
-          ? "Saudi Pro League"
-          : selectedLeague === "saudi-super-cup"
-          ? "Saudi Super Cup"
-          : selectedLeague === "spanish-super-cup"
-          ? "Spanish Super Cup"
-          : "All Leagues";
+      const leagueName = getLeagueName(selectedLeague);
 
       const weekInfo =
         weekFilterType === "all"
@@ -919,11 +924,7 @@ export default function Dashboard() {
 
         // Format filename
         const leagueFormatted = selectedLeague
-          ? selectedLeague === "saudi"
-            ? "Saudi-Pro-League"
-            : selectedLeague === "saudi-super-cup"
-            ? "Saudi-Super-Cup"
-            : "Spanish-Super-Cup"
+          ? getLeagueName(selectedLeague).replace(/\s+/g, "-")
           : "All-Leagues";
         const weekFormatted =
           weekFilterType === "all"
@@ -964,25 +965,34 @@ export default function Dashboard() {
           <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
             {(() => {
-              const leagueInfo = leagues?.find((l) => l.league === selectedLeague);
-              const leagueKnownName = leagueInfo?.knownName || leagueInfo?.name || "";
+              const leagueInfo = leagues?.find(
+                (l) => l.league === selectedLeague
+              );
+              const leagueKnownName =
+                leagueInfo?.knownName || leagueInfo?.name || "";
               const isSuperCup =
                 selectedLeague === "saudi-super-cup" ||
                 selectedLeague === "spanish-super-cup";
               if (isSuperCup) {
-                const stageText = stageFilterType === "all"
-                  ? "All Stages Overview"
-                  : stageFilterType === "single"
-                  ? `${singleStage} Overview`
-                  : `${stageRangeStart} - ${stageRangeEnd} Overview`;
-                return leagueKnownName ? `${stageText} • ${leagueKnownName}` : stageText;
+                const stageText =
+                  stageFilterType === "all"
+                    ? "All Stages Overview"
+                    : stageFilterType === "single"
+                    ? `${singleStage} Overview`
+                    : `${stageRangeStart} - ${stageRangeEnd} Overview`;
+                return leagueKnownName
+                  ? `${stageText} • ${leagueKnownName}`
+                  : stageText;
               } else {
-                const weekText = weekFilterType === "all"
-                  ? "All Weeks Overview"
-                  : weekFilterType === "single"
-                  ? `Week ${singleWeek} Overview`
-                  : `Weeks ${weekRangeStart} - ${weekRangeEnd} Overview`;
-                return leagueKnownName ? `${weekText} • ${leagueKnownName}` : weekText;
+                const weekText =
+                  weekFilterType === "all"
+                    ? "All Weeks Overview"
+                    : weekFilterType === "single"
+                    ? `Week ${singleWeek} Overview`
+                    : `Weeks ${weekRangeStart} - ${weekRangeEnd} Overview`;
+                return leagueKnownName
+                  ? `${weekText} • ${leagueKnownName}`
+                  : weekText;
               }
             })()}
           </p>
@@ -991,30 +1001,39 @@ export default function Dashboard() {
         {/* League and Week Filters */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           {/* League Display */}
-          {selectedLeague && (() => {
-            const leagueInfo = leagues?.find((l) => l.league === selectedLeague);
-            const iconUrl = leagueInfo?.iconUrl
-              ? leagueInfo.iconUrl.startsWith("/")
-                ? `${API_URL.replace("/api", "")}${leagueInfo.iconUrl}`
-                : leagueInfo.iconUrl
-              : null;
-            return (
-              <Badge
-                variant="secondary"
-                className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 justify-center sm:justify-start px-2 sm:px-3 py-1.5 sm:py-2">
-                {iconUrl && (
-                  <img
-                    src={iconUrl}
-                    alt={leagueInfo?.name || leagueInfo?.arabicName || selectedLeague}
-                    className="h-8 sm:h-12 object-contain flex-shrink-0"
-                  />
-                )}
-                <span className="hidden xs:inline">
-                  {leagueInfo?.name || leagueInfo?.arabicName || selectedLeague}
-                </span>
-              </Badge>
-            );
-          })()}
+          {selectedLeague &&
+            (() => {
+              const leagueInfo = leagues?.find(
+                (l) => l.league === selectedLeague
+              );
+              const iconUrl = leagueInfo?.iconUrl
+                ? leagueInfo.iconUrl.startsWith("/")
+                  ? `${API_URL.replace("/api", "")}${leagueInfo.iconUrl}`
+                  : leagueInfo.iconUrl
+                : null;
+              return (
+                <Badge
+                  variant="secondary"
+                  className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 justify-center sm:justify-start px-2 sm:px-3 py-1.5 sm:py-2">
+                  {iconUrl && (
+                    <img
+                      src={iconUrl}
+                      alt={
+                        leagueInfo?.name ||
+                        leagueInfo?.arabicName ||
+                        selectedLeague
+                      }
+                      className="h-8 sm:h-12 object-contain flex-shrink-0"
+                    />
+                  )}
+                  <span className="hidden xs:inline">
+                    {leagueInfo?.name ||
+                      leagueInfo?.arabicName ||
+                      selectedLeague}
+                  </span>
+                </Badge>
+              );
+            })()}
 
           {/* Download Dropdown */}
           <HoverCard openDelay={100} closeDelay={100}>
@@ -1744,47 +1763,24 @@ export default function Dashboard() {
             ? singleWeek
             : `${weekRangeStart}-${weekRangeEnd}`
         }
-        competition={
-          selectedLeague === "saudi"
-            ? "Saudi Pro League"
-            : selectedLeague === "saudi-super-cup"
-            ? "Saudi Super Cup"
-            : selectedLeague === "spanish-super-cup"
-            ? "Spanish Super Cup"
-            : "All Leagues"
-        }
+        competition={getLeagueName(selectedLeague)}
         fileName={
           weekFilterType === "all"
-            ? `Round-Report-${
-                selectedLeague === "saudi"
-                  ? "Saudi-Pro-League"
-                  : selectedLeague === "saudi-super-cup"
-                  ? "Saudi-Super-Cup"
-                  : selectedLeague === "spanish-super-cup"
-                  ? "Spanish-Super-Cup"
-                  : "All-Leagues"
-              }-All-Weeks-${new Date().toISOString().split("T")[0]}.png`
+            ? `Round-Report-${getLeagueName(selectedLeague).replace(
+                /\s+/g,
+                "-"
+              )}-All-Weeks-${new Date().toISOString().split("T")[0]}.png`
             : weekFilterType === "single"
-            ? `Round-Report-${
-                selectedLeague === "saudi"
-                  ? "Saudi-Pro-League"
-                  : selectedLeague === "saudi-super-cup"
-                  ? "Saudi-Super-Cup"
-                  : selectedLeague === "spanish-super-cup"
-                  ? "Spanish-Super-Cup"
-                  : "All-Leagues"
-              }-Week-${singleWeek}-${
+            ? `Round-Report-${getLeagueName(selectedLeague).replace(
+                /\s+/g,
+                "-"
+              )}-Week-${singleWeek}-${
                 new Date().toISOString().split("T")[0]
               }.png`
-            : `Round-Report-${
-                selectedLeague === "saudi"
-                  ? "Saudi-Pro-League"
-                  : selectedLeague === "saudi-super-cup"
-                  ? "Saudi-Super-Cup"
-                  : selectedLeague === "spanish-super-cup"
-                  ? "Spanish-Super-Cup"
-                  : "All-Leagues"
-              }-Weeks-${weekRangeStart}-${weekRangeEnd}-${
+            : `Round-Report-${getLeagueName(selectedLeague).replace(
+                /\s+/g,
+                "-"
+              )}-Weeks-${weekRangeStart}-${weekRangeEnd}-${
                 new Date().toISOString().split("T")[0]
               }.png`
         }

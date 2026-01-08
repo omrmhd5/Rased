@@ -1,5 +1,6 @@
 import express from "express";
 import User from "../models/User.js";
+import Competition from "../models/Competition.js";
 import { authenticateToken } from "../middleware/auth.js";
 
 const router = express.Router();
@@ -33,7 +34,8 @@ router.get("/", authenticateToken, requireSuperAdmin, async (req, res) => {
 // POST /api/users - Create new user (superAdmin only)
 router.post("/", authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { username, email, password, confirmPassword, role, leagues } = req.body;
+    const { username, email, password, confirmPassword, role, leagues } =
+      req.body;
 
     // Validation
     if (!username || !email || !password || !confirmPassword || !role) {
@@ -57,25 +59,31 @@ router.post("/", authenticateToken, requireSuperAdmin, async (req, res) => {
 
     if (!["viewer", "employee"].includes(role)) {
       return res.status(400).json({
-        error: "Invalid role. Must be one of: viewer, employee. SuperAdmin role cannot be assigned to new users.",
+        error:
+          "Invalid role. Must be one of: viewer, employee. SuperAdmin role cannot be assigned to new users.",
       });
     }
 
     // Validate leagues for employees
-    const validLeagues = ["saudi", "saudi-super-cup", "spanish-super-cup"];
     if (role === "employee") {
       if (!leagues || !Array.isArray(leagues) || leagues.length === 0) {
         return res.status(400).json({
           error: "Employees must have at least one league assigned",
         });
       }
-      // Validate each league
+      // Validate each league exists in database
+      const leagueDocs = await Competition.find({
+        league: { $in: leagues },
+      }).lean();
+      const validLeagueSlugs = leagueDocs.map((doc) => doc.league);
       const invalidLeagues = leagues.filter(
-        (league) => !validLeagues.includes(league)
+        (league) => !validLeagueSlugs.includes(league)
       );
       if (invalidLeagues.length > 0) {
         return res.status(400).json({
-          error: `Invalid leagues: ${invalidLeagues.join(", ")}. Valid leagues are: ${validLeagues.join(", ")}`,
+          error: `Invalid leagues: ${invalidLeagues.join(
+            ", "
+          )}. These leagues do not exist in the database.`,
         });
       }
     } else if (leagues && Array.isArray(leagues) && leagues.length > 0) {
@@ -139,7 +147,8 @@ router.post("/", authenticateToken, requireSuperAdmin, async (req, res) => {
 // PUT /api/users/:id - Update user (superAdmin only)
 router.put("/:id", authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
-    const { username, email, password, confirmPassword, role, leagues } = req.body;
+    const { username, email, password, confirmPassword, role, leagues } =
+      req.body;
     const userId = req.params.id;
 
     // Validation
@@ -156,20 +165,25 @@ router.put("/:id", authenticateToken, requireSuperAdmin, async (req, res) => {
     }
 
     // Validate leagues for employees
-    const validLeagues = ["saudi", "saudi-super-cup", "spanish-super-cup"];
     if (role === "employee") {
       if (!leagues || !Array.isArray(leagues) || leagues.length === 0) {
         return res.status(400).json({
           error: "Employees must have at least one league assigned",
         });
       }
-      // Validate each league
+      // Validate each league exists in database
+      const leagueDocs = await Competition.find({
+        league: { $in: leagues },
+      }).lean();
+      const validLeagueSlugs = leagueDocs.map((doc) => doc.league);
       const invalidLeagues = leagues.filter(
-        (league) => !validLeagues.includes(league)
+        (league) => !validLeagueSlugs.includes(league)
       );
       if (invalidLeagues.length > 0) {
         return res.status(400).json({
-          error: `Invalid leagues: ${invalidLeagues.join(", ")}. Valid leagues are: ${validLeagues.join(", ")}`,
+          error: `Invalid leagues: ${invalidLeagues.join(
+            ", "
+          )}. These leagues do not exist in the database.`,
         });
       }
     } else if (leagues && Array.isArray(leagues) && leagues.length > 0) {

@@ -100,7 +100,7 @@ router.get("/external", async (req, res) => {
     }
 
     // Transform API response to match our Match model structure
-    const transformedMatches = transformApiMatches(jsonData, league);
+    const transformedMatches = await transformApiMatches(jsonData, league);
 
     // Save/update matches in database
     await saveMatchesToDatabase(transformedMatches);
@@ -114,13 +114,14 @@ router.get("/external", async (req, res) => {
 });
 
 // Helper function to transform API response to our Match format
-function transformApiMatches(apiData, leagueFromQuery = null) {
+async function transformApiMatches(apiData, leagueFromQuery = null) {
   if (!apiData || !apiData.match || !Array.isArray(apiData.match)) {
     return [];
   }
 
-  return apiData.match
-    .map((matchItem) => {
+  // Process matches with async operations
+  const transformedMatches = await Promise.all(
+    apiData.match.map(async (matchItem) => {
       const matchInfo = matchItem.matchInfo;
       const liveData = matchItem.liveData;
 
@@ -226,39 +227,59 @@ function transformApiMatches(apiData, leagueFromQuery = null) {
       }
 
       // Use league from query parameter if provided, otherwise try to detect from competition
-      let league = leagueFromQuery || "saudi"; // Default to saudi if not provided
+      let league = leagueFromQuery;
 
       // Only try to detect league if not provided from query
       if (!leagueFromQuery) {
         const competitionName = matchInfo.competition?.name || "";
         const competitionKnownName = matchInfo.competition?.knownName || "";
-        const countryName = matchInfo.competition?.country?.name || "";
+        const externalCompetitionId = matchInfo.competition?.id || "";
 
-        // Check if it's a Super Cup
-        const isSuperCup =
-          competitionName.toLowerCase().includes("super cup") ||
-          competitionKnownName.toLowerCase().includes("super cup") ||
-          competitionKnownName.toLowerCase().includes("supercopa") ||
-          competitionName.toLowerCase().includes("سوبر");
+        // Try to find competition in database by name, knownName, or externalId
+        let competitionDoc = null;
+        if (competitionName) {
+          competitionDoc = await Competition.findOne({
+            $or: [
+              { name: competitionName },
+              { knownName: competitionName },
+              { arabicName: competitionName },
+            ],
+          }).lean();
+        }
+        if (!competitionDoc && competitionKnownName) {
+          competitionDoc = await Competition.findOne({
+            $or: [
+              { name: competitionKnownName },
+              { knownName: competitionKnownName },
+              { arabicName: competitionKnownName },
+            ],
+          }).lean();
+        }
+        if (!competitionDoc && externalCompetitionId) {
+          competitionDoc = await Competition.findOne({
+            externalId: externalCompetitionId,
+          }).lean();
+        }
 
-        if (isSuperCup) {
-          // Check for Saudi Super Cup
-          if (
-            competitionName.toLowerCase().includes("saudi") ||
-            competitionKnownName.toLowerCase().includes("saudi") ||
-            competitionKnownName.toLowerCase().includes("سعودي") ||
-            countryName.toLowerCase().includes("saudi")
-          ) {
-            league = "saudi-super-cup";
-          }
-          // Check for Spanish Super Cup
-          else if (
-            competitionName.toLowerCase().includes("spanish") ||
-            competitionKnownName.toLowerCase().includes("spanish") ||
-            competitionKnownName.toLowerCase().includes("spanish") ||
-            countryName.toLowerCase().includes("spain")
-          ) {
-            league = "spanish-super-cup";
+        // If found, use the league from database
+        if (competitionDoc && competitionDoc.league) {
+          league = competitionDoc.league;
+        } else {
+          // Fallback: try to find by partial name match (for backwards compatibility)
+          if (competitionName || competitionKnownName) {
+            const searchTerm = (
+              competitionName || competitionKnownName
+            ).toLowerCase();
+            competitionDoc = await Competition.findOne({
+              $or: [
+                { name: { $regex: searchTerm, $options: "i" } },
+                { knownName: { $regex: searchTerm, $options: "i" } },
+                { arabicName: { $regex: searchTerm, $options: "i" } },
+              ],
+            }).lean();
+            if (competitionDoc && competitionDoc.league) {
+              league = competitionDoc.league;
+            }
           }
         }
       }
@@ -298,7 +319,10 @@ function transformApiMatches(apiData, leagueFromQuery = null) {
         },
       };
     })
-    .filter((match) => match !== null); // Remove null entries (skipped matches)
+  );
+
+  // Filter out null entries (skipped matches)
+  return transformedMatches.filter((match) => match !== null);
 }
 
 // Helper function to save/update competitions in database
@@ -498,13 +522,19 @@ async function returnMatchesFromDatabase(req, res) {
       query.status = status;
     }
 
+    let leagueInfo = null;
     if (league) {
       query.league = league;
+      // Get league info to determine if it's a Super Cup
+      leagueInfo = await Competition.findOne({ league: league }).lean();
     }
 
     // For Super Cups, use stage filtering; for regular leagues, use week filtering
-    const isSuperCup =
-      league === "saudi-super-cup" || league === "spanish-super-cup";
+    // Check competitionFormat from database or fallback to hardcoded check
+    const isSuperCup = leagueInfo
+      ? leagueInfo.competitionFormat?.toLowerCase().includes("super cup") ||
+        leagueInfo.competitionFormat?.toLowerCase().includes("cup")
+      : league === "saudi-super-cup" || league === "spanish-super-cup";
 
     if (isSuperCup) {
       // For Super Cups, if stage is provided, filter by it
@@ -671,30 +701,46 @@ router.post("/", authenticateToken, requireSuperAdmin, async (req, res) => {
 
     // Determine league from competition name (prioritize competition over provided league)
     let finalLeague = league;
-    if (competition) {
-      const competitionLower = competition.toLowerCase();
-      if (
-        competitionLower.includes("saudi super cup") ||
-        competitionLower.includes("كاس السوبر السعودي")
-      ) {
-        finalLeague = "saudi-super-cup";
-      } else if (
-        competitionLower.includes("spanish super cup") ||
-        competitionLower.includes("السوبر الاسباني")
-      ) {
-        finalLeague = "spanish-super-cup";
-      } else if (competitionLower.includes("saudi")) {
-        finalLeague = "saudi";
+    if (competition && !finalLeague) {
+      // Try to find competition in database by name, knownName, or arabicName
+      let competitionDoc = await Competition.findOne({
+        $or: [
+          { name: competition },
+          { knownName: competition },
+          { arabicName: competition },
+        ],
+      }).lean();
+
+      // If not found by exact match, try partial match
+      if (!competitionDoc) {
+        const competitionLower = competition.toLowerCase();
+        competitionDoc = await Competition.findOne({
+          $or: [
+            { name: { $regex: competitionLower, $options: "i" } },
+            { knownName: { $regex: competitionLower, $options: "i" } },
+            { arabicName: { $regex: competitionLower, $options: "i" } },
+          ],
+        }).lean();
+      }
+
+      // If found, use the league from database
+      if (competitionDoc && competitionDoc.league) {
+        finalLeague = competitionDoc.league;
       }
     }
 
-    if (
-      !finalLeague ||
-      !["saudi", "saudi-super-cup", "spanish-super-cup"].includes(finalLeague)
-    ) {
+    // Validate league exists in database
+    if (!finalLeague) {
       return res.status(400).json({
         error:
-          "Invalid league. Must be one of: saudi, saudi-super-cup, spanish-super-cup. League can be determined from competition name or provided explicitly.",
+          "League is required. League can be determined from competition name or provided explicitly.",
+      });
+    }
+
+    const leagueDoc = await Competition.findOne({ league: finalLeague }).lean();
+    if (!leagueDoc) {
+      return res.status(400).json({
+        error: `Invalid league '${finalLeague}'. League does not exist in the database.`,
       });
     }
 
@@ -717,22 +763,19 @@ router.post("/", authenticateToken, requireSuperAdmin, async (req, res) => {
 
       // If not found, try to find by league and known name variations
       if (!comp) {
-        // Map frontend competition names to database competition names
-        const competitionNameMap = {
-          "Saudi Pro League": "Saudi League",
-          "Italian Serie A": "Italian Serie A",
-          "Spanish La Liga": "Spanish La Liga",
-        };
+        // Try to find by partial name match or knownName
+        comp = await Competition.findOne({
+          $or: [
+            { name: { $regex: competition, $options: "i" } },
+            { knownName: { $regex: competition, $options: "i" } },
+            { arabicName: { $regex: competition, $options: "i" } },
+          ],
+        });
+      }
 
-        const mappedName = competitionNameMap[competition];
-        if (mappedName) {
-          comp = await Competition.findOne({ name: mappedName });
-        }
-
-        // If still not found, try to find by league only (for the specific league)
-        if (!comp && finalLeague) {
-          comp = await Competition.findOne({ league: finalLeague });
-        }
+      // If still not found, try to find by league only (for the specific league)
+      if (!comp && finalLeague) {
+        comp = await Competition.findOne({ league: finalLeague });
       }
 
       // If still not found, create new competition
@@ -885,19 +928,30 @@ router.put(
       let finalLeague = league || match.league;
 
       if (competition && !finalLeague) {
-        const competitionLower = competition.toLowerCase();
-        if (
-          competitionLower.includes("saudi super cup") ||
-          competitionLower.includes("كاس السوبر السعودي")
-        ) {
-          finalLeague = "saudi-super-cup";
-        } else if (
-          competitionLower.includes("spanish super cup") ||
-          competitionLower.includes("السوبر الاسباني")
-        ) {
-          finalLeague = "spanish-super-cup";
-        } else if (competitionLower.includes("saudi")) {
-          finalLeague = "saudi";
+        // Try to find competition in database by name, knownName, or arabicName
+        let competitionDoc = await Competition.findOne({
+          $or: [
+            { name: competition },
+            { knownName: competition },
+            { arabicName: competition },
+          ],
+        }).lean();
+
+        // If not found by exact match, try partial match
+        if (!competitionDoc) {
+          const competitionLower = competition.toLowerCase();
+          competitionDoc = await Competition.findOne({
+            $or: [
+              { name: { $regex: competitionLower, $options: "i" } },
+              { knownName: { $regex: competitionLower, $options: "i" } },
+              { arabicName: { $regex: competitionLower, $options: "i" } },
+            ],
+          }).lean();
+        }
+
+        // If found, use the league from database
+        if (competitionDoc && competitionDoc.league) {
+          finalLeague = competitionDoc.league;
         }
       }
 
@@ -959,28 +1013,22 @@ router.put(
             comp = await Competition.findOne({ name: competition });
           }
 
-          // If still not found, try to find by league and known name variations
+          // If still not found, try to find by partial name match or knownName
           if (!comp) {
-            // Map frontend competition names to database competition names
-            const competitionNameMap = {
-              "Saudi Pro League": "Saudi League",
-              "Saudi Super Cup": "Saudi Super Cup",
-              "بطولة كاس السوبر السعودي": "Saudi Super Cup",
-              "Spanish Super Cup": "Spanish Super Cup",
-              "السوبر الاسباني": "Spanish Super Cup",
-            };
+            comp = await Competition.findOne({
+              $or: [
+                { name: { $regex: competition, $options: "i" } },
+                { knownName: { $regex: competition, $options: "i" } },
+                { arabicName: { $regex: competition, $options: "i" } },
+              ],
+            });
+          }
 
-            const mappedName = competitionNameMap[competition];
-            if (mappedName) {
-              comp = await Competition.findOne({ name: mappedName });
-            }
-
-            // If still not found, try to find by league only (for the specific league)
-            if (!comp && finalLeague) {
-              comp = await Competition.findOne({ league: finalLeague });
-            } else if (!comp && match.league) {
-              comp = await Competition.findOne({ league: match.league });
-            }
+          // If still not found, try to find by league only (for the specific league)
+          if (!comp && finalLeague) {
+            comp = await Competition.findOne({ league: finalLeague });
+          } else if (!comp && match.league) {
+            comp = await Competition.findOne({ league: match.league });
           }
 
           if (comp) {
@@ -1003,14 +1051,13 @@ router.put(
         hasChanges = true;
       }
       if (finalLeague && finalLeague !== match.league) {
-        if (
-          !["saudi", "saudi-super-cup", "spanish-super-cup"].includes(
-            finalLeague
-          )
-        ) {
+        // Validate league exists in database
+        const leagueDoc = await Competition.findOne({
+          league: finalLeague,
+        }).lean();
+        if (!leagueDoc) {
           return res.status(400).json({
-            error:
-              "Invalid league. Must be one of: saudi, saudi-super-cup, spanish-super-cup",
+            error: `Invalid league '${finalLeague}'. League does not exist in the database.`,
           });
         }
         match.league = finalLeague;
@@ -1173,14 +1220,17 @@ router.get("/dashboard/stats", async (req, res) => {
       stageEnd,
     } = req.query;
 
-    // Validate league
-    if (
-      !league ||
-      !["saudi", "saudi-super-cup", "spanish-super-cup"].includes(league)
-    ) {
+    // Validate league exists in database
+    if (!league) {
       return res.status(400).json({
-        error:
-          "Valid league parameter is required (saudi, saudi-super-cup, or spanish-super-cup)",
+        error: "Valid league parameter is required",
+      });
+    }
+
+    const leagueDoc = await Competition.findOne({ league: league }).lean();
+    if (!leagueDoc) {
+      return res.status(400).json({
+        error: `Invalid league '${league}'. League does not exist in the database.`,
       });
     }
 
@@ -1191,8 +1241,12 @@ router.get("/dashboard/stats", async (req, res) => {
     };
 
     // For Super Cups, use stage filtering; for regular leagues, use week filtering
+    // Check competitionFormat from database
     const isSuperCup =
-      league === "saudi-super-cup" || league === "spanish-super-cup";
+      leagueDoc.competitionFormat?.toLowerCase().includes("super cup") ||
+      leagueDoc.competitionFormat?.toLowerCase().includes("cup") ||
+      league === "saudi-super-cup" ||
+      league === "spanish-super-cup";
 
     if (isSuperCup) {
       // Stage filtering for Super Cups

@@ -22,7 +22,7 @@ import { getInitialPlatformOperations } from "@/components/MatchDashboard/consta
 import { useAuth } from "@/contexts/AuthContext";
 import { ProblematicAccountsMobile } from "./ProblematicAccountsMobile";
 
-type League = "saudi" | "saudi-super-cup" | "spanish-super-cup" | null;
+type League = string | null;
 type WeekFilterType = "all" | "single" | "range";
 
 interface ProblematicAccount {
@@ -50,20 +50,28 @@ export default function ProblematicAccounts() {
 
   // Get available leagues based on user role (memoized to prevent infinite loops)
   const availableLeagues = useMemo((): League[] => {
-    if (!user) return [];
+    if (!user || !leagues) return [];
 
-    // SuperAdmin and Viewer can access all leagues
+    // Filter out hidden leagues
+    const visibleLeagues = leagues.filter((l) => !l.isHidden);
+
+    // SuperAdmin and Viewer can access all visible leagues
     if (user.role === "superAdmin" || user.role === "viewer") {
-      return ["saudi", "saudi-super-cup", "spanish-super-cup"];
+      return visibleLeagues
+        .map((l) => l.league as League)
+        .filter((l): l is string => Boolean(l));
     }
 
-    // Employees can only access their assigned leagues
+    // Employees can only access their assigned leagues (that are visible)
     if (user.role === "employee" && user.leagues) {
-      return user.leagues;
+      return visibleLeagues
+        .filter((l) => user.leagues?.includes(l.league) && l.league)
+        .map((l) => l.league as League)
+        .filter((l): l is string => Boolean(l));
     }
 
     return [];
-  }, [user]);
+  }, [user, leagues]);
 
   // Filters
   const [league, setLeague] = useState<League>(null);
@@ -157,8 +165,9 @@ export default function ProblematicAccounts() {
           // "All Leagues" selected for employee - use all their assigned leagues
           leaguesToFetch.push(...availableLeagues);
         } else if (user?.role === "superAdmin" || user?.role === "viewer") {
-          // "All Leagues" selected for superAdmin/viewer - fetch all leagues
-          leaguesToFetch.push("saudi", "saudi-super-cup", "spanish-super-cup");
+          // "All Leagues" selected for superAdmin/viewer - fetch all visible leagues
+          const visibleLeagues = leagues?.filter((l) => !l.isHidden && l.league) || [];
+          leaguesToFetch.push(...visibleLeagues.map((l) => l.league as League).filter((l): l is string => Boolean(l)));
         }
 
         // If no leagues to fetch, return empty array
@@ -173,7 +182,13 @@ export default function ProblematicAccounts() {
         const accountMap = new Map<string, ProblematicAccount>();
 
         for (const leagueToFetch of leaguesToFetch) {
+          // Check if league is a Super Cup by checking the league info
+          const leagueInfo = leagues?.find((l) => l.league === leagueToFetch);
           const isSuperCup =
+            leagueInfo?.competitionFormat
+              ?.toLowerCase()
+              .includes("super cup") ||
+            leagueInfo?.competitionFormat?.toLowerCase().includes("cup") ||
             leagueToFetch === "saudi-super-cup" ||
             leagueToFetch === "spanish-super-cup";
           const params = new URLSearchParams();
@@ -293,6 +308,7 @@ export default function ProblematicAccounts() {
     loadingThresholds,
     user?.role,
     availableLeagues,
+    leagues,
   ]);
 
   // Sort accounts
@@ -344,7 +360,9 @@ export default function ProblematicAccounts() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Most Problematic Accounts</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">
+            Most Problematic Accounts
+          </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Accounts and channels with the most violations
           </p>
@@ -395,10 +413,14 @@ export default function ProblematicAccounts() {
               <SelectContent>
                 {/* Show "All Leagues" only if user has access to multiple leagues */}
                 {availableLeagues.length > 1 && (
-                  <SelectItem value="all" className="text-xs sm:text-sm">All Leagues</SelectItem>
+                  <SelectItem value="all" className="text-xs sm:text-sm">
+                    All Leagues
+                  </SelectItem>
                 )}
                 {availableLeagues.map((leagueSlug) => {
-                  const leagueInfo = leagues?.find((l) => l.league === leagueSlug);
+                  const leagueInfo = leagues?.find(
+                    (l) => l.league === leagueSlug
+                  );
                   if (!leagueInfo) return null;
                   const iconUrl = leagueInfo.iconUrl
                     ? leagueInfo.iconUrl.startsWith("/")
@@ -406,16 +428,29 @@ export default function ProblematicAccounts() {
                       : leagueInfo.iconUrl
                     : null;
                   return (
-                    <SelectItem key={leagueSlug} value={leagueSlug} className="text-xs sm:text-sm">
+                    <SelectItem
+                      key={leagueSlug}
+                      value={leagueSlug}
+                      className="text-xs sm:text-sm">
                       <div className="flex items-center gap-2">
                         {iconUrl && (
                           <img
                             src={iconUrl}
-                            alt={leagueInfo.knownName || leagueInfo.name || leagueInfo.arabicName || leagueSlug}
+                            alt={
+                              leagueInfo.knownName ||
+                              leagueInfo.name ||
+                              leagueInfo.arabicName ||
+                              leagueSlug
+                            }
                             className="h-5 w-5 sm:h-6 sm:w-6 object-contain flex-shrink-0"
                           />
                         )}
-                        <span>{leagueInfo.knownName || leagueInfo.name || leagueInfo.arabicName || leagueSlug}</span>
+                        <span>
+                          {leagueInfo.knownName ||
+                            leagueInfo.name ||
+                            leagueInfo.arabicName ||
+                            leagueSlug}
+                        </span>
                       </div>
                     </SelectItem>
                   );
@@ -430,9 +465,14 @@ export default function ProblematicAccounts() {
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all" className="text-xs sm:text-sm">All Platforms</SelectItem>
+              <SelectItem value="all" className="text-xs sm:text-sm">
+                All Platforms
+              </SelectItem>
               {platformOperations.map((platform) => (
-                <SelectItem key={platform.id} value={platform.id} className="text-xs sm:text-sm">
+                <SelectItem
+                  key={platform.id}
+                  value={platform.id}
+                  className="text-xs sm:text-sm">
                   {platform.name}
                 </SelectItem>
               ))}
@@ -441,8 +481,15 @@ export default function ProblematicAccounts() {
 
           {/* Week/Stage Filter Type */}
           {(() => {
+            // Check if selected league is a Super Cup by checking the league info
+            const leagueInfo = leagues?.find((l) => l.league === league);
             const isSuperCup =
-              league === "saudi-super-cup" || league === "spanish-super-cup";
+              leagueInfo?.competitionFormat
+                ?.toLowerCase()
+                .includes("super cup") ||
+              leagueInfo?.competitionFormat?.toLowerCase().includes("cup") ||
+              league === "saudi-super-cup" ||
+              league === "spanish-super-cup";
 
             if (isSuperCup) {
               // Stage filters for Super Cups
@@ -457,9 +504,15 @@ export default function ProblematicAccounts() {
                       <SelectValue placeholder="Stage Filter" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all" className="text-xs sm:text-sm">All Stages</SelectItem>
-                      <SelectItem value="single" className="text-xs sm:text-sm">Single Stage</SelectItem>
-                      <SelectItem value="range" className="text-xs sm:text-sm">Stage Range</SelectItem>
+                      <SelectItem value="all" className="text-xs sm:text-sm">
+                        All Stages
+                      </SelectItem>
+                      <SelectItem value="single" className="text-xs sm:text-sm">
+                        Single Stage
+                      </SelectItem>
+                      <SelectItem value="range" className="text-xs sm:text-sm">
+                        Stage Range
+                      </SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -471,7 +524,10 @@ export default function ProblematicAccounts() {
                       </SelectTrigger>
                       <SelectContent>
                         {availableStages.map((stage) => (
-                          <SelectItem key={stage} value={stage} className="text-xs sm:text-sm">
+                          <SelectItem
+                            key={stage}
+                            value={stage}
+                            className="text-xs sm:text-sm">
                             {stage}
                           </SelectItem>
                         ))}
@@ -490,13 +546,18 @@ export default function ProblematicAccounts() {
                         </SelectTrigger>
                         <SelectContent>
                           {availableStages.map((stage) => (
-                            <SelectItem key={stage} value={stage} className="text-xs sm:text-sm">
+                            <SelectItem
+                              key={stage}
+                              value={stage}
+                              className="text-xs sm:text-sm">
                               {stage}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      <span className="text-muted-foreground text-xs sm:text-sm text-center sm:text-left">to</span>
+                      <span className="text-muted-foreground text-xs sm:text-sm text-center sm:text-left">
+                        to
+                      </span>
                       <Select
                         value={stageRangeEnd}
                         onValueChange={setStageRangeEnd}>
@@ -505,7 +566,10 @@ export default function ProblematicAccounts() {
                         </SelectTrigger>
                         <SelectContent>
                           {availableStages.map((stage) => (
-                            <SelectItem key={stage} value={stage} className="text-xs sm:text-sm">
+                            <SelectItem
+                              key={stage}
+                              value={stage}
+                              className="text-xs sm:text-sm">
                               {stage}
                             </SelectItem>
                           ))}
@@ -528,9 +592,15 @@ export default function ProblematicAccounts() {
                       <SelectValue placeholder="Week Filter" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all" className="text-xs sm:text-sm">All Weeks</SelectItem>
-                      <SelectItem value="single" className="text-xs sm:text-sm">Single Week</SelectItem>
-                      <SelectItem value="range" className="text-xs sm:text-sm">Week Range</SelectItem>
+                      <SelectItem value="all" className="text-xs sm:text-sm">
+                        All Weeks
+                      </SelectItem>
+                      <SelectItem value="single" className="text-xs sm:text-sm">
+                        Single Week
+                      </SelectItem>
+                      <SelectItem value="range" className="text-xs sm:text-sm">
+                        Week Range
+                      </SelectItem>
                     </SelectContent>
                   </Select>
 
@@ -543,7 +613,10 @@ export default function ProblematicAccounts() {
                       <SelectContent>
                         {Array.from({ length: 38 }, (_, i) => i + 1).map(
                           (week) => (
-                            <SelectItem key={week} value={week.toString()} className="text-xs sm:text-sm">
+                            <SelectItem
+                              key={week}
+                              value={week.toString()}
+                              className="text-xs sm:text-sm">
                               Week {week}
                             </SelectItem>
                           )
@@ -564,14 +637,19 @@ export default function ProblematicAccounts() {
                         <SelectContent>
                           {Array.from({ length: 38 }, (_, i) => i + 1).map(
                             (week) => (
-                              <SelectItem key={week} value={week.toString()} className="text-xs sm:text-sm">
+                              <SelectItem
+                                key={week}
+                                value={week.toString()}
+                                className="text-xs sm:text-sm">
                                 Week {week}
                               </SelectItem>
                             )
                           )}
                         </SelectContent>
                       </Select>
-                      <span className="text-muted-foreground text-xs sm:text-sm text-center sm:text-left">to</span>
+                      <span className="text-muted-foreground text-xs sm:text-sm text-center sm:text-left">
+                        to
+                      </span>
                       <Select
                         value={weekRangeEnd}
                         onValueChange={setWeekRangeEnd}>
@@ -581,7 +659,10 @@ export default function ProblematicAccounts() {
                         <SelectContent>
                           {Array.from({ length: 38 }, (_, i) => i + 1).map(
                             (week) => (
-                              <SelectItem key={week} value={week.toString()} className="text-xs sm:text-sm">
+                              <SelectItem
+                                key={week}
+                                value={week.toString()}
+                                className="text-xs sm:text-sm">
                                 Week {week}
                               </SelectItem>
                             )
@@ -597,7 +678,9 @@ export default function ProblematicAccounts() {
 
           {/* Sort By */}
           <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2">
-            <span className="text-xs sm:text-sm text-muted-foreground">Sort by:</span>
+            <span className="text-xs sm:text-sm text-muted-foreground">
+              Sort by:
+            </span>
             <Select
               value={sortBy}
               onValueChange={(value) => setSortBy(value as typeof sortBy)}>
@@ -605,9 +688,15 @@ export default function ProblematicAccounts() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="violations" className="text-xs sm:text-sm">Violations</SelectItem>
-                <SelectItem value="views" className="text-xs sm:text-sm">Views</SelectItem>
-                <SelectItem value="matches" className="text-xs sm:text-sm">Matches</SelectItem>
+                <SelectItem value="violations" className="text-xs sm:text-sm">
+                  Violations
+                </SelectItem>
+                <SelectItem value="views" className="text-xs sm:text-sm">
+                  Views
+                </SelectItem>
+                <SelectItem value="matches" className="text-xs sm:text-sm">
+                  Matches
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -635,37 +724,41 @@ export default function ProblematicAccounts() {
           </div>
         ) : sortedAccounts.length === 0 ? (
           <div className="flex items-center justify-center py-8 sm:py-12">
-            <p className="text-xs sm:text-sm text-muted-foreground">No accounts found</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              No accounts found
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto w-full">
             <table className="w-full min-w-[800px]">
-                <thead className="border-b border-border bg-muted/30">
-                  <tr>
-                    <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-semibold">Rank</th>
-                    <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                      Account/Channel
-                    </th>
-                    <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                      Platform
-                    </th>
-                    <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                      Violations
-                    </th>
-                    <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                      Total Views
-                    </th>
-                    <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                      Matches
-                    </th>
-                    <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                      Status
-                    </th>
-                    <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                      Content Type
-                    </th>
-                  </tr>
-                </thead>
+              <thead className="border-b border-border bg-muted/30">
+                <tr>
+                  <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                    Rank
+                  </th>
+                  <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                    Account/Channel
+                  </th>
+                  <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                    Platform
+                  </th>
+                  <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                    Violations
+                  </th>
+                  <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                    Total Views
+                  </th>
+                  <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                    Matches
+                  </th>
+                  <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                    Status
+                  </th>
+                  <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
+                    Content Type
+                  </th>
+                </tr>
+              </thead>
               <tbody>
                 {sortedAccounts.map((account, index) => {
                   const PlatformIcon = getPlatformIconComponent(
