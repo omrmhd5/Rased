@@ -85,7 +85,8 @@ export function MatchOverview({
 
   const getCompetitionName = () => {
     if (typeof match.competition === "object" && match.competition !== null) {
-      return (match.competition as { name?: string }).name || "";
+      return (match.competition as { knownName?: string; name?: string }).knownName || 
+             (match.competition as { name?: string }).name || "";
     }
     return typeof match.competition === "string" ? match.competition : "";
   };

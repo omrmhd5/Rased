@@ -41,6 +41,7 @@ import { PlatformComparisonMobile } from "@/components/MatchDashboard/PlatformCo
 import { PlatformData } from "@/components/MatchDashboard/types";
 import { formatViews as formatViewsUtil } from "@/components/MatchDashboard/utils";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
+import { useAuth } from "@/contexts/AuthContext";
 
 type League = "saudi" | "saudi-super-cup" | "spanish-super-cup" | null;
 type WeekFilterType = "all" | "single" | "range";
@@ -50,22 +51,9 @@ const formatViews = (views: number) => {
   return views.toLocaleString("en-US");
 };
 
-// Helper to get league icon path
-const getLeagueIcon = (league: League): string => {
-  switch (league) {
-    case "saudi":
-      return "/icons/Saudi_League.svg";
-    case "saudi-super-cup":
-      return "/icons/Saudi_Cup.png";
-    case "spanish-super-cup":
-      return "/icons/Spanish_Cup.svg";
-    default:
-      return "";
-  }
-};
-
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { leagues } = useAuth();
   const [isRoundReportOpen, setIsRoundReportOpen] = useState(false);
 
   // PlatformComparison sorting state
@@ -976,21 +964,25 @@ export default function Dashboard() {
           <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
             {(() => {
+              const leagueInfo = leagues?.find((l) => l.league === selectedLeague);
+              const leagueKnownName = leagueInfo?.knownName || leagueInfo?.name || "";
               const isSuperCup =
                 selectedLeague === "saudi-super-cup" ||
                 selectedLeague === "spanish-super-cup";
               if (isSuperCup) {
-                return stageFilterType === "all"
+                const stageText = stageFilterType === "all"
                   ? "All Stages Overview"
                   : stageFilterType === "single"
                   ? `${singleStage} Overview`
                   : `${stageRangeStart} - ${stageRangeEnd} Overview`;
+                return leagueKnownName ? `${stageText} • ${leagueKnownName}` : stageText;
               } else {
-                return weekFilterType === "all"
+                const weekText = weekFilterType === "all"
                   ? "All Weeks Overview"
                   : weekFilterType === "single"
                   ? `Week ${singleWeek} Overview`
                   : `Weeks ${weekRangeStart} - ${weekRangeEnd} Overview`;
+                return leagueKnownName ? `${weekText} • ${leagueKnownName}` : weekText;
               }
             })()}
           </p>
@@ -999,34 +991,30 @@ export default function Dashboard() {
         {/* League and Week Filters */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           {/* League Display */}
-          {selectedLeague && (
-            <Badge
-              variant="secondary"
-              className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 justify-center sm:justify-start px-2 sm:px-3 py-1.5 sm:py-2">
-              <img
-                src={getLeagueIcon(selectedLeague)}
-                alt={
-                  selectedLeague === "saudi"
-                    ? "Saudi Pro League"
-                    : selectedLeague === "saudi-super-cup"
-                    ? "Saudi Super Cup"
-                    : selectedLeague === "spanish-super-cup"
-                    ? "Spanish Super Cup"
-                    : "No League"
-                }
-                className="h-8 sm:h-12 object-contain flex-shrink-0"
-              />
-              <span className="hidden xs:inline">
-                {selectedLeague === "saudi"
-                  ? "Saudi Pro League"
-                  : selectedLeague === "saudi-super-cup"
-                  ? "Saudi Super Cup"
-                  : selectedLeague === "spanish-super-cup"
-                  ? "Spanish Super Cup"
-                  : "No League"}
-              </span>
-            </Badge>
-          )}
+          {selectedLeague && (() => {
+            const leagueInfo = leagues?.find((l) => l.league === selectedLeague);
+            const iconUrl = leagueInfo?.iconUrl
+              ? leagueInfo.iconUrl.startsWith("/")
+                ? `${API_URL.replace("/api", "")}${leagueInfo.iconUrl}`
+                : leagueInfo.iconUrl
+              : null;
+            return (
+              <Badge
+                variant="secondary"
+                className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 justify-center sm:justify-start px-2 sm:px-3 py-1.5 sm:py-2">
+                {iconUrl && (
+                  <img
+                    src={iconUrl}
+                    alt={leagueInfo?.name || leagueInfo?.arabicName || selectedLeague}
+                    className="h-8 sm:h-12 object-contain flex-shrink-0"
+                  />
+                )}
+                <span className="hidden xs:inline">
+                  {leagueInfo?.name || leagueInfo?.arabicName || selectedLeague}
+                </span>
+              </Badge>
+            );
+          })()}
 
           {/* Download Dropdown */}
           <HoverCard openDelay={100} closeDelay={100}>

@@ -77,7 +77,6 @@ const matchSchema = new mongoose.Schema(
     // League is now derived from competition, but kept for backward compatibility and filtering
     league: {
       type: String,
-      enum: ["saudi", "saudi-super-cup", "spanish-super-cup"],
       index: true,
     },
     winner: {

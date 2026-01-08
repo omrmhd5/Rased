@@ -15,27 +15,43 @@ dotenv.config();
 
 const router = express.Router();
 
-// External API configuration from environment variables
-const EXTERNAL_API_URL = (process.env.EXTERNAL_API_URL || "").trim();
-const EXTERNAL_API_JSONP_CALLBACK = (
-  process.env.EXTERNAL_API_JSONP_CALLBACK || ""
-).trim();
-const EXTERNAL_API_REFERER = (process.env.EXTERNAL_API_REFERER || "").trim();
 const EXTERNAL_API_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
-// League-specific API configurations
-const LEAGUE_API_CONFIG = {
-  saudi: {
-    tmcl: (process.env.SAUDI_LEAGUE_TMCL || "").trim(),
-  },
-  "saudi-super-cup": {
-    tmcl: (process.env.SAUDI_SUPER_CUP_TMCL || "").trim(),
-  },
-  "spanish-super-cup": {
-    tmcl: (process.env.SPANISH_SUPER_CUP_TMCL || "").trim(),
-  },
-};
+// Cache for league configurations (refresh on update)
+let leagueConfigCache = new Map();
+let cacheTimestamp = 0;
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+// Helper function to get league config from database
+async function getLeagueConfig(leagueSlug) {
+  // Check cache first
+  const now = Date.now();
+  if (leagueConfigCache.has(leagueSlug) && now - cacheTimestamp < CACHE_TTL) {
+    return leagueConfigCache.get(leagueSlug);
+  }
+
+  // Fetch from database
+  const competition = await Competition.findOne({
+    league: leagueSlug,
+    isHidden: false,
+  });
+
+  if (!competition) {
+    throw new Error(`League "${leagueSlug}" not found or is hidden`);
+  }
+
+  const config = {
+    apiUrl: competition.apiUrl,
+    referer: competition.referer,
+  };
+
+  // Update cache
+  leagueConfigCache.set(leagueSlug, config);
+  cacheTimestamp = now;
+
+  return config;
+}
 
 // GET /api/matches/external - Fetch matches from external API
 router.get("/external", async (req, res) => {
@@ -43,100 +59,48 @@ router.get("/external", async (req, res) => {
     const { league, week } = req.query;
 
     // Validate league parameter
-    if (
-      !league ||
-      !["saudi", "saudi-super-cup", "spanish-super-cup"].includes(league)
-    ) {
+    if (!league) {
       return res.status(400).json({
-        error:
-          "Valid league parameter is required (saudi, saudi-super-cup, or spanish-super-cup)",
+        error: "League parameter is required",
       });
     }
 
-    // Get league-specific API configuration
-    const leagueConfig = LEAGUE_API_CONFIG[league];
-    if (!leagueConfig || !leagueConfig.tmcl) {
-      throw new Error(
-        `External API configuration for ${league} is missing. Please check your .env file.`
-      );
-    }
+    // Get league configuration from database
+    const leagueConfig = await getLeagueConfig(league);
 
-    // Validate base API URL
-    if (!EXTERNAL_API_URL) {
-      throw new Error(
-        "External API URL is missing. Please check your .env file."
-      );
-    }
-
-    // Build query parameters for external API
-    const params = new URLSearchParams({
-      tmcl: leagueConfig.tmcl,
-      _fmt: "json", // Try JSON format first
-      _pgSz: "400",
-    });
-
-    const apiUrl = `${EXTERNAL_API_URL}?${params.toString()}`;
+    // Use the apiUrl directly (it already contains all query parameters)
+    const apiUrl = leagueConfig.apiUrl;
 
     const response = await fetch(apiUrl, {
       headers: {
-        Referer: EXTERNAL_API_REFERER,
+        Referer: leagueConfig.referer,
         "User-Agent": EXTERNAL_API_USER_AGENT,
       },
     });
 
     if (!response.ok) {
-      // If JSON fails, try JSONP
-      if (!EXTERNAL_API_JSONP_CALLBACK) {
-        throw new Error(
-          "JSONP callback is not configured in environment variables."
-        );
-      }
+      throw new Error(`External API error: ${response.status}`);
+    }
 
-      const jsonpParams = new URLSearchParams({
-        tmcl: leagueConfig.tmcl,
-        _fmt: "jsonp",
-        _clbk: EXTERNAL_API_JSONP_CALLBACK,
-        _pgSz: "400",
-      });
+    const text = await response.text();
 
-      const jsonpUrl = `${EXTERNAL_API_URL}?${jsonpParams.toString()}`;
-      const jsonpResponse = await fetch(jsonpUrl, {
-        headers: {
-          Referer: EXTERNAL_API_REFERER,
-          "User-Agent": EXTERNAL_API_USER_AGENT,
-        },
-      });
-
-      if (!jsonpResponse.ok) {
-        throw new Error(`External API error: ${jsonpResponse.status}`);
-      }
-
-      const jsonpText = await jsonpResponse.text();
-      // Extract JSON from JSONP callback using dynamic callback name
-      const callbackRegex = new RegExp(
-        `^${EXTERNAL_API_JSONP_CALLBACK}\\((.*)\\)$`
-      );
-      const jsonMatch = jsonpText.match(callbackRegex);
-
-      if (jsonMatch) {
-        const jsonData = JSON.parse(jsonMatch[1]);
-        // Transform API response to match our Match model structure
-        const transformedMatches = transformApiMatches(jsonData, league);
-
-        // Save/update matches in database
-        await saveMatchesToDatabase(transformedMatches);
-
-        // Return matches from database (not from API)
-        return await returnMatchesFromDatabase(req, res);
+    // Parse response (handle both JSON and JSONP)
+    let jsonData;
+    if (text.includes("(") && text.endsWith(")")) {
+      // JSONP format: callbackName({...})
+      const match = text.match(/^[^(]+\((.*)\)$/s);
+      if (match) {
+        jsonData = JSON.parse(match[1]);
       } else {
         throw new Error("Failed to parse JSONP response");
       }
+    } else {
+      // JSON format
+      jsonData = JSON.parse(text);
     }
 
-    const data = await response.json();
-
     // Transform API response to match our Match model structure
-    const transformedMatches = transformApiMatches(data, league);
+    const transformedMatches = transformApiMatches(jsonData, league);
 
     // Save/update matches in database
     await saveMatchesToDatabase(transformedMatches);
@@ -638,13 +602,29 @@ router.get("/:externalMatchId", async (req, res) => {
     const match = await Match.findOne({
       externalMatchId: req.params.externalMatchId,
       isDeleted: { $ne: true },
-    }).populate("competition");
+    })
+      .populate("competition")
+      .lean();
 
     if (!match) {
       return res.status(404).json({ error: "Match not found" });
     }
 
-    res.json(match);
+    // If competition is not populated, try to find it by league
+    let competition = match.competition;
+    if (!competition && match.league) {
+      competition = await Competition.findOne({ league: match.league }).lean();
+    }
+
+    // Format date to string and ensure competition object is properly included
+    const formattedMatch = {
+      ...match,
+      date: match.date ? new Date(match.date).toISOString().split("T")[0] : "",
+      // Keep competition as full object (not just name string) so frontend can access knownName
+      competition: competition || null,
+    };
+
+    res.json(formattedMatch);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

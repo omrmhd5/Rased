@@ -28,9 +28,35 @@ const competitionSchema = new mongoose.Schema(
     },
     league: {
       type: String,
-      enum: ["saudi", "italian", "spanish"],
       required: true,
+      unique: true,
       index: true,
+      trim: true,
+    },
+    apiUrl: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    referer: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    arabicName: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    isHidden: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    iconUrl: {
+      type: String,
+      trim: true,
+      default: "",
     },
     country: {
       id: {

@@ -1,7 +1,10 @@
+import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit2, Trash2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { API_URL } from "@/components/MatchDashboard/types";
 
 type League = "saudi" | "saudi-super-cup" | "spanish-super-cup";
 
@@ -24,12 +27,6 @@ interface UsersRolesMobileProps {
   saving: boolean;
 }
 
-const availableLeagues: { value: League; label: string; icon: string }[] = [
-  { value: "saudi", label: "Saudi Pro League", icon: "/icons/Saudi_League.svg" },
-  { value: "saudi-super-cup", label: "Saudi Super Cup", icon: "/icons/Saudi_Cup.png" },
-  { value: "spanish-super-cup", label: "Spanish Super Cup", icon: "/icons/Spanish_Cup.svg" },
-];
-
 export function UsersRolesMobile({
   users,
   currentUserId,
@@ -37,6 +34,31 @@ export function UsersRolesMobile({
   onDelete,
   saving,
 }: UsersRolesMobileProps) {
+  const { leagues, fetchLeagues } = useAuth();
+
+  // Refetch leagues when component mounts
+  useEffect(() => {
+    fetchLeagues();
+  }, [fetchLeagues]);
+
+  // Get league options from AuthContext (excluding hidden leagues)
+  const availableLeagues: { value: League; label: string; icon: string }[] = (
+    leagues || []
+  )
+    .filter((l) => !l.isHidden)
+    .map((league) => {
+      const iconUrl = league.iconUrl
+        ? league.iconUrl.startsWith("/")
+          ? `${API_URL.replace("/api", "")}${league.iconUrl}`
+          : league.iconUrl
+        : "";
+      return {
+        value: league.league as League,
+        label: league.name || league.arabicName || league.league,
+        icon: iconUrl,
+      };
+    });
+
   return (
     <div className="space-y-3">
       {users.map((user) => {
@@ -47,8 +69,12 @@ export function UsersRolesMobile({
             {/* Header */}
             <div className="flex items-start justify-between mb-3">
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold truncate">{user.username}</h3>
-                <p className="text-xs text-muted-foreground truncate mt-0.5">{user.email}</p>
+                <h3 className="text-sm font-semibold truncate">
+                  {user.username}
+                </h3>
+                <p className="text-xs text-muted-foreground truncate mt-0.5">
+                  {user.email}
+                </p>
               </div>
               <div className="flex items-center gap-1 flex-shrink-0 ml-2">
                 <Button
@@ -81,38 +107,53 @@ export function UsersRolesMobile({
                     ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                     : "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400"
                 }`}>
-                {user.role === "superAdmin" ? "Super Admin" : user.role === "viewer" ? "Viewer" : "Employee"}
+                {user.role === "superAdmin"
+                  ? "Super Admin"
+                  : user.role === "viewer"
+                  ? "Viewer"
+                  : "Employee"}
               </span>
             </div>
 
             {/* Leagues */}
-            {user.role === "employee" && user.leagues && user.leagues.length > 0 && (
-              <div className="mb-3">
-                <p className="text-[10px] text-muted-foreground mb-1.5">Leagues</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {user.leagues.map((league) => {
-                    const leagueInfo = availableLeagues.find((l) => l.value === league);
-                    return leagueInfo ? (
-                      <div key={league} className="flex items-center gap-1">
-                        <img
-                          src={leagueInfo.icon}
-                          alt={leagueInfo.label}
-                          className="h-3.5 w-3.5 object-contain flex-shrink-0"
-                        />
-                        <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">
-                          {leagueInfo.label}
-                        </span>
-                      </div>
-                    ) : null;
-                  })}
+            {user.role === "employee" &&
+              user.leagues &&
+              user.leagues.length > 0 && (
+                <div className="mb-3">
+                  <p className="text-[10px] text-muted-foreground mb-1.5">
+                    Leagues
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {user.leagues.map((league) => {
+                      const leagueInfo = availableLeagues.find(
+                        (l) => l.value === league
+                      );
+                      return leagueInfo ? (
+                        <div key={league} className="flex items-center gap-1">
+                          {leagueInfo.icon && (
+                            <img
+                              src={leagueInfo.icon}
+                              alt={leagueInfo.label}
+                              className="h-3.5 w-3.5 object-contain flex-shrink-0"
+                            />
+                          )}
+                          <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">
+                            {leagueInfo.label}
+                          </span>
+                        </div>
+                      ) : null;
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Created Date */}
             <div className="pt-2 border-t border-border/40">
               <p className="text-[9px] text-muted-foreground">
-                Created: {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "N/A"}
+                Created:{" "}
+                {user.createdAt
+                  ? new Date(user.createdAt).toLocaleDateString()
+                  : "N/A"}
               </p>
             </div>
           </Card>
@@ -121,4 +162,3 @@ export function UsersRolesMobile({
     </div>
   );
 }
-

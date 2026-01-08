@@ -46,7 +46,7 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 export default function ProblematicAccounts() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, leagues } = useAuth();
 
   // Get available leagues based on user role (memoized to prevent infinite loops)
   const availableLeagues = useMemo((): League[] => {
@@ -313,30 +313,23 @@ export default function ProblematicAccounts() {
 
   // Helper to get league icon path
   const getLeagueIcon = (league: League): string => {
-    switch (league) {
-      case "saudi":
-        return "/icons/Saudi_League.svg";
-      case "saudi-super-cup":
-        return "/icons/Saudi_Cup.png";
-      case "spanish-super-cup":
-        return "/icons/Spanish_Cup.svg";
-      default:
-        return "";
+    if (!league) return "";
+    const leagueInfo = leagues?.find((l) => l.league === league);
+    if (leagueInfo?.iconUrl) {
+      // Use iconUrl from database, prepend API URL if it's a relative path
+      if (leagueInfo.iconUrl.startsWith("/")) {
+        return `${API_URL.replace("/api", "")}${leagueInfo.iconUrl}`;
+      }
+      return leagueInfo.iconUrl;
     }
+    return "";
   };
 
   // Helper to get league name
   const getLeagueName = (league: League): string => {
-    switch (league) {
-      case "saudi":
-        return "Saudi Pro League";
-      case "saudi-super-cup":
-        return "Saudi Super Cup";
-      case "spanish-super-cup":
-        return "Spanish Super Cup";
-      default:
-        return "";
-    }
+    if (!league) return "";
+    const leagueInfo = leagues?.find((l) => l.league === league);
+    return leagueInfo?.name || leagueInfo?.arabicName || league;
   };
 
   // Auto-select first available league for employees if they have only one league
@@ -404,42 +397,29 @@ export default function ProblematicAccounts() {
                 {availableLeagues.length > 1 && (
                   <SelectItem value="all" className="text-xs sm:text-sm">All Leagues</SelectItem>
                 )}
-                {availableLeagues.includes("saudi") && (
-                  <SelectItem value="saudi" className="text-xs sm:text-sm">
-                    <div className="flex items-center gap-2">
-                      <img
-                        src="/icons/Saudi_League.svg"
-                        alt="Saudi Pro League"
-                        className="h-5 w-5 sm:h-6 sm:w-6 object-contain flex-shrink-0"
-                      />
-                      <span>Saudi Pro League</span>
-                    </div>
-                  </SelectItem>
-                )}
-                {availableLeagues.includes("saudi-super-cup") && (
-                  <SelectItem value="saudi-super-cup" className="text-xs sm:text-sm">
-                    <div className="flex items-center gap-2">
-                      <img
-                        src="/icons/Saudi_Cup.png"
-                        alt="Saudi Super Cup"
-                        className="h-5 w-5 sm:h-6 sm:w-6 object-contain flex-shrink-0 rounded"
-                      />
-                      <span>Saudi Super Cup</span>
-                    </div>
-                  </SelectItem>
-                )}
-                {availableLeagues.includes("spanish-super-cup") && (
-                  <SelectItem value="spanish-super-cup" className="text-xs sm:text-sm">
-                    <div className="flex items-center gap-2">
-                      <img
-                        src="/icons/Spanish_Cup.svg"
-                        alt="Spanish Super Cup"
-                        className="h-5 w-5 sm:h-6 sm:w-6 object-contain flex-shrink-0"
-                      />
-                      <span>Spanish Super Cup</span>
-                    </div>
-                  </SelectItem>
-                )}
+                {availableLeagues.map((leagueSlug) => {
+                  const leagueInfo = leagues?.find((l) => l.league === leagueSlug);
+                  if (!leagueInfo) return null;
+                  const iconUrl = leagueInfo.iconUrl
+                    ? leagueInfo.iconUrl.startsWith("/")
+                      ? `${API_URL.replace("/api", "")}${leagueInfo.iconUrl}`
+                      : leagueInfo.iconUrl
+                    : null;
+                  return (
+                    <SelectItem key={leagueSlug} value={leagueSlug} className="text-xs sm:text-sm">
+                      <div className="flex items-center gap-2">
+                        {iconUrl && (
+                          <img
+                            src={iconUrl}
+                            alt={leagueInfo.knownName || leagueInfo.name || leagueInfo.arabicName || leagueSlug}
+                            className="h-5 w-5 sm:h-6 sm:w-6 object-contain flex-shrink-0"
+                          />
+                        )}
+                        <span>{leagueInfo.knownName || leagueInfo.name || leagueInfo.arabicName || leagueSlug}</span>
+                      </div>
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
           )}

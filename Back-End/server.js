@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 import matchRoutes from "./routes/matches.js";
 import violationRoutes from "./routes/violations.js";
 import platformRoutes from "./routes/platforms.js";
@@ -11,6 +13,10 @@ import authRoutes from "./routes/auth.js";
 import settingsRoutes from "./routes/settings.js";
 import whitelistedAccountsRoutes from "./routes/whitelistedAccounts.js";
 import usersRoutes from "./routes/users.js";
+import leagueRoutes from "./routes/leagues.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 // Load environment variables
 dotenv.config();
@@ -58,6 +64,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser()); // Parse cookies
 
+// Serve uploaded files statically
+app.use("/uploads", express.static(join(__dirname, "uploads")));
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/matches", matchRoutes);
@@ -67,6 +76,7 @@ app.use("/api/platform-by-match", platformByMatchRoutes);
 app.use("/api/settings", settingsRoutes);
 app.use("/api/whitelisted-accounts", whitelistedAccountsRoutes);
 app.use("/api/users", usersRoutes);
+app.use("/api/leagues", leagueRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

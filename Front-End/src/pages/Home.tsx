@@ -11,59 +11,94 @@ import {
 } from "@/components/ui/dialog";
 import { Settings, Calendar, ArrowRight, BarChart3 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { toast } from "@/hooks/use-toast";
 
-type League = "saudi" | "saudi-super-cup" | "spanish-super-cup" | null;
+type League = string | null;
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, leagues, fetchLeagues } = useAuth();
   const navigate = useNavigate();
   const [selectedLeague, setSelectedLeague] = useState<League>(null);
   const [isLeagueDialogOpen, setIsLeagueDialogOpen] = useState(false);
 
+  // Refetch leagues when component mounts
+  useEffect(() => {
+    if (user) {
+      fetchLeagues();
+    }
+  }, [user, fetchLeagues]);
+
   // Get available leagues based on user role
   const getAvailableLeagues = (): League[] => {
-    if (!user) return [];
+    if (!user || !leagues) return [];
     
-    // SuperAdmin and Viewer can access all leagues
+    // Filter out hidden leagues
+    const visibleLeagues = leagues.filter((l) => !l.isHidden);
+    
+    // SuperAdmin and Viewer can access all visible leagues
     if (user.role === "superAdmin" || user.role === "viewer") {
-      return ["saudi", "saudi-super-cup", "spanish-super-cup"];
+      return visibleLeagues.map((l) => l.league);
     }
     
-    // Employees can only access their assigned leagues
+    // Employees can only access their assigned leagues (that are visible)
     if (user.role === "employee" && user.leagues) {
-      return user.leagues;
+      return visibleLeagues
+        .filter((l) => user.leagues?.includes(l.league))
+        .map((l) => l.league);
     }
     
     return [];
   };
 
+  // Validate if selected league is still available and visible
+  const isValidSelectedLeague = (league: League): boolean => {
+    if (!league || !user || !leagues) return false;
+    
+    const leagueInfo = leagues.find((l) => l.league === league);
+    if (!leagueInfo) return false;
+    
+    // Check if league is hidden
+    if (leagueInfo.isHidden) return false;
+    
+    // For employees, check if league is assigned to them
+    if (user.role === "employee" && user.leagues) {
+      return user.leagues.includes(league);
+    }
+    
+    // For viewers and superAdmin, if league is visible, it's valid
+    return true;
+  };
+
   // Load selected league from localStorage on mount
   useEffect(() => {
-    if (!user) return;
+    if (!user || !leagues) return;
     
     const availableLeagues = getAvailableLeagues();
     const savedLeague = localStorage.getItem("selectedLeague") as League;
     
-    if (
-      savedLeague &&
-      availableLeagues.includes(savedLeague)
-    ) {
+    // Validate the saved league
+    if (savedLeague && isValidSelectedLeague(savedLeague)) {
       setSelectedLeague(savedLeague);
-    } else if (availableLeagues.length > 0) {
-      // If saved league is not in available leagues, select the first available
-      if (savedLeague && !availableLeagues.includes(savedLeague)) {
+    } else {
+      // Clear invalid league from localStorage
+      if (savedLeague) {
+        localStorage.removeItem("selectedLeague");
+        setSelectedLeague(null);
+      }
+      
+      if (availableLeagues.length > 0) {
+        // Select the first available league
         setSelectedLeague(availableLeagues[0]);
         localStorage.setItem("selectedLeague", availableLeagues[0]);
-      } else if (!savedLeague) {
-        // If no league is selected, show the dialog
+      } else {
+        // No leagues available, show dialog with message
+        setSelectedLeague(null);
         setIsLeagueDialogOpen(true);
       }
     }
-  }, [user]);
+  }, [user, leagues]);
 
-  const handleLeagueSelect = (
-    league: "saudi" | "saudi-super-cup" | "spanish-super-cup"
-  ) => {
+  const handleLeagueSelect = (league: string) => {
     const availableLeagues = getAvailableLeagues();
     // Only allow selecting from available leagues
     if (availableLeagues.includes(league)) {
@@ -74,29 +109,56 @@ export default function Home() {
   };
 
   const getLeagueName = (league: League): string => {
-    switch (league) {
-      case "saudi":
-        return "Saudi Pro League";
-      case "saudi-super-cup":
-        return "Saudi Super Cup";
-      case "spanish-super-cup":
-        return "Spanish Super Cup";
-      default:
-        return "No League Selected";
-    }
+    if (!league) return "No League Selected";
+    const leagueInfo = leagues.find((l) => l.league === league);
+    return leagueInfo?.knownName || leagueInfo?.name || leagueInfo?.arabicName || league;
   };
 
   const getLeagueIcon = (league: League): string => {
-    switch (league) {
-      case "saudi":
-        return "/icons/Saudi_League.svg";
-      case "saudi-super-cup":
-        return "/icons/Saudi_Cup.png";
-      case "spanish-super-cup":
-        return "/icons/Spanish_Cup.svg";
-      default:
-        return "";
+    if (!league) return "";
+    const leagueInfo = leagues.find((l) => l.league === league);
+    if (leagueInfo?.iconUrl) {
+      // Use iconUrl from database, prepend API URL if it's a relative path
+      if (leagueInfo.iconUrl.startsWith("/")) {
+        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+        return API_URL.replace("/api", "") + leagueInfo.iconUrl;
+      }
+      return leagueInfo.iconUrl;
     }
+    return "";
+  };
+
+  // Check if navigation is allowed (only for employees and viewers - they need a valid league selected)
+  const canNavigate = (): boolean => {
+    // SuperAdmin can always navigate
+    if (user?.role === "superAdmin") {
+      return true;
+    }
+    // Employees and viewers need a valid league selected
+    return selectedLeague && isValidSelectedLeague(selectedLeague);
+  };
+
+  // Handle navigation with league check
+  const handleNavigate = (path: string) => {
+    if (!canNavigate()) {
+      const availableLeagues = getAvailableLeagues();
+      if (availableLeagues.length === 0) {
+        toast({
+          title: "No Leagues Available",
+          description: "No leagues are available. Please contact an administrator.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "League Required",
+          description: "Please select a league before navigating to this page.",
+          variant: "destructive",
+        });
+      }
+      setIsLeagueDialogOpen(true);
+      return;
+    }
+    navigate(path);
   };
 
   return (
@@ -118,7 +180,7 @@ export default function Home() {
             {/* View Matches */}
             <Card
               className="p-4 sm:p-6 hover:shadow-md transition-shadow cursor-pointer touch-manipulation active:scale-[0.98]"
-              onClick={() => navigate("/matches")}>
+              onClick={() => handleNavigate("/matches")}>
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
@@ -136,7 +198,7 @@ export default function Home() {
             {/* View Dashboard */}
             <Card
               className="p-4 sm:p-6 hover:shadow-md transition-shadow cursor-pointer touch-manipulation active:scale-[0.98]"
-              onClick={() => navigate("/dashboard")}>
+              onClick={() => handleNavigate("/dashboard")}>
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
@@ -209,7 +271,11 @@ export default function Home() {
           <div className="space-y-2 sm:space-y-3 py-2 sm:py-4 px-1 sm:px-0">
             {(() => {
               const availableLeagues = getAvailableLeagues();
-              if (availableLeagues.length === 0) {
+              const availableLeagueInfos = leagues.filter((l) => 
+                !l.isHidden && availableLeagues.includes(l.league)
+              );
+
+              if (availableLeagueInfos.length === 0) {
                 return (
                   <div className="text-center py-4 sm:py-6 text-muted-foreground px-2">
                     <p className="text-sm sm:text-base">No leagues available. Please contact an administrator.</p>
@@ -218,62 +284,34 @@ export default function Home() {
               }
               return (
                 <>
-                  {availableLeagues.includes("saudi") && (
-                  <Button
-                    variant="outline"
-                    className="w-full h-auto p-4 sm:p-6 flex items-center gap-3 hover:bg-accent transition-colors touch-manipulation min-h-[64px] sm:min-h-[80px]"
-                    onClick={() => handleLeagueSelect("saudi")}>
-                    <img
-                      src="/icons/Saudi_League.svg"
-                      alt="Saudi Pro League"
-                      className="h-7 w-7 sm:h-8 sm:w-8 object-contain flex-shrink-0"
-                    />
-                    <div className="flex-1 text-left min-w-0">
-                      <div className="font-semibold text-base sm:text-lg truncate">Saudi Pro League</div>
-                      <div className="text-xs sm:text-sm text-muted-foreground truncate">
-                        Saudi Arabia
-                      </div>
-                    </div>
-                  </Button>
-                  )}
-
-                  {availableLeagues.includes("saudi-super-cup") && (
-                  <Button
-                    variant="outline"
-                    className="w-full h-auto p-4 sm:p-6 flex items-center gap-3 hover:bg-accent transition-colors touch-manipulation min-h-[64px] sm:min-h-[80px]"
-                    onClick={() => handleLeagueSelect("saudi-super-cup")}>
-                    <img
-                      src="/icons/Saudi_Cup.png"
-                      alt="Saudi Super Cup"
-                      className="h-10 w-10 sm:h-12 sm:w-12 object-contain flex-shrink-0 rounded"
-                    />
-                    <div className="flex-1 text-left min-w-0">
-                      <div className="font-semibold text-base sm:text-lg truncate">Saudi Super Cup</div>
-                      <div className="text-xs sm:text-sm text-muted-foreground truncate">
-                        بطولة كاس السوبر السعودي
-                      </div>
-                    </div>
-                  </Button>
-                )}
-
-                {availableLeagues.includes("spanish-super-cup") && (
-                  <Button
-                    variant="outline"
-                    className="w-full h-auto p-4 sm:p-6 flex items-center gap-3 hover:bg-accent transition-colors touch-manipulation min-h-[64px] sm:min-h-[80px]"
-                    onClick={() => handleLeagueSelect("spanish-super-cup")}>
-                    <img
-                      src="/icons/Spanish_Cup.svg"
-                      alt="Spanish Super Cup"
-                      className="h-7 w-7 sm:h-8 sm:w-8 object-contain flex-shrink-0"
-                    />
-                    <div className="flex-1 text-left min-w-0">
-                      <div className="font-semibold text-base sm:text-lg truncate">Spanish Super Cup</div>
-                      <div className="text-xs sm:text-sm text-muted-foreground truncate">
-                        السوبر الاسباني
-                      </div>
-                    </div>
-                  </Button>
-                  )}
+                  {availableLeagueInfos.map((leagueInfo) => {
+                    const icon = getLeagueIcon(leagueInfo.league);
+                    return (
+                      <Button
+                        key={leagueInfo.league}
+                        variant="outline"
+                        className="w-full h-auto p-4 sm:p-6 flex items-center gap-3 hover:bg-accent transition-colors touch-manipulation min-h-[64px] sm:min-h-[80px]"
+                        onClick={() => handleLeagueSelect(leagueInfo.league)}>
+                        {icon && (
+                          <img
+                            src={icon}
+                            alt={leagueInfo.name}
+                            className="h-7 w-7 sm:h-8 sm:w-8 object-contain flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 text-left min-w-0">
+                          <div className="font-semibold text-base sm:text-lg truncate">
+                            {leagueInfo.knownName || leagueInfo.name}
+                          </div>
+                          {leagueInfo.arabicName && (
+                            <div className="text-xs sm:text-sm text-muted-foreground truncate">
+                              {leagueInfo.arabicName}
+                            </div>
+                          )}
+                        </div>
+                      </Button>
+                    );
+                  })}
                 </>
               );
             })()}

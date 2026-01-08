@@ -88,8 +88,30 @@ interface Violation {
 
 export default function WhitelistedAccounts() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, leagues } = useAuth();
   const isSuperAdmin = user?.role === "superAdmin";
+  
+  // Get available leagues based on user role
+  const getAvailableLeagues = (): string[] => {
+    if (!user || !leagues) return [];
+    
+    // Filter out hidden leagues
+    const visibleLeagues = leagues.filter((l) => !l.isHidden);
+    
+    // SuperAdmin and Viewer can access all visible leagues
+    if (user.role === "superAdmin" || user.role === "viewer") {
+      return visibleLeagues.map((l) => l.league);
+    }
+    
+    // Employees can only access their assigned leagues (that are visible)
+    if (user.role === "employee" && user.leagues) {
+      return visibleLeagues
+        .filter((l) => user.leagues?.includes(l.league))
+        .map((l) => l.league);
+    }
+    
+    return [];
+  };
   const [accounts, setAccounts] = useState<WhitelistedAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -131,14 +153,14 @@ export default function WhitelistedAccounts() {
     fetchAccounts();
   }, []);
 
-  // Fetch violations for accounts when they change
+  // Fetch violations for accounts when they change or user/leagues change
   useEffect(() => {
-    if (accounts.length > 0) {
+    if (accounts.length > 0 && user) {
       accounts.forEach((account) => {
         fetchViolationsForAccount(account);
       });
     }
-  }, [accounts]);
+  }, [accounts, user, leagues]);
 
   // Get account name for a platform (main name or platform-specific)
   const getAccountNameForPlatform = (
@@ -182,6 +204,17 @@ export default function WhitelistedAccounts() {
     setLoadingViolations((prev) => ({ ...prev, [key]: true }));
 
     try {
+      const availableLeagues = getAvailableLeagues();
+      
+      // If no leagues available, return empty array
+      if (availableLeagues.length === 0) {
+        setAccountViolations((prev) => ({
+          ...prev,
+          [key]: [],
+        }));
+        return;
+      }
+
       // Fetch violations for each platform that this account is whitelisted on
       const violationPromises = account.platforms.map(async (platformId) => {
         // Get the account name for this platform (main name or platform-specific)
@@ -190,35 +223,41 @@ export default function WhitelistedAccounts() {
           platformId
         );
 
-        // Fetch all violations for this platform (without search to avoid regex/contains)
-        const response = await fetch(
-          `${API_URL}/violations?platformId=${platformId}&limit=1000`,
-          {
-            credentials: "include",
-          }
-        );
+        // Fetch violations for each allowed league and combine
+        const leagueViolationPromises = availableLeagues.map(async (league) => {
+          // Fetch violations for this platform and league
+          const response = await fetch(
+            `${API_URL}/violations?platformId=${platformId}&league=${league}&limit=1000`,
+            {
+              credentials: "include",
+            }
+          );
 
-        if (!response.ok) {
-          return [];
-        }
-
-        const violations = await response.json();
-        // Filter to only EXACT accountChannel matches (case-insensitive)
-        // If platform-specific name exists, ONLY check that name (not the main name)
-        // Otherwise, check the main account name
-        return violations.filter((v: Violation) => {
-          if (!v.accountChannel || v.platformId !== platformId) {
-            return false;
+          if (!response.ok) {
+            return [];
           }
 
-          const violationName = v.accountChannel.trim().toLowerCase();
-          const platformName = accountNameForPlatform.trim().toLowerCase();
+          const violations = await response.json();
+          // Filter to only EXACT accountChannel matches (case-insensitive)
+          // If platform-specific name exists, ONLY check that name (not the main name)
+          // Otherwise, check the main account name
+          return violations.filter((v: Violation) => {
+            if (!v.accountChannel || v.platformId !== platformId) {
+              return false;
+            }
 
-          // Exact match only - no contains/substring matching
-          // Since accountNameForPlatform already returns platform-specific name if it exists,
-          // or main name if it doesn't, we just need to check against that
-          return violationName === platformName;
+            const violationName = v.accountChannel.trim().toLowerCase();
+            const platformName = accountNameForPlatform.trim().toLowerCase();
+
+            // Exact match only - no contains/substring matching
+            // Since accountNameForPlatform already returns platform-specific name if it exists,
+            // or main name if it doesn't, we just need to check against that
+            return violationName === platformName;
+          });
         });
+
+        const leagueViolationsArrays = await Promise.all(leagueViolationPromises);
+        return leagueViolationsArrays.flat();
       });
 
       const violationsArrays = await Promise.all(violationPromises);

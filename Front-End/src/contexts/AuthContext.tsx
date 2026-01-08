@@ -8,7 +8,19 @@ import {
 import { useNavigate } from "react-router-dom";
 import { API_URL } from "@/components/MatchDashboard/types";
 
-type League = "saudi" | "saudi-super-cup" | "spanish-super-cup";
+type League = string;
+
+interface LeagueInfo {
+  _id?: string;
+  league: string;
+  name: string;
+  knownName?: string;
+  arabicName?: string;
+  isHidden: boolean;
+  competitionCode?: string;
+  iconUrl?: string;
+  [key: string]: any;
+}
 
 interface User {
   id: string;
@@ -21,9 +33,12 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  leagues: LeagueInfo[];
+  loadingLeagues: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   verifyAuth: () => Promise<void>;
+  fetchLeagues: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -43,12 +58,42 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [leagues, setLeagues] = useState<LeagueInfo[]>([]);
+  const [loadingLeagues, setLoadingLeagues] = useState(false);
   const navigate = useNavigate();
 
   // Verify authentication on mount
   useEffect(() => {
     verifyAuth();
   }, []);
+
+  // Fetch leagues when user is authenticated
+  useEffect(() => {
+    if (user) {
+      fetchLeagues();
+    } else {
+      setLeagues([]);
+    }
+  }, [user]);
+
+  const fetchLeagues = async () => {
+    setLoadingLeagues(true);
+    try {
+      const response = await fetch(`${API_URL}/leagues`, {
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setLeagues(data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching leagues:", error);
+      setLeagues([]);
+    } finally {
+      setLoadingLeagues(false);
+    }
+  };
 
   const verifyAuth = async () => {
     try {
@@ -116,9 +161,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       value={{
         user,
         loading,
+        leagues,
+        loadingLeagues,
         login,
         logout,
         verifyAuth,
+        fetchLeagues,
       }}>
       {children}
     </AuthContext.Provider>

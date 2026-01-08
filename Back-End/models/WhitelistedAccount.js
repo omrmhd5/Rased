@@ -6,7 +6,6 @@ const whitelistedAccountSchema = new mongoose.Schema(
       type: String,
       required: true,
       trim: true,
-      index: true,
     },
     platforms: {
       type: [String],

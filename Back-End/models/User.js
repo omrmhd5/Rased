@@ -32,7 +32,6 @@ const userSchema = new mongoose.Schema(
     },
     leagues: {
       type: [String],
-      enum: ["saudi", "saudi-super-cup", "spanish-super-cup"],
       default: [],
     },
   },

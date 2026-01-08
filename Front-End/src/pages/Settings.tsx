@@ -19,7 +19,29 @@ import {
   Save,
   Loader2,
   AlertTriangle,
+  Globe,
+  Plus,
+  Eye,
+  EyeOff,
+  Edit,
 } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { API_URL } from "@/components/MatchDashboard/types";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -44,6 +66,21 @@ export default function Settings() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(true);
+
+  // Leagues management states
+  const [leagues, setLeagues] = useState<any[]>([]);
+  const [loadingLeagues, setLoadingLeagues] = useState(false);
+  const [isAddLeagueOpen, setIsAddLeagueOpen] = useState(false);
+  const [isEditLeagueOpen, setIsEditLeagueOpen] = useState(false);
+  const [editingLeague, setEditingLeague] = useState<any | null>(null);
+  const [formSlug, setFormSlug] = useState("");
+  const [formApiUrl, setFormApiUrl] = useState("");
+  const [formReferer, setFormReferer] = useState("");
+  const [formArabicName, setFormArabicName] = useState("");
+  const [formIcon, setFormIcon] = useState<File | null>(null);
+  const [formError, setFormError] = useState("");
+  const [addingLeague, setAddingLeague] = useState(false);
+  const [updatingLeague, setUpdatingLeague] = useState(false);
 
   // Check if user is superAdmin
   useEffect(() => {
@@ -115,7 +152,193 @@ export default function Settings() {
     };
 
     fetchSettings();
+    fetchLeagues();
   }, [currentUser]);
+
+  // Fetch leagues
+  const fetchLeagues = async () => {
+    setLoadingLeagues(true);
+    try {
+      const response = await fetch(`${API_URL}/leagues?includeHidden=true`, {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch leagues");
+      }
+
+      const data = await response.json();
+      setLeagues(data || []);
+    } catch (error) {
+      console.error("Error fetching leagues:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load leagues.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingLeagues(false);
+    }
+  };
+
+  // Reset league form
+  const resetLeagueForm = () => {
+    setFormSlug("");
+    setFormApiUrl("");
+    setFormReferer("");
+    setFormArabicName("");
+    setFormIcon(null);
+    setFormError("");
+    setEditingLeague(null);
+  };
+
+  // Open edit league dialog
+  const openEditLeagueDialog = (league: any) => {
+    setEditingLeague(league);
+    setFormSlug(league.league || "");
+    setFormApiUrl(league.apiUrl || "");
+    setFormReferer(league.referer || "");
+    setFormArabicName(league.arabicName || "");
+    setFormIcon(null); // Don't pre-fill icon, user needs to upload new one if they want to change
+    setFormError("");
+    setIsEditLeagueOpen(true);
+  };
+
+  // Add league
+  const handleAddLeague = async () => {
+    setFormError("");
+
+    if (!formSlug.trim() || !formApiUrl.trim() || !formReferer.trim()) {
+      setFormError("Slug, API URL, and Referer are required.");
+      return;
+    }
+
+    if (!formIcon) {
+      setFormError("League icon is required.");
+      return;
+    }
+
+    setAddingLeague(true);
+    try {
+      const formData = new FormData();
+      formData.append("slug", formSlug.trim());
+      formData.append("apiUrl", formApiUrl.trim());
+      formData.append("referer", formReferer.trim());
+      formData.append("arabicName", formArabicName.trim());
+      formData.append("icon", formIcon);
+
+      const response = await fetch(`${API_URL}/leagues`, {
+        method: "POST",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to create league");
+      }
+
+      toast({
+        title: "Success",
+        description: "League created successfully.",
+      });
+
+      setIsAddLeagueOpen(false);
+      resetLeagueForm();
+      fetchLeagues();
+    } catch (error) {
+      console.error("Error adding league:", error);
+      setFormError(
+        error instanceof Error ? error.message : "Failed to create league"
+      );
+    } finally {
+      setAddingLeague(false);
+    }
+  };
+
+  // Update league
+  const handleUpdateLeague = async () => {
+    setFormError("");
+
+    if (!formSlug.trim() || !formApiUrl.trim() || !formReferer.trim()) {
+      setFormError("Slug, API URL, and Referer are required.");
+      return;
+    }
+
+    if (!editingLeague) {
+      setFormError("No league selected for editing.");
+      return;
+    }
+
+    setUpdatingLeague(true);
+    try {
+      const formData = new FormData();
+      formData.append("slug", formSlug.trim());
+      formData.append("apiUrl", formApiUrl.trim());
+      formData.append("referer", formReferer.trim());
+      formData.append("arabicName", formArabicName.trim());
+      // Only append icon if a new one was selected
+      if (formIcon) {
+        formData.append("icon", formIcon);
+      }
+
+      const response = await fetch(`${API_URL}/leagues/${editingLeague.league}`, {
+        method: "PUT",
+        credentials: "include",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to update league");
+      }
+
+      toast({
+        title: "Success",
+        description: "League updated successfully.",
+      });
+
+      setIsEditLeagueOpen(false);
+      resetLeagueForm();
+      fetchLeagues();
+    } catch (error) {
+      console.error("Error updating league:", error);
+      setFormError(
+        error instanceof Error ? error.message : "Failed to update league"
+      );
+    } finally {
+      setUpdatingLeague(false);
+    }
+  };
+
+  // Toggle league hidden status
+  const handleToggleLeague = async (league: any) => {
+    try {
+      const response = await fetch(`${API_URL}/leagues/${league.league}/toggle`, {
+        method: "PATCH",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to toggle league");
+      }
+
+      toast({
+        title: "Success",
+        description: `League ${league.isHidden ? "shown" : "hidden"} successfully.`,
+      });
+
+      fetchLeagues();
+    } catch (error) {
+      console.error("Error toggling league:", error);
+      toast({
+        title: "Error",
+        description: "Failed to toggle league.",
+        variant: "destructive",
+      });
+    }
+  };
+
 
   // Don't render if not superAdmin
   if (!currentUser || currentUser.role !== "superAdmin") {
@@ -512,6 +735,401 @@ export default function Settings() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Leagues Management */}
+      <Card>
+        <CardHeader className="p-4 sm:p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <CardTitle className="text-lg sm:text-xl">Leagues Management</CardTitle>
+            </div>
+            <Dialog open={isAddLeagueOpen} onOpenChange={setIsAddLeagueOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  size="sm"
+                  className="h-8 sm:h-9 text-xs sm:text-sm touch-manipulation">
+                  <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                  <span className="hidden xs:inline">Add League</span>
+                  <span className="xs:hidden">Add</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="w-[95vw] sm:w-full max-w-md max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="text-lg sm:text-xl">Add League</DialogTitle>
+                  <DialogDescription className="text-xs sm:text-sm">
+                    Add a new league by providing the API URL and referer. The system will fetch competition data automatically.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="slug" className="text-xs sm:text-sm">Slug *</Label>
+                    <Input
+                      id="slug"
+                      value={formSlug}
+                      onChange={(e) => setFormSlug(e.target.value)}
+                      placeholder="e.g., saudi"
+                      className="h-9 sm:h-10 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="apiUrl" className="text-xs sm:text-sm">API URL *</Label>
+                    <Input
+                      id="apiUrl"
+                      value={formApiUrl}
+                      onChange={(e) => setFormApiUrl(e.target.value)}
+                      placeholder="https://api.performfeeds.com/..."
+                      className="h-9 sm:h-10 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="referer" className="text-xs sm:text-sm">Referer *</Label>
+                    <Input
+                      id="referer"
+                      value={formReferer}
+                      onChange={(e) => setFormReferer(e.target.value)}
+                      placeholder="https://optaplayerstats.statsperform.com/"
+                      className="h-9 sm:h-10 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="arabicName" className="text-xs sm:text-sm">Arabic Name</Label>
+                    <Input
+                      id="arabicName"
+                      value={formArabicName}
+                      onChange={(e) => setFormArabicName(e.target.value)}
+                      placeholder="الدوري السعودي"
+                      className="h-9 sm:h-10 text-sm"
+                    />
+                  </div>
+                  <div className="space-y-1.5 sm:space-y-2">
+                    <Label htmlFor="icon" className="text-xs sm:text-sm">League Icon * (SVG or PNG)</Label>
+                    <Input
+                      id="icon"
+                      type="file"
+                      accept="image/svg+xml,image/png"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          if (file.size > 5 * 1024 * 1024) {
+                            setFormError("File size must be less than 5MB");
+                            return;
+                          }
+                          setFormIcon(file);
+                          setFormError("");
+                        }
+                      }}
+                      className="h-9 sm:h-10 text-sm"
+                    />
+                    {formIcon && (
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        Selected: {formIcon.name}
+                      </p>
+                    )}
+                  </div>
+                  {formError && (
+                    <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription className="text-xs sm:text-sm">{formError}</AlertDescription>
+                    </Alert>
+                  )}
+                </div>
+                <DialogFooter className="gap-2 sm:gap-0">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setIsAddLeagueOpen(false);
+                      resetLeagueForm();
+                    }}
+                    className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleAddLeague}
+                    disabled={addingLeague}
+                    className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
+                    {addingLeague ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      "Add League"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+          <CardDescription className="text-xs sm:text-sm">
+            Manage leagues and their API configurations
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6">
+          {loadingLeagues ? (
+            <div className="flex items-center justify-center py-6 sm:py-8">
+              <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : leagues.length === 0 ? (
+            <div className="text-center py-8 sm:py-12 text-muted-foreground">
+              <Globe className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
+              <p className="text-xs sm:text-sm">No leagues found. Add your first league to get started.</p>
+            </div>
+          ) : (
+            <>
+              {/* Mobile Version */}
+              <div className="md:hidden space-y-3">
+                {leagues.map((league) => {
+                  const iconUrl = league.iconUrl
+                    ? league.iconUrl.startsWith("/")
+                      ? `${API_URL.replace("/api", "")}${league.iconUrl}`
+                      : league.iconUrl
+                    : null;
+                  return (
+                  <Card key={league._id || league.league} className="p-4">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {iconUrl && (
+                          <img
+                            src={iconUrl}
+                            alt={league.name || league.league}
+                            className="h-8 w-8 sm:h-10 sm:w-10 object-contain flex-shrink-0"
+                          />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-semibold truncate">{league.knownName || league.name || league.league}</span>
+                            {league.isHidden && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                                Hidden
+                              </span>
+                            )}
+                          </div>
+                          {league.arabicName && (
+                            <p className="text-xs text-muted-foreground mb-1">{league.arabicName}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground truncate">Slug: {league.league}</p>
+                          <p className="text-xs text-muted-foreground truncate">Code: {league.competitionCode || "N/A"}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0 ml-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditLeagueDialog(league)}
+                          className="h-7 w-7 touch-manipulation">
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleToggleLeague(league)}
+                          className="h-7 w-7 touch-manipulation">
+                          {league.isHidden ? (
+                            <Eye className="h-3.5 w-3.5" />
+                          ) : (
+                            <EyeOff className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Version */}
+              <div className="hidden md:block rounded-md border overflow-x-auto">
+                <Table className="min-w-[800px]">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">Icon</TableHead>
+                      <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">Name</TableHead>
+                      <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">Arabic Name</TableHead>
+                      <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">Slug</TableHead>
+                      <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">Code</TableHead>
+                      <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">Status</TableHead>
+                      <TableHead className="p-3 sm:p-4 text-right text-xs sm:text-sm">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leagues.map((league) => {
+                      const iconUrl = league.iconUrl
+                        ? league.iconUrl.startsWith("/")
+                          ? `${API_URL.replace("/api", "")}${league.iconUrl}`
+                          : league.iconUrl
+                        : null;
+                      return (
+                      <TableRow key={league._id || league.league}>
+                        <TableCell className="p-3 sm:p-4">
+                          {iconUrl ? (
+                            <img
+                              src={iconUrl}
+                              alt={league.name || league.league}
+                              className="h-8 w-8 sm:h-10 sm:w-10 object-contain"
+                            />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="p-3 sm:p-4 text-xs sm:text-sm">{league.knownName || league.name || league.league}</TableCell>
+                        <TableCell className="p-3 sm:p-4 text-xs sm:text-sm">{league.arabicName || "-"}</TableCell>
+                        <TableCell className="p-3 sm:p-4 text-xs sm:text-sm font-mono">{league.league}</TableCell>
+                        <TableCell className="p-3 sm:p-4 text-xs sm:text-sm">{league.competitionCode || "-"}</TableCell>
+                        <TableCell className="p-3 sm:p-4 text-xs sm:text-sm">
+                          {league.isHidden ? (
+                            <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">Hidden</span>
+                          ) : (
+                            <span className="text-xs px-2 py-0.5 rounded bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">Visible</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="p-3 sm:p-4 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEditLeagueDialog(league)}
+                              className="h-8 w-8">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleToggleLeague(league)}
+                              className="h-8 w-8">
+                              {league.isHidden ? (
+                                <Eye className="h-4 w-4" />
+                              ) : (
+                                <EyeOff className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Edit League Dialog */}
+      <Dialog open={isEditLeagueOpen} onOpenChange={setIsEditLeagueOpen}>
+        <DialogContent className="w-[95vw] sm:w-full max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg sm:text-xl">Edit League</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              Update league information. Only manually added fields can be edited.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="edit-slug" className="text-xs sm:text-sm">Slug *</Label>
+              <Input
+                id="edit-slug"
+                value={formSlug}
+                onChange={(e) => setFormSlug(e.target.value)}
+                placeholder="e.g., saudi"
+                className="h-9 sm:h-10 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="edit-apiUrl" className="text-xs sm:text-sm">API URL *</Label>
+              <Input
+                id="edit-apiUrl"
+                value={formApiUrl}
+                onChange={(e) => setFormApiUrl(e.target.value)}
+                placeholder="https://api.performfeeds.com/..."
+                className="h-9 sm:h-10 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="edit-referer" className="text-xs sm:text-sm">Referer *</Label>
+              <Input
+                id="edit-referer"
+                value={formReferer}
+                onChange={(e) => setFormReferer(e.target.value)}
+                placeholder="https://optaplayerstats.statsperform.com/"
+                className="h-9 sm:h-10 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="edit-arabicName" className="text-xs sm:text-sm">Arabic Name</Label>
+              <Input
+                id="edit-arabicName"
+                value={formArabicName}
+                onChange={(e) => setFormArabicName(e.target.value)}
+                placeholder="الدوري السعودي"
+                className="h-9 sm:h-10 text-sm"
+              />
+            </div>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="edit-icon" className="text-xs sm:text-sm">League Icon (SVG or PNG) - Optional</Label>
+              <Input
+                id="edit-icon"
+                type="file"
+                accept="image/svg+xml,image/png"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    if (file.size > 5 * 1024 * 1024) {
+                      setFormError("File size must be less than 5MB");
+                      return;
+                    }
+                    setFormIcon(file);
+                    setFormError("");
+                  }
+                }}
+                className="h-9 sm:h-10 text-sm"
+              />
+              {formIcon && (
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Selected: {formIcon.name}
+                </p>
+              )}
+              {editingLeague?.iconUrl && !formIcon && (
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Current icon: {editingLeague.iconUrl.split("/").pop()}
+                </p>
+              )}
+            </div>
+            {formError && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription className="text-xs sm:text-sm">{formError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditLeagueOpen(false);
+                resetLeagueForm();
+              }}
+              className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateLeague}
+              disabled={updatingLeague}
+              className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
+              {updatingLeague ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                "Update League"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

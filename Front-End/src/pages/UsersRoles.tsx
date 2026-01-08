@@ -29,11 +29,18 @@ interface User {
 }
 
 export default function UsersRoles() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, leagues, fetchLeagues } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Refetch leagues when component mounts
+  useEffect(() => {
+    if (currentUser?.role === "superAdmin") {
+      fetchLeagues();
+    }
+  }, [currentUser, fetchLeagues]);
   
   // Dialog states
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
@@ -52,11 +59,21 @@ export default function UsersRoles() {
   const [formLeagues, setFormLeagues] = useState<League[]>([]);
   const [formError, setFormError] = useState("");
 
-  const availableLeagues: { value: League; label: string; icon: string }[] = [
-    { value: "saudi", label: "Saudi Pro League", icon: "/icons/Saudi_League.svg" },
-    { value: "saudi-super-cup", label: "Saudi Super Cup", icon: "/icons/Saudi_Cup.png" },
-    { value: "spanish-super-cup", label: "Spanish Super Cup", icon: "/icons/Spanish_Cup.svg" },
-  ];
+  // Get league options from AuthContext
+  const availableLeagues: { value: League; label: string; icon: string }[] = (leagues || [])
+    .filter((l) => !l.isHidden)
+    .map((league) => {
+      const iconUrl = league.iconUrl
+        ? league.iconUrl.startsWith("/")
+          ? `${API_URL.replace("/api", "")}${league.iconUrl}`
+          : league.iconUrl
+        : "";
+      return {
+        value: league.league as League,
+        label: league.name || league.arabicName || league.league,
+        icon: iconUrl,
+      };
+    });
 
   // Check if user is superAdmin
   useEffect(() => {

@@ -55,25 +55,6 @@ import { useAuth } from "@/contexts/AuthContext";
 
 type League = "saudi" | "saudi-super-cup" | "spanish-super-cup" | null;
 
-const leagueNames = {
-  saudi: "Saudi Pro League",
-  "saudi-super-cup": "Saudi Super Cup",
-  "spanish-super-cup": "Spanish Super Cup",
-};
-
-// Helper to get league icon path
-const getLeagueIcon = (league: League): string => {
-  switch (league) {
-    case "saudi":
-      return "/icons/Saudi_League.svg";
-    case "saudi-super-cup":
-      return "/icons/Saudi_Cup.png";
-    case "spanish-super-cup":
-      return "/icons/Spanish_Cup.svg";
-    default:
-      return "";
-  }
-};
 
 interface Competition {
   _id?: string;
@@ -125,8 +106,29 @@ type MatchFilter = "all" | "live" | "upcoming" | "completed";
 
 export default function Matches() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, leagues } = useAuth();
   const isSuperAdmin = user?.role === "superAdmin";
+  
+  // Helper to get league icon path
+  const getLeagueIcon = (league: League): string => {
+    if (!league) return "";
+    const leagueInfo = leagues?.find((l) => l.league === league);
+    if (leagueInfo?.iconUrl) {
+      // Use iconUrl from database, prepend API URL if it's a relative path
+      if (leagueInfo.iconUrl.startsWith("/")) {
+        return `${API_URL.replace("/api", "")}${leagueInfo.iconUrl}`;
+      }
+      return leagueInfo.iconUrl;
+    }
+    return "";
+  };
+  
+  // Helper to get league name
+  const getLeagueName = (league: League): string => {
+    if (!league) return "";
+    const leagueInfo = leagues?.find((l) => l.league === league);
+    return leagueInfo?.knownName || leagueInfo?.name || leagueInfo?.arabicName || league;
+  };
   const [selectedWeek, setSelectedWeek] = useState("12");
   const [selectedStage, setSelectedStage] = useState<string>("");
   const [selectedLeague, setSelectedLeague] = useState<League>(null);
@@ -940,13 +942,24 @@ export default function Matches() {
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-1">
             <h1 className="text-xl sm:text-2xl font-bold">Matches</h1>
             <div className="flex items-center gap-2 flex-wrap">
-              <Badge variant="secondary" className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2">
-                <img
-                  src={getLeagueIcon(selectedLeague!)}
-                  alt={leagueNames[selectedLeague!]}
-                  className="h-8 sm:h-12 w-8 sm:w-12 object-contain flex-shrink-0"
-                />
-                <span className="hidden xs:inline">{leagueNames[selectedLeague!]}</span>
+              <Badge variant="secondary" className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 min-w-0">
+                {(() => {
+                  const leagueInfo = leagues?.find((l) => l.league === selectedLeague);
+                  const iconUrl = getLeagueIcon(selectedLeague!);
+                  const leagueDisplayName = leagueInfo?.knownName || leagueInfo?.name || leagueInfo?.arabicName || selectedLeague;
+                  return (
+                    <>
+                      {iconUrl && (
+                        <img
+                          src={iconUrl}
+                          alt={leagueDisplayName}
+                          className="h-8 sm:h-12 w-8 sm:w-12 object-contain flex-shrink-0"
+                        />
+                      )}
+                      <span className="truncate min-w-0">{leagueDisplayName}</span>
+                    </>
+                  );
+                })()}
               </Badge>
               {(() => {
                 const isSuperCup = selectedLeague === "saudi-super-cup" || selectedLeague === "spanish-super-cup";
@@ -1148,7 +1161,7 @@ export default function Matches() {
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">Add Match Manually</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              Create a new match for {leagueNames[selectedLeague!]}
+              Create a new match for {getLeagueName(selectedLeague!)}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
@@ -1366,7 +1379,7 @@ export default function Matches() {
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">Edit Match</DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              Update match details for {leagueNames[selectedLeague!]}
+              Update match details for {getLeagueName(selectedLeague!)}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
