@@ -20,12 +20,9 @@ export default function Home() {
   const [selectedLeague, setSelectedLeague] = useState<League>(null);
   const [isLeagueDialogOpen, setIsLeagueDialogOpen] = useState(false);
 
-  // Refetch leagues when component mounts
-  useEffect(() => {
-    if (user) {
-      fetchLeagues();
-    }
-  }, [user, fetchLeagues]);
+  // Refetch leagues when component mounts (only once, AuthContext already handles user changes)
+  // Removed duplicate fetchLeagues call - AuthContext already fetches when user changes
+  // This was causing duplicate fetches
 
   // Get available leagues based on user role
   const getAvailableLeagues = (): League[] => {

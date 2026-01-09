@@ -6,7 +6,7 @@ import { Edit2, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { API_URL } from "@/components/MatchDashboard/types";
 
-type League = "saudi" | "saudi-super-cup" | "spanish-super-cup";
+type League = string;
 
 interface User {
   id: string;
@@ -36,10 +36,8 @@ export function UsersRolesMobile({
 }: UsersRolesMobileProps) {
   const { leagues, fetchLeagues } = useAuth();
 
-  // Refetch leagues when component mounts
-  useEffect(() => {
-    fetchLeagues();
-  }, [fetchLeagues]);
+  // Leagues are already fetched by AuthContext when user changes
+  // No need to refetch here - AuthContext handles it
 
   // Get league options from AuthContext (excluding hidden leagues)
   const availableLeagues: { value: League; label: string; icon: string }[] = (

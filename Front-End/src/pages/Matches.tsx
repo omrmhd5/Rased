@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -150,16 +150,25 @@ export default function Matches() {
   };
 
   // Helper to check if league is a Cup (uses competitionType from backend)
+  // Use a ref to store leagues to avoid recreating callback on every leagues change
+  const leaguesRef = useRef(leagues);
+  useEffect(() => {
+    leaguesRef.current = leagues;
+  }, [leagues]);
+  
   const isSuperCupLeague = useCallback((leagueSlug: League): boolean => {
-    if (!leagueSlug || !leagues) return false;
-    const leagueInfo = leagues.find((l) => l.league === leagueSlug);
+    if (!leagueSlug || !leaguesRef.current) return false;
+    const leagueInfo = leaguesRef.current.find((l) => l.league === leagueSlug);
     // Use competitionType from backend (cup or league)
     return leagueInfo?.competitionType === "cup";
-  }, [leagues]);
+  }, []); // Empty deps - uses ref instead
 
   const [selectedWeek, setSelectedWeek] = useState("12");
   const [selectedStage, setSelectedStage] = useState<string>("");
   const [selectedLeague, setSelectedLeague] = useState<League>(null);
+  
+  // Ref to track if we've already initialized to prevent re-initialization loops
+  const isInitializedRef = useRef(false);
 
   // Hardcoded stages for Super Cups (similar to weeks for regular leagues)
   const availableStages = [
@@ -207,7 +216,11 @@ export default function Matches() {
       return;
     }
 
+    // Prevent re-running if already initialized
     const savedLeague = localStorage.getItem("selectedLeague") as League;
+    if (isInitializedRef.current && selectedLeague === savedLeague) {
+      return; // Already initialized, skip
+    }
 
     if (savedLeague) {
       // Get available leagues based on user role
@@ -231,18 +244,21 @@ export default function Matches() {
 
         if (isInAssignedLeagues && isVisible) {
           // Valid league for employee - use it
-          setSelectedLeague(savedLeague);
+          if (selectedLeague !== savedLeague) {
+            setSelectedLeague(savedLeague);
+          }
+          isInitializedRef.current = true;
 
-          // Load week/stage after leagues are available
+          // Load week/stage after leagues are available (only if not already set)
           const isSuperCup = isSuperCupLeague(savedLeague);
           if (isSuperCup) {
             const savedStage = localStorage.getItem("selectedStage");
-            if (savedStage) {
+            if (savedStage && selectedStage !== savedStage) {
               setSelectedStage(savedStage);
             }
           } else {
             const savedWeek = localStorage.getItem("selectedWeek");
-            if (savedWeek) {
+            if (savedWeek && selectedWeek !== savedWeek) {
               setSelectedWeek(savedWeek);
             }
           }
@@ -258,18 +274,21 @@ export default function Matches() {
           availableLeagues.includes(savedLeague);
 
         if (isValid) {
-          setSelectedLeague(savedLeague);
+          if (selectedLeague !== savedLeague) {
+            setSelectedLeague(savedLeague);
+          }
+          isInitializedRef.current = true;
 
-          // Load week/stage after leagues are available
+          // Load week/stage after leagues are available (only if not already set)
           const isSuperCup = isSuperCupLeague(savedLeague);
           if (isSuperCup) {
             const savedStage = localStorage.getItem("selectedStage");
-            if (savedStage) {
+            if (savedStage && selectedStage !== savedStage) {
               setSelectedStage(savedStage);
             }
           } else {
             const savedWeek = localStorage.getItem("selectedWeek");
-            if (savedWeek) {
+            if (savedWeek && selectedWeek !== savedWeek) {
               setSelectedWeek(savedWeek);
             }
           }
@@ -295,13 +314,13 @@ export default function Matches() {
     } else if (!isSuperCup && selectedWeek) {
       localStorage.setItem("selectedWeek", selectedWeek);
     }
-    // isSuperCupLeague is a stable helper function, doesn't need to be in dependencies
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedWeek, selectedStage, selectedLeague]);
+  }, [selectedWeek, selectedStage, selectedLeague, isSuperCupLeague]);
 
   // Fetch matches from database
   const fetchMatchesFromDB = useCallback(async () => {
-    if (!selectedLeague) return;
+    if (!selectedLeague) {
+      return;
+    }
 
     setLoading(true);
     try {
@@ -370,7 +389,9 @@ export default function Matches() {
 
   // Sync matches from external API in the background (don't wait for it)
   const syncMatchesFromAPI = useCallback(async () => {
-    if (!selectedLeague) return;
+    if (!selectedLeague) {
+      return;
+    }
 
     try {
       const isSuperCup = isSuperCupLeague(selectedLeague);
@@ -441,8 +462,10 @@ export default function Matches() {
         // This runs asynchronously and updates the UI when new data arrives
         syncMatchesFromAPI();
       });
+    } else {
+      setMatches([]);
     }
-  }, [selectedLeague, selectedWeek, fetchMatchesFromDB, syncMatchesFromAPI]);
+  }, [selectedLeague, selectedWeek, selectedStage, fetchMatchesFromDB, syncMatchesFromAPI]);
 
   const resetForm = () => {
     setFormDescription("");

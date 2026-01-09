@@ -3,6 +3,7 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
   ReactNode,
 } from "react";
 import { useNavigate } from "react-router-dom";
@@ -67,16 +68,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     verifyAuth();
   }, []);
 
-  // Fetch leagues when user is authenticated
-  useEffect(() => {
-    if (user) {
-      fetchLeagues();
-    } else {
-      setLeagues([]);
-    }
-  }, [user]);
-
-  const fetchLeagues = async () => {
+  const fetchLeagues = useCallback(async () => {
+    console.log("[AuthContext] fetchLeagues: Starting fetch");
     setLoadingLeagues(true);
     try {
       const response = await fetch(`${API_URL}/leagues`, {
@@ -85,15 +78,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log("[AuthContext] fetchLeagues: Success, got", data?.length || 0, "leagues");
         setLeagues(data || []);
+      } else {
+        console.error("[AuthContext] fetchLeagues: Response not OK", response.status);
+        setLeagues([]);
       }
     } catch (error) {
-      console.error("Error fetching leagues:", error);
+      console.error("[AuthContext] fetchLeagues: Error fetching leagues:", error);
       setLeagues([]);
     } finally {
       setLoadingLeagues(false);
     }
-  };
+  }, []); // Empty deps - function doesn't depend on any props/state
+
+  // Fetch leagues when user is authenticated
+  useEffect(() => {
+    console.log("[AuthContext] useEffect: user changed", { user: !!user, userId: user?.id });
+    if (user) {
+      fetchLeagues();
+    } else {
+      setLeagues([]);
+    }
+  }, [user, fetchLeagues]);
 
   const verifyAuth = async () => {
     try {

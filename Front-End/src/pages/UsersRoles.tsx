@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { UsersRolesMobile } from "./UsersRolesMobile";
 
-type League = "saudi" | "saudi-super-cup" | "spanish-super-cup";
+type League = string;
 
 interface User {
   id: string;
@@ -35,13 +35,8 @@ export default function UsersRoles() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Refetch leagues when component mounts
-  useEffect(() => {
-    if (currentUser?.role === "superAdmin") {
-      fetchLeagues();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUser?.role]);
+  // Leagues are already fetched by AuthContext when user changes
+  // No need to refetch here - AuthContext handles it
   
   // Dialog states
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
