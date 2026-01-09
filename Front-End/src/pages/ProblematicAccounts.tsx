@@ -249,15 +249,9 @@ export default function ProblematicAccounts() {
         const accountMap = new Map<string, ProblematicAccount>();
 
         for (const leagueToFetch of leaguesToFetch) {
-          // Check if league is a Super Cup by checking the league info
+          // Check if league is a Cup using competitionType from backend
           const leagueInfo = leagues?.find((l) => l.league === leagueToFetch);
-          const isSuperCup =
-            leagueInfo?.competitionFormat
-              ?.toLowerCase()
-              .includes("super cup") ||
-            leagueInfo?.competitionFormat?.toLowerCase().includes("cup") ||
-            leagueToFetch === "saudi-super-cup" ||
-            leagueToFetch === "spanish-super-cup";
+          const isSuperCup = leagueInfo?.competitionType === "cup";
           const params = new URLSearchParams();
           params.append("league", leagueToFetch);
           if (selectedPlatform && selectedPlatform !== "all") {
@@ -549,15 +543,9 @@ export default function ProblematicAccounts() {
 
           {/* Week/Stage Filter Type */}
           {(() => {
-            // Check if selected league is a Super Cup by checking the league info
+            // Check if selected league is a Cup using competitionType from backend
             const leagueInfo = leagues?.find((l) => l.league === league);
-            const isSuperCup =
-              leagueInfo?.competitionFormat
-                ?.toLowerCase()
-                .includes("super cup") ||
-              leagueInfo?.competitionFormat?.toLowerCase().includes("cup") ||
-              league === "saudi-super-cup" ||
-              league === "spanish-super-cup";
+            const isSuperCup = leagueInfo?.competitionType === "cup";
 
             if (isSuperCup) {
               // Stage filters for Super Cups

@@ -62,6 +62,7 @@ interface Competition {
   knownName?: string;
   competitionCode?: string;
   competitionFormat?: string;
+  competitionType?: "league" | "cup";
   league: string;
   country?: {
     id?: string;
@@ -148,19 +149,13 @@ export default function Matches() {
     return leagueInfo ? !leagueInfo.isHidden : false;
   };
 
-  // Helper to check if league is a Super Cup
-  const isSuperCupLeague = (leagueSlug: League): boolean => {
+  // Helper to check if league is a Cup (uses competitionType from backend)
+  const isSuperCupLeague = useCallback((leagueSlug: League): boolean => {
     if (!leagueSlug || !leagues) return false;
     const leagueInfo = leagues.find((l) => l.league === leagueSlug);
-    if (leagueInfo?.competitionFormat) {
-      const format = leagueInfo.competitionFormat.toLowerCase();
-      return format.includes("super cup") || format.includes("cup");
-    }
-    // Fallback for backwards compatibility
-    return (
-      leagueSlug === "saudi-super-cup" || leagueSlug === "spanish-super-cup"
-    );
-  };
+    // Use competitionType from backend (cup or league)
+    return leagueInfo?.competitionType === "cup";
+  }, [leagues]);
 
   const [selectedWeek, setSelectedWeek] = useState("12");
   const [selectedStage, setSelectedStage] = useState<string>("");
@@ -311,9 +306,17 @@ export default function Matches() {
     setLoading(true);
     try {
       const isSuperCup = isSuperCupLeague(selectedLeague);
-      const url = isSuperCup
-        ? `${API_URL}/matches?league=${selectedLeague}&stage=${selectedStage}`
-        : `${API_URL}/matches?league=${selectedLeague}&week=${selectedWeek}`;
+      const params = new URLSearchParams({
+        league: selectedLeague,
+      });
+      
+      if (isSuperCup && selectedStage) {
+        params.append("stage", selectedStage);
+      } else if (!isSuperCup && selectedWeek) {
+        params.append("week", selectedWeek);
+      }
+      
+      const url = `${API_URL}/matches?${params.toString()}`;
 
       // Fetch matches directly from database
       const response = await fetch(url, {
@@ -363,18 +366,14 @@ export default function Matches() {
     } finally {
       setLoading(false);
     }
-    // isSuperCupLeague is a stable helper function, doesn't need to be in dependencies
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedLeague, selectedWeek, selectedStage]);
+  }, [selectedLeague, selectedWeek, selectedStage, isSuperCupLeague]);
 
   // Sync matches from external API in the background (don't wait for it)
   const syncMatchesFromAPI = useCallback(async () => {
     if (!selectedLeague) return;
 
     try {
-      const isSuperCup =
-        selectedLeague === "saudi-super-cup" ||
-        selectedLeague === "spanish-super-cup";
+      const isSuperCup = isSuperCupLeague(selectedLeague);
       // For Super Cups, we don't filter by stage in external API sync (fetch all)
       const syncUrl = isSuperCup
         ? `${API_URL}/matches/external?league=${selectedLeague}`
@@ -387,9 +386,17 @@ export default function Matches() {
 
       if (response.ok) {
         // Sync completed successfully, refresh from DB
-        const refreshUrl = isSuperCup
-          ? `${API_URL}/matches?league=${selectedLeague}&stage=${selectedStage}`
-          : `${API_URL}/matches?league=${selectedLeague}&week=${selectedWeek}`;
+        const refreshParams = new URLSearchParams({
+          league: selectedLeague,
+        });
+        
+        if (isSuperCup && selectedStage) {
+          refreshParams.append("stage", selectedStage);
+        } else if (!isSuperCup && selectedWeek) {
+          refreshParams.append("week", selectedWeek);
+        }
+        
+        const refreshUrl = `${API_URL}/matches?${refreshParams.toString()}`;
 
         const refreshResponse = await fetch(refreshUrl, {
           credentials: "include",
@@ -423,7 +430,7 @@ export default function Matches() {
       // Silently fail - API sync errors shouldn't affect UI
       console.error("Error syncing matches from API:", error);
     }
-  }, [selectedLeague, selectedWeek, selectedStage]);
+  }, [selectedLeague, selectedWeek, selectedStage, isSuperCupLeague]);
 
   // Fetch matches from DB when league/week changes
   useEffect(() => {
@@ -971,9 +978,7 @@ export default function Matches() {
                     {match.status === "finished" && "Completed"}
                   </Badge>
                   {(() => {
-                    const isSuperCup =
-                      selectedLeague === "saudi-super-cup" ||
-                      selectedLeague === "spanish-super-cup";
+                    const isSuperCup = isSuperCupLeague(selectedLeague);
                     const stage = match.stage;
                     if (isSuperCup && stage) {
                       return (
@@ -1132,9 +1137,7 @@ export default function Matches() {
                 })()}
               </Badge>
               {(() => {
-                const isSuperCup =
-                  selectedLeague === "saudi-super-cup" ||
-                  selectedLeague === "spanish-super-cup";
+                const isSuperCup = isSuperCupLeague(selectedLeague);
                 if (isSuperCup && selectedStage) {
                   return (
                     <Badge className="bg-blue-500 text-white text-xs sm:text-sm">
@@ -1168,9 +1171,7 @@ export default function Matches() {
             </Button>
           )}
           {(() => {
-            const isSuperCup =
-              selectedLeague === "saudi-super-cup" ||
-              selectedLeague === "spanish-super-cup";
+            const isSuperCup = isSuperCupLeague(selectedLeague);
 
             if (isSuperCup) {
               return (
@@ -1225,9 +1226,7 @@ export default function Matches() {
         <Card className="p-6 sm:p-8 text-center">
           <p className="text-xs sm:text-sm text-muted-foreground mb-4">
             {(() => {
-              const isSuperCup =
-                selectedLeague === "saudi-super-cup" ||
-                selectedLeague === "spanish-super-cup";
+              const isSuperCup = isSuperCupLeague(selectedLeague);
               if (isSuperCup && selectedStage) {
                 return `No matches found for this league and stage (${selectedStage})`;
               } else if (!isSuperCup && selectedWeek) {
@@ -1332,9 +1331,7 @@ export default function Matches() {
           } else {
             // Auto-fill stage/week based on selected league when opening dialog
             if (selectedLeague) {
-              const isSuperCup =
-                selectedLeague === "saudi-super-cup" ||
-                selectedLeague === "spanish-super-cup";
+              const isSuperCup = isSuperCupLeague(selectedLeague);
               if (isSuperCup && selectedStage) {
                 setFormStage(selectedStage);
               } else if (!isSuperCup && selectedWeek) {
@@ -1483,9 +1480,7 @@ export default function Matches() {
 
             {/* Week/Stage */}
             {(() => {
-              const isSuperCup =
-                selectedLeague === "saudi-super-cup" ||
-                selectedLeague === "spanish-super-cup";
+              const isSuperCup = isSuperCupLeague(selectedLeague);
 
               if (isSuperCup) {
                 return (
@@ -1744,9 +1739,7 @@ export default function Matches() {
 
             {/* Week/Stage */}
             {(() => {
-              const isSuperCup =
-                selectedLeague === "saudi-super-cup" ||
-                selectedLeague === "spanish-super-cup";
+              const isSuperCup = isSuperCupLeague(selectedLeague);
 
               if (isSuperCup) {
                 return (

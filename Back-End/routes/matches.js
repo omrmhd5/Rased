@@ -68,6 +68,12 @@ router.get("/external", async (req, res) => {
     // Get league configuration from database
     const leagueConfig = await getLeagueConfig(league);
 
+    // Skip external API fetch for manual leagues (they don't have external APIs)
+    if (leagueConfig.apiUrl === "manual") {
+      // For manual leagues, just return matches from database
+      return await returnMatchesFromDatabase(req, res);
+    }
+
     // Use the apiUrl directly (it already contains all query parameters)
     const apiUrl = leagueConfig.apiUrl;
 
@@ -529,12 +535,9 @@ async function returnMatchesFromDatabase(req, res) {
       leagueInfo = await Competition.findOne({ league: league }).lean();
     }
 
-    // For Super Cups, use stage filtering; for regular leagues, use week filtering
-    // Check competitionFormat from database or fallback to hardcoded check
-    const isSuperCup = leagueInfo
-      ? leagueInfo.competitionFormat?.toLowerCase().includes("super cup") ||
-        leagueInfo.competitionFormat?.toLowerCase().includes("cup")
-      : league === "saudi-super-cup" || league === "spanish-super-cup";
+    // For Cups, use stage filtering; for regular leagues, use week filtering
+    // Check competitionType from database
+    const isSuperCup = leagueInfo?.competitionType === "cup";
 
     if (isSuperCup) {
       // For Super Cups, if stage is provided, filter by it
@@ -1240,13 +1243,9 @@ router.get("/dashboard/stats", async (req, res) => {
       isDeleted: { $ne: true },
     };
 
-    // For Super Cups, use stage filtering; for regular leagues, use week filtering
-    // Check competitionFormat from database
-    const isSuperCup =
-      leagueDoc.competitionFormat?.toLowerCase().includes("super cup") ||
-      leagueDoc.competitionFormat?.toLowerCase().includes("cup") ||
-      league === "saudi-super-cup" ||
-      league === "spanish-super-cup";
+    // For Cups, use stage filtering; for regular leagues, use week filtering
+    // Check competitionType from database
+    const isSuperCup = leagueDoc.competitionType === "cup";
 
     if (isSuperCup) {
       // Stage filtering for Super Cups

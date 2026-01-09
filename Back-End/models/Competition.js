@@ -26,6 +26,12 @@ const competitionSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    competitionType: {
+      type: String,
+      enum: ["league", "cup"],
+      default: "league",
+      trim: true,
+    },
     league: {
       type: String,
       required: true,

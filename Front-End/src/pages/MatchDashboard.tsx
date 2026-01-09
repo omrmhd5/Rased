@@ -60,7 +60,7 @@ import { PlatformComparisonMobile } from "@/components/MatchDashboard/PlatformCo
 
 export default function MatchDashboard() {
   const { id } = useParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, leagues } = useAuth();
   const isSuperAdmin = user?.role === "superAdmin";
   const canModifyViolations =
     user?.role === "superAdmin" || user?.role === "employee";
@@ -1840,9 +1840,9 @@ export default function MatchDashboard() {
 
       const competitionName = getCompetitionName();
       const matchDateTime = formatMatchDateTime();
-      const isSuperCup =
-        match.league === "saudi-super-cup" ||
-        match.league === "spanish-super-cup";
+      // Check if league is a cup using competitionType from backend
+      const leagueInfo = leagues?.find((l) => l.league === match.league);
+      const isSuperCup = leagueInfo?.competitionType === "cup";
       const weekOrStage = isSuperCup
         ? match.stage || "N/A"
         : match.week || "N/A";
@@ -2039,9 +2039,8 @@ export default function MatchDashboard() {
         link.href = url;
 
         // Format filename with week or stage
-        const isSuperCup =
-          match.league === "saudi-super-cup" ||
-          match.league === "spanish-super-cup";
+        const leagueInfo = leagues?.find((l) => l.league === match.league);
+        const isSuperCup = leagueInfo?.competitionType === "cup";
         const weekOrStage = isSuperCup
           ? match.stage || "N/A"
           : match.week || "N/A";
@@ -2341,9 +2340,8 @@ export default function MatchDashboard() {
           open={isRoundReportOpen}
           onClose={() => setIsRoundReportOpen(false)}
           week={(() => {
-            const isSuperCup =
-              match.league === "saudi-super-cup" ||
-              match.league === "spanish-super-cup";
+            const leagueInfo = leagues?.find((l) => l.league === match.league);
+            const isSuperCup = leagueInfo?.competitionType === "cup";
             return isSuperCup
               ? `Stage ${match.stage || "N/A"}`
               : `Week ${match.week || "N/A"}`;
@@ -2353,9 +2351,8 @@ export default function MatchDashboard() {
             /\s+/g,
             "-"
           )}-${(() => {
-            const isSuperCup =
-              match.league === "saudi-super-cup" ||
-              match.league === "spanish-super-cup";
+            const leagueInfo = leagues?.find((l) => l.league === match.league);
+            const isSuperCup = leagueInfo?.competitionType === "cup";
             return isSuperCup
               ? `Stage-${match.stage || "N/A"}`
               : `Week-${match.week || "N/A"}`;

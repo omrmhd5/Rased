@@ -11,6 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
@@ -77,6 +84,7 @@ export default function Settings() {
     arabicName?: string;
     isHidden: boolean;
     competitionCode?: string;
+    competitionType?: "league" | "cup";
     iconUrl?: string;
     apiUrl?: string;
     referer?: string;
@@ -95,6 +103,7 @@ export default function Settings() {
   const [formName, setFormName] = useState("");
   const [formIsManual, setFormIsManual] = useState(false);
   const [formIsHidden, setFormIsHidden] = useState(false);
+  const [formCompetitionType, setFormCompetitionType] = useState<"league" | "cup">("league");
   const [formIcon, setFormIcon] = useState<File | null>(null);
   const [formError, setFormError] = useState("");
   const [addingLeague, setAddingLeague] = useState(false);
@@ -208,6 +217,7 @@ export default function Settings() {
     setFormName("");
     setFormIsManual(false);
     setFormIsHidden(false);
+    setFormCompetitionType("league");
     setFormIcon(null);
     setFormError("");
     setEditingLeague(null);
@@ -220,6 +230,7 @@ export default function Settings() {
     setFormApiUrl(league.apiUrl || "");
     setFormReferer(league.referer || "");
     setFormArabicName(league.arabicName || "");
+    setFormCompetitionType(league.competitionType || "league");
     setFormIcon(null); // Don't pre-fill icon, user needs to upload new one if they want to change
     setFormError("");
     setIsEditLeagueOpen(true);
@@ -257,6 +268,7 @@ export default function Settings() {
         formData.append("isManual", "true");
         formData.append("name", formName.trim());
         formData.append("arabicName", formArabicName.trim());
+        formData.append("competitionType", formCompetitionType);
         // Icon is optional for manual leagues
         if (formIcon) {
           formData.append("icon", formIcon);
@@ -265,6 +277,7 @@ export default function Settings() {
         formData.append("apiUrl", formApiUrl.trim());
         formData.append("referer", formReferer.trim());
         formData.append("arabicName", formArabicName.trim());
+        formData.append("competitionType", formCompetitionType);
         formData.append("icon", formIcon);
       }
 
@@ -318,6 +331,7 @@ export default function Settings() {
       formData.append("apiUrl", formApiUrl.trim());
       formData.append("referer", formReferer.trim());
       formData.append("arabicName", formArabicName.trim());
+      formData.append("competitionType", formCompetitionType);
       // Only append icon if a new one was selected
       if (formIcon) {
         formData.append("icon", formIcon);
@@ -896,6 +910,26 @@ export default function Settings() {
                         />
                       </div>
                       <div className="space-y-1.5 sm:space-y-2">
+                        <Label
+                          htmlFor="competitionType"
+                          className="text-xs sm:text-sm">
+                          Competition Type *
+                        </Label>
+                        <Select
+                          value={formCompetitionType}
+                          onValueChange={(value: "league" | "cup") =>
+                            setFormCompetitionType(value)
+                          }>
+                          <SelectTrigger className="h-9 sm:h-10 text-sm">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="league">League</SelectItem>
+                            <SelectItem value="cup">Cup</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5 sm:space-y-2">
                         <Label htmlFor="icon" className="text-xs sm:text-sm">
                           League Icon (SVG or PNG) - Optional
                         </Label>
@@ -962,6 +996,26 @@ export default function Settings() {
                           placeholder="الدوري السعودي"
                           className="h-9 sm:h-10 text-sm"
                         />
+                      </div>
+                      <div className="space-y-1.5 sm:space-y-2">
+                        <Label
+                          htmlFor="competitionType"
+                          className="text-xs sm:text-sm">
+                          Competition Type *
+                        </Label>
+                        <Select
+                          value={formCompetitionType}
+                          onValueChange={(value: "league" | "cup") =>
+                            setFormCompetitionType(value)
+                          }>
+                          <SelectTrigger className="h-9 sm:h-10 text-sm">
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="league">League</SelectItem>
+                            <SelectItem value="cup">Cup</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-1.5 sm:space-y-2">
                         <Label htmlFor="icon" className="text-xs sm:text-sm">
@@ -1283,6 +1337,26 @@ export default function Settings() {
                 placeholder="الدوري السعودي"
                 className="h-9 sm:h-10 text-sm"
               />
+            </div>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label
+                htmlFor="edit-competitionType"
+                className="text-xs sm:text-sm">
+                Competition Type *
+              </Label>
+              <Select
+                value={formCompetitionType}
+                onValueChange={(value: "league" | "cup") =>
+                  setFormCompetitionType(value)
+                }>
+                <SelectTrigger className="h-9 sm:h-10 text-sm">
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="league">League</SelectItem>
+                  <SelectItem value="cup">Cup</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-1.5 sm:space-y-2">
               <Label htmlFor="edit-icon" className="text-xs sm:text-sm">

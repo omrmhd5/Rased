@@ -63,18 +63,12 @@ export default function Dashboard() {
     return leagueInfo ? !leagueInfo.isHidden : false;
   };
 
-  // Helper to check if league is a Super Cup
+  // Helper to check if league is a Cup (uses competitionType from backend)
   const isSuperCupLeague = (leagueSlug: League): boolean => {
     if (!leagueSlug || !leagues) return false;
     const leagueInfo = leagues.find((l) => l.league === leagueSlug);
-    if (leagueInfo?.competitionFormat) {
-      const format = leagueInfo.competitionFormat.toLowerCase();
-      return format.includes("super cup") || format.includes("cup");
-    }
-    // Fallback for backwards compatibility
-    return (
-      leagueSlug === "saudi-super-cup" || leagueSlug === "spanish-super-cup"
-    );
+    // Use competitionType from backend (cup or league)
+    return leagueInfo?.competitionType === "cup";
   };
 
   // Helper to get league name from leagues array
@@ -430,6 +424,7 @@ export default function Dashboard() {
     stageRangeStart,
     stageRangeEnd,
     API_URL,
+    leagues,
   ]);
 
   // Fetch trouble list violations when filters change
@@ -512,6 +507,7 @@ export default function Dashboard() {
     stageRangeEnd,
     troubleListFilter,
     API_URL,
+    leagues,
   ]);
 
   // Get platform operations (for icon lookup)

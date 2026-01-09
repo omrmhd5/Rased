@@ -101,7 +101,7 @@ router.get("/:slug", async (req, res) => {
 // POST /api/leagues - Create new league (superAdmin only)
 router.post("/", authenticateToken, requireSuperAdmin, upload.single("icon"), async (req, res) => {
   try {
-    const { slug, apiUrl, referer, arabicName, isManual, name } = req.body;
+    const { slug, apiUrl, referer, arabicName, isManual, name, competitionType } = req.body;
 
     // Check if league with this slug already exists
     const existingLeague = await Competition.findOne({ league: slug });
@@ -151,6 +151,7 @@ router.post("/", authenticateToken, requireSuperAdmin, upload.single("icon"), as
         referer: "manual", // Placeholder value for manual leagues (required by schema)
         knownName: null, // null for manual leagues
         competitionFormat: null, // null for manual leagues
+        competitionType: competitionType === "cup" ? "cup" : "league", // Default to league if not provided
         country: null, // null for manual leagues
         iconUrl,
         isHidden: false, // Always false for manual leagues
@@ -213,6 +214,7 @@ router.post("/", authenticateToken, requireSuperAdmin, upload.single("icon"), as
       apiUrl,
       referer,
       arabicName: arabicName || "",
+      competitionType: competitionType === "cup" ? "cup" : "league", // Default to league if not provided
       iconUrl,
       isHidden: false,
     });
@@ -243,7 +245,7 @@ router.put("/:slug", authenticateToken, requireSuperAdmin, upload.single("icon")
       return res.status(404).json({ error: "League not found" });
     }
 
-    const { slug, apiUrl, referer, arabicName } = req.body;
+    const { slug, apiUrl, referer, arabicName, competitionType } = req.body;
 
     // Validate required fields
     if (!slug || !apiUrl || !referer) {
@@ -275,6 +277,9 @@ router.put("/:slug", authenticateToken, requireSuperAdmin, upload.single("icon")
     competition.apiUrl = apiUrl;
     competition.referer = referer;
     competition.arabicName = arabicName || "";
+    if (competitionType) {
+      competition.competitionType = competitionType === "cup" ? "cup" : "league";
+    }
 
     // Update icon if new file was uploaded
     if (req.file) {

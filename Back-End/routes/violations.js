@@ -114,12 +114,9 @@ router.get("/", async (req, res) => {
       }
     }
 
-    // For Super Cups, use stage filtering; for regular leagues, use week filtering
-    // Check competitionFormat from database or fallback to hardcoded check
-    const isSuperCup = leagueInfo
-      ? leagueInfo.competitionFormat?.toLowerCase().includes("super cup") ||
-        leagueInfo.competitionFormat?.toLowerCase().includes("cup")
-      : league === "saudi-super-cup" || league === "spanish-super-cup";
+    // For Cups, use stage filtering; for regular leagues, use week filtering
+    // Check competitionType from database
+    const isSuperCup = leagueInfo?.competitionType === "cup";
 
     if (isSuperCup) {
       // Stage filtering for Super Cups
@@ -354,12 +351,9 @@ router.get("/problematic-accounts", async (req, res) => {
       matchFilter.league = league;
     }
 
-    // For Super Cups, use stage filtering; for regular leagues, use week filtering
-    // Check competitionFormat from database or fallback to hardcoded check
-    const isSuperCup = leagueInfo
-      ? leagueInfo.competitionFormat?.toLowerCase().includes("super cup") ||
-        leagueInfo.competitionFormat?.toLowerCase().includes("cup")
-      : league === "saudi-super-cup" || league === "spanish-super-cup";
+    // For Cups, use stage filtering; for regular leagues, use week filtering
+    // Check competitionType from database
+    const isSuperCup = leagueInfo?.competitionType === "cup";
 
     if (isSuperCup) {
       // Stage filtering for Super Cups
