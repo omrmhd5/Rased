@@ -626,11 +626,11 @@ export default function Dashboard() {
     const detected = new Date(reportedAt);
     const diffMs = now.getTime() - detected.getTime();
     const diffMins = Math.floor(diffMs / 60000);
-    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffMins < 60) return t("dashboard.minutesAgo", { minutes: diffMins });
     const diffHours = Math.floor(diffMins / 60);
-    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffHours < 24) return t("dashboard.hoursAgo", { hours: diffHours });
     const diffDays = Math.floor(diffHours / 24);
-    return `${diffDays}d ago`;
+    return t("dashboard.daysAgo", { days: diffDays });
   };
 
   // Format URL for display (shortened)
@@ -1130,18 +1130,36 @@ export default function Dashboard() {
               <div className="flex flex-col">
                 <Button
                   variant="ghost"
-                  className={`w-full h-9 text-xs font-normal touch-manipulation flex items-center ${isRTL ? "flex-row-reverse justify-end" : "justify-start"}`}
+                  className="w-full h-9 text-xs font-normal touch-manipulation flex items-center justify-start"
                   onClick={handleDownloadReport}
                   disabled={isDownloading}>
-                  <span>{t("dashboard.downloadReport")}</span>
-                  <Download className={`${isRTL ? "ml-2" : "mr-2"} h-4 w-4`} />
+                  {isRTL ? (
+                    <>
+                      <span>{t("dashboard.downloadReport")}</span>
+                      <Download className="ml-2 h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      <span>{t("dashboard.downloadReport")}</span>
+                      <Download className="mr-2 h-4 w-4" />
+                    </>
+                  )}
                 </Button>
                 <Button
                   variant="ghost"
-                  className={`w-full h-9 text-xs font-normal touch-manipulation flex items-center ${isRTL ? "flex-row-reverse justify-end" : "justify-start"}`}
+                  className="w-full h-9 text-xs font-normal touch-manipulation flex items-center justify-start"
                   onClick={() => setIsRoundReportOpen(true)}>
-                  <span>{t("dashboard.roundReport")}</span>
-                  <BarChart3 className={`${isRTL ? "ml-2" : "mr-2"} h-4 w-4`} />
+                  {isRTL ? (
+                    <>
+                      <span>{t("dashboard.roundReport")}</span>
+                      <BarChart3 className="ml-2 h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      <span>{t("dashboard.roundReport")}</span>
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                    </>
+                  )}
                 </Button>
               </div>
             </HoverCardContent>
@@ -1548,11 +1566,22 @@ export default function Dashboard() {
       {/* Platform Comparison - Shows all platforms */}
       {statsLoading ? (
         <Card className="p-4 sm:p-6">
-          <div className={`flex items-center justify-center py-6 sm:py-8 ${isRTL ? "flex-row-reverse" : ""}`}>
-            <Loader2 className={`h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground ${isRTL ? "ml-2" : "mr-2"}`} />
-            <span className={`text-xs sm:text-sm text-muted-foreground ${isRTL ? "text-right" : "text-left"}`}>
-              {t("dashboard.loadingPlatformComparison")}
-            </span>
+          <div className="flex items-center justify-center py-6 sm:py-8">
+            {isRTL ? (
+              <>
+                <span className="text-xs sm:text-sm text-muted-foreground text-right">
+                  {t("dashboard.loadingPlatformComparison")}
+                </span>
+                <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground ml-2" />
+              </>
+            ) : (
+              <>
+                <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground mr-2" />
+                <span className="text-xs sm:text-sm text-muted-foreground text-left">
+                  {t("dashboard.loadingPlatformComparison")}
+                </span>
+              </>
+            )}
           </div>
         </Card>
       ) : dashboardStats.platforms.length > 0 ? (
@@ -1602,11 +1631,11 @@ export default function Dashboard() {
         <Card className="h-[400px] sm:h-[500px] flex flex-col p-3 sm:p-4">
           <div className="flex-shrink-0 mb-2 sm:mb-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className={isRTL ? "text-right" : "text-left"}>
-                <h3 className="text-sm sm:text-[15px] font-semibold">
+              <div className="text-left">
+                <h3 className="text-sm sm:text-[15px] font-semibold text-left">
                   {t("dashboard.matchesLeaderboard")}
                 </h3>
-                <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 sm:mt-1">
+                <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 sm:mt-1 text-left">
                   {t("dashboard.matchesRankedByViolations")}
                 </p>
               </div>
@@ -1637,7 +1666,7 @@ export default function Dashboard() {
                 return (
                   <div
                     key={match.id}
-                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-3 sm:p-4 rounded-lg border border-border/40 hover:border-primary/30 hover:bg-muted/20 transition-all cursor-pointer touch-manipulation active:scale-[0.98] ${isRTL ? "sm:flex-row-reverse" : ""}`}
+                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-3 sm:p-4 rounded-lg border border-border/40 hover:border-primary/30 hover:bg-muted/20 transition-all cursor-pointer touch-manipulation active:scale-[0.98] ${isRTL ? "sm:justify-end" : "sm:justify-start"}`}
                     onClick={() => navigate(`/match/${match.id}`)}>
                     {/* Match Title */}
                     <h4 className={`text-xs sm:text-[14px] font-semibold flex-1 min-w-0 truncate ${isRTL ? "sm:pl-4 sm:pr-0 text-right" : "sm:pr-4 text-left"}`}>
@@ -1645,7 +1674,7 @@ export default function Dashboard() {
                     </h4>
 
                     {/* Metrics */}
-                    <div className={`flex items-center gap-2 sm:gap-4 flex-shrink-0 ${isRTL ? "flex-row-reverse" : ""}`}>
+                    <div className={`flex items-center gap-2 sm:gap-4 flex-shrink-0 ${isRTL ? "justify-start" : "justify-end"}`}>
                       <div className="flex items-baseline gap-1 sm:gap-1.5">
                         <span className="text-sm sm:text-[16px] font-bold tabular-nums">
                           {match.violations}
@@ -1675,20 +1704,20 @@ export default function Dashboard() {
 
         {/* Active Trouble List */}
         <Card className="lg:col-span-3 h-[400px] sm:h-[340px] flex flex-col p-3 sm:p-4">
-            <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-3 flex-shrink-0 gap-2 ${isRTL ? "sm:flex-row-reverse" : ""}`}>
-            <div className={`flex flex-col sm:flex-row sm:items-center gap-2 ${isRTL ? "sm:flex-row-reverse" : ""}`}>
-              <h3 className={`text-sm sm:text-[15px] font-semibold ${isRTL ? "text-right" : "text-left"}`}>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-3 flex-shrink-0 gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <h3 className="text-sm sm:text-[15px] font-semibold text-left">
                 {t("dashboard.activeTroubleList")}
               </h3>
               <Badge
                 variant="secondary"
-                className={`h-5 px-2 bg-chart-1/10 text-chart-1 border-0 text-[9px] sm:text-[10px] w-fit flex items-center ${isRTL ? "flex-row-reverse" : ""}`}>
-                <div className={`w-1.5 h-1.5 rounded-full bg-chart-1 animate-pulse ${isRTL ? "ml-1.5" : "mr-1.5"}`} />
+                className="h-5 px-2 bg-chart-1/10 text-chart-1 border-0 text-[9px] sm:text-[10px] w-fit flex items-center text-left">
+                <div className="w-1.5 h-1.5 rounded-full bg-chart-1 animate-pulse mr-1.5" />
                 {sortedActiveViolations.length}{" "}
                 {troubleListFilter === "Active" ? t("dashboard.active").toLowerCase() : t("dashboard.underReview").toLowerCase()}
               </Badge>
             </div>
-            <div className={`flex items-center gap-1 ${isRTL ? "flex-row-reverse" : ""}`}>
+            <div className="flex items-center gap-1 justify-start">
               <Button
                 variant={troubleListFilter === "Active" ? "default" : "outline"}
                 size="sm"
@@ -1713,9 +1742,9 @@ export default function Dashboard() {
                 <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-muted-foreground" />
               </div>
             ) : sortedActiveViolations.length === 0 ? (
-              <div className={`flex flex-col items-center justify-center h-full text-muted-foreground ${isRTL ? "text-right" : "text-left"}`}>
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-left">
                 <FileQuestion className="h-6 w-6 sm:h-8 sm:w-8 mb-2 opacity-50" />
-                <p className="text-xs sm:text-sm">
+                <p className="text-xs sm:text-sm text-left">
                   {t("dashboard.noViolationsFound", { 
                     filter: troubleListFilter === "Active" ? t("dashboard.active").toLowerCase() : t("dashboard.underReview").toLowerCase() 
                   })}
@@ -1731,20 +1760,20 @@ export default function Dashboard() {
                 return (
                   <div
                     key={violation.id}
-                    className={`group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-h-[42px] sm:h-[42px] border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors px-2 py-2 sm:py-0 ${isRTL ? "sm:flex-row-reverse" : ""}`}>
+                    className="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-h-[42px] sm:h-[42px] border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors px-2 py-2 sm:py-0 sm:justify-start">
                     {/* Platform & Account */}
-                    <div className={`flex items-center gap-2 flex-1 sm:w-[180px] sm:flex-shrink-0 min-w-0 ${isRTL ? "flex-row-reverse" : ""}`}>
+                    <div className="flex items-center gap-2 flex-1 sm:w-[180px] sm:flex-shrink-0 min-w-0 justify-start">
                       <div className="flex-shrink-0">
                         {getPlatformIcon(
                           violation.platform,
                           "h-3.5 w-3.5 sm:h-4 sm:w-4"
                         )}
                       </div>
-                      <div className={`flex flex-col min-w-0 flex-1 ${isRTL ? "text-right" : "text-left"}`}>
-                        <span className="text-xs sm:text-[13px] font-medium truncate">
+                      <div className="flex flex-col min-w-0 flex-1 text-left">
+                        <span className="text-xs sm:text-[13px] font-medium truncate text-left">
                           {violation.platform}
                         </span>
-                        <span className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
+                        <span className="text-[10px] sm:text-[11px] text-muted-foreground truncate text-left">
                           {violation.account}
                         </span>
                       </div>
@@ -1753,10 +1782,10 @@ export default function Dashboard() {
                     {/* Match Information */}
                     {violation.matchDescription && (
                       <div className="flex-1 sm:w-[200px] sm:flex-shrink-0 min-w-0">
-                        <div className={`flex items-center gap-1.5 h-[24px] sm:h-[26px] px-2 rounded-md bg-muted/30 border border-border/30 ${isRTL ? "flex-row-reverse" : ""}`}>
+                        <div className="flex items-center gap-1.5 h-[24px] sm:h-[26px] px-2 rounded-md bg-muted/30 border border-border/30 justify-start">
                           <Trophy className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground flex-shrink-0" />
                           <span
-                            className={`text-[10px] sm:text-[11px] font-medium text-foreground/80 truncate ${isRTL ? "text-right" : "text-left"}`}
+                            className="text-[10px] sm:text-[11px] font-medium text-foreground/80 truncate text-left"
                             title={violation.matchDescription}>
                             {violation.matchDescription}
                           </span>
@@ -1770,10 +1799,10 @@ export default function Dashboard() {
                         href={violation.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className={`flex items-center gap-1.5 sm:gap-2 h-[24px] sm:h-[26px] px-2 sm:px-3 rounded-md bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-primary/30 text-[10px] sm:text-[11px] font-medium text-foreground/70 hover:text-primary transition-all w-full touch-manipulation ${isRTL ? "flex-row-reverse" : ""}`}
+                        className="flex items-center gap-1.5 sm:gap-2 h-[24px] sm:h-[26px] px-2 sm:px-3 rounded-md bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-primary/30 text-[10px] sm:text-[11px] font-medium text-foreground/70 hover:text-primary transition-all w-full touch-manipulation justify-start"
                         title={violation.url}>
                         <Link className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0 text-muted-foreground" />
-                        <span className={`truncate flex-1 ${isRTL ? "text-right" : "text-left"}`}>
+                        <span className="truncate flex-1 text-left">
                           {formatUrlForDisplay(violation.url)}
                         </span>
                         <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0 opacity-50" />
@@ -1781,14 +1810,14 @@ export default function Dashboard() {
                     </div>
 
                     {/* Metrics - Right side */}
-                    <div className={`flex items-center gap-1 sm:gap-1.5 flex-wrap sm:flex-nowrap sm:flex-1 ${isRTL ? "sm:justify-start" : "sm:justify-end"}`}>
-                      <span className={`inline-flex items-center gap-1 h-[20px] sm:h-[22px] px-1.5 sm:px-2 rounded-full bg-muted/40 text-[10px] sm:text-[12px] font-medium tabular-nums ${isRTL ? "flex-row-reverse" : ""}`}>
+                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap sm:flex-nowrap sm:flex-1 sm:justify-end">
+                      <span className="inline-flex items-center gap-1 h-[20px] sm:h-[22px] px-1.5 sm:px-2 rounded-full bg-muted/40 text-[10px] sm:text-[12px] font-medium tabular-nums">
                         <Eye className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground flex-shrink-0" />
-                        <span>{formatViews(violation.views)}</span>
+                        <span className="text-left">{formatViews(violation.views)}</span>
                       </span>
-                      <span className={`inline-flex items-center gap-1 h-[20px] sm:h-[22px] px-1.5 sm:px-2 rounded-full bg-muted/40 text-[10px] sm:text-[12px] font-medium ${isRTL ? "flex-row-reverse" : ""}`}>
+                      <span className="inline-flex items-center gap-1 h-[20px] sm:h-[22px] px-1.5 sm:px-2 rounded-full bg-muted/40 text-[10px] sm:text-[12px] font-medium">
                         <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground flex-shrink-0" />
-                        <span>{timeSinceAdded}</span>
+                        <span className="text-left">{timeSinceAdded}</span>
                       </span>
                       <Badge
                         variant={
@@ -1798,7 +1827,7 @@ export default function Dashboard() {
                             ? "default"
                             : "secondary"
                         }
-                        className="h-[16px] sm:h-[18px] text-[9px] sm:text-[10px] px-1 sm:px-1.5">
+                        className="h-[16px] sm:h-[18px] text-[9px] sm:text-[10px] px-1 sm:px-1.5 text-left">
                         {violation.status === "under review"
                           ? t("dashboard.underReview").toLowerCase()
                           : violation.status === "active"
@@ -1808,7 +1837,7 @@ export default function Dashboard() {
                       {warningLevel === "urgent" && (
                         <Badge
                           variant="destructive"
-                          className="h-[16px] sm:h-[18px] text-[9px] sm:text-[10px] px-1 sm:px-1.5">
+                          className="h-[16px] sm:h-[18px] text-[9px] sm:text-[10px] px-1 sm:px-1.5 text-left">
                           {t("dashboard.overdue")}
                         </Badge>
                       )}

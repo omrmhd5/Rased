@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { PlatformData } from "./types";
 import { formatViews, calculateBlockDuration } from "./utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type SortColumn =
   | "views"
@@ -43,6 +44,8 @@ export function PlatformComparison({
   description = "Compare platforms for this match",
   showCard = true,
 }: PlatformComparisonProps) {
+  const { t } = useLanguage();
+  
   const platformMetrics = platformOperations.map((platform) => {
     // Always use backend data directly from platform object (ignore content type filter)
     const totalViolations = platform.totalViolations ?? 0;
@@ -168,7 +171,7 @@ export function PlatformComparison({
             <thead className="bg-muted/30 border-b">
               <tr>
                 <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">
-                  Platform
+                  {t("dashboard.platform")}
                 </th>
                 <th
                   onClick={() => {
@@ -188,7 +191,7 @@ export function PlatformComparison({
                       : "font-medium text-muted-foreground"
                   )}>
                   <div className="flex items-center gap-1">
-                    Views
+                    {t("dashboard.views")}
                     {comparisonSort === "views" && (
                       <span className="text-[10px]">
                         {comparisonSortDirection === "desc" ? "↓" : "↑"}
@@ -214,7 +217,7 @@ export function PlatformComparison({
                       : "font-medium text-muted-foreground"
                   )}>
                   <div className="flex items-center gap-1">
-                    Violations
+                    {t("dashboard.violations")}
                     {comparisonSort === "violations" && (
                       <span className="text-[10px]">
                         {comparisonSortDirection === "desc" ? "↓" : "↑"}
@@ -240,7 +243,7 @@ export function PlatformComparison({
                       : "font-medium text-muted-foreground"
                   )}>
                   <div className="flex items-center gap-1">
-                    Active
+                    {t("dashboard.active")}
                     {comparisonSort === "active" && (
                       <span className="text-[10px]">
                         {comparisonSortDirection === "desc" ? "↓" : "↑"}
@@ -266,7 +269,7 @@ export function PlatformComparison({
                       : "font-medium text-muted-foreground"
                   )}>
                   <div className="flex items-center gap-1">
-                    Blocked
+                    {t("dashboard.blocked")}
                     {comparisonSort === "blocked" && (
                       <span className="text-[10px]">
                         {comparisonSortDirection === "desc" ? "↓" : "↑"}
@@ -292,7 +295,7 @@ export function PlatformComparison({
                       : "font-medium text-muted-foreground"
                   )}>
                   <div className="flex items-center gap-1">
-                    Avg Block Time
+                    {t("dashboard.avgBlockTime")}
                     {comparisonSort === "avgBlockTime" && (
                       <span className="text-[10px]">
                         {comparisonSortDirection === "desc" ? "↓" : "↑"}
@@ -318,7 +321,7 @@ export function PlatformComparison({
                       : "font-medium text-muted-foreground"
                   )}>
                   <div className="flex items-center gap-1">
-                    Removed
+                    {t("dashboard.removed")}
                     {comparisonSort === "removed" && (
                       <span className="text-[10px]">
                         {comparisonSortDirection === "desc" ? "↓" : "↑"}
@@ -344,7 +347,7 @@ export function PlatformComparison({
                       : "font-medium text-muted-foreground"
                   )}>
                   <div className="flex items-center gap-1">
-                    Under Review
+                    {t("dashboard.underReview")}
                     {comparisonSort === "underReview" && (
                       <span className="text-[10px]">
                         {comparisonSortDirection === "desc" ? "↓" : "↑"}
@@ -353,7 +356,7 @@ export function PlatformComparison({
                   </div>
                 </th>
                 <th className="text-left text-xs font-medium text-muted-foreground px-4 py-3">
-                  Target Status
+                  {t("dashboard.targetStatus")}
                 </th>
               </tr>
             </thead>
@@ -365,8 +368,8 @@ export function PlatformComparison({
                 // Match MatchOverview logic: <= targetMins = success, > targetMins = destructive
                 const isWithinTarget = metrics.avgBlockTimeMinutes <= targetMins;
                 const statusText = isWithinTarget
-                  ? "Within target"
-                  : "Over target";
+                  ? t("dashboard.withinTarget")
+                  : t("dashboard.overTarget");
 
                 return (
                   <tr
@@ -429,7 +432,7 @@ export function PlatformComparison({
                           {metrics.blockedCount}
                         </span>
                         <p className="text-xs text-muted-foreground">
-                          {metrics.blockSuccessRate}% success rate
+                          {metrics.blockSuccessRate}% {t("dashboard.successRate")}
                         </p>
                       </div>
                     </td>
@@ -451,9 +454,9 @@ export function PlatformComparison({
                             <>
                               {minutes}{" "}
                               <span className="text-xs text-muted-foreground">
-                                min{" "}
+                                {t("dashboard.min")}{" "}
                                 <span className="text-medium text-muted-foreground">
-                                  ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}hrs)
+                                  ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}{t("dashboard.hrs")})
                                 </span>
                               </span>
                             </>

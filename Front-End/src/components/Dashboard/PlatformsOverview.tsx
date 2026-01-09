@@ -20,6 +20,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Platform {
   id: string;
@@ -100,6 +101,8 @@ export function PlatformsOverview({
   platforms,
   statsLoading,
 }: PlatformsOverviewProps) {
+  const { t, isRTL } = useLanguage();
+  
   // Load saved chart view from localStorage, default to "violations"
   const [chartView, setChartView] = useState<ChartView>(() => {
     const saved = localStorage.getItem("platformsOverviewChartView");
@@ -148,8 +151,9 @@ export function PlatformsOverview({
     platforms.length > 0
       ? platforms
           .filter((p) => p.avgBlockTime > 0)
-          .reduce((fastest, current) =>
-            current.avgBlockTime < fastest.avgBlockTime ? current : fastest,
+          .reduce(
+            (fastest, current) =>
+              current.avgBlockTime < fastest.avgBlockTime ? current : fastest,
             platforms.find((p) => p.avgBlockTime > 0) || platforms[0]
           )
       : null;
@@ -158,10 +162,21 @@ export function PlatformsOverview({
     return (
       <Card className="p-6">
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
-          <div className="text-sm text-muted-foreground">
-            Loading platform data...
-          </div>
+          {isRTL ? (
+            <>
+              <div className="text-sm text-muted-foreground text-right">
+                {t("dashboard.platformsOverview.loadingPlatformData")}
+              </div>
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground ml-2" />
+            </>
+          ) : (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
+              <div className="text-sm text-muted-foreground text-left">
+                {t("dashboard.platformsOverview.loadingPlatformData")}
+              </div>
+            </>
+          )}
         </div>
       </Card>
     );
@@ -171,8 +186,8 @@ export function PlatformsOverview({
     return (
       <Card className="p-6">
         <div className="flex items-center justify-center py-12">
-          <p className="text-sm text-muted-foreground">
-            No platform data available
+          <p className={`text-sm text-muted-foreground ${isRTL ? "text-right" : "text-left"}`}>
+            {t("dashboard.platformsOverview.noPlatformData")}
           </p>
         </div>
       </Card>
@@ -183,39 +198,39 @@ export function PlatformsOverview({
     <Card className="p-6">
       {/* Header with Toggle */}
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="font-semibold">Violations & Views by Platform</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Platform performance overview
+        <div className="text-left">
+          <h3 className="font-semibold text-left">{t("dashboard.platformsOverview.title")}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5 text-left">
+            {t("dashboard.platformsOverview.subtitle")}
           </p>
         </div>
         <div className="inline-flex rounded-lg bg-muted p-1">
           <button
             onClick={() => setChartView("violations")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors text-left ${
               chartView === "violations"
                 ? "bg-background shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}>
-            Violations
+            {t("dashboard.platformsOverview.violations")}
           </button>
           <button
             onClick={() => setChartView("blocked")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors text-left ${
               chartView === "blocked"
                 ? "bg-background shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}>
-            Blocked vs Active
+            {t("dashboard.platformsOverview.blockedVsActive")}
           </button>
           <button
             onClick={() => setChartView("views")}
-            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors text-left ${
               chartView === "views"
                 ? "bg-background shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}>
-            Views
+            {t("dashboard.platformsOverview.views")}
           </button>
         </div>
       </div>
@@ -241,13 +256,13 @@ export function PlatformsOverview({
                 );
               })()}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-muted-foreground">
-                Top Platform by Views
+            <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
+              <p className={`text-xs font-medium text-muted-foreground text-left`}>
+                {t("dashboard.platformsOverview.topPlatformByViews")}
               </p>
-              <p className="text-sm font-semibold truncate">
-                {topViewsPlatform.name} leads with{" "}
-                {formatViewsForDisplay(topViewsPlatform.views)} views
+              <p className={`text-sm font-semibold truncate text-left`}>
+                {topViewsPlatform.name} {t("dashboard.platformsOverview.leadsWith")}{" "}
+                {formatViewsForDisplay(topViewsPlatform.views)} {t("dashboard.platformsOverview.views")}
               </p>
             </div>
           </div>
@@ -258,13 +273,12 @@ export function PlatformsOverview({
             <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
               <Zap className="h-4 w-4 text-success" />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-muted-foreground">
-                Fastest Response
+            <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
+              <p className={`text-xs font-medium text-muted-foreground text-left`}>
+                {t("dashboard.platformsOverview.fastestResponse")}
               </p>
-              <p className="text-sm font-semibold truncate">
-                {fastestPlatform.name} with {fastestPlatform.avgBlockTime} min
-                avg
+              <p className={`text-sm font-semibold truncate text-left`}>
+                {fastestPlatform.name} {t("dashboard.platformsOverview.with")} {fastestPlatform.avgBlockTime} {t("dashboard.platformsOverview.minAvg")}
               </p>
             </div>
           </div>
@@ -320,9 +334,9 @@ export function PlatformsOverview({
               padding: "8px 12px",
               fontSize: "12px",
             }}
-            formatter={(value: any, name: string) => {
-              if (name.includes("Views") || name === "views") {
-                return [formatViewsForDisplay(value), name];
+            formatter={(value: number | string, name: string) => {
+              if (name.includes("Views") || name === "views" || name.includes(t("dashboard.platformsOverview.views"))) {
+                return [formatViewsForDisplay(Number(value)), name];
               }
               return [value, name];
             }}
@@ -341,21 +355,21 @@ export function PlatformsOverview({
             <>
               <Bar
                 dataKey="liveViolations"
-                name="Live Violations"
+                name={t("dashboard.platformsOverview.liveViolations")}
                 fill="hsl(var(--chart-1))"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={40}
               />
               <Bar
                 dataKey="highlightsViolations"
-                name="Highlights Violations"
+                name={t("dashboard.platformsOverview.highlightsViolations")}
                 fill="hsl(var(--chart-2))"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={40}
               />
               <Bar
                 dataKey="othersViolations"
-                name="Others Violations"
+                name={t("dashboard.platformsOverview.othersViolations")}
                 fill="hsl(var(--chart-3))"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={40}
@@ -366,21 +380,21 @@ export function PlatformsOverview({
             <>
               <Bar
                 dataKey="liveViews"
-                name="Live Views"
+                name={t("dashboard.platformsOverview.liveViews")}
                 fill="hsl(var(--chart-3))"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={40}
               />
               <Bar
                 dataKey="highlightsViews"
-                name="Highlights Views"
+                name={t("dashboard.platformsOverview.highlightsViews")}
                 fill="hsl(var(--chart-4))"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={40}
               />
               <Bar
                 dataKey="othersViews"
-                name="Others Views"
+                name={t("dashboard.platformsOverview.othersViews")}
                 fill="hsl(var(--chart-1))"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={40}
@@ -391,14 +405,14 @@ export function PlatformsOverview({
             <>
               <Bar
                 dataKey="blockedCount"
-                name="Blocked"
+                name={t("dashboard.platformsOverview.blocked")}
                 fill="hsl(var(--success))"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={40}
               />
               <Bar
                 dataKey="activeCount"
-                name="Active"
+                name={t("dashboard.platformsOverview.active")}
                 fill="hsl(var(--destructive))"
                 radius={[6, 6, 0, 0]}
                 maxBarSize={40}
@@ -410,7 +424,7 @@ export function PlatformsOverview({
 
       {/* Platform Details Table */}
       <div className="mt-6 border-t pt-4">
-        <h4 className="text-sm font-semibold mb-3">Platform Details</h4>
+        <h4 className={`text-sm font-semibold mb-3 text-left`}>{t("dashboard.platformsOverview.platformDetails")}</h4>
         <div className="space-y-2">
           {platforms.map((platform) => {
             const PlatformIcon = getPlatformIcon(platform.name);
@@ -434,38 +448,37 @@ export function PlatformsOverview({
                       style={{ color: platformColor }}
                     />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold">{platform.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {platform.matchesAffected} match
-                      {platform.matchesAffected !== 1 ? "es" : ""} affected
+                  <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
+                    <p className={`text-sm font-semibold text-left`}>{platform.name}</p>
+                    <p className={`text-xs text-muted-foreground text-left`}>
+                      {platform.matchesAffected} {platform.matchesAffected !== 1 ? t("dashboard.platformsOverview.matches") : t("dashboard.platformsOverview.match")} {t("dashboard.platformsOverview.affected")}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-6 text-sm">
                   <div className="text-right">
-                    <p className="font-semibold">{platform.violations}</p>
-                    <p className="text-xs text-muted-foreground">Violations</p>
+                    <p className="font-semibold text-left">{platform.violations}</p>
+                    <p className="text-xs text-muted-foreground text-left">{t("dashboard.violations")}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold">
+                    <p className="font-semibold text-left">
                       {formatViewsForDisplay(platform.views)}
                     </p>
-                    <p className="text-xs text-muted-foreground">Views</p>
+                    <p className="text-xs text-muted-foreground text-left">{t("dashboard.views")}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-semibold text-success">
+                    <p className="font-semibold text-success text-left">
                       {platform.successRate}%
                     </p>
-                    <p className="text-xs text-muted-foreground">Success</p>
+                    <p className="text-xs text-muted-foreground text-left">{t("dashboard.platformsOverview.success")}</p>
                   </div>
                   {platform.avgBlockTime > 0 && (
                     <div className="text-right">
-                      <p className="font-semibold">
-                        {platform.avgBlockTime} min
+                      <p className="font-semibold text-left">
+                        {platform.avgBlockTime} {t("dashboard.min")}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        Avg Block Time
+                      <p className="text-xs text-muted-foreground text-left">
+                        {t("dashboard.platformsOverview.avgBlockTime")}
                       </p>
                     </div>
                   )}
@@ -478,4 +491,3 @@ export function PlatformsOverview({
     </Card>
   );
 }
-

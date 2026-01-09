@@ -123,9 +123,18 @@ export function TopBar() {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={logout} className={`cursor-pointer touch-manipulation flex items-center ${isRTL ? "flex-row-reverse justify-end" : "justify-start"}`}>
-              <span className="text-sm">{t("topBar.logout")}</span>
-              <LogOut className={`${isRTL ? "ml-2" : "mr-2"} h-4 w-4`} />
+            <DropdownMenuItem onClick={logout} className="cursor-pointer touch-manipulation flex items-center justify-start">
+              {isRTL ? (
+                <>
+                  <span className="text-sm">{t("topBar.logout")}</span>
+                  <LogOut className="ml-2 h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  <span className="text-sm">{t("topBar.logout")}</span>
+                  <LogOut className="mr-2 h-4 w-4" />
+                </>
+              )}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

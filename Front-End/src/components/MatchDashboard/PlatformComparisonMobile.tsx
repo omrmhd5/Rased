@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { PlatformData } from "./types";
 import { formatViews } from "./utils";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type SortColumn =
   | "views"
@@ -44,6 +45,7 @@ export function PlatformComparisonMobile({
   description = "Compare platforms for this match",
   showCard = true,
 }: PlatformComparisonMobileProps) {
+  const { t } = useLanguage();
   const platformMetrics = platformOperations.map((platform) => {
     // Always use backend data directly from platform object (ignore content type filter)
     const totalViolations = platform.totalViolations ?? 0;
@@ -262,7 +264,7 @@ export function PlatformComparisonMobile({
               {/* Metrics Grid */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Views</p>
+                  <p className="text-xs text-muted-foreground">{t("dashboard.views")}</p>
                   <p
                     className={cn(
                       "text-sm font-medium",
@@ -273,7 +275,7 @@ export function PlatformComparisonMobile({
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Violations</p>
+                  <p className="text-xs text-muted-foreground">{t("dashboard.violations")}</p>
                   <p
                     className={cn(
                       "text-sm font-medium",
@@ -285,7 +287,7 @@ export function PlatformComparisonMobile({
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Active</p>
+                  <p className="text-xs text-muted-foreground">{t("dashboard.active")}</p>
                   <p
                     className={cn(
                       "text-sm font-medium",
@@ -297,7 +299,7 @@ export function PlatformComparisonMobile({
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Blocked</p>
+                  <p className="text-xs text-muted-foreground">{t("dashboard.blocked")}</p>
                   <p
                     className={cn(
                       "text-sm font-medium",
@@ -307,13 +309,13 @@ export function PlatformComparisonMobile({
                     {metrics.blockedCount}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {metrics.blockSuccessRate}% success
+                    {metrics.blockSuccessRate}% {t("dashboard.success")}
                   </p>
                 </div>
 
                 <div className="space-y-1">
                   <p className="text-xs text-muted-foreground">
-                    Avg Block Time
+                    {t("dashboard.avgBlockTime")}
                   </p>
                   <p
                     className={cn(
@@ -321,15 +323,15 @@ export function PlatformComparisonMobile({
                       comparisonSort === "avgBlockTime" &&
                         "font-semibold text-primary"
                     )}>
-                    {minutes} min
+                    {minutes} {t("dashboard.min")}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)} hrs)
+                    ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)} {t("dashboard.hrs")})
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Removed</p>
+                  <p className="text-xs text-muted-foreground">{t("dashboard.removed")}</p>
                   <p
                     className={cn(
                       "text-sm font-medium",
@@ -341,7 +343,7 @@ export function PlatformComparisonMobile({
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Under Review</p>
+                  <p className="text-xs text-muted-foreground">{t("dashboard.underReview")}</p>
                   <p
                     className={cn(
                       "text-sm font-medium",

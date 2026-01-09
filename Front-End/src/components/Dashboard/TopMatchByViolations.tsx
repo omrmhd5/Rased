@@ -9,6 +9,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface TopMatchByViolationsProps {
   topMatch: {
@@ -79,6 +80,7 @@ export function TopMatchByViolations({
   statsLoading,
 }: TopMatchByViolationsProps) {
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   if (!topMatch) {
     return null;
@@ -88,11 +90,11 @@ export function TopMatchByViolations({
     <div className="grid grid-cols-1 gap-4">
       <Card className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold">Top Match by Violations</h3>
+          <h3 className="text-base font-semibold">{t("dashboard.topMatchByViolations")}</h3>
           <button
             onClick={() => navigate(`/match/${topMatch.externalMatchId}`)}
             className="text-[10px] text-primary hover:underline flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary/5 hover:bg-primary/10 transition-colors">
-            View Match
+            {t("dashboard.viewMatch")}
             <Eye className="h-3 w-3" />
           </button>
         </div>
@@ -101,33 +103,33 @@ export function TopMatchByViolations({
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mr-2" />
             <div className="text-xs text-muted-foreground">
-              Loading match data...
+              {t("dashboard.loadingMatchData")}
             </div>
           </div>
         ) : (
           <>
             <div className="mb-4 p-3 rounded-lg bg-muted/30">
               <p className="text-xs font-medium text-muted-foreground mb-0.5">
-                Match
+                {t("dashboard.match")}
               </p>
               <p className="font-semibold text-base">{topMatch.teams}</p>
               <div className="flex items-baseline gap-1.5 mt-2">
                 <p className="text-2xl font-bold">
                   {formatViewsForDisplay(topMatch.totalViews)}
                 </p>
-                <p className="text-xs text-muted-foreground">total views</p>
+                <p className="text-xs text-muted-foreground">{t("dashboard.totalViewsLower")}</p>
               </div>
               <div className="flex items-baseline gap-1.5 mt-2">
                 <p className="text-2xl font-bold">{topMatch.violations}</p>
                 <p className="text-xs text-muted-foreground">
-                  total violations
+                  {t("dashboard.totalViolationsLower")}
                 </p>
               </div>
             </div>
 
             <div className="space-y-1.5">
               <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                Breakdown by Platform
+                {t("dashboard.breakdownByPlatform")}
               </p>
               {topMatch.platforms && topMatch.platforms.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -135,7 +137,7 @@ export function TopMatchByViolations({
                     const PlatformIcon = getPlatformIcon(platform.name);
                     const platformColor = getPlatformColor(platform.name);
                     const contentTypeLabel =
-                      platform.violations === 1 ? "violation" : "violations";
+                      platform.violations === 1 ? t("dashboard.violation") : t("dashboard.violations");
                     const blockedCount = Math.round(
                       (platform.violations * platform.successRate) / 100
                     );
@@ -163,7 +165,7 @@ export function TopMatchByViolations({
                           <span className="text-base font-bold text-foreground">
                             {formatViewsForDisplay(platform.views)}
                           </span>{" "}
-                          views •{" "}
+                          {t("dashboard.views")} •{" "}
                           <span className="text-base font-bold text-foreground">
                             {platform.violations}
                           </span>{" "}
@@ -173,11 +175,11 @@ export function TopMatchByViolations({
                           <span className="text-base font-bold text-success">
                             {blockedCount}
                           </span>{" "}
-                          blocked with{" "}
+                          {t("dashboard.blockedWith")}{" "}
                           <span className="text-base font-bold text-success">
                             {platform.successRate}%
                           </span>{" "}
-                          success
+                          {t("dashboard.success")}
                         </p>
                       </div>
                     );
@@ -185,7 +187,7 @@ export function TopMatchByViolations({
                 </div>
               ) : (
                 <div className="text-center py-6 text-xs text-muted-foreground">
-                  No platform data available
+                  {t("dashboard.platformsOverview.noPlatformData")}
                 </div>
               )}
             </div>

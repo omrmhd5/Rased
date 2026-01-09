@@ -69,7 +69,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const fetchLeagues = useCallback(async () => {
-    console.log("[AuthContext] fetchLeagues: Starting fetch");
     setLoadingLeagues(true);
     try {
       const response = await fetch(`${API_URL}/leagues`, {
@@ -78,7 +77,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log("[AuthContext] fetchLeagues: Success, got", data?.length || 0, "leagues");
         setLeagues(data || []);
       } else {
         console.error("[AuthContext] fetchLeagues: Response not OK", response.status);
@@ -94,7 +92,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   // Fetch leagues when user is authenticated
   useEffect(() => {
-    console.log("[AuthContext] useEffect: user changed", { user: !!user, userId: user?.id });
     if (user) {
       fetchLeagues();
     } else {

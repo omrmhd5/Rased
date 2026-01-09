@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { AlertTriangle, Shield, FileQuestion, XCircle } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface MatchViolationsStatusBreakdownProps {
   totalViolations: number;
@@ -25,6 +26,8 @@ export function MatchViolationsStatusBreakdown({
   removedCount,
   underReviewCount,
 }: MatchViolationsStatusBreakdownProps) {
+  const { t } = useLanguage();
+  
   // Calculate percentages
   const calculatePercentage = (value: number) => {
     if (totalViolations === 0) return 0;
@@ -34,28 +37,28 @@ export function MatchViolationsStatusBreakdown({
   // Prepare chart data - colors match MatchOverview component
   const chartData: ChartData[] = [
     {
-      name: "Active",
+      name: t("dashboard.violationsOverview.active"),
       value: activeCount,
       percentage: calculatePercentage(activeCount),
       color: "hsl(var(--destructive))", // Matches MatchOverview Active (destructive)
       icon: <AlertTriangle className="h-3 w-3" />,
     },
     {
-      name: "Blocked",
+      name: t("dashboard.violationsOverview.statusBreakdown.blocked"),
       value: blockedCount,
       percentage: calculatePercentage(blockedCount),
       color: "hsl(var(--success))", // Matches MatchOverview Blocked Successfully (success)
       icon: <Shield className="h-3 w-3" />,
     },
     {
-      name: "Removed",
+      name: t("dashboard.violationsOverview.removed"),
       value: removedCount,
       percentage: calculatePercentage(removedCount),
       color: "hsl(188 94% 43%)", // Matches MatchOverview Removed (cyan-500)
       icon: <XCircle className="h-3 w-3" />,
     },
     {
-      name: "Under Review",
+      name: t("dashboard.violationsOverview.underReview"),
       value: underReviewCount,
       percentage: calculatePercentage(underReviewCount),
       color: "hsl(48 96% 50%)", // Matches MatchOverview Under Review (yellow-500)
@@ -77,10 +80,10 @@ export function MatchViolationsStatusBreakdown({
             <p className="font-semibold text-sm">{data.name}</p>
           </div>
           <p className="text-xs text-muted-foreground">
-            Count: <span className="font-semibold">{data.value}</span>
+            {t("dashboard.violationsOverview.statusBreakdown.count")} <span className="font-semibold">{data.value}</span>
           </p>
           <p className="text-xs text-muted-foreground">
-            Percentage: <span className="font-semibold">{data.percentage}%</span>
+            {t("dashboard.violationsOverview.statusBreakdown.percentage")} <span className="font-semibold">{data.percentage}%</span>
           </p>
         </div>
       );
@@ -122,9 +125,9 @@ export function MatchViolationsStatusBreakdown({
   if (totalViolations === 0) {
     return (
       <Card className="p-4">
-        <h3 className="font-semibold mb-4 text-base">Violations Status Breakdown</h3>
+        <h3 className="font-semibold mb-4 text-base text-left">{t("dashboard.violationsOverview.statusBreakdown.title")}</h3>
         <div className="flex items-center justify-center h-32">
-          <p className="text-sm text-muted-foreground">No violations to display</p>
+          <p className="text-sm text-muted-foreground text-left">{t("dashboard.violationsOverview.statusBreakdown.noViolations")}</p>
         </div>
       </Card>
     );
@@ -132,7 +135,7 @@ export function MatchViolationsStatusBreakdown({
 
   return (
     <Card className="p-4 transition-all duration-300 hover:shadow-lg">
-      <h3 className="font-semibold mb-4 text-base">Violations Status Breakdown</h3>
+      <h3 className="font-semibold mb-4 text-base text-left">{t("dashboard.violationsOverview.statusBreakdown.title")}</h3>
       
       <div className="flex flex-col lg:flex-row items-center gap-3">
         {/* Pie Chart */}
@@ -180,7 +183,7 @@ export function MatchViolationsStatusBreakdown({
                 <div>
                   <p className="font-semibold text-xs">{item.name}</p>
                   <p className="text-[10px] text-muted-foreground">
-                    {item.value} violation{item.value !== 1 ? "s" : ""}
+                    {item.value} {item.value !== 1 ? t("dashboard.violationsOverview.statusBreakdown.violations") : t("dashboard.violationsOverview.statusBreakdown.violation")}
                   </p>
                 </div>
               </div>
