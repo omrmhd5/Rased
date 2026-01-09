@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { formatViews } from "./utils";
 import { Play, Film, MoreHorizontal, BarChart3 } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ContentSplitData {
   name: string;
@@ -12,6 +13,7 @@ interface ContentSplitData {
 interface ContentSplitChartProps {
   data: ContentSplitData[];
   compact?: boolean;
+  title?: string;
 }
 
 // Icon mapping for each content type
@@ -31,7 +33,12 @@ const getIcon = (name: string, compact: boolean = false) => {
   }
 };
 
-export function ContentSplitChart({ data, compact = false }: ContentSplitChartProps) {
+export function ContentSplitChart({
+  data,
+  compact = false,
+  title,
+}: ContentSplitChartProps) {
+  const { t, isRTL } = useLanguage();
   // Calculate max value for percentage calculation
   const maxValue = Math.max(...data.map((d) => d.value), 1);
 
@@ -51,10 +58,12 @@ export function ContentSplitChart({ data, compact = false }: ContentSplitChartPr
   const marginBottom = compact ? "mb-1.5" : "mb-2";
   const barHeight = compact ? "h-2" : "h-3";
 
+  const chartTitle = title || t("dashboard.contentSplitTitle");
+
   return (
     <Card className={`${cardPadding} lg:col-span-1`}>
-      <h3 className={`font-semibold ${titleMargin} ${titleSize}`}>
-        Live Stream vs Highlights vs Others
+      <h3 className={`font-semibold ${titleMargin} ${titleSize} text-left`}>
+        {chartTitle}
       </h3>
 
       <div className={spacing}>
@@ -81,25 +90,55 @@ export function ContentSplitChart({ data, compact = false }: ContentSplitChartPr
 
               {/* Name and Bar Container */}
               <div className="flex-1 min-w-0">
-                <div className={`flex items-center justify-between ${marginBottom}`}>
-                  <span className={`font-semibold ${nameSize} uppercase tracking-wide transition-colors duration-300 group-hover:text-foreground`}>
-                    {entry.name}
-                  </span>
-                  <div className={`text-right ${compact ? "ml-3" : "ml-4"}`}>
-                    <p className={`font-bold ${valueSize} leading-tight transition-transform duration-300 group-hover:scale-105`}>
-                      {formatViews(entry.value)}{" "}
-                      <span className={`${viewsLabelSize} font-normal text-muted-foreground`}>
-                        views
-                      </span>
-                    </p>
-                    <p className={`${violationsSize} text-muted-foreground leading-tight transition-transform duration-300 group-hover:scale-105`}>
-                      {entry.violations} violations
-                    </p>
+                {isRTL ? (
+                  <div
+                    className={`flex items-center justify-between ${marginBottom} flex-row`}>
+                    <span
+                      className={`font-semibold ${nameSize} uppercase tracking-wide transition-colors duration-300 group-hover:text-foreground text-right`}>
+                      {entry.name}
+                    </span>
+                    <div className={`text-right ${compact ? "mr-3" : "mr-4"}`}>
+                      <p
+                        className={`font-bold ${valueSize} leading-tight transition-transform duration-300 group-hover:scale-105 text-left`}>
+                        {formatViews(entry.value)}{" "}
+                        <span
+                          className={`${viewsLabelSize} font-normal text-muted-foreground`}>
+                          {t("dashboard.views")}
+                        </span>
+                      </p>
+                      <p
+                        className={`${violationsSize} text-muted-foreground leading-tight transition-transform duration-300 group-hover:scale-105 text-right`}>
+                        {entry.violations} {t("dashboard.violations")}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div
+                    className={`flex items-center justify-between ${marginBottom}`}>
+                    <span
+                      className={`font-semibold ${nameSize} uppercase tracking-wide transition-colors duration-300 group-hover:text-foreground text-left`}>
+                      {entry.name}
+                    </span>
+                    <div className={`text-right ${compact ? "ml-3" : "ml-4"}`}>
+                      <p
+                        className={`font-bold ${valueSize} leading-tight transition-transform duration-300 group-hover:scale-105 text-right`}>
+                        {formatViews(entry.value)}{" "}
+                        <span
+                          className={`${viewsLabelSize} font-normal text-muted-foreground`}>
+                          {t("dashboard.views")}
+                        </span>
+                      </p>
+                      <p
+                        className={`${violationsSize} text-muted-foreground leading-tight transition-transform duration-300 group-hover:scale-105 text-right`}>
+                        {entry.violations} {t("dashboard.violations")}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Horizontal Progress Bar */}
-                <div className={`relative w-full ${barHeight} bg-muted rounded-full overflow-hidden transition-all duration-300 group-hover:shadow-md`}>
+                <div
+                  className={`relative w-full ${barHeight} bg-muted rounded-full overflow-hidden transition-all duration-300 group-hover:shadow-md`}>
                   <div
                     className="h-full rounded-full transition-all duration-500 ease-out group-hover:shadow-lg"
                     style={{

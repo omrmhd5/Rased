@@ -42,6 +42,7 @@ import { PlatformData } from "@/components/MatchDashboard/types";
 import { formatViews as formatViewsUtil } from "@/components/MatchDashboard/utils";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type League = string | null;
 type WeekFilterType = "all" | "single" | "range";
@@ -54,6 +55,7 @@ const formatViews = (views: number) => {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, leagues, loadingLeagues } = useAuth();
+  const { t, isRTL } = useLanguage();
   const [isRoundReportOpen, setIsRoundReportOpen] = useState(false);
 
   // Helper to check if league is valid (exists in database and is visible)
@@ -73,8 +75,16 @@ export default function Dashboard() {
 
   // Helper to get league name from leagues array
   const getLeagueName = (leagueSlug: League): string => {
-    if (!leagueSlug) return "All Leagues";
+    if (!leagueSlug) return t("dashboard.allLeagues");
     const leagueInfo = leagues?.find((l) => l.league === leagueSlug);
+    if (isRTL) {
+      return (
+        leagueInfo?.arabicName ||
+        leagueInfo?.knownName ||
+        leagueInfo?.name ||
+        leagueSlug
+      );
+    }
     return (
       leagueInfo?.knownName ||
       leagueInfo?.name ||
@@ -754,18 +764,18 @@ export default function Dashboard() {
 
       const weekInfo =
         weekFilterType === "all"
-          ? "All Weeks"
+          ? t("dashboard.allWeeks")
           : weekFilterType === "single"
-          ? `Week ${singleWeek}`
-          : `Weeks ${weekRangeStart} - ${weekRangeEnd}`;
+          ? t("dashboard.week", { number: singleWeek })
+          : t("dashboard.weeksRangeOverview", { start: weekRangeStart, end: weekRangeEnd });
 
       headerDiv.innerHTML = `
         <h1 style="font-size: 32px; font-weight: bold; margin: 0 0 16px 0; color: #1a1a1a;">
-          Dashboard Report
+          ${t("dashboard.dashboardReport")}
         </h1>
         <div style="font-size: 18px; color: #666; line-height: 1.8;">
-          <p style="margin: 0 0 8px 0;"><strong>League:</strong> ${leagueName}</p>
-          <p style="margin: 0;"><strong>Period:</strong> ${weekInfo}</p>
+          <p style="margin: 0 0 8px 0;"><strong>${t("dashboard.league")}</strong> ${leagueName}</p>
+          <p style="margin: 0;"><strong>${t("dashboard.period")}</strong> ${weekInfo}</p>
           </div>
       `;
 
@@ -1001,16 +1011,16 @@ export default function Dashboard() {
         URL.revokeObjectURL(url);
 
         toast({
-          title: "Report Downloaded",
-          description: "Dashboard report has been downloaded successfully",
+          title: t("dashboard.reportDownloaded"),
+          description: t("dashboard.reportDownloadedDescription"),
         });
       }, "image/png");
     } catch (error) {
       console.error("Error generating report:", error);
       toast({
-        title: "Error",
+        title: t("dashboard.error"),
         description:
-          error instanceof Error ? error.message : "Failed to generate report",
+          error instanceof Error ? error.message : t("dashboard.failedToGenerateReport"),
         variant: "destructive",
       });
     } finally {
@@ -1023,32 +1033,33 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">{t("dashboard.title")}</h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
             {(() => {
               const leagueInfo = leagues?.find(
                 (l) => l.league === selectedLeague
               );
-              const leagueKnownName =
-                leagueInfo?.knownName || leagueInfo?.name || "";
+              const leagueKnownName = isRTL
+                ? (leagueInfo?.arabicName || leagueInfo?.knownName || leagueInfo?.name || "")
+                : (leagueInfo?.knownName || leagueInfo?.name || "");
               const isSuperCup = isSuperCupLeague(selectedLeague);
               if (isSuperCup) {
                 const stageText =
                   stageFilterType === "all"
-                    ? "All Stages Overview"
+                    ? t("dashboard.allStagesOverview")
                     : stageFilterType === "single"
-                    ? `${singleStage} Overview`
-                    : `${stageRangeStart} - ${stageRangeEnd} Overview`;
+                    ? t("dashboard.stageOverview", { stage: singleStage })
+                    : t("dashboard.stagesRangeOverview", { start: stageRangeStart, end: stageRangeEnd });
                 return leagueKnownName
                   ? `${stageText} • ${leagueKnownName}`
                   : stageText;
               } else {
                 const weekText =
                   weekFilterType === "all"
-                    ? "All Weeks Overview"
+                    ? t("dashboard.allWeeksOverview")
                     : weekFilterType === "single"
-                    ? `Week ${singleWeek} Overview`
-                    : `Weeks ${weekRangeStart} - ${weekRangeEnd} Overview`;
+                    ? t("dashboard.weekOverview", { week: singleWeek })
+                    : t("dashboard.weeksRangeOverview", { start: weekRangeStart, end: weekRangeEnd });
                 return leagueKnownName
                   ? `${weekText} • ${leagueKnownName}`
                   : weekText;
@@ -1070,25 +1081,23 @@ export default function Dashboard() {
                   ? `${API_URL.replace("/api", "")}${leagueInfo.iconUrl}`
                   : leagueInfo.iconUrl
                 : null;
+              const leagueDisplayName = isRTL
+                ? (leagueInfo?.arabicName || leagueInfo?.knownName || leagueInfo?.name || selectedLeague)
+                : (leagueInfo?.knownName || leagueInfo?.name || leagueInfo?.arabicName || selectedLeague);
+              
               return (
                 <Badge
                   variant="secondary"
-                  className="text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 justify-center sm:justify-start px-2 sm:px-3 py-1.5 sm:py-2">
+                  className={`text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 justify-center sm:justify-start px-2 sm:px-3 py-1.5 sm:py-2 ${isRTL ? "sm:justify-end" : ""}`}>
                   {iconUrl && (
                     <img
                       src={iconUrl}
-                      alt={
-                        leagueInfo?.name ||
-                        leagueInfo?.arabicName ||
-                        selectedLeague
-                      }
+                      alt={leagueDisplayName}
                       className="h-8 sm:h-12 object-contain flex-shrink-0"
                     />
                   )}
-                  <span className="hidden xs:inline">
-                    {leagueInfo?.name ||
-                      leagueInfo?.arabicName ||
-                      selectedLeague}
+                  <span className={`hidden xs:inline ${isRTL ? "text-right" : "text-left"}`}>
+                    {leagueDisplayName}
                   </span>
                 </Badge>
               );
@@ -1104,35 +1113,35 @@ export default function Dashboard() {
                 disabled={isDownloading}>
                 {isDownloading ? (
                   <>
-                    <Loader2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 animate-spin" />
-                    <span className="hidden sm:inline">Downloading...</span>
-                    <span className="sm:hidden">Loading...</span>
+                    <Loader2 className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${isRTL ? "ml-1 sm:ml-1.5" : "mr-1 sm:mr-1.5"} animate-spin`} />
+                    <span className="hidden sm:inline">{t("dashboard.downloading")}</span>
+                    <span className="sm:hidden">{t("dashboard.loading")}</span>
                   </>
                 ) : (
                   <>
-                    <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
-                    <span className="hidden sm:inline">Download</span>
-                    <span className="sm:hidden">DL</span>
+                    <Download className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${isRTL ? "ml-1 sm:ml-1.5" : "mr-1 sm:mr-1.5"}`} />
+                    <span className="hidden sm:inline">{t("dashboard.download")}</span>
+                    <span className="sm:hidden">{t("dashboard.downloadShort")}</span>
                   </>
                 )}
               </Button>
             </HoverCardTrigger>
-            <HoverCardContent align="end" className="w-48 p-1" sideOffset={5}>
+            <HoverCardContent align={isRTL ? "start" : "end"} className="w-48 p-1" sideOffset={5}>
               <div className="flex flex-col">
                 <Button
                   variant="ghost"
-                  className="w-full justify-start h-9 text-xs font-normal touch-manipulation"
+                  className={`w-full h-9 text-xs font-normal touch-manipulation flex items-center ${isRTL ? "flex-row-reverse justify-end" : "justify-start"}`}
                   onClick={handleDownloadReport}
                   disabled={isDownloading}>
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Report
+                  <span>{t("dashboard.downloadReport")}</span>
+                  <Download className={`${isRTL ? "ml-2" : "mr-2"} h-4 w-4`} />
                 </Button>
                 <Button
                   variant="ghost"
-                  className="w-full justify-start h-9 text-xs font-normal touch-manipulation"
+                  className={`w-full h-9 text-xs font-normal touch-manipulation flex items-center ${isRTL ? "flex-row-reverse justify-end" : "justify-start"}`}
                   onClick={() => setIsRoundReportOpen(true)}>
-                  <BarChart3 className="mr-2 h-4 w-4" />
-                  Round Report
+                  <span>{t("dashboard.roundReport")}</span>
+                  <BarChart3 className={`${isRTL ? "ml-2" : "mr-2"} h-4 w-4`} />
                 </Button>
               </div>
             </HoverCardContent>
@@ -1156,13 +1165,13 @@ export default function Dashboard() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all" className="text-xs sm:text-sm">
-                        All Stages
+                        {t("dashboard.allStages")}
                       </SelectItem>
                       <SelectItem value="single" className="text-xs sm:text-sm">
-                        Single Stage
+                        {t("dashboard.singleStage")}
                       </SelectItem>
                       <SelectItem value="range" className="text-xs sm:text-sm">
-                        Stage Range
+                        {t("dashboard.stageRange")}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -1193,7 +1202,7 @@ export default function Dashboard() {
                         value={stageRangeStart}
                         onValueChange={setStageRangeStart}>
                         <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                          <SelectValue placeholder="Start Stage" />
+                          <SelectValue placeholder={t("dashboard.startStage")} />
                         </SelectTrigger>
                         <SelectContent>
                           {availableStages.map((stage) => (
@@ -1213,7 +1222,7 @@ export default function Dashboard() {
                         value={stageRangeEnd}
                         onValueChange={setStageRangeEnd}>
                         <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                          <SelectValue placeholder="End Stage" />
+                          <SelectValue placeholder={t("dashboard.endStage")} />
                         </SelectTrigger>
                         <SelectContent>
                           {availableStages.map((stage) => (
@@ -1244,13 +1253,13 @@ export default function Dashboard() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all" className="text-xs sm:text-sm">
-                        All Weeks
+                        {t("dashboard.allWeeks")}
                       </SelectItem>
                       <SelectItem value="single" className="text-xs sm:text-sm">
-                        Single Week
+                        {t("dashboard.singleWeek")}
                       </SelectItem>
                       <SelectItem value="range" className="text-xs sm:text-sm">
-                        Week Range
+                        {t("dashboard.weekRange")}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -1268,7 +1277,7 @@ export default function Dashboard() {
                               key={week}
                               value={week.toString()}
                               className="text-xs sm:text-sm">
-                              Week {week}
+                              {t("dashboard.week", { number: week.toString() })}
                             </SelectItem>
                           )
                         )}
@@ -1283,7 +1292,7 @@ export default function Dashboard() {
                         value={weekRangeStart}
                         onValueChange={setWeekRangeStart}>
                         <SelectTrigger className="w-full sm:w-[100px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                          <SelectValue placeholder="Start Week" />
+                          <SelectValue placeholder={t("dashboard.startWeek")} />
                         </SelectTrigger>
                         <SelectContent>
                           {Array.from({ length: 38 }, (_, i) => i + 1).map(
@@ -1305,7 +1314,7 @@ export default function Dashboard() {
                         value={weekRangeEnd}
                         onValueChange={setWeekRangeEnd}>
                         <SelectTrigger className="w-full sm:w-[100px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                          <SelectValue placeholder="End Week" />
+                          <SelectValue placeholder={t("dashboard.endWeek")} />
                         </SelectTrigger>
                         <SelectContent>
                           {Array.from({ length: 38 }, (_, i) => i + 1).map(
@@ -1361,10 +1370,10 @@ export default function Dashboard() {
             ref={totalViewsCardRef}
             className="p-3 sm:p-4 bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-chart-4/20 cursor-pointer touch-manipulation">
             <div className="flex items-center justify-between mb-1 sm:mb-1.5">
-              <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground">
-                Total Views
+              <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground text-left">
+                {t("dashboard.totalViews")}
               </p>
-              <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-chart-4" />
+              <Eye className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-chart-4 flex-shrink-0" />
             </div>
 
             {statsLoading ? (
@@ -1376,8 +1385,8 @@ export default function Dashboard() {
                 <p className="text-xl sm:text-2xl font-bold text-foreground">
                   {dashboardStats.totalViews.toLocaleString("en-US")}
                 </p>
-                <p className="text-[10px] sm:text-[11px] text-muted-foreground hidden sm:inline">
-                  Across All Platforms
+                <p className={`text-[10px] sm:text-[11px] text-muted-foreground hidden sm:inline ${isRTL ? "text-right" : "text-left"}`}>
+                  {t("dashboard.acrossAllPlatforms")}
                 </p>
               </div>
             )}
@@ -1388,10 +1397,10 @@ export default function Dashboard() {
             ref={avgBlockTimeCardRef}
             className="p-3 sm:p-4 bg-gradient-to-br from-success/5 to-success/10 border border-success/20 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-success/20 cursor-pointer touch-manipulation">
             <div className="flex items-center justify-between mb-1 sm:mb-1.5">
-              <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground">
-                Avg Block Time
+              <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground text-left">
+                {t("dashboard.avgBlockTime")}
               </p>
-              <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-success" />
+              <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-success flex-shrink-0" />
             </div>
             {statsLoading ? (
               <div className="flex items-center justify-center py-2 sm:py-3">
@@ -1405,10 +1414,10 @@ export default function Dashboard() {
                   return (
                     <>
                       {minutes}
-                      <span className="text-xs sm:text-sm text-muted-foreground ml-1">
-                        min{" "}
+                      <span className={`text-xs sm:text-sm text-muted-foreground ${isRTL ? "mr-1" : "ml-1"}`}>
+                        {t("dashboard.min")}{" "}
                         <span className="text-medium text-muted-foreground hidden sm:inline">
-                          ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}hrs)
+                          ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}{t("dashboard.hrs")})
                         </span>
                       </span>
                     </>
@@ -1424,23 +1433,23 @@ export default function Dashboard() {
               ref={topPlatformCardRef}
               className="p-3 sm:p-4 bg-gradient-to-br from-chart-2/5 to-chart-2/10 border border-chart-2/20 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-chart-2/20 cursor-pointer touch-manipulation">
               <div className="flex items-center justify-between mb-1 sm:mb-1.5">
-                <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground">
-                  Top Platform
+                <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground text-left">
+                  {t("dashboard.topPlatform")}
                 </p>
                 {(() => {
                   const Icon = getPlatformIconComponent(
                     dashboardStats.topPlatform.name
                   );
                   return (
-                    <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-chart-2" />
+                    <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-chart-2 flex-shrink-0" />
                   );
                 })()}
               </div>
               <p className="text-sm sm:text-base font-bold text-foreground mb-0.5 truncate">
                 {dashboardStats.topPlatform.name}
               </p>
-              <p className="text-[10px] sm:text-[11px] text-muted-foreground">
-                {dashboardStats.topPlatform.violations} violations
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground text-left">
+                {dashboardStats.topPlatform.violations} {t("dashboard.violations")}
               </p>
             </Card>
           )}
@@ -1451,17 +1460,19 @@ export default function Dashboard() {
               ref={topMatchCardRef}
               className="p-3 sm:p-4 bg-gradient-to-br from-orange-500/5 to-orange-500/10 border border-orange-500/20 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer touch-manipulation">
               <div className="flex items-center justify-between mb-1 sm:mb-1.5">
-                <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground">
-                  Top Match
+                <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground text-left">
+                  {t("dashboard.topMatch")}
                 </p>
-                <Trophy className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-orange-600" />
+                <Trophy className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-orange-600 flex-shrink-0" />
               </div>
               <p className="text-sm sm:text-base font-bold text-foreground mb-0.5 truncate">
                 {dashboardStats.topMatch.teams}
               </p>
-              <p className="text-[10px] sm:text-[11px] text-muted-foreground">
-                Week {dashboardStats.topMatch.week} •{" "}
-                {dashboardStats.topMatch.violations} violations
+              <p className="text-[10px] sm:text-[11px] text-muted-foreground text-left">
+                {t("dashboard.weekViolations", { 
+                  week: dashboardStats.topMatch.week, 
+                  violations: dashboardStats.topMatch.violations.toString() 
+                })}
               </p>
             </Card>
           )}
@@ -1479,25 +1490,25 @@ export default function Dashboard() {
 
               const contentSplitData = [
                 {
-                  name: "Total Violations",
+                  name: t("dashboard.totalViolations"),
                   value: totalViews,
                   violations: dashboardStats.totalViolations,
                   color: "hsl(var(--chart-4))",
                 },
                 {
-                  name: "Live",
+                  name: t("dashboard.live"),
                   value: dashboardStats.contentSplit.live.views,
                   violations: dashboardStats.contentSplit.live.violations,
                   color: "hsl(var(--chart-1))",
                 },
                 {
-                  name: "Highlights",
+                  name: t("dashboard.highlights"),
                   value: dashboardStats.contentSplit.highlights.views,
                   violations: dashboardStats.contentSplit.highlights.violations,
                   color: "hsl(var(--chart-2))",
                 },
                 {
-                  name: "Others",
+                  name: t("dashboard.others"),
                   value: dashboardStats.contentSplit.others.views,
                   violations: dashboardStats.contentSplit.others.violations,
                   color: "hsl(var(--chart-3))",
@@ -1505,7 +1516,11 @@ export default function Dashboard() {
               ];
 
               return (
-                <ContentSplitChart data={contentSplitData} compact={true} />
+                <ContentSplitChart 
+                  data={contentSplitData} 
+                  compact={true}
+                  title={t("dashboard.contentSplitTitle")}
+                />
               );
             })()}
           </div>
@@ -1533,10 +1548,10 @@ export default function Dashboard() {
       {/* Platform Comparison - Shows all platforms */}
       {statsLoading ? (
         <Card className="p-4 sm:p-6">
-          <div className="flex items-center justify-center py-6 sm:py-8">
-            <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground mr-2" />
-            <span className="text-xs sm:text-sm text-muted-foreground">
-              Loading platform comparison...
+          <div className={`flex items-center justify-center py-6 sm:py-8 ${isRTL ? "flex-row-reverse" : ""}`}>
+            <Loader2 className={`h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground ${isRTL ? "ml-2" : "mr-2"}`} />
+            <span className={`text-xs sm:text-sm text-muted-foreground ${isRTL ? "text-right" : "text-left"}`}>
+              {t("dashboard.loadingPlatformComparison")}
             </span>
           </div>
         </Card>
@@ -1551,8 +1566,8 @@ export default function Dashboard() {
               onSortChange={setComparisonSort}
               onSortDirectionChange={setComparisonSortDirection}
               targetMins={15}
-              title="Platform Comparison"
-              description="Compare platform performance across all matches"
+              title={t("dashboard.platformComparison")}
+              description={t("dashboard.platformComparisonDescription")}
               showCard={true}
             />
           </div>
@@ -1565,8 +1580,8 @@ export default function Dashboard() {
               onSortChange={setComparisonSort}
               onSortDirectionChange={setComparisonSortDirection}
               targetMins={15}
-              title="Platform Comparison"
-              description="Compare platform performance across all matches"
+              title={t("dashboard.platformComparison")}
+              description={t("dashboard.platformComparisonDescription")}
               showCard={true}
             />
           </div>
@@ -1587,12 +1602,12 @@ export default function Dashboard() {
         <Card className="h-[400px] sm:h-[500px] flex flex-col p-3 sm:p-4">
           <div className="flex-shrink-0 mb-2 sm:mb-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div>
+              <div className={isRTL ? "text-right" : "text-left"}>
                 <h3 className="text-sm sm:text-[15px] font-semibold">
-                  Matches Leaderboard
+                  {t("dashboard.matchesLeaderboard")}
                 </h3>
                 <p className="text-[10px] sm:text-[11px] text-muted-foreground mt-0.5 sm:mt-1">
-                  Matches ranked by violations
+                  {t("dashboard.matchesRankedByViolations")}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -1600,10 +1615,10 @@ export default function Dashboard() {
                   variant="secondary"
                   className="h-5 px-2 text-[9px] sm:text-[10px]">
                   {weekFilterType === "all"
-                    ? "All Weeks"
+                    ? t("dashboard.allWeeks")
                     : weekFilterType === "single"
-                    ? `Week ${singleWeek}`
-                    : `Weeks ${weekRangeStart}-${weekRangeEnd}`}
+                    ? t("dashboard.week", { number: singleWeek })
+                    : t("dashboard.weeksRangeOverview", { start: weekRangeStart, end: weekRangeEnd })}
                 </Badge>
               </div>
             </div>
@@ -1614,29 +1629,29 @@ export default function Dashboard() {
                 <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground" />
               </div>
             ) : dashboardStats.matches.length === 0 ? (
-              <div className="flex items-center justify-center h-full text-xs sm:text-sm text-muted-foreground">
-                No matches found
+              <div className={`flex items-center justify-center h-full text-xs sm:text-sm text-muted-foreground ${isRTL ? "text-right" : "text-left"}`}>
+                {t("dashboard.noMatchesFound")}
               </div>
             ) : (
               dashboardStats.matches.map((match) => {
                 return (
                   <div
                     key={match.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-3 sm:p-4 rounded-lg border border-border/40 hover:border-primary/30 hover:bg-muted/20 transition-all cursor-pointer touch-manipulation active:scale-[0.98]"
+                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-3 sm:p-4 rounded-lg border border-border/40 hover:border-primary/30 hover:bg-muted/20 transition-all cursor-pointer touch-manipulation active:scale-[0.98] ${isRTL ? "sm:flex-row-reverse" : ""}`}
                     onClick={() => navigate(`/match/${match.id}`)}>
                     {/* Match Title */}
-                    <h4 className="text-xs sm:text-[14px] font-semibold flex-1 min-w-0 truncate sm:pr-4">
+                    <h4 className={`text-xs sm:text-[14px] font-semibold flex-1 min-w-0 truncate ${isRTL ? "sm:pl-4 sm:pr-0 text-right" : "sm:pr-4 text-left"}`}>
                       {match.description}
                     </h4>
 
                     {/* Metrics */}
-                    <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+                    <div className={`flex items-center gap-2 sm:gap-4 flex-shrink-0 ${isRTL ? "flex-row-reverse" : ""}`}>
                       <div className="flex items-baseline gap-1 sm:gap-1.5">
                         <span className="text-sm sm:text-[16px] font-bold tabular-nums">
                           {match.violations}
                         </span>
-                        <span className="text-[10px] sm:text-[11px] text-muted-foreground">
-                          Violations
+                        <span className={`text-[10px] sm:text-[11px] text-muted-foreground ${isRTL ? "text-right" : "text-left"}`}>
+                          {t("dashboard.violations")}
                         </span>
                       </div>
                       <span className="text-muted-foreground/30 hidden sm:inline">
@@ -1646,8 +1661,8 @@ export default function Dashboard() {
                         <span className="text-sm sm:text-[16px] font-bold tabular-nums">
                           {formatViews(match.totalViews)}
                         </span>
-                        <span className="text-[10px] sm:text-[11px] text-muted-foreground">
-                          Views
+                        <span className={`text-[10px] sm:text-[11px] text-muted-foreground ${isRTL ? "text-right" : "text-left"}`}>
+                          {t("dashboard.views")}
                         </span>
                       </div>
                     </div>
@@ -1660,26 +1675,26 @@ export default function Dashboard() {
 
         {/* Active Trouble List */}
         <Card className="lg:col-span-3 h-[400px] sm:h-[340px] flex flex-col p-3 sm:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-3 flex-shrink-0 gap-2">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <h3 className="text-sm sm:text-[15px] font-semibold">
-                Active Trouble List (Live)
+            <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-3 flex-shrink-0 gap-2 ${isRTL ? "sm:flex-row-reverse" : ""}`}>
+            <div className={`flex flex-col sm:flex-row sm:items-center gap-2 ${isRTL ? "sm:flex-row-reverse" : ""}`}>
+              <h3 className={`text-sm sm:text-[15px] font-semibold ${isRTL ? "text-right" : "text-left"}`}>
+                {t("dashboard.activeTroubleList")}
               </h3>
               <Badge
                 variant="secondary"
-                className="h-5 px-2 bg-chart-1/10 text-chart-1 border-0 text-[9px] sm:text-[10px] w-fit">
-                <div className="w-1.5 h-1.5 rounded-full bg-chart-1 animate-pulse mr-1.5" />
+                className={`h-5 px-2 bg-chart-1/10 text-chart-1 border-0 text-[9px] sm:text-[10px] w-fit flex items-center ${isRTL ? "flex-row-reverse" : ""}`}>
+                <div className={`w-1.5 h-1.5 rounded-full bg-chart-1 animate-pulse ${isRTL ? "ml-1.5" : "mr-1.5"}`} />
                 {sortedActiveViolations.length}{" "}
-                {troubleListFilter.toLowerCase()}
+                {troubleListFilter === "Active" ? t("dashboard.active").toLowerCase() : t("dashboard.underReview").toLowerCase()}
               </Badge>
             </div>
-            <div className="flex items-center gap-1">
+            <div className={`flex items-center gap-1 ${isRTL ? "flex-row-reverse" : ""}`}>
               <Button
                 variant={troubleListFilter === "Active" ? "default" : "outline"}
                 size="sm"
                 className="h-8 sm:h-7 px-2 sm:px-3 text-[10px] sm:text-xs touch-manipulation"
                 onClick={() => setTroubleListFilter("Active")}>
-                Active
+                {t("dashboard.active")}
               </Button>
               <Button
                 variant={
@@ -1688,7 +1703,7 @@ export default function Dashboard() {
                 size="sm"
                 className="h-8 sm:h-7 px-2 sm:px-3 text-[10px] sm:text-xs touch-manipulation"
                 onClick={() => setTroubleListFilter("Under Review")}>
-                Under Review
+                {t("dashboard.underReview")}
               </Button>
             </div>
           </div>
@@ -1698,10 +1713,12 @@ export default function Dashboard() {
                 <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-muted-foreground" />
               </div>
             ) : sortedActiveViolations.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+              <div className={`flex flex-col items-center justify-center h-full text-muted-foreground ${isRTL ? "text-right" : "text-left"}`}>
                 <FileQuestion className="h-6 w-6 sm:h-8 sm:w-8 mb-2 opacity-50" />
                 <p className="text-xs sm:text-sm">
-                  No {troubleListFilter.toLowerCase()} violations found
+                  {t("dashboard.noViolationsFound", { 
+                    filter: troubleListFilter === "Active" ? t("dashboard.active").toLowerCase() : t("dashboard.underReview").toLowerCase() 
+                  })}
                 </p>
               </div>
             ) : (
@@ -1714,16 +1731,16 @@ export default function Dashboard() {
                 return (
                   <div
                     key={violation.id}
-                    className="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-h-[42px] sm:h-[42px] border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors px-2 py-2 sm:py-0">
+                    className={`group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-h-[42px] sm:h-[42px] border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors px-2 py-2 sm:py-0 ${isRTL ? "sm:flex-row-reverse" : ""}`}>
                     {/* Platform & Account */}
-                    <div className="flex items-center gap-2 flex-1 sm:w-[180px] sm:flex-shrink-0 min-w-0">
+                    <div className={`flex items-center gap-2 flex-1 sm:w-[180px] sm:flex-shrink-0 min-w-0 ${isRTL ? "flex-row-reverse" : ""}`}>
                       <div className="flex-shrink-0">
                         {getPlatformIcon(
                           violation.platform,
                           "h-3.5 w-3.5 sm:h-4 sm:w-4"
                         )}
                       </div>
-                      <div className="flex flex-col min-w-0 flex-1">
+                      <div className={`flex flex-col min-w-0 flex-1 ${isRTL ? "text-right" : "text-left"}`}>
                         <span className="text-xs sm:text-[13px] font-medium truncate">
                           {violation.platform}
                         </span>
@@ -1736,10 +1753,10 @@ export default function Dashboard() {
                     {/* Match Information */}
                     {violation.matchDescription && (
                       <div className="flex-1 sm:w-[200px] sm:flex-shrink-0 min-w-0">
-                        <div className="flex items-center gap-1.5 h-[24px] sm:h-[26px] px-2 rounded-md bg-muted/30 border border-border/30">
+                        <div className={`flex items-center gap-1.5 h-[24px] sm:h-[26px] px-2 rounded-md bg-muted/30 border border-border/30 ${isRTL ? "flex-row-reverse" : ""}`}>
                           <Trophy className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground flex-shrink-0" />
                           <span
-                            className="text-[10px] sm:text-[11px] font-medium text-foreground/80 truncate"
+                            className={`text-[10px] sm:text-[11px] font-medium text-foreground/80 truncate ${isRTL ? "text-right" : "text-left"}`}
                             title={violation.matchDescription}>
                             {violation.matchDescription}
                           </span>
@@ -1753,10 +1770,10 @@ export default function Dashboard() {
                         href={violation.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 sm:gap-2 h-[24px] sm:h-[26px] px-2 sm:px-3 rounded-md bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-primary/30 text-[10px] sm:text-[11px] font-medium text-foreground/70 hover:text-primary transition-all w-full touch-manipulation"
+                        className={`flex items-center gap-1.5 sm:gap-2 h-[24px] sm:h-[26px] px-2 sm:px-3 rounded-md bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-primary/30 text-[10px] sm:text-[11px] font-medium text-foreground/70 hover:text-primary transition-all w-full touch-manipulation ${isRTL ? "flex-row-reverse" : ""}`}
                         title={violation.url}>
                         <Link className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0 text-muted-foreground" />
-                        <span className="truncate flex-1">
+                        <span className={`truncate flex-1 ${isRTL ? "text-right" : "text-left"}`}>
                           {formatUrlForDisplay(violation.url)}
                         </span>
                         <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0 opacity-50" />
@@ -1764,13 +1781,13 @@ export default function Dashboard() {
                     </div>
 
                     {/* Metrics - Right side */}
-                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap sm:flex-nowrap sm:flex-1 sm:justify-end">
-                      <span className="inline-flex items-center gap-1 h-[20px] sm:h-[22px] px-1.5 sm:px-2 rounded-full bg-muted/40 text-[10px] sm:text-[12px] font-medium tabular-nums">
-                        <Eye className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground" />
+                    <div className={`flex items-center gap-1 sm:gap-1.5 flex-wrap sm:flex-nowrap sm:flex-1 ${isRTL ? "sm:justify-start" : "sm:justify-end"}`}>
+                      <span className={`inline-flex items-center gap-1 h-[20px] sm:h-[22px] px-1.5 sm:px-2 rounded-full bg-muted/40 text-[10px] sm:text-[12px] font-medium tabular-nums ${isRTL ? "flex-row-reverse" : ""}`}>
+                        <Eye className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground flex-shrink-0" />
                         <span>{formatViews(violation.views)}</span>
                       </span>
-                      <span className="inline-flex items-center gap-1 h-[20px] sm:h-[22px] px-1.5 sm:px-2 rounded-full bg-muted/40 text-[10px] sm:text-[12px] font-medium">
-                        <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground" />
+                      <span className={`inline-flex items-center gap-1 h-[20px] sm:h-[22px] px-1.5 sm:px-2 rounded-full bg-muted/40 text-[10px] sm:text-[12px] font-medium ${isRTL ? "flex-row-reverse" : ""}`}>
+                        <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground flex-shrink-0" />
                         <span>{timeSinceAdded}</span>
                       </span>
                       <Badge
@@ -1783,21 +1800,23 @@ export default function Dashboard() {
                         }
                         className="h-[16px] sm:h-[18px] text-[9px] sm:text-[10px] px-1 sm:px-1.5">
                         {violation.status === "under review"
-                          ? "under review"
+                          ? t("dashboard.underReview").toLowerCase()
+                          : violation.status === "active"
+                          ? t("dashboard.active").toLowerCase()
                           : violation.status}
                       </Badge>
                       {warningLevel === "urgent" && (
                         <Badge
                           variant="destructive"
                           className="h-[16px] sm:h-[18px] text-[9px] sm:text-[10px] px-1 sm:px-1.5">
-                          overdue
+                          {t("dashboard.overdue")}
                         </Badge>
                       )}
                       {warningLevel === "warning" && (
                         <Badge
                           variant="secondary"
                           className="h-[16px] sm:h-[18px] text-[9px] sm:text-[10px] px-1 sm:px-1.5 bg-amber-500/10 text-amber-700 border-amber-500/20">
-                          slower
+                          {t("dashboard.slower")}
                         </Badge>
                       )}
                     </div>
