@@ -7,6 +7,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TopBar } from "@/components/TopBar";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { LanguageProvider, useLanguage } from "@/contexts/LanguageContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
@@ -23,13 +24,15 @@ const queryClient = new QueryClient();
 
 // Component for routes that require authentication and sidebar
 const AuthenticatedLayout = () => {
+  const { isRTL } = useLanguage();
+  
   return (
         <SidebarProvider>
           <div className="min-h-screen flex w-full">
             <AppSidebar />
-            <div className="flex-1 flex flex-col">
+            <div className={`flex-1 flex flex-col ${isRTL ? "mr-0" : "ml-0"}`} style={{ minWidth: 0 }}>
               <TopBar />
-              <main className="flex-1 p-4 sm:p-6 bg-background overflow-x-hidden">
+              <main className="flex-1 p-4 sm:p-6 bg-background overflow-x-hidden" style={{ width: '100%', maxWidth: '100%' }}>
                 <div className="max-w-7xl mx-auto">
                   <Routes>
                 <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
@@ -54,21 +57,23 @@ const AuthenticatedLayout = () => {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/login" element={<Login />} />
-            
-            {/* Protected routes with sidebar */}
-            <Route path="/*" element={<AuthenticatedLayout />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+    <LanguageProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/login" element={<Login />} />
+              
+              {/* Protected routes with sidebar */}
+              <Route path="/*" element={<AuthenticatedLayout />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </LanguageProvider>
   </QueryClientProvider>
 );
 

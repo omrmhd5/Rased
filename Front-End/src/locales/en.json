@@ -1,0 +1,44 @@
+{
+  "home": {
+    "welcome": "Hey {username} 👋",
+    "welcomeFallback": "Hey User 👋",
+    "subtitle": "Ready to monitor and manage your matches? Let's get started!",
+    "viewMatches": {
+      "title": "View Matches",
+      "description": "Browse and manage all matches"
+    },
+    "viewDashboard": {
+      "title": "View Dashboard",
+      "description": "View analytics and insights"
+    },
+    "changeLeague": "Change League",
+    "settings": "Settings",
+    "selectLeague": {
+      "title": "Select League",
+      "description": "Choose a league to view matches",
+      "noLeagues": "No leagues available. Please contact an administrator."
+    },
+    "noLeagueSelected": "No League Selected"
+  },
+  "sidebar": {
+    "analytics": "ANALYTICS",
+    "operations": "OPERATIONS",
+    "management": "MANAGEMENT",
+    "home": "Home",
+    "dashboard": "Dashboard",
+    "problematicAccounts": "Problematic Accounts",
+    "whitelistedAccounts": "Whitelisted Accounts",
+    "matches": "Matches",
+    "usersRoles": "Users & Roles",
+    "settings": "Settings"
+  },
+  "topBar": {
+    "search": "Search...",
+    "goBack": "Go back",
+    "userMenu": "User menu",
+    "user": "User",
+    "logout": "Log out",
+    "switchToLightMode": "Switch to light mode",
+    "switchToDarkMode": "Switch to dark mode"
+  }
+}

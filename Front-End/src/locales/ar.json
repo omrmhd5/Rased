@@ -1,0 +1,44 @@
+{
+  "home": {
+    "welcome": "مرحباً {username} 👋",
+    "welcomeFallback": "مرحباً مستخدم 👋",
+    "subtitle": "هل أنت مستعد لمراقبة وإدارة مبارياتك؟ هيا نبدأ!",
+    "viewMatches": {
+      "title": "عرض المباريات",
+      "description": "تصفح وإدارة جميع المباريات"
+    },
+    "viewDashboard": {
+      "title": "عرض لوحة التحكم",
+      "description": "عرض التحليلات والرؤى"
+    },
+    "changeLeague": "تغيير الدوري",
+    "settings": "الإعدادات",
+    "selectLeague": {
+      "title": "اختر الدوري",
+      "description": "اختر دورياً لعرض المباريات",
+      "noLeagues": "لا توجد دوريات متاحة. يرجى الاتصال بالمسؤول."
+    },
+    "noLeagueSelected": "لم يتم اختيار دوري"
+  },
+  "sidebar": {
+    "analytics": "التحليلات",
+    "operations": "العمليات",
+    "management": "الإدارة",
+    "home": "الرئيسية",
+    "dashboard": "لوحة التحكم",
+    "problematicAccounts": "الحسابات المشكلة",
+    "whitelistedAccounts": "الحسابات المسموحة",
+    "matches": "المباريات",
+    "usersRoles": "المستخدمون والأدوار",
+    "settings": "الإعدادات"
+  },
+  "topBar": {
+    "search": "بحث...",
+    "goBack": "رجوع",
+    "userMenu": "قائمة المستخدم",
+    "user": "مستخدم",
+    "logout": "تسجيل الخروج",
+    "switchToLightMode": "التبديل إلى الوضع الفاتح",
+    "switchToDarkMode": "التبديل إلى الوضع الداكن"
+  }
+}

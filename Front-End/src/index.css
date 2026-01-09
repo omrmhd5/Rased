@@ -127,6 +127,44 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+
+  /* RTL Support */
+  [dir="rtl"] {
+    direction: rtl;
+  }
+
+  [dir="ltr"] {
+    direction: ltr;
+  }
+
+  /* RTL-specific adjustments */
+  [dir="rtl"] .text-left {
+    text-align: right;
+  }
+
+  [dir="rtl"] .text-right {
+    text-align: left;
+  }
+
+  /* Ensure proper text alignment for RTL */
+  [dir="rtl"] {
+    text-align: right;
+  }
+
+  [dir="ltr"] {
+    text-align: left;
+  }
+
+  /* Override sidebar menu button text alignment for RTL */
+  [dir="rtl"] [data-sidebar="sidebar"] .peer\/menu-button,
+  [dir="rtl"] [data-sidebar="sidebar"] button[class*="peer/menu-button"] {
+    text-align: right !important;
+  }
+
+  [dir="rtl"] [data-sidebar="sidebar"] .peer\/menu-button span,
+  [dir="rtl"] [data-sidebar="sidebar"] button[class*="peer/menu-button"] span {
+    text-align: right !important;
+  }
 }
 
 /* Custom thin scrollbar styles */

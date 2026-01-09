@@ -1,6 +1,7 @@
 import { Home, Calendar, Users, Settings, BarChart3, AlertTriangle, Shield } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Sidebar,
   SidebarContent,
@@ -13,51 +14,61 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const analyticsItems = [
-  { title: "Home", url: "/", icon: Home },
-  { title: "Dashboard", url: "/dashboard", icon: BarChart3 },
-  { title: "Problematic Accounts", url: "/problematic-accounts", icon: AlertTriangle },
-  { title: "Whitelisted Accounts", url: "/whitelisted-accounts", icon: Shield },
-];
-
-const operationsItems = [
-  { title: "Matches", url: "/matches", icon: Calendar },
-];
-
 export function AppSidebar() {
   const { state } = useSidebar();
   const { user } = useAuth();
+  const { t, isRTL } = useLanguage();
   const isCollapsed = state === "collapsed";
+
+  const analyticsItems = [
+    { titleKey: "sidebar.home", url: "/", icon: Home },
+    { titleKey: "sidebar.dashboard", url: "/dashboard", icon: BarChart3 },
+    { titleKey: "sidebar.problematicAccounts", url: "/problematic-accounts", icon: AlertTriangle },
+    { titleKey: "sidebar.whitelistedAccounts", url: "/whitelisted-accounts", icon: Shield },
+  ];
+
+  const operationsItems = [
+    { titleKey: "sidebar.matches", url: "/matches", icon: Calendar },
+  ];
 
   const managementItems = [
     ...(user?.role === "superAdmin" 
       ? [
-          { title: "Users & Roles", url: "/users", icon: Users },
-          { title: "Settings", url: "/settings", icon: Settings },
+          { titleKey: "sidebar.usersRoles", url: "/users", icon: Users },
+          { titleKey: "sidebar.settings", url: "/settings", icon: Settings },
         ]
       : []),
   ];
 
   return (
-    <Sidebar className="border-r border-sidebar-border z-50">
-      <SidebarContent className="pt-4">
+    <Sidebar side={isRTL ? "right" : "left"} className={`${isRTL ? "border-l" : "border-r"} border-sidebar-border z-50`}>
+      <SidebarContent className={`pt-4 ${isRTL ? "text-right" : "text-left"}`}>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground px-3 mb-2">
-            ANALYTICS
+          <SidebarGroupLabel className={`text-xs font-semibold text-muted-foreground px-3 mb-2 ${isRTL ? "text-right" : "text-left"}`}>
+            {t("sidebar.analytics")}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {analyticsItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.titleKey}>
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
                       end
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                      className={`flex items-center ${isRTL ? "justify-end" : "justify-start"} gap-3 px-3 py-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors w-full`}
                       activeClassName="bg-primary/10 text-primary font-medium"
                     >
-                      <item.icon className="h-5 w-5" />
-                      {!isCollapsed && <span>{item.title}</span>}
+                      {isRTL ? (
+                        <>
+                          <item.icon className="h-5 w-5 flex-shrink-0" />
+                          {!isCollapsed && <span className="text-right flex-1">{t(item.titleKey)}</span>}
+                        </>
+                      ) : (
+                        <>
+                          <item.icon className="h-5 w-5 flex-shrink-0" />
+                          {!isCollapsed && <span className="text-left">{t(item.titleKey)}</span>}
+                        </>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -67,21 +78,30 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground px-3 mb-2">
-            OPERATIONS
+          <SidebarGroupLabel className={`text-xs font-semibold text-muted-foreground px-3 mb-2 ${isRTL ? "text-right" : "text-left"}`}>
+            {t("sidebar.operations")}
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {operationsItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
+                <SidebarMenuItem key={item.titleKey}>
                   <SidebarMenuButton asChild>
                     <NavLink
                       to={item.url}
-                      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                      className={`flex items-center ${isRTL ? "justify-end" : "justify-start"} gap-3 px-3 py-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors w-full`}
                       activeClassName="bg-primary/10 text-primary font-medium"
                     >
-                      <item.icon className="h-5 w-5" />
-                      {!isCollapsed && <span>{item.title}</span>}
+                      {isRTL ? (
+                        <>
+                          <item.icon className="h-5 w-5 flex-shrink-0" />
+                          {!isCollapsed && <span className="text-right flex-1">{t(item.titleKey)}</span>}
+                        </>
+                      ) : (
+                        <>
+                          <item.icon className="h-5 w-5 flex-shrink-0" />
+                          {!isCollapsed && <span className="text-left">{t(item.titleKey)}</span>}
+                        </>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -92,21 +112,30 @@ export function AppSidebar() {
 
         {managementItems.length > 0 && (
           <SidebarGroup>
-            <SidebarGroupLabel className="text-xs font-semibold text-muted-foreground px-3 mb-2">
-              MANAGEMENT
+            <SidebarGroupLabel className={`text-xs font-semibold text-muted-foreground px-3 mb-2 ${isRTL ? "text-right" : "text-left"}`}>
+              {t("sidebar.management")}
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {managementItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
+                  <SidebarMenuItem key={item.titleKey}>
                     <SidebarMenuButton asChild>
                       <NavLink
                         to={item.url}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+                        className={`flex items-center ${isRTL ? "justify-end" : "justify-start"} gap-3 px-3 py-2 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent transition-colors w-full`}
                         activeClassName="bg-primary/10 text-primary font-medium"
                       >
-                        <item.icon className="h-5 w-5" />
-                        {!isCollapsed && <span>{item.title}</span>}
+                        {isRTL ? (
+                          <>
+                            <item.icon className="h-5 w-5 flex-shrink-0" />
+                            {!isCollapsed && <span className="text-right flex-1">{t(item.titleKey)}</span>}
+                          </>
+                        ) : (
+                          <>
+                            <item.icon className="h-5 w-5 flex-shrink-0" />
+                            {!isCollapsed && <span className="text-left">{t(item.titleKey)}</span>}
+                          </>
+                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
