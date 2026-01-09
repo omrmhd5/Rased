@@ -40,7 +40,8 @@ export default function UsersRoles() {
     if (currentUser?.role === "superAdmin") {
       fetchLeagues();
     }
-  }, [currentUser, fetchLeagues]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser?.role]);
   
   // Dialog states
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);

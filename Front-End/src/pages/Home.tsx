@@ -11,12 +11,11 @@ import {
 } from "@/components/ui/dialog";
 import { Settings, Calendar, ArrowRight, BarChart3 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { toast } from "@/hooks/use-toast";
 
 type League = string | null;
 
 export default function Home() {
-  const { user, leagues, fetchLeagues } = useAuth();
+  const { user, leagues, fetchLeagues, loadingLeagues } = useAuth();
   const navigate = useNavigate();
   const [selectedLeague, setSelectedLeague] = useState<League>(null);
   const [isLeagueDialogOpen, setIsLeagueDialogOpen] = useState(false);
@@ -31,72 +30,103 @@ export default function Home() {
   // Get available leagues based on user role
   const getAvailableLeagues = (): League[] => {
     if (!user || !leagues) return [];
-    
+
     // Filter out hidden leagues
     const visibleLeagues = leagues.filter((l) => !l.isHidden);
-    
+
     // SuperAdmin and Viewer can access all visible leagues
     if (user.role === "superAdmin" || user.role === "viewer") {
       return visibleLeagues.map((l) => l.league);
     }
-    
+
     // Employees can only access their assigned leagues (that are visible)
     if (user.role === "employee" && user.leagues) {
       return visibleLeagues
         .filter((l) => user.leagues?.includes(l.league))
         .map((l) => l.league);
     }
-    
+
     return [];
   };
 
   // Validate if selected league is still available and visible
   const isValidSelectedLeague = (league: League): boolean => {
     if (!league || !user || !leagues) return false;
-    
+
     const leagueInfo = leagues.find((l) => l.league === league);
     if (!leagueInfo) return false;
-    
+
     // Check if league is hidden
     if (leagueInfo.isHidden) return false;
-    
+
     // For employees, check if league is assigned to them
     if (user.role === "employee" && user.leagues) {
       return user.leagues.includes(league);
     }
-    
+
     // For viewers and superAdmin, if league is visible, it's valid
     return true;
   };
 
-  // Load selected league from localStorage on mount
+  // Load selected league from localStorage on mount and validate it
   useEffect(() => {
-    if (!user || !leagues) return;
-    
-    const availableLeagues = getAvailableLeagues();
-    const savedLeague = localStorage.getItem("selectedLeague") as League;
-    
-    // Validate the saved league
-    if (savedLeague && isValidSelectedLeague(savedLeague)) {
-      setSelectedLeague(savedLeague);
-    } else {
-      // Clear invalid league from localStorage
-      if (savedLeague) {
-        localStorage.removeItem("selectedLeague");
-        setSelectedLeague(null);
-      }
-      
-      if (availableLeagues.length > 0) {
-        // Select the first available league
-        setSelectedLeague(availableLeagues[0]);
-        localStorage.setItem("selectedLeague", availableLeagues[0]);
-      } else {
-        // No leagues available, show dialog with message
-        setSelectedLeague(null);
-        setIsLeagueDialogOpen(true);
-      }
+    // Wait until leagues are loaded before validating
+    if (!user || loadingLeagues) {
+      return;
     }
-  }, [user, leagues]);
+
+    // If leagues array is empty after loading, something went wrong - but don't redirect yet
+    if (leagues.length === 0) {
+      return;
+    }
+
+    // Get available leagues based on user role
+    const visibleLeagues = leagues.filter((l) => !l.isHidden);
+    let availableLeagues: League[] = [];
+    if (user.role === "superAdmin" || user.role === "viewer") {
+      availableLeagues = visibleLeagues.map((l) => l.league);
+    } else if (user.role === "employee" && user.leagues) {
+      availableLeagues = visibleLeagues
+        .filter((l) => user.leagues?.includes(l.league))
+        .map((l) => l.league);
+    }
+
+    const savedLeague = localStorage.getItem("selectedLeague") as League;
+
+    // If there's a saved league, validate it
+    if (savedLeague) {
+      const leagueInfo = leagues.find((l) => l.league === savedLeague);
+
+      // For employees: only check if league is in their assigned leagues
+      if (user.role === "employee") {
+        const isInAssignedLeagues =
+          user.leagues && user.leagues.includes(savedLeague);
+        const isVisible = leagueInfo && !leagueInfo.isHidden;
+
+        if (isInAssignedLeagues && isVisible) {
+          // Valid league for employee - use it, don't show modal
+          setSelectedLeague(savedLeague);
+        } else {
+          // League not in employee's assigned leagues - force selection
+          setSelectedLeague(null);
+          setIsLeagueDialogOpen(true);
+        }
+      } else {
+        // For superAdmin/viewer: use saved league without validation
+        setSelectedLeague(savedLeague);
+      }
+    } else if (availableLeagues.length > 0) {
+      // No saved league - auto-select first available
+      setSelectedLeague(availableLeagues[0]);
+      localStorage.setItem("selectedLeague", availableLeagues[0]);
+    } else {
+      // No available leagues
+      setSelectedLeague(null);
+      setIsLeagueDialogOpen(true);
+    }
+    // Only run validation when user role, leagues finish loading, or leagues array changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role, user?.id, loadingLeagues, leagues?.length]);
 
   const handleLeagueSelect = (league: string) => {
     const availableLeagues = getAvailableLeagues();
@@ -111,7 +141,12 @@ export default function Home() {
   const getLeagueName = (league: League): string => {
     if (!league) return "No League Selected";
     const leagueInfo = leagues.find((l) => l.league === league);
-    return leagueInfo?.knownName || leagueInfo?.name || leagueInfo?.arabicName || league;
+    return (
+      leagueInfo?.knownName ||
+      leagueInfo?.name ||
+      leagueInfo?.arabicName ||
+      league
+    );
   };
 
   const getLeagueIcon = (league: League): string => {
@@ -120,45 +155,13 @@ export default function Home() {
     if (leagueInfo?.iconUrl) {
       // Use iconUrl from database, prepend API URL if it's a relative path
       if (leagueInfo.iconUrl.startsWith("/")) {
-        const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+        const API_URL =
+          import.meta.env.VITE_API_URL || "http://localhost:5000/api";
         return API_URL.replace("/api", "") + leagueInfo.iconUrl;
       }
       return leagueInfo.iconUrl;
     }
     return "";
-  };
-
-  // Check if navigation is allowed (only for employees and viewers - they need a valid league selected)
-  const canNavigate = (): boolean => {
-    // SuperAdmin can always navigate
-    if (user?.role === "superAdmin") {
-      return true;
-    }
-    // Employees and viewers need a valid league selected
-    return selectedLeague && isValidSelectedLeague(selectedLeague);
-  };
-
-  // Handle navigation with league check
-  const handleNavigate = (path: string) => {
-    if (!canNavigate()) {
-      const availableLeagues = getAvailableLeagues();
-      if (availableLeagues.length === 0) {
-        toast({
-          title: "No Leagues Available",
-          description: "No leagues are available. Please contact an administrator.",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "League Required",
-          description: "Please select a league before navigating to this page.",
-          variant: "destructive",
-        });
-      }
-      setIsLeagueDialogOpen(true);
-      return;
-    }
-    navigate(path);
   };
 
   return (
@@ -180,13 +183,15 @@ export default function Home() {
             {/* View Matches */}
             <Card
               className="p-4 sm:p-6 hover:shadow-md transition-shadow cursor-pointer touch-manipulation active:scale-[0.98]"
-              onClick={() => handleNavigate("/matches")}>
+              onClick={() => navigate("/matches")}>
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-base sm:text-lg truncate">View Matches</h3>
+                  <h3 className="font-semibold text-base sm:text-lg truncate">
+                    View Matches
+                  </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
                     Browse and manage all matches
                   </p>
@@ -198,13 +203,15 @@ export default function Home() {
             {/* View Dashboard */}
             <Card
               className="p-4 sm:p-6 hover:shadow-md transition-shadow cursor-pointer touch-manipulation active:scale-[0.98]"
-              onClick={() => handleNavigate("/dashboard")}>
+              onClick={() => navigate("/dashboard")}>
               <div className="flex items-center gap-3 sm:gap-4">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-base sm:text-lg truncate">View Dashboard</h3>
+                  <h3 className="font-semibold text-base sm:text-lg truncate">
+                    View Dashboard
+                  </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
                     View analytics and insights
                   </p>
@@ -259,8 +266,8 @@ export default function Home() {
             setIsLeagueDialogOpen(open);
           }
         }}>
-        <DialogContent className="w-[95vw] max-w-md mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto">
-          <DialogHeader className="px-1 sm:px-0">
+        <DialogContent className="w-[95vw] max-w-md mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto flex flex-col">
+          <DialogHeader className="px-1 sm:px-0 flex-shrink-0">
             <DialogTitle className="text-xl sm:text-2xl text-center">
               Select League
             </DialogTitle>
@@ -268,17 +275,19 @@ export default function Home() {
               Choose a league to view matches
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 sm:space-y-3 py-2 sm:py-4 px-1 sm:px-0">
+          <div className="space-y-2 sm:space-y-3 py-2 sm:py-4 px-1 sm:px-0 flex-1 overflow-y-auto">
             {(() => {
               const availableLeagues = getAvailableLeagues();
-              const availableLeagueInfos = leagues.filter((l) => 
-                !l.isHidden && availableLeagues.includes(l.league)
+              const availableLeagueInfos = leagues.filter(
+                (l) => !l.isHidden && availableLeagues.includes(l.league)
               );
 
               if (availableLeagueInfos.length === 0) {
                 return (
                   <div className="text-center py-4 sm:py-6 text-muted-foreground px-2">
-                    <p className="text-sm sm:text-base">No leagues available. Please contact an administrator.</p>
+                    <p className="text-sm sm:text-base">
+                      No leagues available. Please contact an administrator.
+                    </p>
                   </div>
                 );
               }

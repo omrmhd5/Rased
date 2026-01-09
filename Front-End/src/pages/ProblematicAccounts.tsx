@@ -46,7 +46,7 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
 export default function ProblematicAccounts() {
   const navigate = useNavigate();
-  const { user, leagues } = useAuth();
+  const { user, leagues, loadingLeagues } = useAuth();
 
   // Get available leagues based on user role (memoized to prevent infinite loops)
   const availableLeagues = useMemo((): League[] => {
@@ -72,6 +72,68 @@ export default function ProblematicAccounts() {
 
     return [];
   }, [user, leagues]);
+
+  // Validate user's league access on mount and when user/leagues change
+  useEffect(() => {
+    // Wait until leagues are loaded before validating
+    if (!user || loadingLeagues) {
+      return;
+    }
+
+    // If leagues array is empty after loading, something went wrong - but don't redirect yet
+    if (leagues.length === 0) {
+      return;
+    }
+
+    // Get available leagues based on user role
+    const visibleLeagues = leagues.filter((l) => !l.isHidden);
+    let availableLeaguesList: League[] = [];
+    if (user.role === "superAdmin" || user.role === "viewer") {
+      availableLeaguesList = visibleLeagues.map((l) => l.league);
+    } else if (user.role === "employee" && user.leagues) {
+      availableLeaguesList = visibleLeagues
+        .filter((l) => user.leagues?.includes(l.league))
+        .map((l) => l.league);
+    }
+
+    // For employees: if they have no available leagues, redirect to home
+    if (user.role === "employee" && availableLeaguesList.length === 0) {
+      navigate("/");
+      return;
+    }
+
+    // Validate saved league from localStorage (if exists)
+    const savedLeague = localStorage.getItem("selectedLeague") as League;
+    if (savedLeague) {
+      const leagueInfo = leagues.find((l) => l.league === savedLeague);
+
+      // For employees: check if saved league is still in their assigned leagues
+      if (user.role === "employee") {
+        const isInAssignedLeagues =
+          user.leagues && user.leagues.includes(savedLeague);
+        const isVisible = leagueInfo && !leagueInfo.isHidden;
+
+        if (!isInAssignedLeagues || !isVisible) {
+          // Saved league is no longer valid - redirect to home to select new league
+          navigate("/");
+        }
+        // If valid, do nothing - let the page continue
+      } else {
+        // For superAdmin/viewer: check if saved league is still valid
+        if (
+          !leagueInfo ||
+          leagueInfo.isHidden ||
+          !availableLeaguesList.includes(savedLeague)
+        ) {
+          // Saved league is no longer valid - redirect to home
+          navigate("/");
+        }
+        // If valid, do nothing - let the page continue
+      }
+    }
+    // Only run validation when user role, leagues finish loading, or leagues array changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role, user?.id, loadingLeagues, leagues?.length]);
 
   // Filters
   const [league, setLeague] = useState<League>(null);
@@ -166,8 +228,13 @@ export default function ProblematicAccounts() {
           leaguesToFetch.push(...availableLeagues);
         } else if (user?.role === "superAdmin" || user?.role === "viewer") {
           // "All Leagues" selected for superAdmin/viewer - fetch all visible leagues
-          const visibleLeagues = leagues?.filter((l) => !l.isHidden && l.league) || [];
-          leaguesToFetch.push(...visibleLeagues.map((l) => l.league as League).filter((l): l is string => Boolean(l)));
+          const visibleLeagues =
+            leagues?.filter((l) => !l.isHidden && l.league) || [];
+          leaguesToFetch.push(
+            ...visibleLeagues
+              .map((l) => l.league as League)
+              .filter((l): l is string => Boolean(l))
+          );
         }
 
         // If no leagues to fetch, return empty array
@@ -292,6 +359,8 @@ export default function ProblematicAccounts() {
     if (!loadingThresholds) {
       fetchProblematicAccounts();
     }
+    // Only depend on availableLeagues length and user role, not the full arrays
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     league,
     weekFilterType,
@@ -307,8 +376,7 @@ export default function ProblematicAccounts() {
     violationsThreshold,
     loadingThresholds,
     user?.role,
-    availableLeagues,
-    leagues,
+    availableLeagues.length,
   ]);
 
   // Sort accounts

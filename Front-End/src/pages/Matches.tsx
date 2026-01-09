@@ -53,7 +53,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-type League = "saudi" | "saudi-super-cup" | "spanish-super-cup" | null;
+type League = string | null;
 
 interface Competition {
   _id?: string;
@@ -62,7 +62,7 @@ interface Competition {
   knownName?: string;
   competitionCode?: string;
   competitionFormat?: string;
-  league: "saudi" | "saudi-super-cup" | "spanish-super-cup";
+  league: string;
   country?: {
     id?: string;
     name?: string;
@@ -82,7 +82,7 @@ interface Match {
   competition?: Competition | string; // Can be populated object or string
   stadium?: string;
   status: "upcoming" | "live" | "finished" | "postponed";
-  league: "saudi" | "saudi-super-cup" | "spanish-super-cup";
+  league: string;
   winner?: "home" | "away" | "draw" | null;
   scores?: {
     home: number;
@@ -103,7 +103,7 @@ type MatchFilter = "all" | "live" | "upcoming" | "completed";
 
 export default function Matches() {
   const navigate = useNavigate();
-  const { user, leagues } = useAuth();
+  const { user, leagues, loadingLeagues } = useAuth();
   const isSuperAdmin = user?.role === "superAdmin";
 
   // Helper to get league icon path
@@ -138,6 +138,27 @@ export default function Matches() {
     const leagueInfo = leagues?.find((l) => l.league === leagueSlug);
     return (
       leagueInfo?.knownName || leagueInfo?.name || leagueInfo?.arabicName || ""
+    );
+  };
+
+  // Helper to check if league is valid (exists in database and is visible)
+  const isValidLeague = (leagueSlug: League): boolean => {
+    if (!leagueSlug || !leagues) return false;
+    const leagueInfo = leagues.find((l) => l.league === leagueSlug);
+    return leagueInfo ? !leagueInfo.isHidden : false;
+  };
+
+  // Helper to check if league is a Super Cup
+  const isSuperCupLeague = (leagueSlug: League): boolean => {
+    if (!leagueSlug || !leagues) return false;
+    const leagueInfo = leagues.find((l) => l.league === leagueSlug);
+    if (leagueInfo?.competitionFormat) {
+      const format = leagueInfo.competitionFormat.toLowerCase();
+      return format.includes("super cup") || format.includes("cup");
+    }
+    // Fallback for backwards compatibility
+    return (
+      leagueSlug === "saudi-super-cup" || leagueSlug === "spanish-super-cup"
     );
   };
 
@@ -179,44 +200,108 @@ export default function Matches() {
   const [formScoreHome, setFormScoreHome] = useState("");
   const [formScoreAway, setFormScoreAway] = useState("");
 
-  // Load selected league and week/stage from localStorage on mount
+  // Load selected league and week/stage from localStorage on mount and validate it
   useEffect(() => {
+    // Wait until leagues are loaded before validating
+    if (!user || loadingLeagues) {
+      return;
+    }
+
+    // If leagues array is empty after loading, something went wrong - but don't redirect yet
+    if (leagues.length === 0) {
+      return;
+    }
+
     const savedLeague = localStorage.getItem("selectedLeague") as League;
-    if (
-      savedLeague &&
-      ["saudi", "saudi-super-cup", "spanish-super-cup"].includes(savedLeague)
-    ) {
-      setSelectedLeague(savedLeague);
+
+    if (savedLeague) {
+      // Get available leagues based on user role
+      const visibleLeagues = leagues.filter((l) => !l.isHidden);
+      let availableLeagues: League[] = [];
+      if (user.role === "superAdmin" || user.role === "viewer") {
+        availableLeagues = visibleLeagues.map((l) => l.league);
+      } else if (user.role === "employee" && user.leagues) {
+        availableLeagues = visibleLeagues
+          .filter((l) => user.leagues?.includes(l.league))
+          .map((l) => l.league);
+      }
+
+      const leagueInfo = leagues.find((l) => l.league === savedLeague);
+
+      // For employees: validate if league is in their assigned leagues
+      if (user.role === "employee") {
+        const isInAssignedLeagues =
+          user.leagues && user.leagues.includes(savedLeague);
+        const isVisible = leagueInfo && !leagueInfo.isHidden;
+
+        if (isInAssignedLeagues && isVisible) {
+          // Valid league for employee - use it
+          setSelectedLeague(savedLeague);
+
+          // Load week/stage after leagues are available
+          const isSuperCup = isSuperCupLeague(savedLeague);
+          if (isSuperCup) {
+            const savedStage = localStorage.getItem("selectedStage");
+            if (savedStage) {
+              setSelectedStage(savedStage);
+            }
+          } else {
+            const savedWeek = localStorage.getItem("selectedWeek");
+            if (savedWeek) {
+              setSelectedWeek(savedWeek);
+            }
+          }
+        } else {
+          // League not in employee's assigned leagues - redirect to home
+          navigate("/");
+        }
+      } else {
+        // For superAdmin/viewer: use saved league if it exists and is visible
+        const isValid =
+          leagueInfo &&
+          !leagueInfo.isHidden &&
+          availableLeagues.includes(savedLeague);
+
+        if (isValid) {
+          setSelectedLeague(savedLeague);
+
+          // Load week/stage after leagues are available
+          const isSuperCup = isSuperCupLeague(savedLeague);
+          if (isSuperCup) {
+            const savedStage = localStorage.getItem("selectedStage");
+            if (savedStage) {
+              setSelectedStage(savedStage);
+            }
+          } else {
+            const savedWeek = localStorage.getItem("selectedWeek");
+            if (savedWeek) {
+              setSelectedWeek(savedWeek);
+            }
+          }
+        } else {
+          // Invalid league - redirect to home
+          navigate("/");
+        }
+      }
     } else {
       // If no league is selected, redirect to home
       navigate("/");
     }
-
-    const isSuperCup =
-      savedLeague === "saudi-super-cup" || savedLeague === "spanish-super-cup";
-    if (isSuperCup) {
-      const savedStage = localStorage.getItem("selectedStage");
-      if (savedStage) {
-        setSelectedStage(savedStage);
-      }
-    } else {
-      const savedWeek = localStorage.getItem("selectedWeek");
-      if (savedWeek) {
-        setSelectedWeek(savedWeek);
-      }
-    }
-  }, [navigate]);
+    // Only run validation when user role, leagues finish loading, or leagues array changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role, user?.id, loadingLeagues, leagues?.length]);
 
   // Save selected week/stage to localStorage whenever it changes
   useEffect(() => {
-    const isSuperCup =
-      selectedLeague === "saudi-super-cup" ||
-      selectedLeague === "spanish-super-cup";
+    if (!selectedLeague) return;
+    const isSuperCup = isSuperCupLeague(selectedLeague);
     if (isSuperCup && selectedStage) {
       localStorage.setItem("selectedStage", selectedStage);
     } else if (!isSuperCup && selectedWeek) {
       localStorage.setItem("selectedWeek", selectedWeek);
     }
+    // isSuperCupLeague is a stable helper function, doesn't need to be in dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedWeek, selectedStage, selectedLeague]);
 
   // Fetch matches from database
@@ -225,9 +310,7 @@ export default function Matches() {
 
     setLoading(true);
     try {
-      const isSuperCup =
-        selectedLeague === "saudi-super-cup" ||
-        selectedLeague === "spanish-super-cup";
+      const isSuperCup = isSuperCupLeague(selectedLeague);
       const url = isSuperCup
         ? `${API_URL}/matches?league=${selectedLeague}&stage=${selectedStage}`
         : `${API_URL}/matches?league=${selectedLeague}&week=${selectedWeek}`;
@@ -280,6 +363,8 @@ export default function Matches() {
     } finally {
       setLoading(false);
     }
+    // isSuperCupLeague is a stable helper function, doesn't need to be in dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedLeague, selectedWeek, selectedStage]);
 
   // Sync matches from external API in the background (don't wait for it)
@@ -432,9 +517,7 @@ export default function Matches() {
   };
 
   const handleUpdateMatch = async () => {
-    const isSuperCup =
-      selectedLeague === "saudi-super-cup" ||
-      selectedLeague === "spanish-super-cup";
+    const isSuperCup = isSuperCupLeague(selectedLeague);
     const requiredField = isSuperCup ? formStage : formWeek;
 
     if (
@@ -609,9 +692,7 @@ export default function Matches() {
   };
 
   const handleAddMatch = async () => {
-    const isSuperCup =
-      selectedLeague === "saudi-super-cup" ||
-      selectedLeague === "spanish-super-cup";
+    const isSuperCup = isSuperCupLeague(selectedLeague);
     const requiredField = isSuperCup ? formStage : formWeek;
 
     if (!formDate || !formTime || !formTeam1 || !formTeam2 || !requiredField) {

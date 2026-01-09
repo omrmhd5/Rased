@@ -88,30 +88,92 @@ interface Violation {
 
 export default function WhitelistedAccounts() {
   const navigate = useNavigate();
-  const { user, leagues } = useAuth();
+  const { user, leagues, loadingLeagues } = useAuth();
   const isSuperAdmin = user?.role === "superAdmin";
-  
+
   // Get available leagues based on user role
   const getAvailableLeagues = (): string[] => {
     if (!user || !leagues) return [];
-    
+
     // Filter out hidden leagues
     const visibleLeagues = leagues.filter((l) => !l.isHidden);
-    
+
     // SuperAdmin and Viewer can access all visible leagues
     if (user.role === "superAdmin" || user.role === "viewer") {
       return visibleLeagues.map((l) => l.league);
     }
-    
+
     // Employees can only access their assigned leagues (that are visible)
     if (user.role === "employee" && user.leagues) {
       return visibleLeagues
         .filter((l) => user.leagues?.includes(l.league))
         .map((l) => l.league);
     }
-    
+
     return [];
   };
+
+  // Validate user's league access on mount and when user/leagues change
+  useEffect(() => {
+    // Wait until leagues are loaded before validating
+    if (!user || loadingLeagues) {
+      return;
+    }
+
+    // If leagues array is empty after loading, something went wrong - but don't redirect yet
+    if (leagues.length === 0) {
+      return;
+    }
+
+    // Get available leagues based on user role
+    const visibleLeagues = leagues.filter((l) => !l.isHidden);
+    let availableLeaguesList: string[] = [];
+    if (user.role === "superAdmin" || user.role === "viewer") {
+      availableLeaguesList = visibleLeagues.map((l) => l.league);
+    } else if (user.role === "employee" && user.leagues) {
+      availableLeaguesList = visibleLeagues
+        .filter((l) => user.leagues?.includes(l.league))
+        .map((l) => l.league);
+    }
+
+    // For employees: if they have no available leagues, redirect to home
+    if (user.role === "employee" && availableLeaguesList.length === 0) {
+      navigate("/");
+      return;
+    }
+
+    // Validate saved league from localStorage (if exists)
+    const savedLeague = localStorage.getItem("selectedLeague");
+    if (savedLeague) {
+      const leagueInfo = leagues.find((l) => l.league === savedLeague);
+
+      // For employees: check if saved league is still in their assigned leagues
+      if (user.role === "employee") {
+        const isInAssignedLeagues =
+          user.leagues && user.leagues.includes(savedLeague);
+        const isVisible = leagueInfo && !leagueInfo.isHidden;
+
+        if (!isInAssignedLeagues || !isVisible) {
+          // Saved league is no longer valid - redirect to home to select new league
+          navigate("/");
+        }
+        // If valid, do nothing - let the page continue
+      } else {
+        // For superAdmin/viewer: check if saved league is still valid
+        if (
+          !leagueInfo ||
+          leagueInfo.isHidden ||
+          !availableLeaguesList.includes(savedLeague)
+        ) {
+          // Saved league is no longer valid - redirect to home
+          navigate("/");
+        }
+        // If valid, do nothing - let the page continue
+      }
+    }
+    // Only run validation when user role, leagues finish loading, or leagues array changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.role, user?.id, loadingLeagues, leagues?.length]);
   const [accounts, setAccounts] = useState<WhitelistedAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -153,14 +215,21 @@ export default function WhitelistedAccounts() {
     fetchAccounts();
   }, []);
 
-  // Fetch violations for accounts when they change or user/leagues change
+  // Fetch violations for accounts when they change (only fetch once per account)
   useEffect(() => {
-    if (accounts.length > 0 && user) {
+    if (accounts.length > 0 && user && leagues) {
+      // Only fetch violations for accounts that don't already have violations loaded
       accounts.forEach((account) => {
-        fetchViolationsForAccount(account);
+        const key = account._id;
+        // Only fetch if we don't already have violations or aren't currently loading
+        if (!accountViolations[key] && !loadingViolations[key]) {
+          fetchViolationsForAccount(account);
+        }
       });
     }
-  }, [accounts, user, leagues]);
+    // Only depend on accounts length and user id, not the full objects or leagues array
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [accounts.length, user?.id]);
 
   // Get account name for a platform (main name or platform-specific)
   const getAccountNameForPlatform = (
@@ -205,7 +274,7 @@ export default function WhitelistedAccounts() {
 
     try {
       const availableLeagues = getAvailableLeagues();
-      
+
       // If no leagues available, return empty array
       if (availableLeagues.length === 0) {
         setAccountViolations((prev) => ({
@@ -256,7 +325,9 @@ export default function WhitelistedAccounts() {
           });
         });
 
-        const leagueViolationsArrays = await Promise.all(leagueViolationPromises);
+        const leagueViolationsArrays = await Promise.all(
+          leagueViolationPromises
+        );
         return leagueViolationsArrays.flat();
       });
 
@@ -573,12 +644,16 @@ export default function WhitelistedAccounts() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-              <CardTitle className="text-lg sm:text-xl">Whitelisted Accounts</CardTitle>
+              <CardTitle className="text-lg sm:text-xl">
+                Whitelisted Accounts
+              </CardTitle>
             </div>
             {isSuperAdmin && (
               <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button onClick={() => resetForm()} className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
+                  <Button
+                    onClick={() => resetForm()}
+                    className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                     <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                     <span className="hidden xs:inline">Add Account</span>
                     <span className="xs:hidden">Add</span>
@@ -586,7 +661,9 @@ export default function WhitelistedAccounts() {
                 </DialogTrigger>
                 <DialogContent className="w-[95vw] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
-                    <DialogTitle className="text-lg sm:text-xl">Add Whitelisted Account</DialogTitle>
+                    <DialogTitle className="text-lg sm:text-xl">
+                      Add Whitelisted Account
+                    </DialogTitle>
                     <DialogDescription className="text-xs sm:text-sm">
                       Add an account to the whitelist. Select the platforms
                       where this account should be whitelisted.
@@ -599,7 +676,11 @@ export default function WhitelistedAccounts() {
                       </Alert>
                     )}
                     <div className="space-y-2">
-                      <Label htmlFor="account-channel" className="text-xs sm:text-sm">Account Channel</Label>
+                      <Label
+                        htmlFor="account-channel"
+                        className="text-xs sm:text-sm">
+                        Account Channel
+                      </Label>
                       <Input
                         id="account-channel"
                         value={accountChannel}
@@ -609,7 +690,9 @@ export default function WhitelistedAccounts() {
                       />
                     </div>
                     <div className="space-y-2 sm:space-y-3">
-                      <Label className="text-xs sm:text-sm">Select Platforms</Label>
+                      <Label className="text-xs sm:text-sm">
+                        Select Platforms
+                      </Label>
                       <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 border rounded-lg">
                         {platformOperations.map((platform) => {
                           const PlatformIcon = platform.icon;
@@ -672,7 +755,9 @@ export default function WhitelistedAccounts() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="notes" className="text-xs sm:text-sm">Notes (Optional)</Label>
+                      <Label htmlFor="notes" className="text-xs sm:text-sm">
+                        Notes (Optional)
+                      </Label>
                       <Textarea
                         id="notes"
                         value={notes}
@@ -693,7 +778,10 @@ export default function WhitelistedAccounts() {
                       className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                       Cancel
                     </Button>
-                    <Button onClick={handleAddAccount} disabled={saving} className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
+                    <Button
+                      onClick={handleAddAccount}
+                      disabled={saving}
+                      className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                       {saving ? (
                         <>
                           <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
@@ -751,276 +839,281 @@ export default function WhitelistedAccounts() {
               {/* Desktop Version */}
               <div className="hidden md:block rounded-md border overflow-x-auto">
                 <Table className="min-w-[800px]">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Account Channel</TableHead>
-                    <TableHead>Platforms</TableHead>
-                    <TableHead>Violations</TableHead>
-                    <TableHead>Notes</TableHead>
-                    <TableHead>Created</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {accounts.map((account) => {
-                    const violations = accountViolations[account._id] || [];
-                    const isLoading = loadingViolations[account._id] || false;
-                    const isExpanded = expandedAccounts.has(account._id);
-                    const violationCount = violations.length;
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Account Channel</TableHead>
+                      <TableHead>Platforms</TableHead>
+                      <TableHead>Violations</TableHead>
+                      <TableHead>Notes</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {accounts.map((account) => {
+                      const violations = accountViolations[account._id] || [];
+                      const isLoading = loadingViolations[account._id] || false;
+                      const isExpanded = expandedAccounts.has(account._id);
+                      const violationCount = violations.length;
 
-                    return (
-                      <Collapsible
-                        key={account._id}
-                        asChild
-                        open={isExpanded}
-                        onOpenChange={() => toggleAccountExpanded(account._id)}>
-                        <>
-                          <TableRow>
-                            <TableCell className="font-medium">
-                              <div className="flex items-center gap-2">
-                                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                {account.accountChannel}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-2">
-                                {account.platforms.map((platformId) => {
-                                  const platform = platformOperations.find(
-                                    (p) => p.id === platformId
-                                  );
-                                  const PlatformIcon = platform?.icon;
-                                  const accountNameForPlatform =
-                                    getAccountNameForPlatform(
-                                      account,
-                                      platformId
-                                    );
-                                  const hasCustomName =
-                                    account.platformNames &&
-                                    account.platformNames[platformId];
-                                  return (
-                                    <Badge
-                                      key={platformId}
-                                      variant="secondary"
-                                      className="flex items-center gap-1"
-                                      title={
-                                        hasCustomName
-                                          ? `Account name: ${accountNameForPlatform}`
-                                          : undefined
-                                      }>
-                                      {PlatformIcon && (
-                                        <PlatformIcon
-                                          className="h-3 w-3"
-                                          style={{ color: platform.color }}
-                                        />
-                                      )}
-                                      <span>{getPlatformName(platformId)}</span>
-                                      {hasCustomName && (
-                                        <span className="text-xs opacity-70 ml-1">
-                                          ({accountNameForPlatform})
-                                        </span>
-                                      )}
-                                    </Badge>
-                                  );
-                                })}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                {isLoading ? (
-                                  <>
-                                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                                    <span className="text-sm text-muted-foreground">
-                                      Loading...
-                                    </span>
-                                  </>
-                                ) : violationCount > 0 ? (
-                                  <>
-                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                    <CollapsibleTrigger asChild>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-auto p-0 text-sm font-normal text-amber-600 hover:text-amber-700">
-                                        {violationCount} violation
-                                        {violationCount !== 1 ? "s" : ""}
-                                      </Button>
-                                    </CollapsibleTrigger>
-                                  </>
-                                ) : (
-                                  <span className="text-sm text-muted-foreground">
-                                    No violations
-                                  </span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="max-w-xs">
-                                {account.notes ? (
-                                  <p className="text-sm text-muted-foreground line-clamp-2">
-                                    {account.notes}
-                                  </p>
-                                ) : (
-                                  <span className="text-sm text-muted-foreground italic">
-                                    No notes
-                                  </span>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              {account.createdAt
-                                ? new Date(
-                                    account.createdAt
-                                  ).toLocaleDateString()
-                                : "N/A"}
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {isSuperAdmin && (
-                                <div className="flex justify-end gap-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => openEditDialog(account)}
-                                    className="h-8 w-8">
-                                    <Edit2 className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => openDeleteDialog(account)}
-                                    className="h-8 w-8 text-destructive hover:text-destructive">
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                      return (
+                        <Collapsible
+                          key={account._id}
+                          asChild
+                          open={isExpanded}
+                          onOpenChange={() =>
+                            toggleAccountExpanded(account._id)
+                          }>
+                          <>
+                            <TableRow>
+                              <TableCell className="font-medium">
+                                <div className="flex items-center gap-2">
+                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                  {account.accountChannel}
                                 </div>
-                              )}
-                              {!isSuperAdmin && (
-                                <span className="text-sm text-muted-foreground">
-                                  View only
-                                </span>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                          {violationCount > 0 && (
-                            <CollapsibleContent asChild>
-                              <TableRow>
-                                <TableCell
-                                  colSpan={6}
-                                  className="bg-muted/50 p-0">
-                                  <div className="p-4 space-y-2">
-                                    <h4 className="text-sm font-semibold mb-3">
-                                      Associated Violations ({violationCount})
-                                    </h4>
-                                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                                      {violations.map((violation) => {
-                                        // Get match ID - matchId is populated with externalMatchId
-                                        const matchId =
-                                          (typeof violation.matchId ===
-                                            "object" &&
-                                            violation.matchId
-                                              ?.externalMatchId) ||
-                                          violation.externalMatchId ||
-                                          (typeof violation.matchId === "string"
-                                            ? violation.matchId
-                                            : null);
-
-                                        return (
-                                          <div
-                                            key={violation._id}
-                                            className={cn(
-                                              "flex items-start justify-between p-3 border rounded-lg bg-background cursor-pointer transition-colors",
-                                              "hover:bg-accent/50 hover:border-primary/50"
-                                            )}
-                                            onClick={() => {
-                                              if (matchId) {
-                                                navigate(`/match/${matchId}`);
-                                              } else {
-                                                // Fallback to opening violation URL if match ID not available
-                                                window.open(
-                                                  violation.violationUrl,
-                                                  "_blank"
-                                                );
-                                              }
-                                            }}
-                                            title="Click to view match dashboard">
-                                            <div className="flex-1 space-y-1">
-                                              <div className="flex items-center gap-2">
-                                                <Badge
-                                                  variant="outline"
-                                                  className="text-xs flex items-center gap-1">
-                                                  {getPlatformIcon(
-                                                    violation.platformId
-                                                  ) && (
-                                                    <span>
-                                                      {getPlatformIcon(
-                                                        violation.platformId
-                                                      )}
-                                                    </span>
-                                                  )}
-                                                  {violation.platformName}
-                                                </Badge>
-                                                <Badge
-                                                  variant="outline"
-                                                  className={cn(
-                                                    "text-xs",
-                                                    (getStatusBadge(
-                                                      violation.status
-                                                    ) === "Active" ||
-                                                      getStatusBadge(
-                                                        violation.status
-                                                      ) === "Reported") &&
-                                                      "bg-red-100 text-red-700 hover:bg-red-200 border-red-300 dark:bg-red-900/30 dark:text-red-400",
-                                                    getStatusBadge(
-                                                      violation.status
-                                                    ) === "Blocked" &&
-                                                      "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
-                                                    getStatusBadge(
-                                                      violation.status
-                                                    ) === "Removed" &&
-                                                      "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
-                                                    (getStatusBadge(
-                                                      violation.status
-                                                    ) === "Review" ||
-                                                      getStatusBadge(
-                                                        violation.status
-                                                      ) === "Under Review") &&
-                                                      "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
-                                                  )}>
-                                                  {getStatusBadge(
-                                                    violation.status
-                                                  )}
-                                                </Badge>
-                                                <Badge
-                                                  variant="outline"
-                                                  className="text-xs">
-                                                  {violation.contentType}
-                                                </Badge>
-                                              </div>
-                                              {violation.matchName && (
-                                                <p className="text-sm text-muted-foreground">
-                                                  {violation.matchName}
-                                                </p>
-                                              )}
-                                              <p className="text-xs text-muted-foreground">
-                                                Added:{" "}
-                                                {new Date(
-                                                  violation.timeAdded
-                                                ).toLocaleString()}
-                                              </p>
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-wrap gap-2">
+                                  {account.platforms.map((platformId) => {
+                                    const platform = platformOperations.find(
+                                      (p) => p.id === platformId
+                                    );
+                                    const PlatformIcon = platform?.icon;
+                                    const accountNameForPlatform =
+                                      getAccountNameForPlatform(
+                                        account,
+                                        platformId
+                                      );
+                                    const hasCustomName =
+                                      account.platformNames &&
+                                      account.platformNames[platformId];
+                                    return (
+                                      <Badge
+                                        key={platformId}
+                                        variant="secondary"
+                                        className="flex items-center gap-1"
+                                        title={
+                                          hasCustomName
+                                            ? `Account name: ${accountNameForPlatform}`
+                                            : undefined
+                                        }>
+                                        {PlatformIcon && (
+                                          <PlatformIcon
+                                            className="h-3 w-3"
+                                            style={{ color: platform.color }}
+                                          />
+                                        )}
+                                        <span>
+                                          {getPlatformName(platformId)}
+                                        </span>
+                                        {hasCustomName && (
+                                          <span className="text-xs opacity-70 ml-1">
+                                            ({accountNameForPlatform})
+                                          </span>
+                                        )}
+                                      </Badge>
+                                    );
+                                  })}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  {isLoading ? (
+                                    <>
+                                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                                      <span className="text-sm text-muted-foreground">
+                                        Loading...
+                                      </span>
+                                    </>
+                                  ) : violationCount > 0 ? (
+                                    <>
+                                      <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                      <CollapsibleTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-auto p-0 text-sm font-normal text-amber-600 hover:text-amber-700">
+                                          {violationCount} violation
+                                          {violationCount !== 1 ? "s" : ""}
+                                        </Button>
+                                      </CollapsibleTrigger>
+                                    </>
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">
+                                      No violations
+                                    </span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-xs">
+                                  {account.notes ? (
+                                    <p className="text-sm text-muted-foreground line-clamp-2">
+                                      {account.notes}
+                                    </p>
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground italic">
+                                      No notes
+                                    </span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {account.createdAt
+                                  ? new Date(
+                                      account.createdAt
+                                    ).toLocaleDateString()
+                                  : "N/A"}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {isSuperAdmin && (
+                                  <div className="flex justify-end gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => openEditDialog(account)}
+                                      className="h-8 w-8">
+                                      <Edit2 className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => openDeleteDialog(account)}
+                                      className="h-8 w-8 text-destructive hover:text-destructive">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
                                   </div>
-                                </TableCell>
-                              </TableRow>
-                            </CollapsibleContent>
-                          )}
-                        </>
-                      </Collapsible>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                                )}
+                                {!isSuperAdmin && (
+                                  <span className="text-sm text-muted-foreground">
+                                    View only
+                                  </span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                            {violationCount > 0 && (
+                              <CollapsibleContent asChild>
+                                <TableRow>
+                                  <TableCell
+                                    colSpan={6}
+                                    className="bg-muted/50 p-0">
+                                    <div className="p-4 space-y-2">
+                                      <h4 className="text-sm font-semibold mb-3">
+                                        Associated Violations ({violationCount})
+                                      </h4>
+                                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                                        {violations.map((violation) => {
+                                          // Get match ID - matchId is populated with externalMatchId
+                                          const matchId =
+                                            (typeof violation.matchId ===
+                                              "object" &&
+                                              violation.matchId
+                                                ?.externalMatchId) ||
+                                            violation.externalMatchId ||
+                                            (typeof violation.matchId ===
+                                            "string"
+                                              ? violation.matchId
+                                              : null);
+
+                                          return (
+                                            <div
+                                              key={violation._id}
+                                              className={cn(
+                                                "flex items-start justify-between p-3 border rounded-lg bg-background cursor-pointer transition-colors",
+                                                "hover:bg-accent/50 hover:border-primary/50"
+                                              )}
+                                              onClick={() => {
+                                                if (matchId) {
+                                                  navigate(`/match/${matchId}`);
+                                                } else {
+                                                  // Fallback to opening violation URL if match ID not available
+                                                  window.open(
+                                                    violation.violationUrl,
+                                                    "_blank"
+                                                  );
+                                                }
+                                              }}
+                                              title="Click to view match dashboard">
+                                              <div className="flex-1 space-y-1">
+                                                <div className="flex items-center gap-2">
+                                                  <Badge
+                                                    variant="outline"
+                                                    className="text-xs flex items-center gap-1">
+                                                    {getPlatformIcon(
+                                                      violation.platformId
+                                                    ) && (
+                                                      <span>
+                                                        {getPlatformIcon(
+                                                          violation.platformId
+                                                        )}
+                                                      </span>
+                                                    )}
+                                                    {violation.platformName}
+                                                  </Badge>
+                                                  <Badge
+                                                    variant="outline"
+                                                    className={cn(
+                                                      "text-xs",
+                                                      (getStatusBadge(
+                                                        violation.status
+                                                      ) === "Active" ||
+                                                        getStatusBadge(
+                                                          violation.status
+                                                        ) === "Reported") &&
+                                                        "bg-red-100 text-red-700 hover:bg-red-200 border-red-300 dark:bg-red-900/30 dark:text-red-400",
+                                                      getStatusBadge(
+                                                        violation.status
+                                                      ) === "Blocked" &&
+                                                        "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
+                                                      getStatusBadge(
+                                                        violation.status
+                                                      ) === "Removed" &&
+                                                        "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
+                                                      (getStatusBadge(
+                                                        violation.status
+                                                      ) === "Review" ||
+                                                        getStatusBadge(
+                                                          violation.status
+                                                        ) === "Under Review") &&
+                                                        "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                                    )}>
+                                                    {getStatusBadge(
+                                                      violation.status
+                                                    )}
+                                                  </Badge>
+                                                  <Badge
+                                                    variant="outline"
+                                                    className="text-xs">
+                                                    {violation.contentType}
+                                                  </Badge>
+                                                </div>
+                                                {violation.matchName && (
+                                                  <p className="text-sm text-muted-foreground">
+                                                    {violation.matchName}
+                                                  </p>
+                                                )}
+                                                <p className="text-xs text-muted-foreground">
+                                                  Added:{" "}
+                                                  {new Date(
+                                                    violation.timeAdded
+                                                  ).toLocaleString()}
+                                                </p>
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              </CollapsibleContent>
+                            )}
+                          </>
+                        </Collapsible>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               </div>
             </>
           )}
@@ -1031,7 +1124,9 @@ export default function WhitelistedAccounts() {
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="w-[95vw] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Edit Whitelisted Account</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">
+              Edit Whitelisted Account
+            </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               Update the account channel and platform selections.
             </DialogDescription>
@@ -1043,7 +1138,11 @@ export default function WhitelistedAccounts() {
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="edit-account-channel" className="text-xs sm:text-sm">Account Channel</Label>
+              <Label
+                htmlFor="edit-account-channel"
+                className="text-xs sm:text-sm">
+                Account Channel
+              </Label>
               <Input
                 id="edit-account-channel"
                 value={accountChannel}
@@ -1112,7 +1211,9 @@ export default function WhitelistedAccounts() {
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-notes" className="text-xs sm:text-sm">Notes (Optional)</Label>
+              <Label htmlFor="edit-notes" className="text-xs sm:text-sm">
+                Notes (Optional)
+              </Label>
               <Textarea
                 id="edit-notes"
                 value={notes}
@@ -1134,7 +1235,10 @@ export default function WhitelistedAccounts() {
               className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               Cancel
             </Button>
-            <Button onClick={handleEditAccount} disabled={saving} className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
+            <Button
+              onClick={handleEditAccount}
+              disabled={saving}
+              className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
               {saving ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
@@ -1155,7 +1259,9 @@ export default function WhitelistedAccounts() {
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent className="w-[95vw] sm:w-full">
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Remove from Whitelist</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">
+              Remove from Whitelist
+            </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               Are you sure you want to remove this account from the whitelist?
               This action cannot be undone.
