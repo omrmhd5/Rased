@@ -20,6 +20,21 @@
     },
     "noLeagueSelected": "No League Selected"
   },
+  "login": {
+    "title": "Welcome Back",
+    "description": "Sign in to your Rased account",
+    "email": "Email",
+    "emailPlaceholder": "name@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "signIn": "Sign In",
+    "signingIn": "Signing in...",
+    "error": {
+      "loginFailed": "Login failed. Please try again."
+    }
+  },
   "sidebar": {
     "analytics": "ANALYTICS",
     "operations": "OPERATIONS",

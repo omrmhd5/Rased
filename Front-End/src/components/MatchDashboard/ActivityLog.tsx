@@ -522,7 +522,7 @@ export function ActivityLog({
             const getStatusColorClasses = (status: string) => {
               const statusLower = status.toLowerCase();
               if (statusLower === "active") {
-                return "bg-destructive/10 text-destructive";
+                return "bg-destructive/10 text-destructive dark:text-red-400";
               } else if (statusLower === "blocked") {
                 return "bg-success/10 text-success";
               } else if (statusLower === "removed") {

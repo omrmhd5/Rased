@@ -866,7 +866,7 @@ export default function ProblematicAccounts() {
                       </td>
                       <td className="p-3 sm:p-4">
                         <div className="flex items-center gap-2 min-w-0">
-                          <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive flex-shrink-0" />
+                          <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-destructive dark:text-red-400 flex-shrink-0" />
                           <span className="text-xs sm:text-sm font-medium truncate">
                             {account.accountChannel}
                           </span>
@@ -891,7 +891,7 @@ export default function ProblematicAccounts() {
                           <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap justify-end">
                             <Badge
                               variant="destructive"
-                              className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0">
+                              className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 dark:bg-red-500 dark:text-white">
                               {account.activeCount} {t("problematicAccounts.active")}
                             </Badge>
                             <Badge

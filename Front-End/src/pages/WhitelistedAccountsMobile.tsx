@@ -142,7 +142,7 @@ export function WhitelistedAccountsMobile({
                     variant="ghost"
                     size="icon"
                     onClick={() => onDelete(account)}
-                    className="h-7 w-7 text-destructive hover:text-destructive touch-manipulation">
+                    className="h-7 w-7 text-destructive hover:text-destructive dark:text-red-400 dark:hover:text-red-300 touch-manipulation">
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>

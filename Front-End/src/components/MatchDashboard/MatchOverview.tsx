@@ -216,8 +216,8 @@ export function MatchOverview({
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4 mb-3 sm:mb-4">
         {/* Total Violations */}
-        <div className="flex items-center gap-2 sm:gap-2.5 transition-all duration-300 active:scale-[0.98] active:bg-chart-1/5 rounded-lg p-1.5 sm:p-2 -m-1.5 sm:-m-2 cursor-pointer touch-manipulation">
-          <div className="p-1.5 sm:p-2 rounded-full bg-chart-1/10 shrink-0 transition-transform duration-300">
+        <div className="flex items-center gap-2 sm:gap-2.5 transition-all duration-300 active:scale-[0.98] active:bg-chart-1/10 rounded-lg p-1.5 sm:p-2 -m-1.5 sm:-m-2 cursor-pointer touch-manipulation">
+          <div className="p-1.5 sm:p-2 rounded-full bg-chart-1/20 shrink-0 transition-transform duration-300">
             <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-chart-1" />
           </div>
           <div className="min-w-0">
@@ -237,9 +237,9 @@ export function MatchOverview({
         </div>
 
         {/* Active */}
-        <div className="flex items-center gap-2 sm:gap-2.5 transition-all duration-300 active:scale-[0.98] active:bg-destructive/5 rounded-lg p-1.5 sm:p-2 -m-1.5 sm:-m-2 cursor-pointer touch-manipulation">
-          <div className="p-1.5 sm:p-2 rounded-full bg-destructive/10 shrink-0 transition-transform duration-300">
-            <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-destructive" />
+        <div className="flex items-center gap-2 sm:gap-2.5 transition-all duration-300 active:scale-[0.98] active:bg-destructive/10 rounded-lg p-1.5 sm:p-2 -m-1.5 sm:-m-2 cursor-pointer touch-manipulation">
+          <div className="p-1.5 sm:p-2 rounded-full bg-destructive/20 shrink-0 transition-transform duration-300">
+            <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-destructive dark:text-red-400" />
           </div>
           <div className="min-w-0">
             <p className="text-lg sm:text-xl font-bold leading-none mb-0.5 sm:mb-1">
@@ -257,8 +257,8 @@ export function MatchOverview({
         </div>
 
         {/* Blocked Successfully */}
-        <div className="flex items-center gap-2 sm:gap-2.5 transition-all duration-300 active:scale-[0.98] active:bg-success/5 rounded-lg p-1.5 sm:p-2 -m-1.5 sm:-m-2 cursor-pointer touch-manipulation">
-          <div className="p-1.5 sm:p-2 rounded-full bg-success/10 shrink-0 transition-transform duration-300">
+        <div className="flex items-center gap-2 sm:gap-2.5 transition-all duration-300 active:scale-[0.98] active:bg-success/10 rounded-lg p-1.5 sm:p-2 -m-1.5 sm:-m-2 cursor-pointer touch-manipulation">
+          <div className="p-1.5 sm:p-2 rounded-full bg-success/20 shrink-0 transition-transform duration-300">
             <Shield className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-success" />
           </div>
           <div className="min-w-0">
@@ -284,8 +284,8 @@ export function MatchOverview({
         </div>
 
         {/* Removed */}
-        <div className="flex items-center gap-2 sm:gap-2.5 transition-all duration-300 active:scale-[0.98] active:bg-cyan-500/5 rounded-lg p-1.5 sm:p-2 -m-1.5 sm:-m-2 cursor-pointer touch-manipulation">
-          <div className="p-1.5 sm:p-2 rounded-full bg-cyan-500/10 shrink-0 transition-transform duration-300">
+        <div className="flex items-center gap-2 sm:gap-2.5 transition-all duration-300 active:scale-[0.98] active:bg-cyan-500/10 rounded-lg p-1.5 sm:p-2 -m-1.5 sm:-m-2 cursor-pointer touch-manipulation">
+          <div className="p-1.5 sm:p-2 rounded-full bg-cyan-500/20 shrink-0 transition-transform duration-300">
             <XCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-cyan-500" />
           </div>
           <div className="min-w-0">
@@ -325,7 +325,7 @@ export function MatchOverview({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-        <div className="p-3 sm:p-4 rounded-lg bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20 transition-all duration-300 active:scale-[0.98] active:shadow-lg active:shadow-chart-4/20 cursor-pointer touch-manipulation">
+        <div className="p-3 sm:p-4 rounded-lg bg-gradient-to-br from-chart-4/20 to-chart-4/30 border border-chart-4/50 transition-all duration-300 active:scale-[0.98] active:shadow-lg active:shadow-chart-4/30 cursor-pointer touch-manipulation">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-chart-4" />
@@ -344,7 +344,7 @@ export function MatchOverview({
           </p>
         </div>
 
-        <div className="p-3 sm:p-4 rounded-lg bg-gradient-to-br from-success/5 to-success/10 border border-success/20 transition-all duration-300 active:scale-[0.98] active:shadow-lg active:shadow-success/20 cursor-pointer touch-manipulation">
+        <div className="p-3 sm:p-4 rounded-lg bg-gradient-to-br from-success/20 to-success/30 border border-success/50 transition-all duration-300 active:scale-[0.98] active:shadow-lg active:shadow-success/30 cursor-pointer touch-manipulation">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-success" />
@@ -399,7 +399,7 @@ export function MatchOverview({
         </div>
 
         {/* Top Platform */}
-        <div className="p-3 sm:p-4 rounded-lg bg-gradient-to-br from-chart-2/5 to-chart-2/10 border border-chart-2/20 transition-all duration-300 active:scale-[0.98] active:shadow-lg active:shadow-chart-2/20 cursor-pointer touch-manipulation sm:col-span-2 md:col-span-1">
+        <div className="p-3 sm:p-4 rounded-lg bg-gradient-to-br from-chart-2/20 to-chart-2/30 border border-chart-2/50 transition-all duration-300 active:scale-[0.98] active:shadow-lg active:shadow-chart-2/30 cursor-pointer touch-manipulation sm:col-span-2 md:col-span-1">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Award className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-chart-2" />

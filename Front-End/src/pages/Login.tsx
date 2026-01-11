@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ export default function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const { t } = useLanguage();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,7 +35,7 @@ export default function Login() {
       await login(email, password);
     } catch (err: unknown) {
       const errorMessage =
-        err instanceof Error ? err.message : "Login failed. Please try again.";
+        err instanceof Error ? err.message : t("login.error.loginFailed");
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -49,8 +51,8 @@ export default function Login() {
               <Shield className="h-7 w-7 sm:h-8 sm:w-8 text-primary-foreground" />
             </div>
           </div>
-          <CardTitle className="text-xl sm:text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription className="text-sm sm:text-base">Sign in to your Rased account</CardDescription>
+          <CardTitle className="text-xl sm:text-2xl font-bold">{t("login.title")}</CardTitle>
+          <CardDescription className="text-sm sm:text-base">{t("login.description")}</CardDescription>
         </CardHeader>
         <CardContent className="px-4 sm:px-6 pb-6">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -60,13 +62,13 @@ export default function Login() {
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm sm:text-base">Email</Label>
+              <Label htmlFor="email" className="text-sm sm:text-base">{t("login.email")}</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                 <Input
                   id="email"
                   type="email"
-                  placeholder="name@example.com"
+                  placeholder={t("login.emailPlaceholder")}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -76,13 +78,13 @@ export default function Login() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm sm:text-base">Password</Label>
+              <Label htmlFor="password" className="text-sm sm:text-base">{t("login.password")}</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
+                  placeholder={t("login.passwordPlaceholder")}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -96,7 +98,7 @@ export default function Login() {
                   className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-9 sm:w-9 hover:bg-transparent touch-manipulation"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={loading}
-                  aria-label={showPassword ? "Hide password" : "Show password"}>
+                  aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}>
                   {showPassword ? (
                     <EyeOff className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                   ) : (
@@ -109,10 +111,10 @@ export default function Login() {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
+                  {t("login.signingIn")}
                 </>
               ) : (
-                "Sign In"
+                t("login.signIn")
               )}
             </Button>
           </form>

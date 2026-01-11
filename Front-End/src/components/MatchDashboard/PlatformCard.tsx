@@ -132,13 +132,13 @@ export function PlatformCard({
         <div className="p-3 rounded-xl bg-gradient-to-br from-destructive/10 to-destructive/5 border border-destructive/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-destructive/20 cursor-pointer group">
           <div className="flex items-center gap-1.5 mb-2">
             <div className="p-0.5 rounded bg-destructive/20 group-hover:bg-destructive/30 transition-colors">
-              <AlertTriangle className="h-2.5 w-2.5 text-destructive" />
+              <AlertTriangle className="h-2.5 w-2.5 text-destructive dark:text-red-400" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
               {t("matchDashboard.platformCard.active")}
             </p>
           </div>
-          <p className="text-lg font-bold text-destructive transition-transform duration-300 group-hover:scale-110">
+          <p className="text-lg font-bold text-destructive dark:text-red-400 transition-transform duration-300 group-hover:scale-110">
             {activeCount}
           </p>
         </div>

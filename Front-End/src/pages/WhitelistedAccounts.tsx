@@ -987,7 +987,7 @@ export default function WhitelistedAccounts() {
                                       variant="ghost"
                                       size="icon"
                                       onClick={() => openDeleteDialog(account)}
-                                      className="h-8 w-8 text-destructive hover:text-destructive">
+                                      className="h-8 w-8 text-destructive hover:text-destructive dark:text-red-400 dark:hover:text-red-300">
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
                                   </div>

@@ -57,10 +57,10 @@ export function ViolationsOverview({
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
           {/* Total Violations */}
           <div
-            className={`flex items-center gap-2 sm:gap-2.5 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:bg-chart-1/5 rounded-lg p-2 -m-2 cursor-pointer touch-manipulation ${
+            className={`flex items-center gap-2 sm:gap-2.5 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:bg-chart-1/10 rounded-lg p-2 -m-2 cursor-pointer touch-manipulation ${
               isRTL ? "" : ""
             }`}>
-            <div className="p-1.5 sm:p-2 rounded-full bg-chart-1/10 shrink-0 transition-transform duration-300 hover:scale-110">
+            <div className="p-1.5 sm:p-2 rounded-full bg-chart-1/20 shrink-0 transition-transform duration-300 hover:scale-110">
               <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-chart-1" />
             </div>
             <div className={`min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
@@ -74,9 +74,9 @@ export function ViolationsOverview({
           </div>
 
           {/* Active */}
-          <div className="flex items-center gap-2 sm:gap-2.5 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:bg-destructive/5 rounded-lg p-2 -m-2 cursor-pointer touch-manipulation">
-            <div className="p-1.5 sm:p-2 rounded-full bg-destructive/10 shrink-0 transition-transform duration-300 hover:scale-110">
-              <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-destructive" />
+          <div className="flex items-center gap-2 sm:gap-2.5 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:bg-destructive/10 rounded-lg p-2 -m-2 cursor-pointer touch-manipulation">
+            <div className="p-1.5 sm:p-2 rounded-full bg-destructive/20 shrink-0 transition-transform duration-300 hover:scale-110">
+              <AlertTriangle className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-destructive dark:text-red-400" />
             </div>
             <div className={`min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
               <p className="text-lg sm:text-xl font-bold leading-none mb-0.5 sm:mb-1 transition-transform duration-300 hover:scale-105 text-left">
@@ -92,8 +92,8 @@ export function ViolationsOverview({
           </div>
 
           {/* Blocked Successfully */}
-          <div className="flex items-center gap-2 sm:gap-2.5 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:bg-success/5 rounded-lg p-2 -m-2 cursor-pointer touch-manipulation">
-            <div className="p-1.5 sm:p-2 rounded-full bg-success/10 shrink-0 transition-transform duration-300 hover:scale-110">
+          <div className="flex items-center gap-2 sm:gap-2.5 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:bg-success/10 rounded-lg p-2 -m-2 cursor-pointer touch-manipulation">
+            <div className="p-1.5 sm:p-2 rounded-full bg-success/20 shrink-0 transition-transform duration-300 hover:scale-110">
               <Shield className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-success" />
             </div>
             <div className={`min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
@@ -131,8 +131,8 @@ export function ViolationsOverview({
           </div>
 
           {/* Under Review */}
-          <div className="flex items-center gap-2 sm:gap-2.5 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:bg-yellow-500/5 rounded-lg p-2 -m-2 cursor-pointer touch-manipulation">
-            <div className="p-1.5 sm:p-2 rounded-full bg-yellow-500/10 shrink-0 transition-transform duration-300 hover:scale-110">
+          <div className="flex items-center gap-2 sm:gap-2.5 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:bg-yellow-500/10 rounded-lg p-2 -m-2 cursor-pointer touch-manipulation">
+            <div className="p-1.5 sm:p-2 rounded-full bg-yellow-500/20 shrink-0 transition-transform duration-300 hover:scale-110">
               <FileQuestion className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-yellow-500" />
             </div>
             <div className={`min-w-0 ${isRTL ? "text-right" : "text-left"}`}>

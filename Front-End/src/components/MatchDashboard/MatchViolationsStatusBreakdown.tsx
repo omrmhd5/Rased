@@ -2,6 +2,8 @@ import { Card } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { AlertTriangle, Shield, FileQuestion, XCircle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 interface MatchViolationsStatusBreakdownProps {
   totalViolations: number;
@@ -27,12 +29,23 @@ export function MatchViolationsStatusBreakdown({
   underReviewCount,
 }: MatchViolationsStatusBreakdownProps) {
   const { t } = useLanguage();
-  
+  const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Calculate percentages
   const calculatePercentage = (value: number) => {
     if (totalViolations === 0) return 0;
     return Math.round((value / totalViolations) * 100);
   };
+
+  // Use brighter red in dark mode
+  const activeColor = mounted && theme === "dark" 
+    ? "hsl(0 84% 60%)" // Brighter red for dark mode
+    : "hsl(var(--destructive))"; // Original destructive color for light mode
 
   // Prepare chart data - colors match MatchOverview component
   const chartData: ChartData[] = [
@@ -40,7 +53,7 @@ export function MatchViolationsStatusBreakdown({
       name: t("dashboard.violationsOverview.active"),
       value: activeCount,
       percentage: calculatePercentage(activeCount),
-      color: "hsl(var(--destructive))", // Matches MatchOverview Active (destructive)
+      color: activeColor, // Matches MatchOverview Active (destructive)
       icon: <AlertTriangle className="h-3 w-3" />,
     },
     {

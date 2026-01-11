@@ -20,13 +20,22 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useState } from "react";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 export function TopBar() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { language, setLanguage, isRTL, t } = useLanguage();
-  const [darkMode, setDarkMode] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  // Avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDarkMode = theme === "dark";
 
   return <header className="sticky top-0 h-14 sm:h-16 bg-card border-b border-border z-40 flex items-center px-2 sm:px-3 md:px-4 lg:px-6 gap-1.5 sm:gap-2 md:gap-3 lg:gap-4 w-full">
       {/* Back Button & Menu Toggle */}
@@ -91,11 +100,15 @@ export function TopBar() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setDarkMode(!darkMode)}
-          aria-label={darkMode ? t("topBar.switchToLightMode") : t("topBar.switchToDarkMode")}
+          onClick={() => {
+            if (mounted) {
+              setTheme(isDarkMode ? "light" : "dark");
+            }
+          }}
+          aria-label={mounted && isDarkMode ? t("topBar.switchToLightMode") : t("topBar.switchToDarkMode")}
           className="h-8 w-8 sm:h-9 sm:w-9 touch-manipulation"
         >
-          {darkMode ? (
+          {mounted && isDarkMode ? (
             <Sun className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
           ) : (
             <Moon className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />

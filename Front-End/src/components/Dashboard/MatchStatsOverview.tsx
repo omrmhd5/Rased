@@ -86,7 +86,7 @@ export function MatchStatsOverview({
           {/* Live Matches */}
           <div className="flex items-center gap-2.5 transition-all duration-300 hover:scale-105 hover:bg-destructive/5 rounded-lg p-2 -m-2 cursor-pointer">
             <div className="p-2 rounded-full bg-destructive/10 shrink-0 transition-transform duration-300 hover:scale-110">
-              <Play className="h-3.5 w-3.5 text-destructive" />
+              <Play className="h-3.5 w-3.5 text-destructive dark:text-red-400" />
             </div>
             <div className={`min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
               <p className="text-xl font-bold leading-none mb-1 transition-transform duration-300 hover:scale-105 text-left">

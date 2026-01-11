@@ -106,7 +106,7 @@ export function ProblematicAccountsMobile({
                   </Badge>
                 </div>
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+                  <AlertTriangle className="h-4 w-4 text-destructive dark:text-red-400 flex-shrink-0" />
                   <span className="text-sm font-semibold truncate">
                     {account.accountChannel}
                   </span>
@@ -134,7 +134,7 @@ export function ProblematicAccountsMobile({
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <Badge
                     variant="destructive"
-                    className="text-[9px] px-1.5 py-0">
+                    className="text-[9px] px-1.5 py-0 dark:bg-red-500 dark:text-white">
                     {account.activeCount} {t("problematicAccounts.active")}
                   </Badge>
                   <Badge

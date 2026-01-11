@@ -1386,7 +1386,7 @@ export default function Dashboard() {
           {/* Total Views Card (Small) */}
           <Card
             ref={totalViewsCardRef}
-            className="p-3 sm:p-4 bg-gradient-to-br from-chart-4/5 to-chart-4/10 border border-chart-4/20 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-chart-4/20 cursor-pointer touch-manipulation">
+            className="p-3 sm:p-4 bg-gradient-to-br from-chart-4/20 to-chart-4/30 border border-chart-4/50 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-chart-4/30 cursor-pointer touch-manipulation">
             <div className="flex items-center justify-between mb-1 sm:mb-1.5">
               <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground text-left">
                 {t("dashboard.totalViews")}
@@ -1413,7 +1413,7 @@ export default function Dashboard() {
           {/* Avg Block Time Card */}
           <Card
             ref={avgBlockTimeCardRef}
-            className="p-3 sm:p-4 bg-gradient-to-br from-success/5 to-success/10 border border-success/20 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-success/20 cursor-pointer touch-manipulation">
+            className="p-3 sm:p-4 bg-gradient-to-br from-success/20 to-success/30 border border-success/50 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-success/30 cursor-pointer touch-manipulation">
             <div className="flex items-center justify-between mb-1 sm:mb-1.5">
               <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground text-left">
                 {t("dashboard.avgBlockTime")}
@@ -1449,7 +1449,7 @@ export default function Dashboard() {
           {dashboardStats.topPlatform && (
             <Card
               ref={topPlatformCardRef}
-              className="p-3 sm:p-4 bg-gradient-to-br from-chart-2/5 to-chart-2/10 border border-chart-2/20 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-chart-2/20 cursor-pointer touch-manipulation">
+              className="p-3 sm:p-4 bg-gradient-to-br from-chart-2/20 to-chart-2/30 border border-chart-2/50 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-chart-2/30 cursor-pointer touch-manipulation">
               <div className="flex items-center justify-between mb-1 sm:mb-1.5">
                 <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground text-left">
                   {t("dashboard.topPlatform")}
@@ -1476,7 +1476,7 @@ export default function Dashboard() {
           {dashboardStats.topMatch && (
             <Card
               ref={topMatchCardRef}
-              className="p-3 sm:p-4 bg-gradient-to-br from-orange-500/5 to-orange-500/10 border border-orange-500/20 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-orange-500/20 cursor-pointer touch-manipulation">
+              className="p-3 sm:p-4 bg-gradient-to-br from-orange-500/20 to-orange-500/30 border border-orange-500/50 transition-all duration-300 hover:scale-105 active:scale-[0.98] hover:shadow-lg hover:shadow-orange-500/30 cursor-pointer touch-manipulation">
               <div className="flex items-center justify-between mb-1 sm:mb-1.5">
                 <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground text-left">
                   {t("dashboard.topMatch")}
