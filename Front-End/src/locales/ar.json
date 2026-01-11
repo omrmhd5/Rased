@@ -54,7 +54,9 @@
     "user": "مستخدم",
     "logout": "تسجيل الخروج",
     "switchToLightMode": "التبديل إلى الوضع الفاتح",
-    "switchToDarkMode": "التبديل إلى الوضع الداكن"
+    "switchToDarkMode": "التبديل إلى الوضع الداكن",
+    "noResults": "لم يتم العثور على مباريات",
+    "searching": "جاري البحث..."
   },
   "dashboard": {
     "title": "لوحة التحكم",

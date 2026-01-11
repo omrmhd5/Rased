@@ -629,6 +629,104 @@ router.get("/", async (req, res) => {
   return await returnMatchesFromDatabase(req, res);
 });
 
+// GET /api/matches/search - Search matches by description (for all roles)
+router.get("/search", authenticateToken, async (req, res) => {
+  try {
+    const { query, league } = req.query;
+
+    // Validate query parameter
+    if (!query || query.trim() === "") {
+      return res.status(400).json({
+        error: "Query parameter is required",
+      });
+    }
+
+    // Validate league parameter
+    if (!league) {
+      return res.status(400).json({
+        error: "League parameter is required",
+      });
+    }
+
+    // Verify league exists in database
+    const leagueDoc = await Competition.findOne({ league: league }).lean();
+    if (!leagueDoc) {
+      return res.status(400).json({
+        error: `Invalid league '${league}'. League does not exist in the database.`,
+      });
+    }
+
+    // Get user from request (set by authenticateToken middleware)
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    // Get user to check role and league access
+    const user = await User.findById(userId).select("-password").lean();
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check if user has access to this league
+    if (user.role === "employee" && user.leagues) {
+      if (!user.leagues.includes(league)) {
+        return res.status(403).json({
+          error: "Access denied. You don't have access to this league.",
+        });
+      }
+    }
+
+    // Search matches by description (case-insensitive, partial match)
+    // Only search matches from the specified league
+    const searchQuery = {
+      league: league,
+      isDeleted: { $ne: true },
+      description: { $regex: query.trim(), $options: "i" },
+    };
+
+    const matches = await Match.find(searchQuery)
+      .select("_id externalMatchId description team1 team2 date time week stage status league")
+      .limit(20) // Get more results to sort properly
+      .lean();
+
+    // Format matches for frontend and sort by week (numeric) then date
+    const formattedMatches = matches
+      .map((match) => ({
+        id: match.externalMatchId,
+        description: match.description || `${match.team1} vs ${match.team2}`,
+        team1: match.team1,
+        team2: match.team2,
+        date: match.date ? new Date(match.date).toISOString().split("T")[0] : "",
+        time: match.time || "",
+        week: match.week || "",
+        stage: match.stage || "",
+        status: match.status || "upcoming",
+        league: match.league,
+        // Add numeric week for sorting
+        weekNum: match.week ? parseInt(match.week, 10) || 0 : 0,
+      }))
+      .sort((a, b) => {
+        // Sort by week (numeric) ascending, then by date ascending
+        if (a.weekNum !== b.weekNum) {
+          return a.weekNum - b.weekNum;
+        }
+        // If weeks are equal, sort by date
+        if (a.date && b.date) {
+          return a.date.localeCompare(b.date);
+        }
+        return 0;
+      })
+      .slice(0, 10) // Limit to 10 results after sorting
+      .map(({ weekNum, ...match }) => match); // Remove weekNum from final result
+
+    res.json(formattedMatches);
+  } catch (error) {
+    console.error("Error searching matches:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/matches/:externalMatchId - Get single match by externalMatchId
 router.get("/:externalMatchId", async (req, res) => {
   try {

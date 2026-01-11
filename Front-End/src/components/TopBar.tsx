@@ -1,4 +1,4 @@
-import { Menu, Search, User, ArrowLeft, ArrowRight, LogOut, Moon, Sun, Globe } from "lucide-react";
+import { Menu, Search, User, ArrowLeft, ArrowRight, LogOut, Moon, Sun, Globe, Loader2 } from "lucide-react";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -17,11 +17,29 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
+
+interface SearchMatch {
+  id: string;
+  description: string;
+  team1: string;
+  team2: string;
+  date: string;
+  time: string;
+  week: string;
+  stage: string;
+  status: string;
+  league: string;
+}
 
 export function TopBar() {
   const navigate = useNavigate();
@@ -29,10 +47,108 @@ export function TopBar() {
   const { language, setLanguage, isRTL, t } = useLanguage();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchMatch[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
   // Avoid hydration mismatch
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // Debounced search function
+  const performSearch = useCallback(async (query: string) => {
+    if (!query || query.trim().length < 2) {
+      setSearchResults([]);
+      setIsSearchOpen(false);
+      return;
+    }
+
+    const selectedLeague = localStorage.getItem("selectedLeague");
+    if (!selectedLeague) {
+      setSearchResults([]);
+      setIsSearchOpen(false);
+      return;
+    }
+
+    setIsSearching(true);
+    setIsSearchOpen(true);
+
+    try {
+      const response = await fetch(
+        `${API_URL}/matches/search?query=${encodeURIComponent(query.trim())}&league=${encodeURIComponent(selectedLeague)}`,
+        {
+          credentials: "include", // Use cookie-based authentication
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Search failed");
+      }
+
+      const data = await response.json();
+      setSearchResults(data);
+    } catch (error) {
+      console.error("Error searching matches:", error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [API_URL]);
+
+  // Handle search input change with debouncing
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+
+    // Clear existing timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // Set new timeout for debounced search
+    searchTimeoutRef.current = setTimeout(() => {
+      performSearch(value);
+    }, 300); // 300ms debounce
+  };
+
+  // Handle match selection
+  const handleMatchSelect = (matchId: string) => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setIsSearchOpen(false);
+    navigate(`/match/${matchId}`);
+  };
+
+  // Close search when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        searchInputRef.current &&
+        !searchInputRef.current.contains(event.target as Node) &&
+        !(event.target as HTMLElement).closest('[role="dialog"]')
+      ) {
+        setIsSearchOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
   }, []);
 
   const isDarkMode = theme === "dark";
@@ -70,14 +186,89 @@ export function TopBar() {
       </div>
 
       {/* Search Bar - Responsive */}
-      <div className="flex-1 max-w-none sm:max-w-xs md:max-w-md lg:max-w-xl mx-1 sm:mx-2">
-        <div className="relative">
-          <Search className={`absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground pointer-events-none ${isRTL ? "right-2.5 sm:right-3" : "left-2.5 sm:left-3"}`} />
-          <Input 
-            placeholder={t("topBar.search")}
-            className={`${isRTL ? "pr-8 sm:pr-10 pl-3" : "pl-8 sm:pl-10 pr-3"} rounded-full bg-muted/50 border-muted h-8 sm:h-9 text-xs sm:text-sm w-full`}
-          />
-        </div>
+      <div className="flex-1 max-w-none sm:max-w-xs md:max-w-md lg:max-w-xl mx-1 sm:mx-2 relative">
+        <Popover open={isSearchOpen && (searchResults.length > 0 || (searchQuery.trim().length >= 2 && !isSearching))} onOpenChange={setIsSearchOpen} modal={false}>
+          <PopoverTrigger asChild>
+            <div className="relative w-full" onMouseDown={(e) => {
+              // Prevent PopoverTrigger from stealing focus
+              if (e.target === searchInputRef.current || searchInputRef.current?.contains(e.target as Node)) {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+              }
+            }}>
+              <Search className={`absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground pointer-events-none ${isRTL ? "right-2.5 sm:right-3" : "left-2.5 sm:left-3"}`} />
+              {isSearching && (
+                <Loader2 className={`absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground animate-spin pointer-events-none ${isRTL ? "left-2.5 sm:left-3" : "right-2.5 sm:right-3"}`} />
+              )}
+              <Input 
+                ref={searchInputRef}
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                onFocus={() => {
+                  if (searchResults.length > 0 || (searchQuery.trim().length >= 2 && !isSearching)) {
+                    setIsSearchOpen(true);
+                  }
+                }}
+                placeholder={t("topBar.search")}
+                className={`${isRTL ? "pr-8 sm:pr-10" : "pl-8 sm:pl-10"} ${isSearching ? (isRTL ? "pl-8 sm:pl-10" : "pr-8 sm:pr-10") : ""} rounded-full bg-muted/50 border-muted h-8 sm:h-9 text-xs sm:text-sm w-full`}
+              />
+            </div>
+          </PopoverTrigger>
+          <PopoverContent 
+            className={`w-[var(--radix-popover-trigger-width)] p-0 ${isRTL ? "text-right" : "text-left"}`}
+            align="start"
+            side="bottom"
+            sideOffset={4}
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onCloseAutoFocus={(e) => {
+              // Return focus to input when popover closes
+              e.preventDefault();
+              searchInputRef.current?.focus();
+            }}
+          >
+            <div className="max-h-[300px] overflow-y-auto">
+              {isSearching ? (
+                <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                  {t("topBar.searching")}
+                </div>
+              ) : searchResults.length > 0 ? (
+                <div className="py-1">
+                  {searchResults.map((match) => (
+                    <button
+                      key={match.id}
+                      onClick={() => handleMatchSelect(match.id)}
+                      className={`w-full px-4 py-2 hover:bg-accent transition-colors ${isRTL ? "text-right" : "text-left"}`}
+                    >
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm font-medium truncate">
+                          {match.description}
+                        </span>
+                        <div className={`flex items-center gap-2 text-xs text-muted-foreground ${isRTL ? "flex-row-reverse" : ""}`}>
+                          {match.date && (
+                            <span>
+                              {new Date(match.date).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })}
+                            </span>
+                          )}
+                          {match.time && <span>• {match.time}</span>}
+                          {match.week && <span>• Week {match.week}</span>}
+                          {match.stage && <span>• {match.stage}</span>}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : searchQuery.trim().length >= 2 ? (
+                <div className="px-4 py-3 text-sm text-muted-foreground text-center">
+                  {t("topBar.noResults")}
+                </div>
+              ) : null}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Action Buttons - Fixed and Aligned */}

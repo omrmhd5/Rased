@@ -54,7 +54,9 @@
     "user": "User",
     "logout": "Log out",
     "switchToLightMode": "Switch to light mode",
-    "switchToDarkMode": "Switch to dark mode"
+    "switchToDarkMode": "Switch to dark mode",
+    "noResults": "No matches found",
+    "searching": "Searching..."
   },
   "dashboard": {
     "title": "Dashboard",
