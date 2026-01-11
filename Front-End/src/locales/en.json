@@ -229,6 +229,9 @@
     "success": "Success",
     "removed": "Removed",
     "review": "Review",
+    "reported": "Reported",
+    "allTypes": "All types",
+    "other": "Other",
     "live": "Live:",
     "highlights": "Highlights:",
     "others": "Others:",
@@ -450,6 +453,295 @@
       "failedToAdd": "Failed to add user",
       "failedToUpdate": "Failed to update user",
       "failedToDelete": "Failed to delete user"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage application settings",
+    "accessDenied": "Access Denied",
+    "onlySuperAdmin": "Only superAdmin can access this page.",
+    "targetBlockTime": {
+      "title": "Target Block Time",
+      "description": "Set the target time (in minutes) for blocking violations",
+      "minutes": "Minutes",
+      "hours": "Hours",
+      "autoConvert": "Enter time in either minutes or hours - values will auto-convert",
+      "saveTargetTime": "Save Target Time",
+      "saving": "Saving...",
+      "validationError": "Validation Error",
+      "mustBeGreaterThanOne": "Target minutes must be greater than or equal to 1.",
+      "settingsSaved": "Settings Saved",
+      "targetUpdated": "Target block time updated to {minutes} minutes ({hours} hours)."
+    },
+    "problematicAccountsThresholds": {
+      "title": "Problematic Accounts Thresholds",
+      "description": "Set thresholds for views and violations. Accounts above these thresholds are considered problematic.",
+      "viewsThreshold": "Views Threshold",
+      "violationsThreshold": "Violations Threshold",
+      "viewsDescription": "Accounts with views above this number are considered problematic",
+      "violationsDescription": "Accounts with violations above this number are considered problematic",
+      "saveThresholds": "Save Thresholds",
+      "thresholdsSaved": "Thresholds Saved",
+      "thresholdsUpdated": "Views threshold: {views}, Violations threshold: {violations}",
+      "validationError": "Validation Error",
+      "mustBeGreaterThanZero": "Thresholds must be greater than or equal to 0."
+    },
+    "leaguesManagement": {
+      "title": "Leagues Management",
+      "description": "Manage leagues and their API configurations",
+      "addLeague": "Add League",
+      "add": "Add",
+      "editLeague": "Edit League",
+      "updateLeagueInfo": "Update league information. Only manually added fields can be edited.",
+      "manualLeague": "Manual League",
+      "manualLeagueDescription": "Create a manual league by providing basic information.",
+      "regularLeagueDescription": "Add a new league by providing the API URL and referer. The system will fetch competition data automatically.",
+      "slug": "Slug",
+      "name": "Name",
+      "arabicName": "Arabic Name",
+      "competitionType": "Competition Type",
+      "leagueIcon": "League Icon (SVG or PNG) - Optional",
+      "leagueIconRequired": "League Icon * (SVG or PNG)",
+      "apiUrl": "API URL",
+      "referer": "Referer",
+      "selectType": "Select type",
+      "league": "League",
+      "cup": "Cup",
+      "selected": "Selected:",
+      "currentIcon": "Current icon:",
+      "cancel": "Cancel",
+      "adding": "Adding...",
+      "updating": "Updating...",
+      "updateLeague": "Update League",
+      "loadingLeagues": "Loading leagues...",
+      "noLeaguesFound": "No leagues found. Add your first league to get started.",
+      "tableHeaders": {
+        "icon": "Icon",
+        "name": "Name",
+        "arabicName": "Arabic Name",
+        "slug": "Slug",
+        "code": "Code",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "status": {
+        "hidden": "Hidden",
+        "visible": "Visible"
+      },
+      "slugLabel": "Slug:",
+      "codeLabel": "Code:",
+      "success": {
+        "leagueCreated": "League created successfully.",
+        "leagueUpdated": "League updated successfully.",
+        "leagueShown": "League shown successfully.",
+        "leagueHidden": "League hidden successfully."
+      },
+      "error": {
+        "failedToLoad": "Failed to load settings. Using default values.",
+        "failedToLoadLeagues": "Failed to load leagues.",
+        "failedToSave": "Failed to save settings",
+        "failedToSaveThresholds": "Failed to save thresholds",
+        "failedToCreate": "Failed to create league",
+        "failedToUpdate": "Failed to update league",
+        "failedToToggle": "Failed to toggle league",
+        "slugNameRequired": "Slug and Name are required for manual leagues.",
+        "slugApiUrlRefererRequired": "Slug, API URL, and Referer are required.",
+        "iconRequired": "League icon is required for regular leagues.",
+        "noLeagueSelected": "No league selected for editing.",
+        "fileSizeTooLarge": "File size must be less than 5MB"
+      }
+    }
+  },
+  "matchDashboard": {
+    "loading": "Loading match data...",
+    "matchNotFound": "Match not found",
+    "error": {
+      "title": "Error",
+      "failedToRefetch": "Failed to refetch data",
+      "failedToLoad": "Failed to load match data",
+      "matchDataNotAvailable": "Match data not available",
+      "failedToGenerateReport": "Failed to generate report",
+      "failedToAddNote": "Failed to add note",
+      "failedToUpdateStatus": "Failed to update violation status",
+      "failedToChangeStatus": "Failed to change violation status",
+      "failedToBlock": "Failed to block violation",
+      "failedToDelete": "Failed to delete violation",
+      "failedToSave": "Failed to save violation",
+      "noComponentsFound": "No components found to capture",
+      "couldNotGetCanvasContext": "Could not get canvas context",
+      "failedToCreateImageBlob": "Failed to create image blob"
+    },
+    "success": {
+      "statusChangedToActive": "Status changed to Active",
+      "violationNowActive": "Violation is now active again",
+      "violationBlocked": "Violation blocked",
+      "violationBlockedAt": "Violation marked as blocked at {time}",
+      "violationDeleted": "Violation deleted",
+      "violationRemoved": "Violation has been removed successfully",
+      "violationSaved": "Violation saved successfully",
+      "violationUpdated": "Violation updated successfully",
+      "changesSaved": "Changes saved successfully",
+      "noteAdded": "Note added",
+      "noteAddedSuccess": "Note has been added successfully",
+      "reportDownloaded": "Report Downloaded",
+      "reportDownloadedSuccess": "Match report has been downloaded successfully"
+    },
+    "whitelistWarning": {
+      "title": "Whitelisted Account Warning",
+      "description": "This account is whitelisted for this platform. Are you sure you want to add a violation for this account?",
+      "cancel": "Cancel",
+      "confirm": "Yes, Add Violation"
+    },
+    "add": "Add",
+    "addPlatform": "Add platform",
+    "sections": {
+      "platformOperations": "Platform Operations (This Match)",
+      "platformComparison": "Platform Comparison (This Match)",
+      "platformComparisonDescription": "Compare platforms for this match"
+    },
+    "report": {
+      "league": "League:",
+      "week": "Week",
+      "stage": "Stage",
+      "dateTime": "Date & Time:",
+      "vs": "vs"
+    },
+    "matchOverview": {
+      "vs": "vs",
+      "stage": "Stage",
+      "week": "Week",
+      "nA": "N/A",
+      "status": {
+        "live": "● LIVE",
+        "completed": "COMPLETED",
+        "postponed": "POSTPONED",
+        "cancelled": "CANCELLED",
+        "upcoming": "UPCOMING"
+      },
+      "download": {
+        "generating": "Generating...",
+        "download": "Download",
+        "dl": "DL",
+        "downloadReport": "Download Report",
+        "roundReport": "Round Report"
+      },
+      "stats": {
+        "totalViolations": "Total Violations",
+        "allPlatforms": "all platforms",
+        "active": "Active",
+        "needsAction": "needs action",
+        "successRate": "success rate",
+        "blockedSuccessfully": "Blocked Successfully",
+        "removed": "Removed",
+        "removedViolations": "removed violations",
+        "underReview": "Under Review",
+        "pendingReview": "pending review",
+        "totalViews": "Total Views (This Match)",
+        "acrossAllPlatforms": "Across all platforms",
+        "avgBlockTime": "Avg Block Time (This Match)",
+        "withinTarget": "Within target",
+        "overTarget": "Over target",
+        "min": "min",
+        "hrs": "hrs",
+        "target": "Target:",
+        "topPlatform": "Top Platform",
+        "views": "views",
+        "biggestSource": "biggest source"
+      }
+    },
+    "activityLog": {
+      "title": "Match Activity Log",
+      "filters": {
+        "allActivity": "All Activity",
+        "violationAdded": "Violation Added",
+        "violationDeleted": "Violation Deleted",
+        "urlChanged": "URL Changed",
+        "accountChanged": "Account Changed",
+        "contentTypeChanged": "Content Type Changed",
+        "statusChange": "Status Change",
+        "viewsChanged": "Views Changed",
+        "timeAddedChanged": "Time Added Changed",
+        "blockedAtChanged": "Blocked At Changed",
+        "notesAdded": "Notes - Added",
+        "notesEdited": "Notes - Edited",
+        "notesChanged": "Notes - Changed"
+      },
+      "platformFilter": {
+        "placeholder": "All Platforms",
+        "allPlatforms": "All Platforms"
+      },
+      "userFilter": {
+        "placeholder": "All Users",
+        "allUsers": "All Users"
+      },
+      "emptyState": {
+        "noActivityFound": "No activity found",
+        "noViolationsYet": "No violations yet",
+        "tryChangingFilter": "Try changing the filter"
+      },
+      "badges": {
+        "added": "Added",
+        "deleted": "Deleted",
+        "statusChange": "Status Change",
+        "urlChanged": "URL Changed",
+        "accountChanged": "Account Changed",
+        "contentTypeChanged": "Content Type Changed",
+        "viewsChanged": "Views Changed",
+        "timeAddedChanged": "Time Added Changed",
+        "blockedAtAdded": "Blocked At Added",
+        "blockedAtRemoved": "Blocked At Removed",
+        "blockedAtChanged": "Blocked At Changed",
+        "noteAdded": "Note Added",
+        "noteDeleted": "Note Deleted",
+        "noteChanged": "Note Changed",
+        "updated": "Updated"
+      },
+      "descriptions": {
+        "violationCreatedOn": "Violation created on",
+        "violationDeletedFrom": "Violation deleted from",
+        "forChannelUser": "for channel/user",
+        "with": "with",
+        "views": "views",
+        "andStatus": "and status:",
+        "withStatus": "with status:",
+        "statusChangedFrom": "Status changed from",
+        "to": "to",
+        "blockedAtTimeAdded": "Blocked at time added:",
+        "blockedAtTimeRemoved": "Blocked at time removed",
+        "violationUrlChangedFrom": "Violation URL changed from",
+        "accountChannelChangedFrom": "Account channel changed from",
+        "contentTypeChangedFrom": "Content type changed from",
+        "viewsChangedFrom": "Views changed from",
+        "timeAddedChangedFrom": "Time added changed from",
+        "blockedAtChangedFrom": "Blocked at changed from",
+        "noteChangedFrom": "Note changed from",
+        "notesChanged": "Notes changed",
+        "changedFrom": "changed from",
+        "violationUpdated": "Violation updated",
+        "unknownPlatform": "Unknown Platform",
+        "platform": "platform"
+      },
+      "timeAgo": {
+        "justNow": "just now",
+        "minutesAgo": "{minutes}m ago",
+        "hoursAgo": "{hours}h ago",
+        "daysAgo": "{days}d ago"
+      },
+      "dateTime": {
+        "at": "at"
+      },
+      "actions": {
+        "deleteLogEntry": "Delete log entry",
+        "maximize": "Maximize",
+        "minimize": "Minimize"
+      },
+      "deleteDialog": {
+        "title": "Delete Log Entry",
+        "description": "Are you sure you want to delete this log entry? This action cannot be undone."
+      },
+      "error": {
+        "failedToDelete": "Failed to delete log entry. Please try again."
+      }
     }
   }
 }

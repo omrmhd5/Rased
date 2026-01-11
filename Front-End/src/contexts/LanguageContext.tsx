@@ -12,7 +12,7 @@ interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   isRTL: boolean;
-  t: (key: string, params?: Record<string, string>) => string;
+  t: (key: string, params?: Record<string, string | number>) => string;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(
@@ -63,7 +63,7 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
   };
 
   // Translation function with parameter interpolation
-  const t = (key: string, params?: Record<string, string>): string => {
+  const t = (key: string, params?: Record<string, string | number>): string => {
     const keys = key.split(".");
     let value: any = translations[language];
 
@@ -91,7 +91,7 @@ export const LanguageProvider = ({ children }: LanguageProviderProps) => {
       Object.keys(params).forEach((paramKey) => {
         translatedString = translatedString.replace(
           new RegExp(`\\{${paramKey}\\}`, "g"),
-          params[paramKey]
+          String(params[paramKey])
         );
       });
     }

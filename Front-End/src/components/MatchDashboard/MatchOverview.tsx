@@ -20,6 +20,8 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MatchOverviewProps {
   match: Match;
@@ -65,6 +67,9 @@ export function MatchOverview({
   isDownloading = false,
   onRoundReport,
 }: MatchOverviewProps) {
+  const { t, isRTL } = useLanguage();
+  const { leagues } = useAuth();
+
   const formatMatchDateTime = () => {
     const dateStr = match.date;
     const timeStr = match.time || "";
@@ -72,7 +77,7 @@ export function MatchOverview({
 
     try {
       const date = new Date(dateStr);
-      const formattedDate = date.toLocaleDateString("en-US", {
+      const formattedDate = date.toLocaleDateString(isRTL ? "ar-SA" : "en-US", {
         day: "numeric",
         month: "short",
         year: "numeric",
@@ -85,12 +90,11 @@ export function MatchOverview({
 
   const getCompetitionName = () => {
     if (typeof match.competition === "object" && match.competition !== null) {
-      return (
-        (match.competition as { knownName?: string; name?: string })
-          .knownName ||
-        (match.competition as { name?: string }).name ||
-        ""
-      );
+      const competition = match.competition as { knownName?: string; name?: string; arabicName?: string };
+      if (isRTL && competition.arabicName) {
+        return competition.arabicName;
+      }
+      return competition.knownName || competition.name || "";
     }
     return typeof match.competition === "string" ? match.competition : "";
   };
@@ -100,31 +104,31 @@ export function MatchOverview({
     if (status === "live") {
       return (
         <Badge className="bg-red-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">
-          ● LIVE
+          {t("matchDashboard.matchOverview.status.live")}
         </Badge>
       );
     } else if (status === "finished") {
       return (
         <Badge className="bg-green-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">
-          COMPLETED
+          {t("matchDashboard.matchOverview.status.completed")}
         </Badge>
       );
     } else if (status === "postponed") {
       return (
         <Badge className="bg-yellow-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">
-          POSTPONED
+          {t("matchDashboard.matchOverview.status.postponed")}
         </Badge>
       );
     } else if (status === "cancelled") {
       return (
         <Badge className="bg-gray-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">
-          CANCELLED
+          {t("matchDashboard.matchOverview.status.cancelled")}
         </Badge>
       );
     } else {
       return (
         <Badge className="bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">
-          UPCOMING
+          {t("matchDashboard.matchOverview.status.upcoming")}
         </Badge>
       );
     }
@@ -135,19 +139,18 @@ export function MatchOverview({
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
         <div className="flex-1 min-w-0">
           <h1 className="text-lg sm:text-xl font-bold mb-1 break-words">
-            {match.team1} vs {match.team2}
+            {match.team1} {t("matchDashboard.matchOverview.vs")} {match.team2}
           </h1>
           <p className="text-[10px] sm:text-xs text-muted-foreground break-words">
             {(() => {
-              const isSuperCup =
-                match.league === "saudi-super-cup" ||
-                match.league === "spanish-super-cup";
+              const leagueInfo = leagues?.find((l) => l.league === match.league);
+              const isSuperCup = leagueInfo?.competitionType === "cup";
               if (isSuperCup) {
-                return `Stage ${match.stage || "N/A"}`;
+                return `${t("matchDashboard.matchOverview.stage")} ${match.stage || t("matchDashboard.matchOverview.nA")}`;
               }
-              return `Week ${match.week || "N/A"}`;
+              return `${t("matchDashboard.matchOverview.week")} ${match.week || t("matchDashboard.matchOverview.nA")}`;
             })()}{" "}
-            • {getCompetitionName() || "N/A"} • {match.stadium || "N/A"}
+            • {getCompetitionName() || t("matchDashboard.matchOverview.nA")} • {match.stadium || t("matchDashboard.matchOverview.nA")}
           </p>
         </div>
         <div className="flex flex-row sm:flex-col sm:text-right sm:items-end gap-2 sm:gap-2 w-full sm:w-auto">
@@ -166,14 +169,14 @@ export function MatchOverview({
                     {isDownloading ? (
                       <>
                         <Loader2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 animate-spin" />
-                        <span className="hidden xs:inline">Generating...</span>
+                        <span className="hidden xs:inline">{t("matchDashboard.matchOverview.download.generating")}</span>
                         <span className="xs:hidden">...</span>
                       </>
                     ) : (
                       <>
                         <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
-                        <span className="hidden xs:inline">Download</span>
-                        <span className="xs:hidden">DL</span>
+                        <span className="hidden xs:inline">{t("matchDashboard.matchOverview.download.download")}</span>
+                        <span className="xs:hidden">{t("matchDashboard.matchOverview.download.dl")}</span>
                       </>
                     )}
                   </Button>
@@ -190,7 +193,7 @@ export function MatchOverview({
                         onClick={onDownloadReport}
                         disabled={isDownloading}>
                         <Download className="mr-2 h-4 w-4" />
-                        Download Report
+                        {t("matchDashboard.matchOverview.download.downloadReport")}
                       </Button>
                     )}
                     {onRoundReport && (
@@ -199,7 +202,7 @@ export function MatchOverview({
                         className="w-full justify-start h-9 text-xs font-normal touch-manipulation"
                         onClick={onRoundReport}>
                         <BarChart3 className="mr-2 h-4 w-4" />
-                        Round Report
+                        {t("matchDashboard.matchOverview.download.roundReport")}
                       </Button>
                     )}
                   </div>
@@ -225,10 +228,10 @@ export function MatchOverview({
                 : totalViolations}
             </p>
             <p className="text-[10px] sm:text-xs text-muted-foreground">
-              Total Violations
+              {t("matchDashboard.matchOverview.stats.totalViolations")}
             </p>
             <p className="text-[9px] sm:text-[10px] text-muted-foreground/70 mt-0.5 hidden sm:block">
-              all platforms
+              {t("matchDashboard.matchOverview.stats.allPlatforms")}
             </p>
           </div>
         </div>
@@ -245,10 +248,10 @@ export function MatchOverview({
                 : totalActive}
             </p>
             <p className="text-[10px] sm:text-xs text-muted-foreground">
-              Active
+              {t("matchDashboard.matchOverview.stats.active")}
             </p>
             <p className="text-[9px] sm:text-[10px] text-muted-foreground/70 mt-0.5 hidden sm:block">
-              needs action
+              {t("matchDashboard.matchOverview.stats.needsAction")}
             </p>
           </div>
         </div>
@@ -272,10 +275,10 @@ export function MatchOverview({
               {blockSuccessRate !== undefined && blockSuccessRate !== null
                 ? `${blockSuccessRate}%`
                 : `${blockedRate}%`}{" "}
-              <span className="hidden sm:inline">success rate</span>
+              <span className="hidden sm:inline">{t("matchDashboard.matchOverview.stats.successRate")}</span>
             </p>
             <p className="text-[9px] sm:text-[10px] text-muted-foreground/70 mt-0.5 hidden sm:block">
-              Blocked Successfully
+              {t("matchDashboard.matchOverview.stats.blockedSuccessfully")}
             </p>
           </div>
         </div>
@@ -292,10 +295,10 @@ export function MatchOverview({
                 : 0}
             </p>
             <p className="text-[10px] sm:text-xs text-muted-foreground">
-              Removed
+              {t("matchDashboard.matchOverview.stats.removed")}
             </p>
             <p className="text-[9px] sm:text-[10px] text-muted-foreground/70 mt-0.5 hidden sm:block">
-              removed violations
+              {t("matchDashboard.matchOverview.stats.removedViolations")}
             </p>
           </div>
         </div>
@@ -312,10 +315,10 @@ export function MatchOverview({
                 : 0}
             </p>
             <p className="text-[10px] sm:text-xs text-muted-foreground">
-              Under Review
+              {t("matchDashboard.matchOverview.stats.underReview")}
             </p>
             <p className="text-[9px] sm:text-[10px] text-muted-foreground/70 mt-0.5 hidden sm:block">
-              pending review
+              {t("matchDashboard.matchOverview.stats.pendingReview")}
             </p>
           </div>
         </div>
@@ -327,7 +330,7 @@ export function MatchOverview({
             <div className="flex items-center gap-2">
               <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-chart-4" />
               <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                Total Views (This Match)
+                {t("matchDashboard.matchOverview.stats.totalViews")}
               </p>
             </div>
           </div>
@@ -337,7 +340,7 @@ export function MatchOverview({
               : formattedTotalViews}
           </p>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
-            Across all platforms
+            {t("matchDashboard.matchOverview.stats.acrossAllPlatforms")}
           </p>
         </div>
 
@@ -346,7 +349,7 @@ export function MatchOverview({
             <div className="flex items-center gap-2">
               <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-success" />
               <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                Avg Block Time (This Match)
+                {t("matchDashboard.matchOverview.stats.avgBlockTime")}
               </p>
             </div>
             <Badge
@@ -360,8 +363,8 @@ export function MatchOverview({
               {(avgBlockTimeNumber !== undefined && avgBlockTimeNumber !== null
                 ? avgBlockTimeNumber
                 : parseFloat(avgBlockTime)) <= targetMins
-                ? "Within target"
-                : "Over target"}
+                ? t("matchDashboard.matchOverview.stats.withinTarget")
+                : t("matchDashboard.matchOverview.stats.overTarget")}
             </Badge>
           </div>
           <p className="text-2xl sm:text-3xl font-bold text-foreground mb-1">
@@ -375,9 +378,9 @@ export function MatchOverview({
                 <>
                   {minutes}
                   <span className="text-sm sm:text-base text-muted-foreground ml-1">
-                    min{" "}
+                    {t("matchDashboard.matchOverview.stats.min")}{" "}
                     <span className="text-xs sm:text-sm text-muted-foreground">
-                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}hrs)
+                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}{t("matchDashboard.matchOverview.stats.hrs")})
                     </span>
                   </span>
                 </>
@@ -385,11 +388,11 @@ export function MatchOverview({
             })()}
           </p>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Target: {targetMins}{" "}
+            {t("matchDashboard.matchOverview.stats.target")} {targetMins}{" "}
             <span className="text-[10px] sm:text-xs text-muted-foreground">
-              min{" "}
+              {t("matchDashboard.matchOverview.stats.min")}{" "}
               <span className="text-[9px] sm:text-xs text-muted-foreground">
-                ({(targetMins / 60).toFixed(2)}hrs)
+                ({(targetMins / 60).toFixed(2)}{t("matchDashboard.matchOverview.stats.hrs")})
               </span>
             </span>
           </p>
@@ -401,7 +404,7 @@ export function MatchOverview({
             <div className="flex items-center gap-2">
               <Award className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-chart-2" />
               <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                Top Platform
+                {t("matchDashboard.matchOverview.stats.topPlatform")}
               </p>
             </div>
           </div>
@@ -412,11 +415,11 @@ export function MatchOverview({
               ? topPlatform.totalViews
               : "0"}
             <span className="text-sm sm:text-base text-muted-foreground ml-1">
-              views
+              {t("matchDashboard.matchOverview.stats.views")}
             </span>
           </p>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
-            {topPlatform ? `${topPlatform.name} • biggest source` : "N/A"}
+            {topPlatform ? `${topPlatform.name} • ${t("matchDashboard.matchOverview.stats.biggestSource")}` : t("matchDashboard.matchOverview.nA")}
           </p>
         </div>
       </div>

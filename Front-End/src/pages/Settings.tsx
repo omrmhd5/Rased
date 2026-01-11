@@ -52,9 +52,11 @@ import {
 } from "@/components/ui/dialog";
 import { API_URL } from "@/components/MatchDashboard/types";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function Settings() {
   const { user: currentUser } = useAuth();
+  const { t, isRTL } = useLanguage();
   const navigate = useNavigate();
   const [targetMinutes, setTargetMinutes] = useState<number>(15);
   const [targetHours, setTargetHours] = useState<number>(15 / 60);
@@ -113,8 +115,8 @@ export default function Settings() {
   useEffect(() => {
     if (!currentUser || currentUser.role !== "superAdmin") {
       toast({
-        title: "Access Denied",
-        description: "Only superAdmin can access this page.",
+        title: t("settings.accessDenied"),
+        description: t("settings.onlySuperAdmin"),
         variant: "destructive",
       });
       navigate("/");
@@ -156,8 +158,8 @@ export default function Settings() {
       } catch (error) {
         console.error("Error loading settings:", error);
         toast({
-          title: "Error",
-          description: "Failed to load settings. Using default values.",
+          title: t("settings.leaguesManagement.error.failedToLoad"),
+          description: t("settings.leaguesManagement.error.failedToLoad"),
           variant: "destructive",
         });
         // Use defaults if API fails
@@ -199,8 +201,8 @@ export default function Settings() {
     } catch (error) {
       console.error("Error fetching leagues:", error);
       toast({
-        title: "Error",
-        description: "Failed to load leagues.",
+        title: t("settings.leaguesManagement.error.failedToLoadLeagues"),
+        description: t("settings.leaguesManagement.error.failedToLoadLeagues"),
         variant: "destructive",
       });
     } finally {
@@ -244,17 +246,17 @@ export default function Settings() {
     if (formIsManual) {
       // Manual league validation
       if (!formSlug.trim() || !formName.trim()) {
-        setFormError("Slug and Name are required for manual leagues.");
+        setFormError(t("settings.leaguesManagement.error.slugNameRequired"));
         return;
       }
     } else {
       // Regular league validation
       if (!formSlug.trim() || !formApiUrl.trim() || !formReferer.trim()) {
-        setFormError("Slug, API URL, and Referer are required.");
+        setFormError(t("settings.leaguesManagement.error.slugApiUrlRefererRequired"));
         return;
       }
       if (!formIcon) {
-        setFormError("League icon is required for regular leagues.");
+        setFormError(t("settings.leaguesManagement.error.iconRequired"));
         return;
       }
     }
@@ -294,7 +296,7 @@ export default function Settings() {
 
       toast({
         title: "Success",
-        description: "League created successfully.",
+        description: t("settings.leaguesManagement.success.leagueCreated"),
       });
 
       setIsAddLeagueOpen(false);
@@ -303,7 +305,7 @@ export default function Settings() {
     } catch (error) {
       console.error("Error adding league:", error);
       setFormError(
-        error instanceof Error ? error.message : "Failed to create league"
+        error instanceof Error ? error.message : t("settings.leaguesManagement.error.failedToCreate")
       );
     } finally {
       setAddingLeague(false);
@@ -315,12 +317,12 @@ export default function Settings() {
     setFormError("");
 
     if (!formSlug.trim() || !formApiUrl.trim() || !formReferer.trim()) {
-      setFormError("Slug, API URL, and Referer are required.");
+      setFormError(t("settings.leaguesManagement.error.slugApiUrlRefererRequired"));
       return;
     }
 
     if (!editingLeague) {
-      setFormError("No league selected for editing.");
+      setFormError(t("settings.leaguesManagement.error.noLeagueSelected"));
       return;
     }
 
@@ -353,7 +355,7 @@ export default function Settings() {
 
       toast({
         title: "Success",
-        description: "League updated successfully.",
+        description: t("settings.leaguesManagement.success.leagueUpdated"),
       });
 
       setIsEditLeagueOpen(false);
@@ -362,7 +364,7 @@ export default function Settings() {
     } catch (error) {
       console.error("Error updating league:", error);
       setFormError(
-        error instanceof Error ? error.message : "Failed to update league"
+        error instanceof Error ? error.message : t("settings.leaguesManagement.error.failedToUpdate")
       );
     } finally {
       setUpdatingLeague(false);
@@ -386,17 +388,17 @@ export default function Settings() {
 
       toast({
         title: "Success",
-        description: `League ${
-          league.isHidden ? "shown" : "hidden"
-        } successfully.`,
+        description: league.isHidden 
+          ? t("settings.leaguesManagement.success.leagueShown")
+          : t("settings.leaguesManagement.success.leagueHidden"),
       });
 
       fetchLeagues();
     } catch (error) {
       console.error("Error toggling league:", error);
       toast({
-        title: "Error",
-        description: "Failed to toggle league.",
+        title: t("settings.leaguesManagement.error.failedToToggle"),
+        description: t("settings.leaguesManagement.error.failedToToggle"),
         variant: "destructive",
       });
     }
@@ -518,8 +520,8 @@ export default function Settings() {
   const handleSaveTargetMinutes = async () => {
     if (targetMinutes < 1) {
       toast({
-        title: "Validation Error",
-        description: "Target minutes must be greater than or equal to 1.",
+        title: t("settings.targetBlockTime.validationError"),
+        description: t("settings.targetBlockTime.mustBeGreaterThanOne"),
         variant: "destructive",
       });
       return;
@@ -552,17 +554,18 @@ export default function Settings() {
       setTargetHours(hours);
 
       toast({
-        title: "Settings Saved",
-        description: `Target block time updated to ${minutes} minutes (${hours.toFixed(
-          2
-        )} hours).`,
+        title: t("settings.targetBlockTime.settingsSaved"),
+        description: t("settings.targetBlockTime.targetUpdated", { 
+          minutes: minutes.toString(), 
+          hours: hours.toFixed(2) 
+        }),
       });
     } catch (error) {
       console.error("Error saving settings:", error);
       toast({
-        title: "Error",
+        title: t("settings.leaguesManagement.error.failedToSave"),
         description:
-          error instanceof Error ? error.message : "Failed to save settings",
+          error instanceof Error ? error.message : t("settings.leaguesManagement.error.failedToSave"),
         variant: "destructive",
       });
     } finally {
@@ -574,8 +577,8 @@ export default function Settings() {
   const handleSaveThresholds = async () => {
     if (viewsThreshold < 0 || violationsThreshold < 0) {
       toast({
-        title: "Validation Error",
-        description: "Thresholds must be greater than or equal to 0.",
+        title: t("settings.problematicAccountsThresholds.validationError"),
+        description: t("settings.problematicAccountsThresholds.mustBeGreaterThanZero"),
         variant: "destructive",
       });
       return;
@@ -612,17 +615,18 @@ export default function Settings() {
       setViolationsThresholdInput(violationsThresh.toString());
 
       toast({
-        title: "Thresholds Saved",
-        description: `Views threshold: ${viewsThresh.toLocaleString(
-          "en-US"
-        )}, Violations threshold: ${violationsThresh}`,
+        title: t("settings.problematicAccountsThresholds.thresholdsSaved"),
+        description: t("settings.problematicAccountsThresholds.thresholdsUpdated", {
+          views: viewsThresh.toLocaleString("en-US"),
+          violations: violationsThresh.toString()
+        }),
       });
     } catch (error) {
       console.error("Error saving thresholds:", error);
       toast({
-        title: "Error",
+        title: t("settings.problematicAccountsThresholds.error.failedToSaveThresholds"),
         description:
-          error instanceof Error ? error.message : "Failed to save thresholds",
+          error instanceof Error ? error.message : t("settings.problematicAccountsThresholds.error.failedToSaveThresholds"),
         variant: "destructive",
       });
     } finally {
@@ -635,10 +639,10 @@ export default function Settings() {
       <div>
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2">
           <SettingsIcon className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8" />
-          Settings
+          {t("settings.title")}
         </h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
-          Manage application settings
+          {t("settings.subtitle")}
         </p>
       </div>
 
@@ -649,11 +653,11 @@ export default function Settings() {
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               <CardTitle className="text-lg sm:text-xl">
-                Target Block Time
+                {t("settings.targetBlockTime.title")}
               </CardTitle>
             </div>
             <CardDescription className="text-xs sm:text-sm">
-              Set the target time (in minutes) for blocking violations
+              {t("settings.targetBlockTime.description")}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 space-y-3 sm:space-y-4">
@@ -668,7 +672,7 @@ export default function Settings() {
                     <Label
                       htmlFor="targetMinutes"
                       className="text-xs sm:text-sm">
-                      Minutes
+                      {t("settings.targetBlockTime.minutes")}
                     </Label>
                     <Input
                       id="targetMinutes"
@@ -684,7 +688,7 @@ export default function Settings() {
                   </div>
                   <div className="space-y-1.5 sm:space-y-2">
                     <Label htmlFor="targetHours" className="text-xs sm:text-sm">
-                      Hours
+                      {t("settings.targetBlockTime.hours")}
                     </Label>
                     <Input
                       id="targetHours"
@@ -700,8 +704,7 @@ export default function Settings() {
                   </div>
                 </div>
                 <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  Enter time in either minutes or hours - values will
-                  auto-convert
+                  {t("settings.targetBlockTime.autoConvert")}
                 </p>
                 <Button
                   onClick={handleSaveTargetMinutes}
@@ -710,12 +713,12 @@ export default function Settings() {
                   {saving ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
-                      Saving...
+                      {t("settings.targetBlockTime.saving")}
                     </>
                   ) : (
                     <>
                       <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                      Save Target Time
+                      {t("settings.targetBlockTime.saveTargetTime")}
                     </>
                   )}
                 </Button>
@@ -730,12 +733,11 @@ export default function Settings() {
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               <CardTitle className="text-lg sm:text-xl">
-                Problematic Accounts Thresholds
+                {t("settings.problematicAccountsThresholds.title")}
               </CardTitle>
             </div>
             <CardDescription className="text-xs sm:text-sm">
-              Set thresholds for views and violations. Accounts above these
-              thresholds are considered problematic.
+              {t("settings.problematicAccountsThresholds.description")}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-4 sm:p-6 space-y-3 sm:space-y-4">
@@ -750,7 +752,7 @@ export default function Settings() {
                     <Label
                       htmlFor="viewsThreshold"
                       className="text-xs sm:text-sm">
-                      Views Threshold
+                      {t("settings.problematicAccountsThresholds.viewsThreshold")}
                     </Label>
                     <Input
                       id="viewsThreshold"
@@ -765,15 +767,14 @@ export default function Settings() {
                       disabled={saving}
                     />
                     <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      Accounts with views above this number are considered
-                      problematic
+                      {t("settings.problematicAccountsThresholds.viewsDescription")}
                     </p>
                   </div>
                   <div className="space-y-1.5 sm:space-y-2">
                     <Label
                       htmlFor="violationsThreshold"
                       className="text-xs sm:text-sm">
-                      Violations Threshold
+                      {t("settings.problematicAccountsThresholds.violationsThreshold")}
                     </Label>
                     <Input
                       id="violationsThreshold"
@@ -787,8 +788,7 @@ export default function Settings() {
                       disabled={saving}
                     />
                     <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      Accounts with violations above this number are considered
-                      problematic
+                      {t("settings.problematicAccountsThresholds.violationsDescription")}
                     </p>
                   </div>
                 </div>
@@ -799,12 +799,12 @@ export default function Settings() {
                   {saving ? (
                     <>
                       <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
-                      Saving...
+                      {t("settings.targetBlockTime.saving")}
                     </>
                   ) : (
                     <>
                       <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                      Save Thresholds
+                      {t("settings.problematicAccountsThresholds.saveThresholds")}
                     </>
                   )}
                 </Button>
@@ -821,7 +821,7 @@ export default function Settings() {
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               <CardTitle className="text-lg sm:text-xl">
-                Leagues Management
+                {t("settings.leaguesManagement.title")}
               </CardTitle>
             </div>
             <Dialog
@@ -837,19 +837,19 @@ export default function Settings() {
                   size="sm"
                   className="h-8 sm:h-9 text-xs sm:text-sm touch-manipulation">
                   <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  <span className="hidden xs:inline">Add League</span>
-                  <span className="xs:hidden">Add</span>
+                  <span className="hidden xs:inline">{t("settings.leaguesManagement.addLeague")}</span>
+                  <span className="xs:hidden">{t("settings.leaguesManagement.add")}</span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="w-[95vw] sm:w-full max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="text-lg sm:text-xl">
-                    Add League
+                    {t("settings.leaguesManagement.addLeague")}
                   </DialogTitle>
                   <DialogDescription className="text-xs sm:text-sm">
                     {formIsManual
-                      ? "Create a manual league by providing basic information."
-                      : "Add a new league by providing the API URL and referer. The system will fetch competition data automatically."}
+                      ? t("settings.leaguesManagement.manualLeagueDescription")
+                      : t("settings.leaguesManagement.regularLeagueDescription")}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
@@ -864,13 +864,13 @@ export default function Settings() {
                     <Label
                       htmlFor="isManual"
                       className="text-xs sm:text-sm font-normal cursor-pointer">
-                      Manual League
+                      {t("settings.leaguesManagement.manualLeague")}
                     </Label>
                   </div>
 
                   <div className="space-y-1.5 sm:space-y-2">
                     <Label htmlFor="slug" className="text-xs sm:text-sm">
-                      Slug *
+                      {t("settings.leaguesManagement.slug")} *
                     </Label>
                     <Input
                       id="slug"
@@ -885,7 +885,7 @@ export default function Settings() {
                     <>
                       <div className="space-y-1.5 sm:space-y-2">
                         <Label htmlFor="name" className="text-xs sm:text-sm">
-                          Name *
+                          {t("settings.leaguesManagement.name")} *
                         </Label>
                         <Input
                           id="name"
@@ -899,7 +899,7 @@ export default function Settings() {
                         <Label
                           htmlFor="arabicName"
                           className="text-xs sm:text-sm">
-                          Arabic Name
+                          {t("settings.leaguesManagement.arabicName")}
                         </Label>
                         <Input
                           id="arabicName"
@@ -913,7 +913,7 @@ export default function Settings() {
                         <Label
                           htmlFor="competitionType"
                           className="text-xs sm:text-sm">
-                          Competition Type *
+                          {t("settings.leaguesManagement.competitionType")} *
                         </Label>
                         <Select
                           value={formCompetitionType}
@@ -921,17 +921,17 @@ export default function Settings() {
                             setFormCompetitionType(value)
                           }>
                           <SelectTrigger className="h-9 sm:h-10 text-sm">
-                            <SelectValue placeholder="Select type" />
+                            <SelectValue placeholder={t("settings.leaguesManagement.selectType")} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="league">League</SelectItem>
-                            <SelectItem value="cup">Cup</SelectItem>
+                            <SelectItem value="league">{t("settings.leaguesManagement.league")}</SelectItem>
+                            <SelectItem value="cup">{t("settings.leaguesManagement.cup")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-1.5 sm:space-y-2">
                         <Label htmlFor="icon" className="text-xs sm:text-sm">
-                          League Icon (SVG or PNG) - Optional
+                          {t("settings.leaguesManagement.leagueIcon")}
                         </Label>
                         <Input
                           id="icon"
@@ -941,7 +941,7 @@ export default function Settings() {
                             const file = e.target.files?.[0];
                             if (file) {
                               if (file.size > 5 * 1024 * 1024) {
-                                setFormError("File size must be less than 5MB");
+                                setFormError(t("settings.leaguesManagement.error.fileSizeTooLarge"));
                                 return;
                               }
                               setFormIcon(file);
@@ -952,7 +952,7 @@ export default function Settings() {
                         />
                         {formIcon && (
                           <p className="text-[10px] sm:text-xs text-muted-foreground">
-                            Selected: {formIcon.name}
+                            {t("settings.leaguesManagement.selected")} {formIcon.name}
                           </p>
                         )}
                       </div>
@@ -961,7 +961,7 @@ export default function Settings() {
                     <>
                       <div className="space-y-1.5 sm:space-y-2">
                         <Label htmlFor="apiUrl" className="text-xs sm:text-sm">
-                          API URL *
+                          {t("settings.leaguesManagement.apiUrl")} *
                         </Label>
                         <Input
                           id="apiUrl"
@@ -973,7 +973,7 @@ export default function Settings() {
                       </div>
                       <div className="space-y-1.5 sm:space-y-2">
                         <Label htmlFor="referer" className="text-xs sm:text-sm">
-                          Referer *
+                          {t("settings.leaguesManagement.referer")} *
                         </Label>
                         <Input
                           id="referer"
@@ -987,7 +987,7 @@ export default function Settings() {
                         <Label
                           htmlFor="arabicName"
                           className="text-xs sm:text-sm">
-                          Arabic Name
+                          {t("settings.leaguesManagement.arabicName")}
                         </Label>
                         <Input
                           id="arabicName"
@@ -1001,7 +1001,7 @@ export default function Settings() {
                         <Label
                           htmlFor="competitionType"
                           className="text-xs sm:text-sm">
-                          Competition Type *
+                          {t("settings.leaguesManagement.competitionType")} *
                         </Label>
                         <Select
                           value={formCompetitionType}
@@ -1009,17 +1009,17 @@ export default function Settings() {
                             setFormCompetitionType(value)
                           }>
                           <SelectTrigger className="h-9 sm:h-10 text-sm">
-                            <SelectValue placeholder="Select type" />
+                            <SelectValue placeholder={t("settings.leaguesManagement.selectType")} />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="league">League</SelectItem>
-                            <SelectItem value="cup">Cup</SelectItem>
+                            <SelectItem value="league">{t("settings.leaguesManagement.league")}</SelectItem>
+                            <SelectItem value="cup">{t("settings.leaguesManagement.cup")}</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div className="space-y-1.5 sm:space-y-2">
                         <Label htmlFor="icon" className="text-xs sm:text-sm">
-                          League Icon * (SVG or PNG)
+                          {t("settings.leaguesManagement.leagueIconRequired")}
                         </Label>
                         <Input
                           id="icon"
@@ -1029,7 +1029,7 @@ export default function Settings() {
                             const file = e.target.files?.[0];
                             if (file) {
                               if (file.size > 5 * 1024 * 1024) {
-                                setFormError("File size must be less than 5MB");
+                                setFormError(t("settings.leaguesManagement.error.fileSizeTooLarge"));
                                 return;
                               }
                               setFormIcon(file);
@@ -1040,7 +1040,7 @@ export default function Settings() {
                         />
                         {formIcon && (
                           <p className="text-[10px] sm:text-xs text-muted-foreground">
-                            Selected: {formIcon.name}
+                            {t("settings.leaguesManagement.selected")} {formIcon.name}
                           </p>
                         )}
                       </div>
@@ -1063,7 +1063,7 @@ export default function Settings() {
                       resetLeagueForm();
                     }}
                     className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                    Cancel
+                    {t("settings.leaguesManagement.cancel")}
                   </Button>
                   <Button
                     onClick={handleAddLeague}
@@ -1072,10 +1072,10 @@ export default function Settings() {
                     {addingLeague ? (
                       <>
                         <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
-                        Adding...
+                        {t("settings.leaguesManagement.adding")}
                       </>
                     ) : (
-                      "Add League"
+                      t("settings.leaguesManagement.addLeague")
                     )}
                   </Button>
                 </DialogFooter>
@@ -1083,7 +1083,7 @@ export default function Settings() {
             </Dialog>
           </div>
           <CardDescription className="text-xs sm:text-sm">
-            Manage leagues and their API configurations
+            {t("settings.leaguesManagement.description")}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
@@ -1095,7 +1095,7 @@ export default function Settings() {
             <div className="text-center py-8 sm:py-12 text-muted-foreground">
               <Globe className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
               <p className="text-xs sm:text-sm">
-                No leagues found. Add your first league to get started.
+                {t("settings.leaguesManagement.noLeaguesFound")}
               </p>
             </div>
           ) : (
@@ -1122,13 +1122,15 @@ export default function Settings() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-sm font-semibold truncate">
-                                {league.knownName ||
-                                  league.name ||
-                                  league.league}
+                                {isRTL && league.arabicName
+                                  ? league.arabicName
+                                  : league.knownName ||
+                                    league.name ||
+                                    league.league}
                               </span>
                               {league.isHidden && (
                                 <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                                  Hidden
+                                  {t("settings.leaguesManagement.status.hidden")}
                                 </span>
                               )}
                             </div>
@@ -1138,10 +1140,10 @@ export default function Settings() {
                               </p>
                             )}
                             <p className="text-xs text-muted-foreground truncate">
-                              Slug: {league.league}
+                              {t("settings.leaguesManagement.slugLabel")} {league.league}
                             </p>
                             <p className="text-xs text-muted-foreground truncate">
-                              Code: {league.competitionCode || "N/A"}
+                              {t("settings.leaguesManagement.codeLabel")} {league.competitionCode || t("whitelistedAccounts.nA")}
                             </p>
                           </div>
                         </div>
@@ -1177,25 +1179,25 @@ export default function Settings() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">
-                        Icon
+                        {t("settings.leaguesManagement.tableHeaders.icon")}
                       </TableHead>
                       <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">
-                        Name
+                        {t("settings.leaguesManagement.tableHeaders.name")}
                       </TableHead>
                       <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">
-                        Arabic Name
+                        {t("settings.leaguesManagement.tableHeaders.arabicName")}
                       </TableHead>
                       <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">
-                        Slug
+                        {t("settings.leaguesManagement.tableHeaders.slug")}
                       </TableHead>
                       <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">
-                        Code
+                        {t("settings.leaguesManagement.tableHeaders.code")}
                       </TableHead>
                       <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">
-                        Status
+                        {t("settings.leaguesManagement.tableHeaders.status")}
                       </TableHead>
                       <TableHead className="p-3 sm:p-4 text-right text-xs sm:text-sm">
-                        Actions
+                        {t("settings.leaguesManagement.tableHeaders.actions")}
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1222,7 +1224,9 @@ export default function Settings() {
                             )}
                           </TableCell>
                           <TableCell className="p-3 sm:p-4 text-xs sm:text-sm">
-                            {league.knownName || league.name || league.league}
+                            {isRTL && league.arabicName
+                              ? league.arabicName
+                              : league.knownName || league.name || league.league}
                           </TableCell>
                           <TableCell className="p-3 sm:p-4 text-xs sm:text-sm">
                             {league.arabicName || "-"}
@@ -1236,11 +1240,11 @@ export default function Settings() {
                           <TableCell className="p-3 sm:p-4 text-xs sm:text-sm">
                             {league.isHidden ? (
                               <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                                Hidden
+                                {t("settings.leaguesManagement.status.hidden")}
                               </span>
                             ) : (
                               <span className="text-xs px-2 py-0.5 rounded bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-                                Visible
+                                {t("settings.leaguesManagement.status.visible")}
                               </span>
                             )}
                           </TableCell>
@@ -1282,17 +1286,16 @@ export default function Settings() {
         <DialogContent className="w-[95vw] sm:w-full max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">
-              Edit League
+              {t("settings.leaguesManagement.editLeague")}
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              Update league information. Only manually added fields can be
-              edited.
+              {t("settings.leaguesManagement.updateLeagueInfo")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
             <div className="space-y-1.5 sm:space-y-2">
               <Label htmlFor="edit-slug" className="text-xs sm:text-sm">
-                Slug *
+                {t("settings.leaguesManagement.slug")} *
               </Label>
               <Input
                 id="edit-slug"
@@ -1304,7 +1307,7 @@ export default function Settings() {
             </div>
             <div className="space-y-1.5 sm:space-y-2">
               <Label htmlFor="edit-apiUrl" className="text-xs sm:text-sm">
-                API URL *
+                {t("settings.leaguesManagement.apiUrl")} *
               </Label>
               <Input
                 id="edit-apiUrl"
@@ -1316,7 +1319,7 @@ export default function Settings() {
             </div>
             <div className="space-y-1.5 sm:space-y-2">
               <Label htmlFor="edit-referer" className="text-xs sm:text-sm">
-                Referer *
+                {t("settings.leaguesManagement.referer")} *
               </Label>
               <Input
                 id="edit-referer"
@@ -1328,7 +1331,7 @@ export default function Settings() {
             </div>
             <div className="space-y-1.5 sm:space-y-2">
               <Label htmlFor="edit-arabicName" className="text-xs sm:text-sm">
-                Arabic Name
+                {t("settings.leaguesManagement.arabicName")}
               </Label>
               <Input
                 id="edit-arabicName"
@@ -1342,7 +1345,7 @@ export default function Settings() {
               <Label
                 htmlFor="edit-competitionType"
                 className="text-xs sm:text-sm">
-                Competition Type *
+                {t("settings.leaguesManagement.competitionType")} *
               </Label>
               <Select
                 value={formCompetitionType}
@@ -1350,17 +1353,17 @@ export default function Settings() {
                   setFormCompetitionType(value)
                 }>
                 <SelectTrigger className="h-9 sm:h-10 text-sm">
-                  <SelectValue placeholder="Select type" />
+                  <SelectValue placeholder={t("settings.leaguesManagement.selectType")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="league">League</SelectItem>
-                  <SelectItem value="cup">Cup</SelectItem>
+                  <SelectItem value="league">{t("settings.leaguesManagement.league")}</SelectItem>
+                  <SelectItem value="cup">{t("settings.leaguesManagement.cup")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5 sm:space-y-2">
               <Label htmlFor="edit-icon" className="text-xs sm:text-sm">
-                League Icon (SVG or PNG) - Optional
+                {t("settings.leaguesManagement.leagueIcon")}
               </Label>
               <Input
                 id="edit-icon"
@@ -1370,7 +1373,7 @@ export default function Settings() {
                   const file = e.target.files?.[0];
                   if (file) {
                     if (file.size > 5 * 1024 * 1024) {
-                      setFormError("File size must be less than 5MB");
+                      setFormError(t("settings.leaguesManagement.error.fileSizeTooLarge"));
                       return;
                     }
                     setFormIcon(file);
@@ -1381,12 +1384,12 @@ export default function Settings() {
               />
               {formIcon && (
                 <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  Selected: {formIcon.name}
+                  {t("settings.leaguesManagement.selected")} {formIcon.name}
                 </p>
               )}
               {editingLeague?.iconUrl && !formIcon && (
                 <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  Current icon: {editingLeague.iconUrl.split("/").pop()}
+                  {t("settings.leaguesManagement.currentIcon")} {editingLeague.iconUrl.split("/").pop()}
                 </p>
               )}
             </div>
@@ -1407,7 +1410,7 @@ export default function Settings() {
                 resetLeagueForm();
               }}
               className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-              Cancel
+              {t("settings.leaguesManagement.cancel")}
             </Button>
             <Button
               onClick={handleUpdateLeague}
@@ -1416,10 +1419,10 @@ export default function Settings() {
               {updatingLeague ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
-                  Updating...
+                  {t("settings.leaguesManagement.updating")}
                 </>
               ) : (
-                "Update League"
+                t("settings.leaguesManagement.updateLeague")
               )}
             </Button>
           </DialogFooter>

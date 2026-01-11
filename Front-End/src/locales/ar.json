@@ -229,6 +229,9 @@
     "success": "نجاح",
     "removed": "تمت الإزالة",
     "review": "مراجعة",
+    "reported": "تم الإبلاغ عنه",
+    "allTypes": "جميع الأنواع",
+    "other": "أخرى",
     "live": "مباشر:",
     "highlights": "أبرز اللحظات:",
     "others": "أخرى:",
@@ -450,6 +453,295 @@
       "failedToAdd": "فشل إضافة مستخدم",
       "failedToUpdate": "فشل تحديث مستخدم",
       "failedToDelete": "فشل حذف مستخدم"
+    }
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "subtitle": "إدارة إعدادات التطبيق",
+    "accessDenied": "تم رفض الوصول",
+    "onlySuperAdmin": "يمكن للمسؤول الرئيسي فقط الوصول إلى هذه الصفحة.",
+    "targetBlockTime": {
+      "title": "وقت الحظر المستهدف",
+      "description": "تعيين الوقت المستهدف (بالدقائق) لحظر الانتهاكات",
+      "minutes": "الدقائق",
+      "hours": "الساعات",
+      "autoConvert": "أدخل الوقت إما بالدقائق أو الساعات - سيتم التحويل تلقائياً",
+      "saveTargetTime": "حفظ الوقت المستهدف",
+      "saving": "جاري الحفظ...",
+      "validationError": "خطأ في التحقق",
+      "mustBeGreaterThanOne": "يجب أن تكون الدقائق المستهدفة أكبر من أو تساوي 1.",
+      "settingsSaved": "تم حفظ الإعدادات",
+      "targetUpdated": "تم تحديث وقت الحظر المستهدف إلى {minutes} دقيقة ({hours} ساعة)."
+    },
+    "problematicAccountsThresholds": {
+      "title": "عتبات الحسابات المشكلة",
+      "description": "تعيين العتبات للمشاهدات والانتهاكات. الحسابات التي تتجاوز هذه العتبات تعتبر مشكلة.",
+      "viewsThreshold": "عتبة المشاهدات",
+      "violationsThreshold": "عتبة الانتهاكات",
+      "viewsDescription": "الحسابات التي تتجاوز مشاهداتها هذا الرقم تعتبر مشكلة",
+      "violationsDescription": "الحسابات التي تتجاوز انتهاكاتها هذا الرقم تعتبر مشكلة",
+      "saveThresholds": "حفظ العتبات",
+      "thresholdsSaved": "تم حفظ العتبات",
+      "thresholdsUpdated": "عتبة المشاهدات: {views}، عتبة الانتهاكات: {violations}",
+      "validationError": "خطأ في التحقق",
+      "mustBeGreaterThanZero": "يجب أن تكون العتبات أكبر من أو تساوي 0."
+    },
+    "leaguesManagement": {
+      "title": "إدارة الدوريات",
+      "description": "إدارة الدوريات وتكوينات واجهة برمجة التطبيقات الخاصة بها",
+      "addLeague": "إضافة دوري",
+      "add": "إضافة",
+      "editLeague": "تعديل دوري",
+      "updateLeagueInfo": "تحديث معلومات الدوري. يمكن تعديل الحقول المضافة يدوياً فقط.",
+      "manualLeague": "دوري يدوي",
+      "manualLeagueDescription": "إنشاء دوري يدوي من خلال تقديم المعلومات الأساسية.",
+      "regularLeagueDescription": "إضافة دوري جديد من خلال تقديم رابط واجهة برمجة التطبيقات والمرجع. سيقوم النظام بجلب بيانات المسابقة تلقائياً.",
+      "slug": "المعرف",
+      "name": "الاسم",
+      "arabicName": "الاسم العربي",
+      "competitionType": "نوع المسابقة",
+      "leagueIcon": "أيقونة الدوري (SVG أو PNG) - اختياري",
+      "leagueIconRequired": "أيقونة الدوري * (SVG أو PNG)",
+      "apiUrl": "رابط واجهة برمجة التطبيقات",
+      "referer": "المرجع",
+      "selectType": "اختر النوع",
+      "league": "دوري",
+      "cup": "كأس",
+      "selected": "المحدد:",
+      "currentIcon": "الأيقونة الحالية:",
+      "cancel": "إلغاء",
+      "adding": "جاري الإضافة...",
+      "updating": "جاري التحديث...",
+      "updateLeague": "تحديث الدوري",
+      "loadingLeagues": "جاري تحميل الدوريات...",
+      "noLeaguesFound": "لم يتم العثور على دوريات. أضف دوريك الأول للبدء.",
+      "tableHeaders": {
+        "icon": "الأيقونة",
+        "name": "الاسم",
+        "arabicName": "الاسم العربي",
+        "slug": "المعرف",
+        "code": "الكود",
+        "status": "الحالة",
+        "actions": "الإجراءات"
+      },
+      "status": {
+        "hidden": "مخفي",
+        "visible": "ظاهر"
+      },
+      "slugLabel": "المعرف:",
+      "codeLabel": "الكود:",
+      "success": {
+        "leagueCreated": "تم إنشاء الدوري بنجاح.",
+        "leagueUpdated": "تم تحديث الدوري بنجاح.",
+        "leagueShown": "تم إظهار الدوري بنجاح.",
+        "leagueHidden": "تم إخفاء الدوري بنجاح."
+      },
+      "error": {
+        "failedToLoad": "فشل تحميل الإعدادات. استخدام القيم الافتراضية.",
+        "failedToLoadLeagues": "فشل تحميل الدوريات.",
+        "failedToSave": "فشل حفظ الإعدادات",
+        "failedToSaveThresholds": "فشل حفظ العتبات",
+        "failedToCreate": "فشل إنشاء دوري",
+        "failedToUpdate": "فشل تحديث دوري",
+        "failedToToggle": "فشل تبديل حالة الدوري",
+        "slugNameRequired": "المعرف والاسم مطلوبان للدوريات اليدوية.",
+        "slugApiUrlRefererRequired": "المعرف ورابط واجهة برمجة التطبيقات والمرجع مطلوبة.",
+        "iconRequired": "أيقونة الدوري مطلوبة للدوريات العادية.",
+        "noLeagueSelected": "لم يتم اختيار دوري للتعديل.",
+        "fileSizeTooLarge": "يجب أن يكون حجم الملف أقل من 5 ميجابايت"
+      }
+    }
+  },
+  "matchDashboard": {
+    "loading": "جاري تحميل بيانات المباراة...",
+    "matchNotFound": "لم يتم العثور على المباراة",
+    "error": {
+      "title": "خطأ",
+      "failedToRefetch": "فشل إعادة جلب البيانات",
+      "failedToLoad": "فشل تحميل بيانات المباراة",
+      "matchDataNotAvailable": "بيانات المباراة غير متاحة",
+      "failedToGenerateReport": "فشل إنشاء التقرير",
+      "failedToAddNote": "فشل إضافة الملاحظة",
+      "failedToUpdateStatus": "فشل تحديث حالة الانتهاك",
+      "failedToChangeStatus": "فشل تغيير حالة الانتهاك",
+      "failedToBlock": "فشل حظر الانتهاك",
+      "failedToDelete": "فشل حذف الانتهاك",
+      "failedToSave": "فشل حفظ الانتهاك",
+      "noComponentsFound": "لم يتم العثور على مكونات للالتقاط",
+      "couldNotGetCanvasContext": "تعذر الحصول على سياق اللوحة",
+      "failedToCreateImageBlob": "فشل إنشاء كائن الصورة"
+    },
+    "success": {
+      "statusChangedToActive": "تم تغيير الحالة إلى نشط",
+      "violationNowActive": "الانتهاك نشط الآن مرة أخرى",
+      "violationBlocked": "تم حظر الانتهاك",
+      "violationBlockedAt": "تم تحديد الانتهاك كمحظور في {time}",
+      "violationDeleted": "تم حذف الانتهاك",
+      "violationRemoved": "تم إزالة الانتهاك بنجاح",
+      "violationSaved": "تم حفظ الانتهاك بنجاح",
+      "violationUpdated": "تم تحديث الانتهاك بنجاح",
+      "changesSaved": "تم حفظ التغييرات بنجاح",
+      "noteAdded": "تمت إضافة الملاحظة",
+      "noteAddedSuccess": "تمت إضافة الملاحظة بنجاح",
+      "reportDownloaded": "تم تنزيل التقرير",
+      "reportDownloadedSuccess": "تم تنزيل تقرير المباراة بنجاح"
+    },
+    "whitelistWarning": {
+      "title": "تحذير حساب في القائمة البيضاء",
+      "description": "هذا الحساب موجود في القائمة البيضاء لهذه المنصة. هل أنت متأكد أنك تريد إضافة انتهاك لهذا الحساب؟",
+      "cancel": "إلغاء",
+      "confirm": "نعم، أضف الانتهاك"
+    },
+    "add": "إضافة",
+    "addPlatform": "إضافة منصة",
+    "sections": {
+      "platformOperations": "عمليات المنصات (هذه المباراة)",
+      "platformComparison": "مقارنة المنصات (هذه المباراة)",
+      "platformComparisonDescription": "قارن المنصات لهذه المباراة"
+    },
+    "report": {
+      "league": "الدوري:",
+      "week": "الأسبوع",
+      "stage": "المرحلة",
+      "dateTime": "التاريخ والوقت:",
+      "vs": "ضد"
+    },
+    "matchOverview": {
+      "vs": "ضد",
+      "stage": "المرحلة",
+      "week": "الأسبوع",
+      "nA": "غير متاح",
+      "status": {
+        "live": "● مباشر",
+        "completed": "مكتمل",
+        "postponed": "مؤجل",
+        "cancelled": "ملغي",
+        "upcoming": "قادم"
+      },
+      "download": {
+        "generating": "جاري الإنشاء...",
+        "download": "تنزيل",
+        "dl": "تنزيل",
+        "downloadReport": "تنزيل التقرير",
+        "roundReport": "تقرير الجولة"
+      },
+      "stats": {
+        "totalViolations": "إجمالي الانتهاكات",
+        "allPlatforms": "جميع المنصات",
+        "active": "نشط",
+        "needsAction": "يحتاج إجراء",
+        "successRate": "معدل النجاح",
+        "blockedSuccessfully": "تم الحظر بنجاح",
+        "removed": "تمت الإزالة",
+        "removedViolations": "انتهاكات تمت إزالتها",
+        "underReview": "قيد المراجعة",
+        "pendingReview": "في انتظار المراجعة",
+        "totalViews": "إجمالي المشاهدات (هذه المباراة)",
+        "acrossAllPlatforms": "عبر جميع المنصات",
+        "avgBlockTime": "متوسط وقت الحظر (هذه المباراة)",
+        "withinTarget": "ضمن الهدف",
+        "overTarget": "فوق الهدف",
+        "min": "دقيقة",
+        "hrs": "ساعة",
+        "target": "الهدف:",
+        "topPlatform": "أفضل منصة",
+        "views": "مشاهدة",
+        "biggestSource": "أكبر مصدر"
+      }
+    },
+    "activityLog": {
+      "title": "سجل نشاط المباراة",
+      "filters": {
+        "allActivity": "كل النشاط",
+        "violationAdded": "تمت إضافة انتهاك",
+        "violationDeleted": "تم حذف انتهاك",
+        "urlChanged": "تم تغيير الرابط",
+        "accountChanged": "تم تغيير الحساب",
+        "contentTypeChanged": "تم تغيير نوع المحتوى",
+        "statusChange": "تغيير الحالة",
+        "viewsChanged": "تم تغيير المشاهدات",
+        "timeAddedChanged": "تم تغيير وقت الإضافة",
+        "blockedAtChanged": "تم تغيير وقت الحظر",
+        "notesAdded": "ملاحظات - تمت الإضافة",
+        "notesEdited": "ملاحظات - تم التعديل",
+        "notesChanged": "ملاحظات - تم التغيير"
+      },
+      "platformFilter": {
+        "placeholder": "جميع المنصات",
+        "allPlatforms": "جميع المنصات"
+      },
+      "userFilter": {
+        "placeholder": "جميع المستخدمين",
+        "allUsers": "جميع المستخدمين"
+      },
+      "emptyState": {
+        "noActivityFound": "لم يتم العثور على نشاط",
+        "noViolationsYet": "لا توجد انتهاكات بعد",
+        "tryChangingFilter": "جرب تغيير المرشح"
+      },
+      "badges": {
+        "added": "تمت الإضافة",
+        "deleted": "تم الحذف",
+        "statusChange": "تغيير الحالة",
+        "urlChanged": "تم تغيير الرابط",
+        "accountChanged": "تم تغيير الحساب",
+        "contentTypeChanged": "تم تغيير نوع المحتوى",
+        "viewsChanged": "تم تغيير المشاهدات",
+        "timeAddedChanged": "تم تغيير وقت الإضافة",
+        "blockedAtAdded": "تمت إضافة وقت الحظر",
+        "blockedAtRemoved": "تمت إزالة وقت الحظر",
+        "blockedAtChanged": "تم تغيير وقت الحظر",
+        "noteAdded": "تمت إضافة ملاحظة",
+        "noteDeleted": "تم حذف الملاحظة",
+        "noteChanged": "تم تغيير الملاحظة",
+        "updated": "تم التحديث"
+      },
+      "descriptions": {
+        "violationCreatedOn": "تم إنشاء انتهاك على",
+        "violationDeletedFrom": "تم حذف انتهاك من",
+        "forChannelUser": "لقناة/مستخدم",
+        "with": "مع",
+        "views": "مشاهدة",
+        "andStatus": "والحالة:",
+        "withStatus": "مع الحالة:",
+        "statusChangedFrom": "تم تغيير الحالة من",
+        "to": "إلى",
+        "blockedAtTimeAdded": "تمت إضافة وقت الحظر:",
+        "blockedAtTimeRemoved": "تمت إزالة وقت الحظر",
+        "violationUrlChangedFrom": "تم تغيير رابط الانتهاك من",
+        "accountChannelChangedFrom": "تم تغيير قناة الحساب من",
+        "contentTypeChangedFrom": "تم تغيير نوع المحتوى من",
+        "viewsChangedFrom": "تم تغيير المشاهدات من",
+        "timeAddedChangedFrom": "تم تغيير وقت الإضافة من",
+        "blockedAtChangedFrom": "تم تغيير وقت الحظر من",
+        "noteChangedFrom": "تم تغيير الملاحظة من",
+        "notesChanged": "تم تغيير الملاحظات",
+        "changedFrom": "تم التغيير من",
+        "violationUpdated": "تم تحديث الانتهاك",
+        "unknownPlatform": "منصة غير معروفة",
+        "platform": "منصة"
+      },
+      "timeAgo": {
+        "justNow": "الآن",
+        "minutesAgo": "منذ {minutes} دقيقة",
+        "hoursAgo": "منذ {hours} ساعة",
+        "daysAgo": "منذ {days} يوم"
+      },
+      "dateTime": {
+        "at": "في"
+      },
+      "actions": {
+        "deleteLogEntry": "حذف إدخال السجل",
+        "maximize": "تكبير",
+        "minimize": "تصغير"
+      },
+      "deleteDialog": {
+        "title": "حذف إدخال السجل",
+        "description": "هل أنت متأكد أنك تريد حذف إدخال السجل هذا؟ لا يمكن التراجع عن هذا الإجراء."
+      },
+      "error": {
+        "failedToDelete": "فشل حذف إدخال السجل. يرجى المحاولة مرة أخرى."
+      }
     }
   }
 }

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -61,6 +62,7 @@ import { PlatformComparisonMobile } from "@/components/MatchDashboard/PlatformCo
 export default function MatchDashboard() {
   const { id } = useParams<{ id: string }>();
   const { user, leagues } = useAuth();
+  const { t, isRTL } = useLanguage();
   const isSuperAdmin = user?.role === "superAdmin";
   const canModifyViolations =
     user?.role === "superAdmin" || user?.role === "employee";
@@ -330,8 +332,8 @@ export default function MatchDashboard() {
       } catch (error) {
         console.error("Error refetching all data:", error);
         toast({
-          title: "Error",
-          description: "Failed to refetch data",
+          title: t("matchDashboard.error.title"),
+          description: t("matchDashboard.error.failedToRefetch"),
           variant: "destructive",
         });
         // Restore scroll position even on error
@@ -609,8 +611,8 @@ export default function MatchDashboard() {
       } catch (error) {
         console.error("Error fetching match:", error);
         toast({
-          title: "Error",
-          description: "Failed to load match data",
+          title: t("matchDashboard.error.title"),
+          description: t("matchDashboard.error.failedToLoad"),
           variant: "destructive",
         });
       } finally {
@@ -692,9 +694,9 @@ export default function MatchDashboard() {
         },
       ]);
     }
-    // Only depend on platformOperations length, not the full array
+    // Depend on match and platformOperations to recalculate when violations change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [match, platformOperations.length]);
+  }, [match, platformOperations]);
 
   // Platform slot system (max 2 platforms visible)
   const [selectedSlots, setSelectedSlots] = useState<string[]>([
@@ -1099,14 +1101,14 @@ export default function MatchDashboard() {
           triggerRefetch();
 
           toast({
-            title: "Status changed to Active",
-            description: "Violation is now active again",
+            title: t("matchDashboard.success.statusChangedToActive"),
+            description: t("matchDashboard.success.violationNowActive"),
           });
         } catch (error) {
           console.error("Error setting violation to active:", error);
           toast({
-            title: "Error",
-            description: "Failed to change violation status",
+            title: t("matchDashboard.error.title"),
+            description: t("matchDashboard.error.failedToChangeStatus"),
             variant: "destructive",
           });
         }
@@ -1210,10 +1212,10 @@ export default function MatchDashboard() {
       triggerRefetch();
 
       toast({
-        title: "Violation blocked",
-        description: `Violation marked as blocked at ${new Date(
-          blockTime
-        ).toLocaleString()}`,
+        title: t("matchDashboard.success.violationBlocked"),
+        description: t("matchDashboard.success.violationBlockedAt", {
+          time: new Date(blockTime).toLocaleString(isRTL ? "ar-SA" : "en-US")
+        }),
       });
 
       setIsBlockConfirmOpen(false);
@@ -1221,8 +1223,8 @@ export default function MatchDashboard() {
     } catch (error) {
       console.error("Error blocking violation:", error);
       toast({
-        title: "Error",
-        description: "Failed to block violation",
+        title: t("matchDashboard.error.title"),
+        description: t("matchDashboard.error.failedToBlock"),
         variant: "destructive",
       });
     }
@@ -1354,8 +1356,8 @@ export default function MatchDashboard() {
         triggerRefetch();
 
         toast({
-          title: "Violation updated",
-          description: "Changes saved successfully",
+          title: t("matchDashboard.success.violationUpdated"),
+          description: t("matchDashboard.success.changesSaved"),
         });
       } else {
         // Add new violation
@@ -1426,7 +1428,7 @@ export default function MatchDashboard() {
       toast({
         title: "Error",
         description:
-          error instanceof Error ? error.message : "Failed to save violation",
+          error instanceof Error ? error.message : t("matchDashboard.error.failedToSave"),
         variant: "destructive",
       });
     }
@@ -1574,7 +1576,7 @@ export default function MatchDashboard() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to delete violation");
+        throw new Error(t("matchDashboard.error.failedToDelete"));
       }
 
       // Update local state
@@ -1624,8 +1626,8 @@ export default function MatchDashboard() {
     } catch (error) {
       console.error("Error deleting violation:", error);
       toast({
-        title: "Error",
-        description: "Failed to delete violation",
+        title: t("matchDashboard.error.title"),
+        description: t("matchDashboard.error.failedToDelete"),
         variant: "destructive",
       });
     }
@@ -1678,7 +1680,7 @@ export default function MatchDashboard() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to add note");
+        throw new Error(t("matchDashboard.error.failedToAddNote"));
       }
 
       const updatedViolation = await response.json();
@@ -1707,8 +1709,8 @@ export default function MatchDashboard() {
       triggerRefetch();
 
       toast({
-        title: "Note added",
-        description: "Note has been added successfully",
+        title: t("matchDashboard.success.noteAdded"),
+        description: t("matchDashboard.success.noteAddedSuccess"),
       });
 
       setIsAddNoteOpen(false);
@@ -1716,8 +1718,8 @@ export default function MatchDashboard() {
     } catch (error) {
       console.error("Error adding note:", error);
       toast({
-        title: "Error",
-        description: "Failed to add note",
+        title: t("matchDashboard.error.title"),
+        description: t("matchDashboard.error.failedToAddNote"),
         variant: "destructive",
       });
     }
@@ -1729,7 +1731,7 @@ export default function MatchDashboard() {
         <div className="text-center">
           <RefreshCw className="h-6 w-6 sm:h-8 sm:w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Loading match data...
+            {t("matchDashboard.loading")}
           </p>
         </div>
       </div>
@@ -1742,7 +1744,7 @@ export default function MatchDashboard() {
         <div className="text-center">
           <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Match not found
+            {t("matchDashboard.matchNotFound")}
           </p>
         </div>
       </div>
@@ -1785,8 +1787,8 @@ export default function MatchDashboard() {
   const handleDownloadReport = async () => {
     if (!match) {
       toast({
-        title: "Error",
-        description: "Match data not available",
+        title: t("matchDashboard.error.title"),
+        description: t("matchDashboard.error.matchDataNotAvailable"),
         variant: "destructive",
       });
       return;
@@ -1858,14 +1860,14 @@ export default function MatchDashboard() {
 
       headerDiv.innerHTML = `
         <h1 style="font-size: 32px; font-weight: bold; margin: 0 0 16px 0; color: #1a1a1a;">
-          ${match.team1} vs ${match.team2}
+          ${match.team1} ${t("matchDashboard.report.vs")} ${match.team2}
         </h1>
         <div style="font-size: 18px; color: #666; line-height: 1.8;">
-          <p style="margin: 0 0 8px 0;"><strong>League:</strong> ${
+          <p style="margin: 0 0 8px 0;"><strong>${t("matchDashboard.report.league")}</strong> ${
             competitionName || "N/A"
           }</p>
           <p style="margin: 0 0 8px 0;"><strong>${weekOrStageLabel}:</strong> ${weekOrStage}</p>
-          <p style="margin: 0;"><strong>Date & Time:</strong> ${
+          <p style="margin: 0;"><strong>${t("matchDashboard.report.dateTime")}</strong> ${
             matchDateTime || "N/A"
           }</p>
             </div>
@@ -1998,14 +2000,14 @@ export default function MatchDashboard() {
       }
 
       if (images.length === 0) {
-        throw new Error("No components found to capture");
+        throw new Error(t("matchDashboard.error.noComponentsFound"));
       }
 
       // Create a canvas to combine all images
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
       if (!ctx) {
-        throw new Error("Could not get canvas context");
+        throw new Error(t("matchDashboard.error.couldNotGetCanvasContext"));
       }
 
       // Load all images and calculate total height
@@ -2039,7 +2041,7 @@ export default function MatchDashboard() {
       // Convert to blob and download
       canvas.toBlob((blob) => {
         if (!blob) {
-          throw new Error("Failed to create image blob");
+          throw new Error(t("matchDashboard.error.failedToCreateImageBlob"));
         }
 
         const url = URL.createObjectURL(blob);
@@ -2056,24 +2058,24 @@ export default function MatchDashboard() {
           .toString()
           .replace(/\s+/g, "-");
         const dateFormatted = new Date().toISOString().split("T")[0];
-        const label = isSuperCup ? "Stage" : "Week";
-        link.download = `Match-Report-${label}-${weekOrStageFormatted}-${match.team1}-vs-${match.team2}-${dateFormatted}.png`;
+        const label = isSuperCup ? t("matchDashboard.report.stage") : t("matchDashboard.report.week");
+        link.download = `Match-Report-${label}-${weekOrStageFormatted}-${match.team1}-${t("matchDashboard.report.vs")}-${match.team2}-${dateFormatted}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
         toast({
-          title: "Report Downloaded",
-          description: "Match report has been downloaded successfully",
+          title: t("matchDashboard.success.reportDownloaded"),
+          description: t("matchDashboard.success.reportDownloadedSuccess"),
         });
       }, "image/png");
     } catch (error) {
       console.error("Error generating report:", error);
       toast({
-        title: "Error",
+        title: t("matchDashboard.error.title"),
         description:
-          error instanceof Error ? error.message : "Failed to generate report",
+          error instanceof Error ? error.message : t("matchDashboard.error.failedToGenerateReport"),
         variant: "destructive",
       });
     } finally {
@@ -2157,7 +2159,7 @@ export default function MatchDashboard() {
       <div className="space-y-3 sm:space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-semibold">
-            Platform Operations (This Match)
+            {t("matchDashboard.sections.platformOperations")}
           </h2>
         </div>
 
@@ -2231,8 +2233,8 @@ export default function MatchDashboard() {
             onSortDirectionChange={setComparisonSortDirection}
             onSelectedSlotsChange={setSelectedSlots}
             targetMins={targetMins}
-            title="Platform Comparison (This Match)"
-            description="Compare platforms for this match"
+            title={t("matchDashboard.sections.platformComparison")}
+            description={t("matchDashboard.sections.platformComparisonDescription")}
             showCard={true}
           />
         </div>
@@ -2315,11 +2317,10 @@ export default function MatchDashboard() {
         <DialogContent className="w-[95vw] sm:w-full sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl text-destructive">
-              Whitelisted Account Warning
+              {t("matchDashboard.whitelistWarning.title")}
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              This account is whitelisted for this platform. Are you sure you
-              want to add a violation for this account?
+              {t("matchDashboard.whitelistWarning.description")}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 mt-4">
@@ -2330,13 +2331,13 @@ export default function MatchDashboard() {
                 setPendingViolationData(null);
               }}
               className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation w-full sm:w-auto">
-              Cancel
+              {t("matchDashboard.whitelistWarning.cancel")}
             </Button>
             <Button
               variant="destructive"
               onClick={confirmWhitelistSave}
               className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation w-full sm:w-auto">
-              Yes, Add Violation
+              {t("matchDashboard.whitelistWarning.confirm")}
             </Button>
           </div>
         </DialogContent>

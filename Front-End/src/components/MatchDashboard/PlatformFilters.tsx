@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Plus, X, ChevronDown } from "lucide-react";
 import { PlatformData } from "./types";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PlatformFiltersProps {
   selectedSlots: string[];
@@ -29,6 +30,7 @@ export function PlatformFilters({
   onAddPlatform,
   onContentTypeFilterChange,
 }: PlatformFiltersProps) {
+  const { t } = useLanguage();
   const availablePlatforms = allPlatforms.filter(
     (p) => !selectedSlots.includes(p.id)
   );
@@ -71,8 +73,8 @@ export function PlatformFilters({
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-1 sm:gap-1.5 h-8 sm:h-9 text-xs sm:text-sm touch-manipulation">
                 <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                <span className="hidden xs:inline">Add platform</span>
-                <span className="xs:hidden">Add</span>
+                <span className="hidden xs:inline">{t("matchDashboard.addPlatform")}</span>
+                <span className="xs:hidden">{t("matchDashboard.add")}</span>
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
@@ -102,13 +104,13 @@ export function PlatformFilters({
           variant={contentTypeFilter === "all" ? "default" : "outline"}
           className="cursor-pointer text-[10px] sm:text-xs px-2 sm:px-2.5 py-1 touch-manipulation active:scale-[0.98]"
           onClick={() => onContentTypeFilterChange("all")}>
-          All types
+          {t("dashboard.allTypes")}
         </Badge>
         <Badge
           variant={contentTypeFilter === "live" ? "default" : "outline"}
           className="cursor-pointer text-[10px] sm:text-xs px-2 sm:px-2.5 py-1 touch-manipulation active:scale-[0.98]"
           onClick={() => onContentTypeFilterChange("live")}>
-          Live
+          {t("dashboard.live")}
         </Badge>
         <Badge
           variant={
@@ -116,13 +118,13 @@ export function PlatformFilters({
           }
           className="cursor-pointer text-[10px] sm:text-xs px-2 sm:px-2.5 py-1 touch-manipulation active:scale-[0.98]"
           onClick={() => onContentTypeFilterChange("highlights")}>
-          Highlights
+          {t("dashboard.highlights")}
         </Badge>
         <Badge
           variant={contentTypeFilter === "other" ? "default" : "outline"}
           className="cursor-pointer text-[10px] sm:text-xs px-2 sm:px-2.5 py-1 touch-manipulation active:scale-[0.98]"
           onClick={() => onContentTypeFilterChange("other")}>
-          Other
+          {t("dashboard.other")}
         </Badge>
       </div>
     </div>

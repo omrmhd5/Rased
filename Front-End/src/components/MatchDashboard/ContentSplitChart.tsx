@@ -19,18 +19,33 @@ interface ContentSplitChartProps {
 // Icon mapping for each content type
 const getIcon = (name: string, compact: boolean = false) => {
   const iconSize = compact ? "h-3 w-3" : "h-4 w-4";
-  switch (name.toLowerCase()) {
-    case "total violations":
-      return <BarChart3 className={iconSize} />;
-    case "live":
-      return <Play className={iconSize} />;
-    case "highlights":
-      return <Film className={iconSize} />;
-    case "others":
-      return <MoreHorizontal className={iconSize} />;
-    default:
-      return <MoreHorizontal className={iconSize} />;
+  const nameLower = name.toLowerCase();
+  // Check for both English and Arabic names
+  if (nameLower === "total violations" || nameLower === "إجمالي الانتهاكات") {
+    return <BarChart3 className={iconSize} />;
+  } else if (nameLower === "live" || nameLower === "مباشر") {
+    return <Play className={iconSize} />;
+  } else if (nameLower === "highlights" || nameLower === "أبرز اللحظات") {
+    return <Film className={iconSize} />;
+  } else if (nameLower === "others" || nameLower === "أخرى") {
+    return <MoreHorizontal className={iconSize} />;
   }
+  return <MoreHorizontal className={iconSize} />;
+};
+
+// Translate content type names
+const translateContentTypeName = (name: string, t: (key: string) => string): string => {
+  const nameLower = name.toLowerCase();
+  if (nameLower === "total violations") {
+    return t("dashboard.totalViolations");
+  } else if (nameLower === "live") {
+    return t("dashboard.live");
+  } else if (nameLower === "highlights") {
+    return t("dashboard.highlights");
+  } else if (nameLower === "others") {
+    return t("dashboard.others");
+  }
+  return name;
 };
 
 export function ContentSplitChart({
@@ -95,7 +110,7 @@ export function ContentSplitChart({
                     className={`flex items-center justify-between ${marginBottom} flex-row`}>
                     <span
                       className={`font-semibold ${nameSize} uppercase tracking-wide transition-colors duration-300 group-hover:text-foreground text-right`}>
-                      {entry.name}
+                      {translateContentTypeName(entry.name, t)}
                     </span>
                     <div className={`text-right ${compact ? "mr-3" : "mr-4"}`}>
                       <p
@@ -117,7 +132,7 @@ export function ContentSplitChart({
                     className={`flex items-center justify-between ${marginBottom}`}>
                     <span
                       className={`font-semibold ${nameSize} uppercase tracking-wide transition-colors duration-300 group-hover:text-foreground text-left`}>
-                      {entry.name}
+                      {translateContentTypeName(entry.name, t)}
                     </span>
                     <div className={`text-right ${compact ? "ml-3" : "ml-4"}`}>
                       <p

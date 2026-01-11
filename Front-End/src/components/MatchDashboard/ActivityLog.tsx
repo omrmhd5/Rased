@@ -42,6 +42,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import React, { useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ActivityLogItem {
   type: string;
@@ -143,6 +144,7 @@ export function ActivityLog({
   onUserFilterChange,
   isSuperAdmin = false,
 }: ActivityLogProps) {
+  const { t, isRTL } = useLanguage();
   const [deleteConfirmItem, setDeleteConfirmItem] =
     useState<ActivityLogItem | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -197,7 +199,7 @@ export function ActivityLog({
       setDeleteConfirmItem(null);
     } catch (error) {
       console.error("Error deleting log entry:", error);
-      alert("Failed to delete log entry. Please try again.");
+      alert(t("matchDashboard.activityLog.error.failedToDelete"));
     }
   };
   // Convert violation audit logs to ActivityLogItem format
@@ -215,65 +217,112 @@ export function ActivityLog({
       hour: "numeric",
       minute: "2-digit",
     });
-    const timeAgo = formatTimeAgo(timestamp);
+    const timeAgo = formatTimeAgoHelper(timestamp, t);
 
-    const platformName = deletedLog.changes?.platformName || "platform";
+    const platformName = deletedLog.changes?.platformName || t("matchDashboard.activityLog.descriptions.platform");
     const accountName = deletedLog.changes?.accountChannel || "";
     const status = deletedLog.changes?.status || "";
     const views = deletedLog.changes?.views || "0";
 
     auditLogItems.push({
       type: "deleted",
-      time: `${formattedDate} at ${formattedTime} • ${timeAgo}`,
-      badge: "Deleted",
+      time: `${formattedDate} ${t("matchDashboard.activityLog.dateTime.at")} ${formattedTime} • ${timeAgo}`,
+      badge: t("matchDashboard.activityLog.badges.deleted"),
       badgeVariant: "destructive",
       description: (
-        <>
-          Violation deleted from{" "}
-          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-            {platformName}
-          </code>
-          {accountName && (
+        <div className="text-left">
+          {isRTL ? (
             <>
-              {" "}
-              for channel/user{" "}
+              {views && views !== "0" && status && (
+                <>
+                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                    {status}
+                  </code>{" "}
+                  {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
+                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                    {formatViewsString(views)} {t("matchDashboard.activityLog.descriptions.views")}
+                  </code>{" "}
+                  {t("matchDashboard.activityLog.descriptions.with")}{" "}
+                </>
+              )}
+              {views && views !== "0" && !status && (
+                <>
+                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                    {formatViewsString(views)} {t("matchDashboard.activityLog.descriptions.views")}
+                  </code>{" "}
+                  {t("matchDashboard.activityLog.descriptions.with")}{" "}
+                </>
+              )}
+              {!views && status && (
+                <>
+                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                    {status}
+                  </code>{" "}
+                  {t("matchDashboard.activityLog.descriptions.withStatus")}{" "}
+                </>
+              )}
+              {accountName && (
+                <>
+                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                    {accountName}
+                  </code>{" "}
+                  {t("matchDashboard.activityLog.descriptions.forChannelUser")}{" "}
+                </>
+              )}
               <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                {accountName}
-              </code>
-            </>
-          )}
-          {views && views !== "0" && status && (
-            <>
-              {" "}
-              with{" "}
-              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                {formatViewsString(views)} views
+                {platformName}
               </code>{" "}
-              and status:{" "}
-              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                {status}
-              </code>
+              {t("matchDashboard.activityLog.descriptions.violationDeletedFrom")}
             </>
-          )}
-          {views && views !== "0" && !status && (
+          ) : (
             <>
-              {" "}
-              with{" "}
+              {t("matchDashboard.activityLog.descriptions.violationDeletedFrom")}{" "}
               <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                {formatViewsString(views)} views
+                {platformName}
               </code>
+              {accountName && (
+                <>
+                  {" "}
+                  {t("matchDashboard.activityLog.descriptions.forChannelUser")}{" "}
+                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                    {accountName}
+                  </code>
+                </>
+              )}
+              {views && views !== "0" && status && (
+                <>
+                  {" "}
+                  {t("matchDashboard.activityLog.descriptions.with")}{" "}
+                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                    {formatViewsString(views)} {t("matchDashboard.activityLog.descriptions.views")}
+                  </code>{" "}
+                  {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
+                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                    {status}
+                  </code>
+                </>
+              )}
+              {views && views !== "0" && !status && (
+                <>
+                  {" "}
+                  {t("matchDashboard.activityLog.descriptions.with")}{" "}
+                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                    {formatViewsString(views)} {t("matchDashboard.activityLog.descriptions.views")}
+                  </code>
+                </>
+              )}
+              {!views && status && (
+                <>
+                  {" "}
+                  {t("matchDashboard.activityLog.descriptions.withStatus")}{" "}
+                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                    {status}
+                  </code>
+                </>
+              )}
             </>
           )}
-          {!views && status && (
-            <>
-              {" "}
-              with status:{" "}
-              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                {status}
-              </code>
-            </>
-          )}
-        </>
+        </div>
       ),
       platform: platformName,
       timestamp: timestamp.getTime(),
@@ -306,7 +355,7 @@ export function ActivityLog({
           hour: "numeric",
           minute: "2-digit",
         });
-        const timeAgo = formatTimeAgo(timestamp);
+        const timeAgo = formatTimeAgoHelper(timestamp, t);
 
         let type: string = entry.action;
         let description: string | React.ReactNode = "";
@@ -315,65 +364,124 @@ export function ActivityLog({
         switch (entry.action) {
           case "created": {
             type = "added";
-            badge = "Added";
-            const platformName = violation.platformName || "platform";
+            badge = t("matchDashboard.activityLog.badges.added");
+            const platformName = violation.platformName || t("matchDashboard.activityLog.descriptions.platform");
             const accountName =
               violation.accountChannel || violation.accountHandle || "";
             const views = violation.views || "0";
             const status = violation.status || "";
+            
+            // Helper function to translate status values
+            const translateStatus = (status: string): string => {
+              const statusLower = status.toLowerCase();
+              if (statusLower === "active") return t("dashboard.active");
+              if (statusLower === "blocked") return t("dashboard.blocked");
+              if (statusLower === "removed") return t("dashboard.removed");
+              if (statusLower === "under review") return t("dashboard.underReview");
+              if (statusLower === "reported") return t("dashboard.reported");
+              return status;
+            };
+            
             description = (
-              <>
-                Violation created on{" "}
-                <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                  {platformName}
-                </code>
-                {accountName && (
+              <div className="text-left">
+                {isRTL ? (
                   <>
-                    {" "}
-                    for channel/user{" "}
+                    {views && views !== "0" && status && (
+                      <>
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {translateStatus(status)}
+                        </code>{" "}
+                        {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {formatViewsString(views)} {t("matchDashboard.activityLog.descriptions.views")}
+                        </code>{" "}
+                        {t("matchDashboard.activityLog.descriptions.with")}{" "}
+                      </>
+                    )}
+                    {views && views !== "0" && !status && (
+                      <>
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {formatViewsString(views)} {t("matchDashboard.activityLog.descriptions.views")}
+                        </code>{" "}
+                        {t("matchDashboard.activityLog.descriptions.with")}{" "}
+                      </>
+                    )}
+                    {!views && status && (
+                      <>
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {translateStatus(status)}
+                        </code>{" "}
+                        {t("matchDashboard.activityLog.descriptions.withStatus")}{" "}
+                      </>
+                    )}
+                    {accountName && (
+                      <>
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {accountName}
+                        </code>{" "}
+                        {t("matchDashboard.activityLog.descriptions.forChannelUser")}{" "}
+                      </>
+                    )}
                     <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                      {accountName}
-                    </code>
-                  </>
-                )}
-                {views && views !== "0" && status && (
-                  <>
-                    {" "}
-                    with{" "}
-                    <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                      {formatViewsString(views)} views
+                      {platformName}
                     </code>{" "}
-                    and status:{" "}
-                    <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                      {status}
-                    </code>
+                    {t("matchDashboard.activityLog.descriptions.violationCreatedOn")}
                   </>
-                )}
-                {views && views !== "0" && !status && (
+                ) : (
                   <>
-                    {" "}
-                    with{" "}
+                    {t("matchDashboard.activityLog.descriptions.violationCreatedOn")}{" "}
                     <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                      {formatViewsString(views)} views
+                      {platformName}
                     </code>
+                    {accountName && (
+                      <>
+                        {" "}
+                        {t("matchDashboard.activityLog.descriptions.forChannelUser")}{" "}
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {accountName}
+                        </code>
+                      </>
+                    )}
+                    {views && views !== "0" && status && (
+                      <>
+                        {" "}
+                        {t("matchDashboard.activityLog.descriptions.with")}{" "}
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {formatViewsString(views)} {t("matchDashboard.activityLog.descriptions.views")}
+                        </code>{" "}
+                        {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {translateStatus(status)}
+                        </code>
+                      </>
+                    )}
+                    {views && views !== "0" && !status && (
+                      <>
+                        {" "}
+                        {t("matchDashboard.activityLog.descriptions.with")}{" "}
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {formatViewsString(views)} {t("matchDashboard.activityLog.descriptions.views")}
+                        </code>
+                      </>
+                    )}
+                    {!views && status && (
+                      <>
+                        {" "}
+                        {t("matchDashboard.activityLog.descriptions.withStatus")}{" "}
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {translateStatus(status)}
+                        </code>
+                      </>
+                    )}
                   </>
                 )}
-                {!views && status && (
-                  <>
-                    {" "}
-                    with status:{" "}
-                    <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                      {status}
-                    </code>
-                  </>
-                )}
-              </>
+              </div>
             );
             break;
           }
           case "status_changed": {
             type = "status_change";
-            badge = "Status Change";
+            badge = t("matchDashboard.activityLog.badges.statusChange");
             const oldStatus = String(entry.oldValue || "");
             const newStatus = String(entry.newValue || "");
 
@@ -392,85 +500,96 @@ export function ActivityLog({
               return "bg-primary/10 text-primary";
             };
 
+            // Helper function to translate status values
+            const translateStatus = (status: string): string => {
+              const statusLower = status.toLowerCase();
+              if (statusLower === "active") return t("dashboard.active");
+              if (statusLower === "blocked") return t("dashboard.blocked");
+              if (statusLower === "removed") return t("dashboard.removed");
+              if (statusLower === "under review") return t("dashboard.underReview");
+              if (statusLower === "reported") return t("dashboard.reported");
+              return status;
+            };
+
             // Check if blockedAt was added or removed
             if (entry.changes?.blockedAtAdded) {
               const blockedAtTime =
                 entry.changes.blockedAtAdded &&
                 (typeof entry.changes.blockedAtAdded === "string" ||
                   typeof entry.changes.blockedAtAdded === "number")
-                  ? new Date(entry.changes.blockedAtAdded).toLocaleString()
+                  ? new Date(entry.changes.blockedAtAdded).toLocaleString("en-US")
                   : "";
               description = (
-                <>
-                  Status changed from{" "}
+                <div className="text-left">
+                  {t("matchDashboard.activityLog.descriptions.statusChangedFrom")}{" "}
                   <code
                     className={`text-xs ${getStatusColorClasses(
                       oldStatus
                     )} px-1.5 py-0.5 rounded font-mono`}>
-                    {oldStatus}
+                    {translateStatus(oldStatus)}
                   </code>{" "}
-                  to{" "}
+                  {t("matchDashboard.activityLog.descriptions.to")}{" "}
                   <code
                     className={`text-xs ${getStatusColorClasses(
                       newStatus
                     )} px-1.5 py-0.5 rounded font-mono`}>
-                    {newStatus}
+                    {translateStatus(newStatus)}
                   </code>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    Blocked at time added:{" "}
+                    {t("matchDashboard.activityLog.descriptions.blockedAtTimeAdded")}{" "}
                     <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                       {blockedAtTime}
                     </code>
                   </div>
-                </>
+                </div>
               );
             } else if (entry.changes?.blockedAtRemoved) {
               description = (
-                <>
-                  Status changed from{" "}
+                <div className="text-left">
+                  {t("matchDashboard.activityLog.descriptions.statusChangedFrom")}{" "}
                   <code
                     className={`text-xs ${getStatusColorClasses(
                       oldStatus
                     )} px-1.5 py-0.5 rounded font-mono`}>
-                    {oldStatus}
+                    {translateStatus(oldStatus)}
                   </code>{" "}
-                  to{" "}
+                  {t("matchDashboard.activityLog.descriptions.to")}{" "}
                   <code
                     className={`text-xs ${getStatusColorClasses(
                       newStatus
                     )} px-1.5 py-0.5 rounded font-mono`}>
-                    {newStatus}
+                    {translateStatus(newStatus)}
                   </code>
                   <div className="mt-1 text-xs text-muted-foreground">
-                    Blocked at time removed
+                    {t("matchDashboard.activityLog.descriptions.blockedAtTimeRemoved")}
                   </div>
-                </>
+                </div>
               );
             } else {
               description = (
-                <>
-                  Status changed from{" "}
+                <div className="text-left">
+                  {t("matchDashboard.activityLog.descriptions.statusChangedFrom")}{" "}
                   <code
                     className={`text-xs ${getStatusColorClasses(
                       oldStatus
                     )} px-1.5 py-0.5 rounded font-mono`}>
-                    {oldStatus}
+                    {translateStatus(oldStatus)}
                   </code>{" "}
-                  to{" "}
+                  {t("matchDashboard.activityLog.descriptions.to")}{" "}
                   <code
                     className={`text-xs ${getStatusColorClasses(
                       newStatus
                     )} px-1.5 py-0.5 rounded font-mono`}>
-                    {newStatus}
+                    {translateStatus(newStatus)}
                   </code>
-                </>
+                </div>
               );
             }
             break;
           }
           case "note_added": {
             type = "notes_added";
-            badge = "Note Added";
+            badge = t("matchDashboard.activityLog.badges.noteAdded");
             const addedNotes =
               entry.changes?.added ||
               (Array.isArray(entry.newValue) && Array.isArray(entry.oldValue)
@@ -485,75 +604,120 @@ export function ActivityLog({
           case "field_updated": {
             if (entry.field === "violationUrl") {
               type = "url_changed";
-              badge = "URL Changed";
+              badge = t("matchDashboard.activityLog.badges.urlChanged");
               const oldUrl = String(entry.oldValue || "");
               const newUrl = String(entry.newValue || "");
               description = (
-                <>
-                  Violation URL changed from{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono break-all">
-                    {oldUrl}
-                  </code>{" "}
-                  to{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono break-all">
-                    {newUrl}
-                  </code>
-                </>
+                <div className="text-left">
+                  {isRTL ? (
+                    <>
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono break-all">
+                        {newUrl}
+                      </code>{" "}
+                      {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono break-all">
+                        {oldUrl}
+                      </code>{" "}
+                      {t("matchDashboard.activityLog.descriptions.violationUrlChangedFrom")}
+                    </>
+                  ) : (
+                    <>
+                      {t("matchDashboard.activityLog.descriptions.violationUrlChangedFrom")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono break-all">
+                        {oldUrl}
+                      </code>{" "}
+                      {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono break-all">
+                        {newUrl}
+                      </code>
+                    </>
+                  )}
+                </div>
               );
             } else if (entry.field === "accountChannel") {
               type = "account_changed";
-              badge = "Account Changed";
+              badge = t("matchDashboard.activityLog.badges.accountChanged");
               const oldChannel = String(entry.oldValue || "");
               const newChannel = String(entry.newValue || "");
               description = (
-                <>
-                  Account channel changed from{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {oldChannel}
-                  </code>{" "}
-                  to{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {newChannel}
-                  </code>
-                </>
+                <div className="text-left">
+                  {isRTL ? (
+                    <>
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {newChannel}
+                      </code>{" "}
+                      {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {oldChannel}
+                      </code>{" "}
+                      {t("matchDashboard.activityLog.descriptions.accountChannelChangedFrom")}
+                    </>
+                  ) : (
+                    <>
+                      {t("matchDashboard.activityLog.descriptions.accountChannelChangedFrom")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {oldChannel}
+                      </code>{" "}
+                      {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {newChannel}
+                      </code>
+                    </>
+                  )}
+                </div>
               );
             } else if (entry.field === "contentType") {
               type = "content_type_changed";
-              badge = "Content Type Changed";
+              badge = t("matchDashboard.activityLog.badges.contentTypeChanged");
               const oldType = String(entry.oldValue || "");
               const newType = String(entry.newValue || "");
               description = (
-                <>
-                  Content type changed from{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {oldType}
-                  </code>{" "}
-                  to{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {newType}
-                  </code>
-                </>
+                <div className="text-left">
+                  {isRTL ? (
+                    <>
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {newType}
+                      </code>{" "}
+                      {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {oldType}
+                      </code>{" "}
+                      {t("matchDashboard.activityLog.descriptions.contentTypeChangedFrom")}
+                    </>
+                  ) : (
+                    <>
+                      {t("matchDashboard.activityLog.descriptions.contentTypeChangedFrom")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {oldType}
+                      </code>{" "}
+                      {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {newType}
+                      </code>
+                    </>
+                  )}
+                </div>
               );
             } else if (entry.field === "views") {
               type = "views_changed";
-              badge = "Views Changed";
+              badge = t("matchDashboard.activityLog.badges.viewsChanged");
               const oldViews = String(entry.oldValue ?? "");
               const newViews = String(entry.newValue ?? "");
               description = (
-                <>
-                  Views changed from{" "}
+                <div className="text-left">
+                  {t("matchDashboard.activityLog.descriptions.viewsChangedFrom")}{" "}
                   <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                     {oldViews}
                   </code>{" "}
-                  to{" "}
+                  {t("matchDashboard.activityLog.descriptions.to")}{" "}
                   <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                     {newViews}
                   </code>
-                </>
+                </div>
               );
             } else if (entry.field === "timeAdded") {
               type = "time_added_changed";
-              badge = "Time Added Changed";
+              badge = t("matchDashboard.activityLog.badges.timeAddedChanged");
               const timeOptions: Intl.DateTimeFormatOptions = {
                 month: "2-digit",
                 day: "2-digit",
@@ -587,44 +751,59 @@ export function ActivityLog({
                     )
                   : "";
               description = (
-                <>
-                  Time added changed from{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {oldTime}
-                  </code>{" "}
-                  to{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {newTime}
-                  </code>
-                </>
+                <div className="text-left">
+                  {isRTL ? (
+                    <>
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {newTime}
+                      </code>{" "}
+                      {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {oldTime}
+                      </code>{" "}
+                      {t("matchDashboard.activityLog.descriptions.timeAddedChangedFrom")}
+                    </>
+                  ) : (
+                    <>
+                      {t("matchDashboard.activityLog.descriptions.timeAddedChangedFrom")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {oldTime}
+                      </code>{" "}
+                      {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {newTime}
+                      </code>
+                    </>
+                  )}
+                </div>
               );
             } else if (entry.field === "blockedAt") {
               const action = entry.changes?.action;
               if (action === "added") {
                 type = "blocked_at_added";
-                badge = "Blocked At Added";
+                badge = t("matchDashboard.activityLog.badges.blockedAtAdded");
                 const newBlocked =
                   entry.newValue &&
                   (typeof entry.newValue === "string" ||
                     typeof entry.newValue === "number")
-                    ? new Date(entry.newValue).toLocaleString()
+                    ? new Date(entry.newValue).toLocaleString("en-US")
                     : "";
                 description = (
-                  <>
-                    Blocked at time added:{" "}
+                  <div className="text-left">
+                    {t("matchDashboard.activityLog.descriptions.blockedAtTimeAdded")}{" "}
                     <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                       {newBlocked}
                     </code>
-                  </>
+                  </div>
                 );
               } else if (action === "removed") {
                 type = "blocked_at_removed";
-                badge = "Blocked At Removed";
-                description = "Blocked at removed";
+                badge = t("matchDashboard.activityLog.badges.blockedAtRemoved");
+                description = t("matchDashboard.activityLog.descriptions.blockedAtTimeRemoved");
               } else if (action === "changed" || !action) {
                 // action === "changed" or no action (fallback) - this is when time is explicitly changed
                 type = "blocked_at_changed";
-                badge = "Blocked At Changed";
+                badge = t("matchDashboard.activityLog.badges.blockedAtChanged");
                 const timeOptions: Intl.DateTimeFormatOptions = {
                   month: "2-digit",
                   day: "2-digit",
@@ -652,16 +831,16 @@ export function ActivityLog({
                       )
                     : "undefined";
                 description = (
-                  <>
-                    Blocked at changed from{" "}
+                  <div className="text-left">
+                    {t("matchDashboard.activityLog.descriptions.blockedAtChangedFrom")}{" "}
                     <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                       {oldBlocked}
                     </code>{" "}
-                    to{" "}
+                    {t("matchDashboard.activityLog.descriptions.to")}{" "}
                     <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                       {newBlocked}
                     </code>
-                  </>
+                  </div>
                 );
               }
             } else if (entry.field === "notes") {
@@ -672,7 +851,7 @@ export function ActivityLog({
               ) {
                 // Note was deleted
                 type = "notes_edited";
-                badge = "Note Deleted";
+                badge = t("matchDashboard.activityLog.badges.noteDeleted");
                 const removedNotes = entry.changes.removed;
                 description = removedNotes.join(", ");
               } else if (
@@ -681,7 +860,7 @@ export function ActivityLog({
               ) {
                 // Note was edited - show "from X to Y" format
                 type = "notes_changed";
-                badge = "Note Changed";
+                badge = t("matchDashboard.activityLog.badges.noteChanged");
                 const edited = entry.changes.edited as Array<{
                   old: string;
                   new: string;
@@ -689,29 +868,44 @@ export function ActivityLog({
                 if (edited && Array.isArray(edited) && edited.length > 0) {
                   const firstEdit = edited[0];
                   description = (
-                    <>
-                      Note changed from{" "}
-                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                        {firstEdit.old}
-                      </code>{" "}
-                      to{" "}
-                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                        {firstEdit.new}
-                      </code>
-                    </>
+                    <div className="text-left">
+                      {isRTL ? (
+                        <>
+                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                            {firstEdit.new}
+                          </code>{" "}
+                          {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                            {firstEdit.old}
+                          </code>{" "}
+                          {t("matchDashboard.activityLog.descriptions.noteChangedFrom")}
+                        </>
+                      ) : (
+                        <>
+                          {t("matchDashboard.activityLog.descriptions.noteChangedFrom")}{" "}
+                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                            {firstEdit.old}
+                          </code>{" "}
+                          {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                            {firstEdit.new}
+                          </code>
+                        </>
+                      )}
+                    </div>
                   );
                 } else {
-                  description = "Notes changed";
+                  description = t("matchDashboard.activityLog.descriptions.notesChanged");
                 }
               } else {
                 // Other note changes
                 type = "notes_changed";
-                badge = "Note Changed";
-                description = "Notes changed";
+                badge = t("matchDashboard.activityLog.badges.noteChanged");
+                description = t("matchDashboard.activityLog.descriptions.notesChanged");
               }
             } else {
               type = "field_updated";
-              badge = "Updated";
+              badge = t("matchDashboard.activityLog.badges.updated");
               const fieldName = entry.field
                 ? entry.field
                     .replace(/([A-Z])/g, " $1")
@@ -721,35 +915,50 @@ export function ActivityLog({
               const oldVal = String(entry.oldValue ?? "");
               const newVal = String(entry.newValue ?? "");
               description = (
-                <>
-                  {fieldName} changed from{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {oldVal}
-                  </code>{" "}
-                  to{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {newVal}
-                  </code>
-                </>
+                <div className="text-left">
+                  {isRTL ? (
+                    <>
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {newVal}
+                      </code>{" "}
+                      {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {oldVal}
+                      </code>{" "}
+                      {fieldName} {t("matchDashboard.activityLog.descriptions.changedFrom")}
+                    </>
+                  ) : (
+                    <>
+                      {fieldName} {t("matchDashboard.activityLog.descriptions.changedFrom")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {oldVal}
+                      </code>{" "}
+                      {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {newVal}
+                      </code>
+                    </>
+                  )}
+                </div>
               );
             }
             break;
           }
           case "deleted": {
             type = "deleted";
-            badge = "Deleted";
+            badge = t("matchDashboard.activityLog.badges.deleted");
             const violationId = violation._id || violation.id?.toString();
             const platformName =
               violation.platformName ||
               (violationId ? violationToPlatformMap.get(violationId) : null) ||
-              "platform";
-            description = `Violation deleted from ${platformName}`;
+              t("matchDashboard.activityLog.descriptions.platform");
+            description = `${t("matchDashboard.activityLog.descriptions.violationDeletedFrom")} ${platformName}`;
             break;
           }
           default:
             type = entry.action;
-            badge = "Updated";
-            description = "Violation updated";
+            badge = t("matchDashboard.activityLog.badges.updated");
+            description = t("matchDashboard.activityLog.descriptions.violationUpdated");
         }
 
         // Get platform name from the violation or find it from platformOperations map
@@ -757,11 +966,11 @@ export function ActivityLog({
         const platformName =
           violation.platformName ||
           (violationId ? violationToPlatformMap.get(violationId) : null) ||
-          "Unknown Platform";
+          t("matchDashboard.activityLog.descriptions.unknownPlatform");
 
         auditLogItems.push({
           type,
-          time: `${formattedDate} at ${formattedTime} • ${timeAgo}`,
+          time: `${formattedDate} ${t("matchDashboard.activityLog.dateTime.at")} ${formattedTime} • ${timeAgo}`,
           badge,
           badgeVariant:
             type === "deleted"
@@ -866,47 +1075,47 @@ export function ActivityLog({
           value={filter}
           onValueChange={(value) => onFilterChange(value as ActivityFilter)}>
           <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
-            <SelectValue placeholder="All Activity" />
+            <SelectValue placeholder={t("matchDashboard.activityLog.filters.allActivity")} />
           </SelectTrigger>
           <SelectContent className="max-h-[300px] p-1">
             <SelectItem value="all" className="text-xs py-1.5">
-              All Activity
+              {t("matchDashboard.activityLog.filters.allActivity")}
             </SelectItem>
             <SelectItem value="added" className="text-xs py-1.5">
-              Violation Added
+              {t("matchDashboard.activityLog.filters.violationAdded")}
             </SelectItem>
             <SelectItem value="deleted" className="text-xs py-1.5">
-              Violation Deleted
+              {t("matchDashboard.activityLog.filters.violationDeleted")}
             </SelectItem>
             <SelectItem value="url_changed" className="text-xs py-1.5">
-              URL Changed
+              {t("matchDashboard.activityLog.filters.urlChanged")}
             </SelectItem>
             <SelectItem value="account_changed" className="text-xs py-1.5">
-              Account Changed
+              {t("matchDashboard.activityLog.filters.accountChanged")}
             </SelectItem>
             <SelectItem value="content_type_changed" className="text-xs py-1.5">
-              Content Type Changed
+              {t("matchDashboard.activityLog.filters.contentTypeChanged")}
             </SelectItem>
             <SelectItem value="status_change" className="text-xs py-1.5">
-              Status Change
+              {t("matchDashboard.activityLog.filters.statusChange")}
             </SelectItem>
             <SelectItem value="views_changed" className="text-xs py-1.5">
-              Views Changed
+              {t("matchDashboard.activityLog.filters.viewsChanged")}
             </SelectItem>
             <SelectItem value="time_added_changed" className="text-xs py-1.5">
-              Time Added Changed
+              {t("matchDashboard.activityLog.filters.timeAddedChanged")}
             </SelectItem>
             <SelectItem value="blocked_at_changed" className="text-xs py-1.5">
-              Blocked At Changed
+              {t("matchDashboard.activityLog.filters.blockedAtChanged")}
             </SelectItem>
             <SelectItem value="notes_added" className="text-xs py-1.5">
-              Notes - Added
+              {t("matchDashboard.activityLog.filters.notesAdded")}
             </SelectItem>
             <SelectItem value="notes_edited" className="text-xs py-1.5">
-              Notes - Edited
+              {t("matchDashboard.activityLog.filters.notesEdited")}
             </SelectItem>
             <SelectItem value="notes_changed" className="text-xs py-1.5">
-              Notes - Changed
+              {t("matchDashboard.activityLog.filters.notesChanged")}
             </SelectItem>
           </SelectContent>
         </Select>
@@ -915,11 +1124,11 @@ export function ActivityLog({
         {onPlatformFilterChange && (
           <Select value={platformFilter} onValueChange={onPlatformFilterChange}>
             <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
-              <SelectValue placeholder="All Platforms" />
+              <SelectValue placeholder={t("matchDashboard.activityLog.platformFilter.placeholder")} />
             </SelectTrigger>
             <SelectContent className="max-h-[300px] p-1">
               <SelectItem value="all" className="text-xs py-1.5">
-                All Platforms
+                {t("matchDashboard.activityLog.platformFilter.allPlatforms")}
               </SelectItem>
               {uniquePlatforms.map((platform) => (
                 <SelectItem
@@ -937,11 +1146,11 @@ export function ActivityLog({
         {onUserFilterChange && (
           <Select value={userFilter} onValueChange={onUserFilterChange}>
             <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
-              <SelectValue placeholder="All Users" />
+              <SelectValue placeholder={t("matchDashboard.activityLog.userFilter.placeholder")} />
             </SelectTrigger>
             <SelectContent className="max-h-[300px] p-1">
               <SelectItem value="all" className="text-xs py-1.5">
-                All Users
+                {t("matchDashboard.activityLog.userFilter.allUsers")}
               </SelectItem>
               {uniqueUsers.map((user) => (
                 <SelectItem key={user} value={user} className="text-xs py-1.5">
@@ -1023,7 +1232,7 @@ export function ActivityLog({
                           <button
                             onClick={() => handleDeleteLog(item)}
                             className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                            title="Delete log entry">
+                            title={t("matchDashboard.activityLog.actions.deleteLogEntry")}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
                         )}
@@ -1053,11 +1262,11 @@ export function ActivityLog({
     <>
       <Card className="p-6 lg:col-span-2">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold">Match Activity Log</h3>
+          <h3 className="font-semibold">{t("matchDashboard.activityLog.title")}</h3>
           <button
             onClick={() => setIsMaximized(true)}
             className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-            title="Maximize">
+            title={t("matchDashboard.activityLog.actions.maximize")}>
             <Maximize2 className="h-4 w-4" />
           </button>
         </div>
@@ -1071,8 +1280,8 @@ export function ActivityLog({
             if (!open) setDeleteConfirmItem(null);
           }}
           onConfirm={confirmDeleteLog}
-          title="Delete Log Entry"
-          description="Are you sure you want to delete this log entry? This action cannot be undone."
+          title={t("matchDashboard.activityLog.deleteDialog.title")}
+          description={t("matchDashboard.activityLog.deleteDialog.description")}
         />
       </Card>
 
@@ -1080,11 +1289,11 @@ export function ActivityLog({
         <DialogContent className="max-w-[95vw] max-h-[95vh] w-[95vw] h-[95vh] flex flex-col p-0 translate-x-[-50%] translate-y-[-50%] left-[50%] top-[50%] [&>button]:hidden">
           <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
             <div className="flex items-center justify-between">
-              <DialogTitle>Match Activity Log</DialogTitle>
+              <DialogTitle>{t("matchDashboard.activityLog.title")}</DialogTitle>
               <button
                 onClick={() => setIsMaximized(false)}
                 className="p-1.5 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                title="Minimize">
+                title={t("matchDashboard.activityLog.actions.minimize")}>
                 <Minimize2 className="h-4 w-4" />
               </button>
             </div>
@@ -1098,15 +1307,17 @@ export function ActivityLog({
   );
 }
 
-function formatTimeAgo(date: Date): string {
+// formatTimeAgo function needs to be called from within component to access t()
+// So we'll create it as a helper that takes t as parameter
+const formatTimeAgoHelper = (date: Date, t: (key: string, params?: Record<string, string | number>) => string): string => {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
 
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffMins < 1) return t("matchDashboard.activityLog.timeAgo.justNow");
+  if (diffMins < 60) return t("matchDashboard.activityLog.timeAgo.minutesAgo", { minutes: diffMins });
   const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffHours < 24) return t("matchDashboard.activityLog.timeAgo.hoursAgo", { hours: diffHours });
   const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
-}
+  return t("matchDashboard.activityLog.timeAgo.daysAgo", { days: diffDays });
+};

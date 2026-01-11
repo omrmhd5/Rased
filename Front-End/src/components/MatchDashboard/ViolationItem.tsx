@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { Violation, PlatformData } from "./types";
 import { formatViewsString, formatBlockedViolationText } from "./utils";
 import { useState, useEffect } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Collapsible,
   CollapsibleContent,
@@ -83,9 +84,21 @@ export function ViolationItem({
   getPlatformIcon,
   canModifyViolations = true,
 }: ViolationItemProps) {
+  const { t } = useLanguage();
   // Force re-render every minute to update time displays
   const [, setRefresh] = useState(0);
   const [isAuditLogOpen, setIsAuditLogOpen] = useState(false);
+
+  // Translate status badge
+  const translateStatus = (status: string): string => {
+    const statusLower = status.toLowerCase();
+    if (statusLower === "active") return t("dashboard.active");
+    if (statusLower === "blocked") return t("dashboard.blocked");
+    if (statusLower === "removed") return t("dashboard.removed");
+    if (statusLower === "review" || statusLower === "under review") return t("dashboard.underReview");
+    if (statusLower === "reported") return t("dashboard.reported");
+    return status;
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -125,7 +138,7 @@ export function ViolationItem({
                 violation.statusBadge === "Under Review") &&
                 "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
             )}>
-            {violation.statusBadge}
+            {translateStatus(violation.statusBadge || "Active")}
           </Badge>
         </div>
         <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
