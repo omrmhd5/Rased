@@ -11,6 +11,7 @@ import {
 import { Search } from "lucide-react";
 import { PlatformData, Violation } from "./types";
 import { ViolationItem } from "./ViolationItem";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ExpandedPlatformDialogProps {
   open: boolean;
@@ -45,6 +46,7 @@ export function ExpandedPlatformDialog({
   onAddNote,
   getPlatformIcon,
 }: ExpandedPlatformDialogProps) {
+  const { t } = useLanguage();
   if (!platform) return null;
 
   return (
@@ -71,27 +73,27 @@ export function ExpandedPlatformDialog({
         <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
           <div className="flex items-center justify-between gap-4 py-3 px-4 bg-muted/30 rounded-lg">
             <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">Total views</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("matchDashboard.platformCard.totalViews")}</p>
               <p className="text-sm font-bold">{platform.totalViews}</p>
             </div>
             <div className="h-8 w-px bg-border" />
             <div className="text-center">
               <p className="text-xs text-muted-foreground mb-1">
-                Avg block time
+                {t("matchDashboard.platformCard.avgBlockTime")}
               </p>
               <p className="text-sm font-bold">{platform.avgBlockTime}</p>
             </div>
             <div className="h-8 w-px bg-border" />
             <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">Blocked</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("matchDashboard.platformCard.blocked")}</p>
               <p className="text-sm font-bold">{platform.blockedCount ?? 0}</p>
               <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                {platform.blockedSuccess} success rate
+                {platform.blockedSuccess} {t("matchDashboard.matchOverview.stats.successRate")}
               </p>
             </div>
             <div className="h-8 w-px bg-border" />
             <div className="text-center">
-              <p className="text-xs text-muted-foreground mb-1">Still active</p>
+              <p className="text-xs text-muted-foreground mb-1">{t("matchDashboard.matchOverview.stats.active")}</p>
               <p className="text-sm font-bold">{platform.stillActive}</p>
             </div>
           </div>
@@ -101,31 +103,31 @@ export function ExpandedPlatformDialog({
               variant={cardFilter === "all" || !cardFilter ? "default" : "outline"}
               className="cursor-pointer text-xs"
               onClick={() => onFilterChange("all")}>
-              All
+              {t("matchDashboard.expandedPlatformDialog.filters.all")}
             </Badge>
             <Badge
               variant={cardFilter === "active" ? "default" : "outline"}
               className="cursor-pointer text-xs"
               onClick={() => onFilterChange("active")}>
-              Active
+              {t("matchDashboard.expandedPlatformDialog.filters.active")}
             </Badge>
             <Badge
               variant={cardFilter === "blocked" ? "default" : "outline"}
               className="cursor-pointer text-xs"
               onClick={() => onFilterChange("blocked")}>
-              Blocked
+              {t("matchDashboard.expandedPlatformDialog.filters.blocked")}
             </Badge>
             <Badge
               variant={cardFilter === "removed" ? "default" : "outline"}
               className="cursor-pointer text-xs"
               onClick={() => onFilterChange("removed")}>
-              Removed
+              {t("matchDashboard.expandedPlatformDialog.filters.removed")}
             </Badge>
             <Badge
               variant={cardFilter === "review" ? "default" : "outline"}
               className="cursor-pointer text-xs"
               onClick={() => onFilterChange("review")}>
-              Review
+              {t("matchDashboard.expandedPlatformDialog.filters.review")}
             </Badge>
           </div>
 

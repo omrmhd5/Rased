@@ -21,6 +21,7 @@ import React from "react";
 import { Match, PlatformData } from "./types";
 import { getKSATime, extractAccountHandleFromUrl } from "./utils";
 import { Plus, X } from "lucide-react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface AddViolationSheetProps {
   open: boolean;
@@ -79,6 +80,8 @@ export function AddViolationSheet({
   onDeleteNote,
   onSave,
 }: AddViolationSheetProps) {
+  const { t } = useLanguage();
+  
   const handleUrlChange = (url: string) => {
     onFormUrlChange(url);
     const extractedHandle = extractAccountHandleFromUrl(url);
@@ -117,18 +120,18 @@ export function AddViolationSheet({
       <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>
-            {isEditMode ? "Edit Violation" : "Add Violation"}
+            {isEditMode ? t("matchDashboard.addViolationSheet.title.edit") : t("matchDashboard.addViolationSheet.title.add")}
           </SheetTitle>
           <SheetDescription>
             {isEditMode
-              ? "Update violation details"
-              : "Add a new violation for this match and platform"}
+              ? t("matchDashboard.addViolationSheet.description.edit")
+              : t("matchDashboard.addViolationSheet.description.add")}
           </SheetDescription>
         </SheetHeader>
 
         <div className="space-y-6 py-6">
           <div className="space-y-2">
-            <Label>Match</Label>
+            <Label>{t("matchDashboard.addViolationSheet.match")}</Label>
             <Input
               value={match ? `${match.team1} vs ${match.team2}` : ""}
               disabled
@@ -136,7 +139,7 @@ export function AddViolationSheet({
           </div>
 
           <div className="space-y-2">
-            <Label>Platform</Label>
+            <Label>{t("matchDashboard.addViolationSheet.platform")}</Label>
             <Input
               value={
                 platformOperations.find(
@@ -148,67 +151,67 @@ export function AddViolationSheet({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="violation-url">Violation URL *</Label>
+            <Label htmlFor="violation-url">{t("matchDashboard.addViolationSheet.violationUrl")}</Label>
             <Input
               id="violation-url"
-              placeholder="https://x.com/..."
+              placeholder={t("matchDashboard.addViolationSheet.violationUrlPlaceholder")}
               value={formUrl}
               onChange={(e) => handleUrlChange(e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="account-handle">Account / Channel *</Label>
+            <Label htmlFor="account-handle">{t("matchDashboard.addViolationSheet.accountChannel")}</Label>
             <Input
               id="account-handle"
-              placeholder="@username or channel name"
+              placeholder={t("matchDashboard.addViolationSheet.accountChannelPlaceholder")}
               value={formAccountHandle}
               onChange={(e) => onFormAccountHandleChange(e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="content-type">Content Type *</Label>
+            <Label htmlFor="content-type">{t("matchDashboard.addViolationSheet.contentType")}</Label>
             <Select value={formContentType} onValueChange={onFormContentTypeChange}>
               <SelectTrigger id="content-type">
-                <SelectValue placeholder="Select content type" />
+                <SelectValue placeholder={t("matchDashboard.addViolationSheet.contentTypePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="live">Live</SelectItem>
-                <SelectItem value="highlights">Highlights</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
+                <SelectItem value="live">{t("dashboard.live")}</SelectItem>
+                <SelectItem value="highlights">{t("dashboard.highlights")}</SelectItem>
+                <SelectItem value="other">{t("dashboard.other")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="status">Status *</Label>
+            <Label htmlFor="status">{t("matchDashboard.addViolationSheet.status")}</Label>
             <Select value={formStatus} onValueChange={handleStatusChange}>
               <SelectTrigger id="status">
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder={t("matchDashboard.addViolationSheet.statusPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Blocked">Blocked</SelectItem>
-                <SelectItem value="Removed">Removed</SelectItem>
-                <SelectItem value="Under Review">Under Review</SelectItem>
+                <SelectItem value="Active">{t("dashboard.active")}</SelectItem>
+                <SelectItem value="Blocked">{t("dashboard.blocked")}</SelectItem>
+                <SelectItem value="Removed">{t("dashboard.removed")}</SelectItem>
+                <SelectItem value="Under Review">{t("dashboard.underReview")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="views">Views (optional)</Label>
+            <Label htmlFor="views">{t("matchDashboard.addViolationSheet.views")}</Label>
             <Input
               id="views"
               type="text"
-              placeholder="0"
+              placeholder={t("matchDashboard.addViolationSheet.viewsPlaceholder")}
               value={formViews}
               onChange={(e) => handleViewsChange(e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="time-added">Time Added *</Label>
+            <Label htmlFor="time-added">{t("matchDashboard.addViolationSheet.timeAdded")}</Label>
             <Input
               id="time-added"
               type="datetime-local"
@@ -219,7 +222,7 @@ export function AddViolationSheet({
 
           {formStatus === "Blocked" && (
             <div className="space-y-2">
-              <Label htmlFor="blocked-at">Blocked at (optional)</Label>
+              <Label htmlFor="blocked-at">{t("matchDashboard.addViolationSheet.blockedAt")}</Label>
               <Input
                 id="blocked-at"
                 type="datetime-local"
@@ -227,7 +230,7 @@ export function AddViolationSheet({
                 onChange={(e) => onFormBlockedAtChange(e.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Leave empty or adjust the auto-filled time
+                {t("matchDashboard.addViolationSheet.blockedAtHint")}
               </p>
             </div>
           )}
@@ -235,7 +238,7 @@ export function AddViolationSheet({
           {/* Notes Section */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>Notes (optional)</Label>
+              <Label>{t("matchDashboard.addViolationSheet.notes")}</Label>
               <Button
                 type="button"
                 variant="ghost"
@@ -243,7 +246,7 @@ export function AddViolationSheet({
                 className="h-7 px-2 text-xs"
                 onClick={onAddNote}>
                 <Plus className="h-3.5 w-3.5 mr-1" />
-                Add note
+                {t("matchDashboard.addViolationSheet.addNote")}
               </Button>
             </div>
             <div className="space-y-2">
@@ -254,7 +257,7 @@ export function AddViolationSheet({
                   <Input
                     value={note}
                     onChange={(e) => onNoteChange(index, e.target.value)}
-                    placeholder="Enter note..."
+                    placeholder={t("matchDashboard.addViolationSheet.notePlaceholder")}
                     className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                   <Button
@@ -269,7 +272,7 @@ export function AddViolationSheet({
               ))}
               {formNotes.length === 0 && (
                 <div className="text-sm text-muted-foreground text-center py-4 border border-dashed rounded-lg">
-                  No notes yet. Click "Add note" to add one.
+                  {t("matchDashboard.addViolationSheet.noNotes")}
                 </div>
               )}
             </div>
@@ -278,10 +281,10 @@ export function AddViolationSheet({
 
         <SheetFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("matchDashboard.addViolationSheet.cancel")}
           </Button>
           <Button onClick={onSave}>
-            {isEditMode ? "Save changes" : "Save Violation"}
+            {isEditMode ? t("matchDashboard.addViolationSheet.save.edit") : t("matchDashboard.addViolationSheet.save.add")}
           </Button>
         </SheetFooter>
       </SheetContent>

@@ -336,8 +336,24 @@ export const calculateBlockDuration = (
   return null;
 };
 
-export const formatBlockedViolationText = (violation: Violation): string => {
-  const contentType = violation.contentType || violation.type || "Other";
+export const formatBlockedViolationText = (
+  violation: Violation,
+  t?: (key: string) => string,
+  isRTL?: boolean
+): string => {
+  // Translate content type
+  const contentTypeRaw = violation.contentType || violation.type || "Other";
+  let contentType = contentTypeRaw;
+  if (t) {
+    const contentTypeLower = contentTypeRaw.toLowerCase();
+    if (contentTypeLower === "live") {
+      contentType = t("dashboard.live");
+    } else if (contentTypeLower === "highlights") {
+      contentType = t("dashboard.highlights");
+    } else if (contentTypeLower === "other" || contentTypeLower === "others") {
+      contentType = t("dashboard.other");
+    }
+  }
 
   // Format date and time
   const addedDate = new Date(violation.timeAdded);
@@ -359,45 +375,68 @@ export const formatBlockedViolationText = (violation: Violation): string => {
   const addedDiffMs = now.getTime() - addedTime;
   const addedDiffMins = Math.floor(addedDiffMs / 60000);
 
-  let addedAgo = "just now";
+  const addedOnText = t ? t("matchDashboard.violationItem.addedOn") : "added on";
+  const justNowText = t ? t("matchDashboard.violationItem.justNow") : "just now";
+  const agoText = t ? t("matchDashboard.violationItem.timeUnits.ago") : "ago";
+  const mText = t ? t("matchDashboard.violationItem.timeUnits.m") : "m";
+  const hText = t ? t("matchDashboard.violationItem.timeUnits.h") : "h";
+  const dText = t ? t("matchDashboard.violationItem.timeUnits.d") : "d";
+
+  let addedAgo = justNowText;
   if (addedDiffMins >= 1 && addedDiffMins < 60) {
-    addedAgo = `${addedDiffMins}m ago`;
+    addedAgo = `${addedDiffMins}${mText} ${agoText}`;
   } else if (addedDiffMins >= 60) {
     const addedDiffHours = Math.floor(addedDiffMins / 60);
     if (addedDiffHours < 24) {
-      addedAgo = `${addedDiffHours}h ago`;
+      addedAgo = `${addedDiffHours}${hText} ${agoText}`;
     } else {
       const addedDiffDays = Math.floor(addedDiffHours / 24);
-      addedAgo = `${addedDiffDays}d ago`;
+      addedAgo = `${addedDiffDays}${dText} ${agoText}`;
     }
   }
 
-  let text = `${contentType} • added on ${dateTimeStr}, • ${addedAgo}`;
-
   // If blocked and has blockedAt, show block time (time from added to blocked)
   // Note: Only "Blocked" status has blockedAt, "Removed" does not
-  if (violation.status === "Blocked" && violation.blockedAt) {
+  const hasBlockedAt = violation.status === "Blocked" && violation.blockedAt;
+  let blockedInText = "";
+  let blockTimeText = "";
+  
+  if (hasBlockedAt) {
     const blockedTime = new Date(violation.blockedAt).getTime();
     // Block time = blockedAt - timeAdded (time it took to block)
     const diffMs = blockedTime - addedTime;
     const diffMins = Math.floor(diffMs / 60000);
 
-    let blockTimeText = "0 min";
+    blockedInText = t ? t("matchDashboard.violationItem.blockedIn") : "blocked in";
+    const minText = t ? t("matchDashboard.violationItem.timeUnits.min") : "min";
+
     if (diffMins < 0) {
-      blockTimeText = "0 min"; // Invalid time (blocked before added)
+      blockTimeText = `0 ${minText}`; // Invalid time (blocked before added)
     } else if (diffMins < 60) {
-      blockTimeText = `${diffMins} min`;
+      blockTimeText = `${diffMins} ${minText}`;
     } else if (diffMins < 1440) {
       const hours = Math.floor(diffMins / 60);
-      blockTimeText = `${hours}h`;
+      blockTimeText = `${hours}${hText}`;
     } else {
       const days = Math.floor(diffMins / 1440);
-      blockTimeText = `${days}d`;
+      blockTimeText = `${days}${dText}`;
     }
-
-    text += ` • blocked in ${blockTimeText}`;
   }
 
+  // For RTL, reverse the order: time ago • date • added on • content type • (blocked info)
+  if (isRTL && t) {
+    let text = `${addedAgo} • ${dateTimeStr}, ${addedOnText} • ${contentType}`;
+    if (hasBlockedAt) {
+      text = `${blockTimeText} ${blockedInText} • ${text}`;
+    }
+    return text;
+  }
+
+  // LTR: return string for backward compatibility
+  let text = `${contentType} • ${addedOnText} ${dateTimeStr}, • ${addedAgo}`;
+  if (hasBlockedAt) {
+    text += ` • ${blockedInText} ${blockTimeText}`;
+  }
   return text;
 };
 

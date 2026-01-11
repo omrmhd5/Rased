@@ -186,7 +186,9 @@
       "affected": "متأثرة",
       "success": "النجاح",
       "avgBlockTime": "متوسط وقت الحظر"
-    }
+    },
+    "allTypes": "جميع الأنواع",
+    "other": "أخرى"
   },
   "problematicAccounts": {
     "title": "أكثر الحسابات إشكالية",
@@ -230,8 +232,6 @@
     "removed": "تمت الإزالة",
     "review": "مراجعة",
     "reported": "تم الإبلاغ عنه",
-    "allTypes": "جميع الأنواع",
-    "other": "أخرى",
     "live": "مباشر:",
     "highlights": "أبرز اللحظات:",
     "others": "أخرى:",
@@ -594,6 +594,139 @@
     },
     "add": "إضافة",
     "addPlatform": "إضافة منصة",
+    "platformCard": {
+      "addViolation": "إضافة انتهاك",
+      "maximize": "تكبير",
+      "live": "مباشر:",
+      "highlights": "أبرز اللحظات:",
+      "others": "أخرى:",
+      "totalViews": "إجمالي المشاهدات",
+      "totalViolations": "إجمالي الانتهاكات",
+      "active": "نشط",
+      "blocked": "تم الحظر",
+      "avgBlockTime": "متوسط وقت الحظر",
+      "removed": "تمت الإزالة",
+      "blockSuccessRate": "معدل نجاح الحظر",
+      "underReview": "قيد المراجعة",
+      "min": "دقيقة",
+      "hrs": "ساعة",
+      "of": "من"
+    },
+    "violationItem": {
+      "copyLink": "نسخ الرابط",
+      "edit": "تعديل",
+      "setToActive": "تعيين كـ نشط",
+      "markAsBlocked": "تعيين كـ محظور",
+      "addNote": "إضافة ملاحظة",
+      "delete": "حذف",
+      "changeHistory": "سجل التغييرات",
+      "addedOn": "تمت الإضافة في",
+      "blockedIn": "تم الحظر خلال",
+      "justNow": "الآن",
+      "timeUnits": {
+        "min": "دقيقة",
+        "m": "د",
+        "h": "س",
+        "d": "ي",
+        "ago": "منذ"
+      },
+      "noViolationsFound": "لم يتم العثور على انتهاكات تطابق المرشحات الخاصة بك.",
+      "violationCreatedOn": "تم إنشاء انتهاك على",
+      "forChannelUser": "لقناة/مستخدم",
+      "with": "مع",
+      "views": "مشاهدة",
+      "andStatus": "والحالة:",
+      "withStatus": "مع الحالة:",
+      "statusChangedFrom": "تم تغيير الحالة من",
+      "to": "إلى",
+      "blockedAtTimeAdded": "تمت إضافة وقت الحظر:",
+      "blockedAtTimeRemoved": "تمت إزالة وقت الحظر",
+      "violationUrlChangedFrom": "تم تغيير رابط الانتهاك من",
+      "accountChannelChangedFrom": "تم تغيير قناة الحساب من",
+      "contentTypeChangedFrom": "تم تغيير نوع المحتوى من",
+      "viewsChangedFrom": "تم تغيير المشاهدات من",
+      "timeAddedChangedFrom": "تم تغيير وقت الإضافة من",
+      "blockedAtChangedFrom": "تم تغيير وقت الحظر من",
+      "blockedAtTimeAddedLabel": "تمت إضافة وقت الحظر:",
+      "blockedAtRemoved": "تمت إزالة وقت الحظر",
+      "noteAdded": "ملاحظة",
+      "notesAdded": "ملاحظات",
+      "added": "تمت الإضافة:",
+      "noteDeleted": "ملاحظة",
+      "notesDeleted": "ملاحظات",
+      "deleted": "تم الحذف:",
+      "noteChangedFrom": "تم تغيير الملاحظة من",
+      "notesChanged": "تم تغيير الملاحظات",
+      "fieldUpdated": "تم تحديث الحقل",
+      "violationDeleted": "تم حذف الانتهاك",
+      "updated": "تم التحديث"
+    },
+    "expandedPlatformDialog": {
+      "allViolations": "جميع الانتهاكات",
+      "viewingAllViolations": "عرض جميع الانتهاكات لهذه المنصة في هذه المباراة",
+      "searchPlaceholder": "البحث عن الروابط أو الحسابات...",
+      "filters": {
+        "all": "الكل",
+        "active": "نشط",
+        "blocked": "تم الحظر",
+        "removed": "تمت الإزالة",
+        "review": "قيد المراجعة"
+      }
+    },
+    "addViolationSheet": {
+      "title": {
+        "edit": "تعديل الانتهاك",
+        "add": "إضافة انتهاك"
+      },
+      "description": {
+        "edit": "تحديث تفاصيل الانتهاك",
+        "add": "إضافة انتهاك جديد لهذه المباراة والمنصة"
+      },
+      "match": "المباراة",
+      "platform": "المنصة",
+      "violationUrl": "رابط الانتهاك *",
+      "violationUrlPlaceholder": "https://x.com/...",
+      "accountChannel": "الحساب / القناة *",
+      "accountChannelPlaceholder": "@username أو اسم القناة",
+      "contentType": "نوع المحتوى *",
+      "contentTypePlaceholder": "اختر نوع المحتوى",
+      "status": "الحالة *",
+      "statusPlaceholder": "اختر الحالة",
+      "views": "المشاهدات (اختياري)",
+      "viewsPlaceholder": "0",
+      "timeAdded": "وقت الإضافة *",
+      "blockedAt": "وقت الحظر (اختياري)",
+      "blockedAtHint": "اتركه فارغاً أو اضبط الوقت المعبأ تلقائياً",
+      "notes": "الملاحظات (اختياري)",
+      "addNote": "إضافة ملاحظة",
+      "notePlaceholder": "أدخل الملاحظة...",
+      "noNotes": "لا توجد ملاحظات بعد. انقر على \"إضافة ملاحظة\" لإضافة واحدة.",
+      "cancel": "إلغاء",
+      "save": {
+        "edit": "حفظ التغييرات",
+        "add": "حفظ الانتهاك"
+      }
+    },
+    "addNoteDialog": {
+      "title": "إضافة ملاحظة",
+      "description": "أضف ملاحظة لهذا الانتهاك. ستظهر الملاحظات كعناصر منفصلة.",
+      "note": "الملاحظة",
+      "notePlaceholder": "أدخل ملاحظتك هنا...",
+      "existingNotes": "الملاحظات الموجودة",
+      "cancel": "إلغاء",
+      "addNote": "إضافة ملاحظة"
+    },
+    "blockConfirmDialog": {
+      "title": "تأكيد وقت الحظر",
+      "description": "أنت تقوم بتعيين هذا الانتهاك كمحظور. اختر وقت الحظر الدقيق لتسجيله لهذا المنشور.",
+      "views": "مشاهدة",
+      "added": "تمت الإضافة",
+      "useCurrentTime": "استخدام الوقت الحالي",
+      "currentTimeHint": "وقت الحظر = الآن",
+      "setCustomTime": "تعيين وقت حظر مخصص",
+      "cancel": "إلغاء",
+      "confirm": "تأكيد الحظر"
+    },
     "sections": {
       "platformOperations": "عمليات المنصات (هذه المباراة)",
       "platformComparison": "مقارنة المنصات (هذه المباراة)",
@@ -742,6 +875,36 @@
       "error": {
         "failedToDelete": "فشل حذف إدخال السجل. يرجى المحاولة مرة أخرى."
       }
+    }
+  },
+  "roundReport": {
+    "title": "تقرير الجولة",
+    "downloadAsImage": "تنزيل كصورة",
+    "close": "إغلاق",
+    "mainTitle": "تقرير الجولة لمكافحة القرصنة",
+    "week": "الأسبوع",
+    "dataIncludes": "تشمل البيانات جميع المباريات في الأسبوع/الجولة الحالية",
+    "liveStreamViolations": "انتهاكات البث المباشر",
+    "highlightsViolations": "انتهاكات أبرز اللحظات",
+    "tableHeaders": {
+      "platform": "المنصة",
+      "detected": "تم الكشف",
+      "blocked": "تم الحظر",
+      "successRate": "معدل النجاح",
+      "avgBlockTime": "متوسط وقت الحظر",
+      "views": "المشاهدات"
+    },
+    "timeFormats": {
+      "na": "غير متاح",
+      "days": "يوم",
+      "hours": "ساعة",
+      "minutes": "دقيقة"
+    },
+    "toast": {
+      "reportSaved": "تم حفظ التقرير",
+      "reportSavedDescription": "تم حفظ تقرير الجولة كصورة بنجاح",
+      "error": "خطأ",
+      "errorDescription": "حدث خطأ أثناء حفظ التقرير"
     }
   }
 }

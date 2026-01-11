@@ -42,8 +42,8 @@ const translateContentTypeName = (name: string, t: (key: string) => string): str
     return t("dashboard.live");
   } else if (nameLower === "highlights") {
     return t("dashboard.highlights");
-  } else if (nameLower === "others") {
-    return t("dashboard.others");
+  } else if (nameLower === "others" || nameLower === "other") {
+    return t("dashboard.other");
   }
   return name;
 };

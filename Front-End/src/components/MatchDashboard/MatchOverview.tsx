@@ -77,7 +77,7 @@ export function MatchOverview({
 
     try {
       const date = new Date(dateStr);
-      const formattedDate = date.toLocaleDateString(isRTL ? "ar-SA" : "en-US", {
+      const formattedDate = date.toLocaleDateString("en-US", {
         day: "numeric",
         month: "short",
         year: "numeric",

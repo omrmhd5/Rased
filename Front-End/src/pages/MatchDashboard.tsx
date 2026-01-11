@@ -2250,6 +2250,8 @@ export default function MatchDashboard() {
             onSortDirectionChange={setComparisonSortDirection}
             onSelectedSlotsChange={setSelectedSlots}
             targetMins={targetMins}
+            title={t("matchDashboard.sections.platformComparison")}
+            description={t("matchDashboard.sections.platformComparisonDescription")}
           />
         </div>
       </div>

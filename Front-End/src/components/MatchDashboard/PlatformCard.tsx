@@ -32,6 +32,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useState } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PlatformCardProps {
   platform: PlatformData;
@@ -66,6 +67,7 @@ export function PlatformCard({
   getPlatformIcon,
   canModifyViolations = true,
 }: PlatformCardProps) {
+  const { t } = useLanguage();
   const [isMaximized, setIsMaximized] = useState(false);
   const IconComponent = platform.icon;
 
@@ -103,7 +105,7 @@ export function PlatformCard({
               <Eye className="h-2.5 w-2.5 text-chart-4" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
-              Total views
+              {t("matchDashboard.platformCard.totalViews")}
             </p>
           </div>
           <p className="text-lg font-bold text-chart-4 transition-transform duration-300 group-hover:scale-110">
@@ -118,7 +120,7 @@ export function PlatformCard({
               <AlertTriangle className="h-2.5 w-2.5 text-chart-1" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
-              Total violations
+              {t("matchDashboard.platformCard.totalViolations")}
             </p>
           </div>
           <p className="text-lg font-bold text-chart-1 transition-transform duration-300 group-hover:scale-110">
@@ -133,7 +135,7 @@ export function PlatformCard({
               <AlertTriangle className="h-2.5 w-2.5 text-destructive" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
-              Active
+              {t("matchDashboard.platformCard.active")}
             </p>
           </div>
           <p className="text-lg font-bold text-destructive transition-transform duration-300 group-hover:scale-110">
@@ -148,7 +150,7 @@ export function PlatformCard({
               <Shield className="h-2.5 w-2.5 text-success" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
-              Blocked
+              {t("matchDashboard.platformCard.blocked")}
             </p>
           </div>
           <p className="text-lg font-bold text-success transition-transform duration-300 group-hover:scale-110">
@@ -163,7 +165,7 @@ export function PlatformCard({
               <Clock className="h-2.5 w-2.5 text-success" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
-              Avg block time
+              {t("matchDashboard.platformCard.avgBlockTime")}
             </p>
           </div>
           <p className="text-lg font-bold text-success transition-transform duration-300 group-hover:scale-110">
@@ -188,9 +190,9 @@ export function PlatformCard({
                 <>
                   {minutes % 1 === 0 ? minutes : minutes.toFixed(1)}
                   <span className="text-xs text-muted-foreground ml-1">
-                    min{" "}
+                    {t("matchDashboard.platformCard.min")}{" "}
                     <span className="text-xs text-muted-foreground">
-                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}hrs)
+                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}{t("matchDashboard.platformCard.hrs")})
                     </span>
                   </span>
                 </>
@@ -206,7 +208,7 @@ export function PlatformCard({
               <XCircle className="h-2.5 w-2.5 text-cyan-500" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
-              Removed
+              {t("matchDashboard.platformCard.removed")}
             </p>
           </div>
           <p className="text-lg font-bold text-cyan-500 transition-transform duration-300 group-hover:scale-110">
@@ -221,7 +223,7 @@ export function PlatformCard({
               <TrendingUp className="h-2.5 w-2.5 text-green-500" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
-              Block success rate
+              {t("matchDashboard.platformCard.blockSuccessRate")}
             </p>
           </div>
           <p className="text-lg font-bold text-green-600 dark:text-green-400 transition-transform duration-300 group-hover:scale-110">
@@ -242,7 +244,7 @@ export function PlatformCard({
               <FileQuestion className="h-2.5 w-2.5 text-yellow-500" />
             </div>
             <p className="text-[10px] font-medium text-muted-foreground">
-              Under review
+              {t("matchDashboard.platformCard.underReview")}
             </p>
           </div>
           <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400 transition-transform duration-300 group-hover:scale-110">
@@ -257,38 +259,38 @@ export function PlatformCard({
             variant={cardFilter === "all" ? "default" : "outline"}
             className="cursor-pointer text-xs"
             onClick={() => onFilterChange("all")}>
-            All
+            {t("matchDashboard.expandedPlatformDialog.filters.all")}
           </Badge>
           <Badge
             variant={cardFilter === "active" ? "default" : "outline"}
             className="cursor-pointer text-xs"
             onClick={() => onFilterChange("active")}>
-            Active
+            {t("matchDashboard.expandedPlatformDialog.filters.active")}
           </Badge>
           <Badge
             variant={cardFilter === "blocked" ? "default" : "outline"}
             className="cursor-pointer text-xs"
             onClick={() => onFilterChange("blocked")}>
-            Blocked
+            {t("matchDashboard.expandedPlatformDialog.filters.blocked")}
           </Badge>
           <Badge
             variant={cardFilter === "removed" ? "default" : "outline"}
             className="cursor-pointer text-xs"
             onClick={() => onFilterChange("removed")}>
-            Removed
+            {t("matchDashboard.expandedPlatformDialog.filters.removed")}
           </Badge>
           <Badge
             variant={cardFilter === "review" ? "default" : "outline"}
             className="cursor-pointer text-xs"
             onClick={() => onFilterChange("review")}>
-            Review
+            {t("matchDashboard.expandedPlatformDialog.filters.review")}
           </Badge>
         </div>
 
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="Search URLs or accounts..."
+            placeholder={t("matchDashboard.expandedPlatformDialog.searchPlaceholder")}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="h-8 pl-8 text-xs"
@@ -302,12 +304,12 @@ export function PlatformCard({
             <div className="flex flex-col items-center justify-center text-center py-12">
               <AlertCircle className="h-8 w-8 text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground mb-4">
-                No violations found matching your filters.
+                {t("matchDashboard.violationItem.noViolationsFound")}
               </p>
               {canModifyViolations && (
                 <Button size="sm" variant="outline" onClick={onAddViolation}>
                   <Plus className="h-3 w-3 mr-1.5" />
-                  Add violation
+                  {t("matchDashboard.platformCard.addViolation")}
                 </Button>
               )}
             </div>
@@ -336,12 +338,12 @@ export function PlatformCard({
             <div className="flex flex-col items-center justify-center h-full text-center py-12">
               <AlertCircle className="h-8 w-8 text-muted-foreground mb-2" />
               <p className="text-sm text-muted-foreground mb-4">
-                No violations found matching your filters.
+                {t("matchDashboard.violationItem.noViolationsFound")}
               </p>
               {canModifyViolations && (
                 <Button size="sm" variant="outline" onClick={onAddViolation}>
                   <Plus className="h-3 w-3 mr-1.5" />
-                  Add violation
+                  {t("matchDashboard.platformCard.addViolation")}
                 </Button>
               )}
             </div>
@@ -381,7 +383,7 @@ export function PlatformCard({
               <h3 className="font-semibold">{platform.name}</h3>
             </div>
             <p className="text-xs text-muted-foreground ml-7">
-              Live: {liveCount} • Highlights: {highlightsCount} • Others:{" "}
+              {t("matchDashboard.platformCard.live")} {liveCount} • {t("matchDashboard.platformCard.highlights")} {highlightsCount} • {t("matchDashboard.platformCard.others")}{" "}
               {othersCount}
             </p>
           </div>
@@ -393,9 +395,9 @@ export function PlatformCard({
               <Maximize2 className="h-4 w-4" />
             </button>
             {canModifyViolations && (
-              <Button size="sm" className="text-xs" onClick={onAddViolation}>
+                <Button size="sm" className="text-xs" onClick={onAddViolation}>
                 <Plus className="h-3 w-3 mr-1.5" />
-                Add violation
+                {t("matchDashboard.platformCard.addViolation")}
               </Button>
             )}
           </div>
@@ -417,10 +419,10 @@ export function PlatformCard({
               </div>
               <div className="flex items-center gap-2">
                 {canModifyViolations && (
-                  <Button size="sm" className="text-xs" onClick={onAddViolation}>
-                    <Plus className="h-3 w-3 mr-1.5" />
-                    Add violation
-                  </Button>
+                <Button size="sm" className="text-xs" onClick={onAddViolation}>
+                <Plus className="h-3 w-3 mr-1.5" />
+                {t("matchDashboard.platformCard.addViolation")}
+              </Button>
                 )}
                 <button
                   onClick={() => setIsMaximized(false)}

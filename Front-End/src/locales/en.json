@@ -186,7 +186,9 @@
       "affected": "affected",
       "success": "Success",
       "avgBlockTime": "Avg Block Time"
-    }
+    },
+    "allTypes": "All types",
+    "other": "Other"
   },
   "problematicAccounts": {
     "title": "Most Problematic Accounts",
@@ -230,8 +232,6 @@
     "removed": "Removed",
     "review": "Review",
     "reported": "Reported",
-    "allTypes": "All types",
-    "other": "Other",
     "live": "Live:",
     "highlights": "Highlights:",
     "others": "Others:",
@@ -594,6 +594,139 @@
     },
     "add": "Add",
     "addPlatform": "Add platform",
+    "platformCard": {
+      "addViolation": "Add violation",
+      "maximize": "Maximize",
+      "live": "Live:",
+      "highlights": "Highlights:",
+      "others": "Others:",
+      "totalViews": "Total views",
+      "totalViolations": "Total violations",
+      "active": "Active",
+      "blocked": "Blocked",
+      "avgBlockTime": "Avg block time",
+      "removed": "Removed",
+      "blockSuccessRate": "Block success rate",
+      "underReview": "Under review",
+      "min": "min",
+      "hrs": "hrs",
+      "of": "of"
+    },
+    "violationItem": {
+      "copyLink": "Copy link",
+      "edit": "Edit",
+      "setToActive": "Set to Active",
+      "markAsBlocked": "Mark as blocked",
+      "addNote": "Add note",
+      "delete": "Delete",
+      "changeHistory": "Change History",
+      "addedOn": "added on",
+      "blockedIn": "blocked in",
+      "justNow": "just now",
+      "timeUnits": {
+        "min": "min",
+        "m": "m",
+        "h": "h",
+        "d": "d",
+        "ago": "ago"
+      },
+      "noViolationsFound": "No violations found matching your filters.",
+      "violationCreatedOn": "Violation created on",
+      "forChannelUser": "for channel/user",
+      "with": "with",
+      "views": "views",
+      "andStatus": "and status:",
+      "withStatus": "with status:",
+      "statusChangedFrom": "Status changed from",
+      "to": "to",
+      "blockedAtTimeAdded": "Blocked at time added:",
+      "blockedAtTimeRemoved": "Blocked at time removed",
+      "violationUrlChangedFrom": "Violation URL changed from",
+      "accountChannelChangedFrom": "Account Channel changed from",
+      "contentTypeChangedFrom": "Content Type changed from",
+      "viewsChangedFrom": "Views changed from",
+      "timeAddedChangedFrom": "Time Added changed from",
+      "blockedAtChangedFrom": "Blocked At changed from",
+      "blockedAtTimeAddedLabel": "Blocked At time added:",
+      "blockedAtRemoved": "Blocked At removed",
+      "noteAdded": "Note",
+      "notesAdded": "Notes",
+      "added": "added:",
+      "noteDeleted": "Note",
+      "notesDeleted": "Notes",
+      "deleted": "deleted:",
+      "noteChangedFrom": "Note changed from",
+      "notesChanged": "Notes changed",
+      "fieldUpdated": "Field updated",
+      "violationDeleted": "Violation deleted",
+      "updated": "Updated"
+    },
+    "expandedPlatformDialog": {
+      "allViolations": "All Violations",
+      "viewingAllViolations": "Viewing all violations for this platform in this match",
+      "searchPlaceholder": "Search URLs or accounts...",
+      "filters": {
+        "all": "All",
+        "active": "Active",
+        "blocked": "Blocked",
+        "removed": "Removed",
+        "review": "Review"
+      }
+    },
+    "addViolationSheet": {
+      "title": {
+        "edit": "Edit Violation",
+        "add": "Add Violation"
+      },
+      "description": {
+        "edit": "Update violation details",
+        "add": "Add a new violation for this match and platform"
+      },
+      "match": "Match",
+      "platform": "Platform",
+      "violationUrl": "Violation URL *",
+      "violationUrlPlaceholder": "https://x.com/...",
+      "accountChannel": "Account / Channel *",
+      "accountChannelPlaceholder": "@username or channel name",
+      "contentType": "Content Type *",
+      "contentTypePlaceholder": "Select content type",
+      "status": "Status *",
+      "statusPlaceholder": "Select status",
+      "views": "Views (optional)",
+      "viewsPlaceholder": "0",
+      "timeAdded": "Time Added *",
+      "blockedAt": "Blocked at (optional)",
+      "blockedAtHint": "Leave empty or adjust the auto-filled time",
+      "notes": "Notes (optional)",
+      "addNote": "Add note",
+      "notePlaceholder": "Enter note...",
+      "noNotes": "No notes yet. Click \"Add note\" to add one.",
+      "cancel": "Cancel",
+      "save": {
+        "edit": "Save changes",
+        "add": "Save Violation"
+      }
+    },
+    "addNoteDialog": {
+      "title": "Add Note",
+      "description": "Add a note to this violation. Notes will be displayed as individual items.",
+      "note": "Note",
+      "notePlaceholder": "Enter your note here...",
+      "existingNotes": "Existing Notes",
+      "cancel": "Cancel",
+      "addNote": "Add Note"
+    },
+    "blockConfirmDialog": {
+      "title": "Confirm block time",
+      "description": "You are marking this violation as blocked. Choose the exact block time to record for this post.",
+      "views": "views",
+      "added": "added",
+      "useCurrentTime": "Use current time",
+      "currentTimeHint": "Block time = now",
+      "setCustomTime": "Set custom block time",
+      "cancel": "Cancel",
+      "confirm": "Confirm block"
+    },
     "sections": {
       "platformOperations": "Platform Operations (This Match)",
       "platformComparison": "Platform Comparison (This Match)",
@@ -742,6 +875,36 @@
       "error": {
         "failedToDelete": "Failed to delete log entry. Please try again."
       }
+    }
+  },
+  "roundReport": {
+    "title": "Round Report",
+    "downloadAsImage": "Download as Image",
+    "close": "Close",
+    "mainTitle": "Anti-Piracy Round Report",
+    "week": "Week",
+    "dataIncludes": "Data includes all matches in the current week/round",
+    "liveStreamViolations": "Live Stream Violations",
+    "highlightsViolations": "Highlights Violations",
+    "tableHeaders": {
+      "platform": "Platform",
+      "detected": "Detected",
+      "blocked": "Blocked",
+      "successRate": "Success Rate",
+      "avgBlockTime": "Avg Block Time",
+      "views": "Views"
+    },
+    "timeFormats": {
+      "na": "N/A",
+      "days": "d",
+      "hours": "h",
+      "minutes": "min"
+    },
+    "toast": {
+      "reportSaved": "Report Saved",
+      "reportSavedDescription": "Round report has been saved as an image successfully",
+      "error": "Error",
+      "errorDescription": "An error occurred while saving the report"
     }
   }
 }

@@ -13,6 +13,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Violation, PlatformData } from "./types";
 import { formatViewsString } from "./utils";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface BlockConfirmDialogProps {
   open: boolean;
@@ -41,14 +42,15 @@ export function BlockConfirmDialog({
   onCustomBlockTimeChange,
   onConfirm,
 }: BlockConfirmDialogProps) {
+  const { t } = useLanguage();
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Confirm block time</DialogTitle>
+          <DialogTitle>{t("matchDashboard.blockConfirmDialog.title")}</DialogTitle>
           <DialogDescription>
-            You are marking this violation as blocked. Choose the exact block
-            time to record for this post.
+            {t("matchDashboard.blockConfirmDialog.description")}
           </DialogDescription>
         </DialogHeader>
 
@@ -63,15 +65,24 @@ export function BlockConfirmDialog({
                 }
               </Badge>
               <span className="text-muted-foreground">•</span>
-              <span>{blockConfirmViolation.violation.type}</span>
+              <span>
+                {(() => {
+                  const contentType = blockConfirmViolation.violation.type || blockConfirmViolation.violation.contentType || "Other";
+                  const contentTypeLower = contentType.toLowerCase();
+                  if (contentTypeLower === "live") return t("dashboard.live");
+                  if (contentTypeLower === "highlights") return t("dashboard.highlights");
+                  if (contentTypeLower === "other" || contentTypeLower === "others") return t("dashboard.other");
+                  return contentType;
+                })()}
+              </span>
               <span className="text-muted-foreground">•</span>
               <span className="font-medium">
                 {formatViewsString(blockConfirmViolation.violation.views || "0")}{" "}
-                views
+                {t("matchDashboard.blockConfirmDialog.views")}
               </span>
               <span className="text-muted-foreground">•</span>
               <span className="text-xs text-muted-foreground">
-                added {blockConfirmViolation.violation.addedAgo}
+                {t("matchDashboard.blockConfirmDialog.added")} {blockConfirmViolation.violation.addedAgo}
               </span>
             </div>
           </div>
@@ -93,10 +104,10 @@ export function BlockConfirmDialog({
               />
               <div className="flex-1">
                 <Label htmlFor="current" className="font-medium cursor-pointer">
-                  Use current time
+                  {t("matchDashboard.blockConfirmDialog.useCurrentTime")}
                 </Label>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Block time = now
+                  {t("matchDashboard.blockConfirmDialog.currentTimeHint")}
                 </p>
               </div>
             </div>
@@ -107,7 +118,7 @@ export function BlockConfirmDialog({
               <RadioGroupItem value="custom" id="custom" className="mt-0.5" />
               <div className="flex-1">
                 <Label htmlFor="custom" className="font-medium cursor-pointer">
-                  Set custom block time
+                  {t("matchDashboard.blockConfirmDialog.setCustomTime")}
                 </Label>
                 {blockTimeChoice === "custom" && (
                   <Input
@@ -124,9 +135,9 @@ export function BlockConfirmDialog({
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("matchDashboard.blockConfirmDialog.cancel")}
           </Button>
-          <Button onClick={onConfirm}>Confirm block</Button>
+          <Button onClick={onConfirm}>{t("matchDashboard.blockConfirmDialog.confirm")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

@@ -84,7 +84,7 @@ export function ViolationItem({
   getPlatformIcon,
   canModifyViolations = true,
 }: ViolationItemProps) {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   // Force re-render every minute to update time displays
   const [, setRefresh] = useState(0);
   const [isAuditLogOpen, setIsAuditLogOpen] = useState(false);
@@ -154,7 +154,7 @@ export function ViolationItem({
                 <Copy className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Copy link</TooltipContent>
+            <TooltipContent>{t("matchDashboard.violationItem.copyLink")}</TooltipContent>
           </Tooltip>
 
           {canModifyViolations && (
@@ -169,7 +169,7 @@ export function ViolationItem({
                     <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Edit</TooltipContent>
+                <TooltipContent>{t("matchDashboard.violationItem.edit")}</TooltipContent>
               </Tooltip>
 
               <Tooltip>
@@ -185,8 +185,8 @@ export function ViolationItem({
                 <TooltipContent>
                   {violation.status === "Blocked" ||
                   violation.status === "Removed"
-                    ? "Set to Active"
-                    : "Mark as blocked"}
+                    ? t("matchDashboard.violationItem.setToActive")
+                    : t("matchDashboard.violationItem.markAsBlocked")}
                 </TooltipContent>
               </Tooltip>
 
@@ -204,14 +204,14 @@ export function ViolationItem({
                     onClick={() => onAddNote(platform.id, violation)}
                     className="text-xs sm:text-sm touch-manipulation">
                     <FileEdit className="mr-2 h-4 w-4" />
-                    Add note
+                    {t("matchDashboard.violationItem.addNote")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-destructive text-xs sm:text-sm touch-manipulation"
                     onClick={() => onDelete(platform.id, violation.id)}>
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    {t("matchDashboard.violationItem.delete")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -263,8 +263,8 @@ export function ViolationItem({
       </div>
 
       {/* Line 3: Meta text */}
-      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 break-words overflow-wrap-anywhere">
-        {formatBlockedViolationText(violation)}
+      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 break-words overflow-wrap-anywhere text-left">
+        {formatBlockedViolationText(violation, t, isRTL)}
       </p>
 
       {/* Line 4: Notes */}
@@ -291,7 +291,7 @@ export function ViolationItem({
           className="mt-2 pt-2 border-t border-border/50">
           <CollapsibleTrigger className="flex items-center gap-2 w-full text-[10px] sm:text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation">
             <History className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-            <span>Change History ({violation.auditLog.length})</span>
+            <span>{t("matchDashboard.violationItem.changeHistory")} ({violation.auditLog.length})</span>
             {isAuditLogOpen ? (
               <ChevronUp className="h-3 w-3 sm:h-3.5 sm:w-3.5 ml-auto" />
             ) : (
@@ -310,7 +310,7 @@ export function ViolationItem({
                 hour: "numeric",
                 minute: "2-digit",
               });
-              const timeAgo = formatTimeAgo(timestamp);
+              const timeAgo = formatTimeAgo(timestamp, t);
 
               let description: string | React.ReactNode = "";
               switch (entry.action) {
@@ -320,53 +320,101 @@ export function ViolationItem({
                     violation.accountChannel || violation.accountHandle || "";
                   const views = violation.views || "0";
                   const status = violation.status || "";
+                  
                   description = (
-                    <>
-                      Violation created on{" "}
-                      <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
-                        {platformName}
-                      </code>
-                      {accountName && (
+                    <div className="text-left">
+                      {isRTL ? (
                         <>
-                          {" "}
-                          for channel/user{" "}
+                          {views && views !== "0" && status && (
+                            <>
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {translateStatus(status)}
+                              </code>{" "}
+                              {t("matchDashboard.violationItem.andStatus")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {formatViewsString(views)} {t("matchDashboard.violationItem.views")}
+                              </code>{" "}
+                              {t("matchDashboard.violationItem.with")}{" "}
+                            </>
+                          )}
+                          {views && views !== "0" && !status && (
+                            <>
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {formatViewsString(views)} {t("matchDashboard.violationItem.views")}
+                              </code>{" "}
+                              {t("matchDashboard.violationItem.with")}{" "}
+                            </>
+                          )}
+                          {!views && status && (
+                            <>
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {translateStatus(status)}
+                              </code>{" "}
+                              {t("matchDashboard.violationItem.withStatus")}{" "}
+                            </>
+                          )}
+                          {accountName && (
+                            <>
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {accountName}
+                              </code>{" "}
+                              {t("matchDashboard.violationItem.forChannelUser")}{" "}
+                            </>
+                          )}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
-                            {accountName}
-                          </code>
-                        </>
-                      )}
-                      {views && views !== "0" && status && (
-                        <>
-                          {" "}
-                          with{" "}
-                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
-                            {formatViewsString(views)} views
+                            {platformName}
                           </code>{" "}
-                          and status:{" "}
-                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
-                            {status}
-                          </code>
+                          {t("matchDashboard.violationItem.violationCreatedOn")}
                         </>
-                      )}
-                      {views && views !== "0" && !status && (
+                      ) : (
                         <>
-                          {" "}
-                          with{" "}
+                          {t("matchDashboard.violationItem.violationCreatedOn")}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
-                            {formatViewsString(views)} views
+                            {platformName}
                           </code>
+                          {accountName && (
+                            <>
+                              {" "}
+                              {t("matchDashboard.violationItem.forChannelUser")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {accountName}
+                              </code>
+                            </>
+                          )}
+                          {views && views !== "0" && status && (
+                            <>
+                              {" "}
+                              {t("matchDashboard.violationItem.with")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {formatViewsString(views)} {t("matchDashboard.violationItem.views")}
+                              </code>{" "}
+                              {t("matchDashboard.violationItem.andStatus")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {translateStatus(status)}
+                              </code>
+                            </>
+                          )}
+                          {views && views !== "0" && !status && (
+                            <>
+                              {" "}
+                              {t("matchDashboard.violationItem.with")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {formatViewsString(views)} {t("matchDashboard.violationItem.views")}
+                              </code>
+                            </>
+                          )}
+                          {!views && status && (
+                            <>
+                              {" "}
+                              {t("matchDashboard.violationItem.withStatus")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {translateStatus(status)}
+                              </code>
+                            </>
+                          )}
                         </>
                       )}
-                      {!views && status && (
-                        <>
-                          {" "}
-                          with status:{" "}
-                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
-                            {status}
-                          </code>
-                        </>
-                      )}
-                    </>
+                    </div>
                   );
                   break;
                 }
@@ -397,72 +445,72 @@ export function ViolationItem({
                         typeof entry.changes.blockedAtAdded === "number")
                         ? new Date(
                             entry.changes.blockedAtAdded
-                          ).toLocaleString()
+                          ).toLocaleString("en-US")
                         : "";
                     description = (
-                      <>
-                        Status changed from{" "}
+                      <div className="text-left">
+                        {t("matchDashboard.violationItem.statusChangedFrom")}{" "}
                         <code
                           className={`text-[9px] sm:text-xs ${getStatusColorClasses(
                             oldStatus
                           )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
-                          {oldStatus}
+                          {translateStatus(oldStatus)}
                         </code>{" "}
-                        to{" "}
+                        {t("matchDashboard.violationItem.to")}{" "}
                         <code
                           className={`text-[9px] sm:text-xs ${getStatusColorClasses(
                             newStatus
                           )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
-                          {newStatus}
+                          {translateStatus(newStatus)}
                         </code>
                         <div className="mt-1 text-[10px] sm:text-xs text-muted-foreground">
-                          Blocked at time added:{" "}
+                          {t("matchDashboard.violationItem.blockedAtTimeAdded")}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {blockedAtTime}
                           </code>
                         </div>
-                      </>
+                      </div>
                     );
                   } else if (entry.changes?.blockedAtRemoved) {
                     description = (
-                      <>
-                        Status changed from{" "}
+                      <div className="text-left">
+                        {t("matchDashboard.violationItem.statusChangedFrom")}{" "}
                         <code
                           className={`text-[9px] sm:text-xs ${getStatusColorClasses(
                             oldStatus
                           )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
-                          {oldStatus}
+                          {translateStatus(oldStatus)}
                         </code>{" "}
-                        to{" "}
+                        {t("matchDashboard.violationItem.to")}{" "}
                         <code
                           className={`text-[9px] sm:text-xs ${getStatusColorClasses(
                             newStatus
                           )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
-                          {newStatus}
+                          {translateStatus(newStatus)}
                         </code>
                         <div className="mt-1 text-[10px] sm:text-xs text-muted-foreground">
-                          Blocked at time removed
+                          {t("matchDashboard.violationItem.blockedAtTimeRemoved")}
                         </div>
-                      </>
+                      </div>
                     );
                   } else {
                     description = (
-                      <>
-                        Status changed from{" "}
+                      <div className="text-left">
+                        {t("matchDashboard.violationItem.statusChangedFrom")}{" "}
                         <code
                           className={`text-[9px] sm:text-xs ${getStatusColorClasses(
                             oldStatus
                           )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
-                          {oldStatus}
+                          {translateStatus(oldStatus)}
                         </code>{" "}
-                        to{" "}
+                        {t("matchDashboard.violationItem.to")}{" "}
                         <code
                           className={`text-[9px] sm:text-xs ${getStatusColorClasses(
                             newStatus
                           )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
-                          {newStatus}
+                          {translateStatus(newStatus)}
                         </code>
-                      </>
+                      </div>
                     );
                   }
                   break;
@@ -478,9 +526,11 @@ export function ViolationItem({
                         )
                       : []) ||
                     [];
-                  description = `Note${
-                    addedNotes.length > 1 ? "s" : ""
-                  } added: ${addedNotes.join(", ")}`;
+                  description = (
+                    <div className="text-left">
+                      {addedNotes.length > 1 ? t("matchDashboard.violationItem.notesAdded") : t("matchDashboard.violationItem.noteAdded")} {t("matchDashboard.violationItem.added")} {addedNotes.join(", ")}
+                    </div>
+                  );
                   break;
                 }
                 case "field_updated": {
@@ -500,61 +550,61 @@ export function ViolationItem({
                       const oldUrl = String(entry.oldValue || "");
                       const newUrl = String(entry.newValue || "");
                       description = (
-                        <>
-                          Violation URL changed from{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono break-all">
+                        <div className="text-left">
+                          {t("matchDashboard.violationItem.violationUrlChangedFrom")}{" "}
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono break-all">
                             {oldUrl}
                           </code>{" "}
-                          to{" "}
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono break-all">
+                          {t("matchDashboard.violationItem.to")}{" "}
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono break-all">
                             {newUrl}
                           </code>
-                        </>
+                        </div>
                       );
                     } else if (entry.field === "accountChannel") {
                       const oldChannel = String(entry.oldValue || "");
                       const newChannel = String(entry.newValue || "");
                       description = (
-                        <>
-                          Account Channel changed from{" "}
+                        <div className="text-left">
+                          {t("matchDashboard.violationItem.accountChannelChangedFrom")}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {oldChannel}
                           </code>{" "}
-                          to{" "}
+                          {t("matchDashboard.violationItem.to")}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {newChannel}
                           </code>
-                        </>
+                        </div>
                       );
                     } else if (entry.field === "contentType") {
                       const oldType = String(entry.oldValue || "");
                       const newType = String(entry.newValue || "");
                       description = (
-                        <>
-                          Content Type changed from{" "}
+                        <div className="text-left">
+                          {t("matchDashboard.violationItem.contentTypeChangedFrom")}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {oldType}
                           </code>{" "}
-                          to{" "}
+                          {t("matchDashboard.violationItem.to")}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {newType}
                           </code>
-                        </>
+                        </div>
                       );
                     } else if (entry.field === "views") {
                       const oldViews = String(entry.oldValue ?? "");
                       const newViews = String(entry.newValue ?? "");
                       description = (
-                        <>
-                          Views changed from{" "}
+                        <div className="text-left">
+                          {t("matchDashboard.violationItem.viewsChangedFrom")}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {oldViews}
                           </code>{" "}
-                          to{" "}
+                          {t("matchDashboard.violationItem.to")}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {newViews}
                           </code>
-                        </>
+                        </div>
                       );
                     } else if (entry.field === "timeAdded") {
                       const timeOptions: Intl.DateTimeFormatOptions = {
@@ -584,16 +634,16 @@ export function ViolationItem({
                             )
                           : "";
                       description = (
-                        <>
-                          Time Added changed from{" "}
+                        <div className="text-left">
+                          {t("matchDashboard.violationItem.timeAddedChangedFrom")}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {oldTime}
                           </code>{" "}
-                          to{" "}
+                          {t("matchDashboard.violationItem.to")}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {newTime}
                           </code>
-                        </>
+                        </div>
                       );
                     } else if (entry.field === "blockedAt") {
                       const action = entry.changes?.action;
@@ -605,15 +655,19 @@ export function ViolationItem({
                             ? new Date(entry.newValue).toLocaleString()
                             : "";
                         description = (
-                          <>
-                            Blocked At time added:{" "}
+                          <div className="text-left">
+                            {t("matchDashboard.violationItem.blockedAtTimeAddedLabel")}{" "}
                             <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                               {newBlocked}
                             </code>
-                          </>
+                          </div>
                         );
                       } else if (action === "removed") {
-                        description = "Blocked At removed";
+                        description = (
+                          <div className="text-left">
+                            {t("matchDashboard.violationItem.blockedAtRemoved")}
+                          </div>
+                        );
                       } else if (action === "changed" || !action) {
                         // action === "changed" or no action (fallback) - this is when time is explicitly changed
                         const timeOptions: Intl.DateTimeFormatOptions = {
@@ -643,16 +697,16 @@ export function ViolationItem({
                               )
                             : "undefined";
                         description = (
-                          <>
-                            Blocked At changed from{" "}
+                          <div className="text-left">
+                            {t("matchDashboard.violationItem.blockedAtChangedFrom")}{" "}
                             <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                               {oldBlocked}
                             </code>{" "}
-                            to{" "}
+                            {t("matchDashboard.violationItem.to")}{" "}
                             <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                               {newBlocked}
                             </code>
-                          </>
+                          </div>
                         );
                       }
                     } else if (entry.field === "notes") {
@@ -663,9 +717,11 @@ export function ViolationItem({
                       ) {
                         // Note was deleted
                         const removedNotes = entry.changes.removed;
-                        description = `Note${
-                          removedNotes.length > 1 ? "s" : ""
-                        } deleted: ${removedNotes.join(", ")}`;
+                        description = (
+                          <div className="text-left">
+                            {removedNotes.length > 1 ? t("matchDashboard.violationItem.notesDeleted") : t("matchDashboard.violationItem.noteDeleted")} {t("matchDashboard.violationItem.deleted")} {removedNotes.join(", ")}
+                          </div>
+                        );
                       } else if (
                         entry.changes?.action === "changed" &&
                         entry.changes?.edited
@@ -675,49 +731,196 @@ export function ViolationItem({
                         if (edited.length > 0) {
                           const firstEdit = edited[0];
                           description = (
-                            <>
-                              Note changed from{" "}
-                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
-                                {firstEdit.old}
-                              </code>{" "}
-                              to{" "}
-                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
-                                {firstEdit.new}
-                              </code>
-                            </>
+                            <div className="text-left">
+                              {isRTL ? (
+                                <>
+                                  <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                    {firstEdit.new}
+                                  </code>{" "}
+                                  {t("matchDashboard.violationItem.to")}{" "}
+                                  <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                    {firstEdit.old}
+                                  </code>{" "}
+                                  {t("matchDashboard.violationItem.noteChangedFrom")}
+                                </>
+                              ) : (
+                                <>
+                                  {t("matchDashboard.violationItem.noteChangedFrom")}{" "}
+                                  <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                    {firstEdit.old}
+                                  </code>{" "}
+                                  {t("matchDashboard.violationItem.to")}{" "}
+                                  <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                    {firstEdit.new}
+                                  </code>
+                                </>
+                              )}
+                            </div>
                           );
                         } else {
-                          description = "Notes changed";
+                          description = (
+                            <div className="text-left">
+                              {t("matchDashboard.violationItem.notesChanged")}
+                            </div>
+                          );
                         }
                       } else {
-                        description = "Notes changed";
+                        description = (
+                          <div className="text-left">
+                            {t("matchDashboard.violationItem.notesChanged")}
+                          </div>
+                        );
                       }
                     } else {
                       const oldVal = String(entry.oldValue ?? "");
                       const newVal = String(entry.newValue ?? "");
                       description = (
-                        <>
-                          {fieldName} changed from{" "}
-                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
-                            {oldVal}
-                          </code>{" "}
-                          to{" "}
-                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
-                            {newVal}
-                          </code>
-                        </>
+                        <div className="text-left">
+                          {isRTL ? (
+                            <>
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {newVal}
+                              </code>{" "}
+                              {t("matchDashboard.violationItem.to")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {oldVal}
+                              </code>{" "}
+                              {fieldName} {t("matchDashboard.activityLog.descriptions.changedFrom")}
+                            </>
+                          ) : (
+                            <>
+                              {fieldName} {t("matchDashboard.activityLog.descriptions.changedFrom")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {oldVal}
+                              </code>{" "}
+                              {t("matchDashboard.violationItem.to")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {newVal}
+                              </code>
+                            </>
+                          )}
+                        </div>
                       );
                     }
                   } else {
-                    description = "Field updated";
+                    description = (
+                      <div className="text-left">
+                        {t("matchDashboard.violationItem.fieldUpdated")}
+                      </div>
+                    );
                   }
                   break;
                 }
-                case "deleted":
-                  description = "Violation deleted";
+                case "deleted": {
+                  const platformName = violation.platformName || "platform";
+                  const accountName =
+                    violation.accountChannel || violation.accountHandle || "";
+                  const views = violation.views || "0";
+                  const status = violation.status || "";
+                  
+                  description = (
+                    <div className="text-left">
+                      {isRTL ? (
+                        <>
+                          {views && views !== "0" && status && (
+                            <>
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {translateStatus(status)}
+                              </code>{" "}
+                              {t("matchDashboard.violationItem.andStatus")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {formatViewsString(views)} {t("matchDashboard.violationItem.views")}
+                              </code>{" "}
+                              {t("matchDashboard.violationItem.with")}{" "}
+                            </>
+                          )}
+                          {views && views !== "0" && !status && (
+                            <>
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {formatViewsString(views)} {t("matchDashboard.violationItem.views")}
+                              </code>{" "}
+                              {t("matchDashboard.violationItem.with")}{" "}
+                            </>
+                          )}
+                          {!views && status && (
+                            <>
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {translateStatus(status)}
+                              </code>{" "}
+                              {t("matchDashboard.violationItem.withStatus")}{" "}
+                            </>
+                          )}
+                          {accountName && (
+                            <>
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {accountName}
+                              </code>{" "}
+                              {t("matchDashboard.violationItem.forChannelUser")}{" "}
+                            </>
+                          )}
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                            {platformName}
+                          </code>{" "}
+                          {t("matchDashboard.activityLog.descriptions.violationDeletedFrom")}
+                        </>
+                      ) : (
+                        <>
+                          {t("matchDashboard.activityLog.descriptions.violationDeletedFrom")}{" "}
+                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                            {platformName}
+                          </code>
+                          {accountName && (
+                            <>
+                              {" "}
+                              {t("matchDashboard.violationItem.forChannelUser")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {accountName}
+                              </code>
+                            </>
+                          )}
+                          {views && views !== "0" && status && (
+                            <>
+                              {" "}
+                              {t("matchDashboard.violationItem.with")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {formatViewsString(views)} {t("matchDashboard.violationItem.views")}
+                              </code>{" "}
+                              {t("matchDashboard.violationItem.andStatus")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {translateStatus(status)}
+                              </code>
+                            </>
+                          )}
+                          {views && views !== "0" && !status && (
+                            <>
+                              {" "}
+                              {t("matchDashboard.violationItem.with")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {formatViewsString(views)} {t("matchDashboard.violationItem.views")}
+                              </code>
+                            </>
+                          )}
+                          {!views && status && (
+                            <>
+                              {" "}
+                              {t("matchDashboard.violationItem.withStatus")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {translateStatus(status)}
+                              </code>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
                   break;
+                }
                 default:
-                  description = "Updated";
+                  description = (
+                    <div className="text-left">
+                      {t("matchDashboard.violationItem.updated")}
+                    </div>
+                  );
               }
 
               return (
@@ -732,7 +935,7 @@ export function ViolationItem({
                       </span>
                     </div>
                     <span className="text-[9px] sm:text-xs text-muted-foreground/70">
-                      {formattedDate} at {formattedTime} • {timeAgo}
+                      {formattedDate} {t("matchDashboard.activityLog.dateTime.at")} {formattedTime} • {timeAgo}
                     </span>
                   </div>
                   <div className="text-[10px] sm:text-xs text-muted-foreground break-words">
@@ -748,15 +951,15 @@ export function ViolationItem({
   );
 }
 
-function formatTimeAgo(date: Date): string {
+function formatTimeAgo(date: Date, t: (key: string, params?: Record<string, string | number>) => string): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);
 
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffMins < 1) return t("matchDashboard.activityLog.timeAgo.justNow");
+  if (diffMins < 60) return t("matchDashboard.activityLog.timeAgo.minutesAgo", { minutes: diffMins });
   const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffHours < 24) return t("matchDashboard.activityLog.timeAgo.hoursAgo", { hours: diffHours });
   const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
+  return t("matchDashboard.activityLog.timeAgo.daysAgo", { days: diffDays });
 }
