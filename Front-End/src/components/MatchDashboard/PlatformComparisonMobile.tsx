@@ -208,13 +208,13 @@ export function PlatformComparisonMobile({
 
       {/* Sort Buttons */}
       <div className="flex flex-wrap gap-2 mb-4">
-        <SortButton sortKey="views" label="Views" />
-        <SortButton sortKey="violations" label="Violations" />
-        <SortButton sortKey="active" label="Active" />
-        <SortButton sortKey="blocked" label="Blocked" />
-        <SortButton sortKey="avgBlockTime" label="Block Time" />
-        <SortButton sortKey="removed" label="Removed" />
-        <SortButton sortKey="underReview" label="Review" />
+        <SortButton sortKey="views" label={t("dashboard.views")} />
+        <SortButton sortKey="violations" label={t("dashboard.violations")} />
+        <SortButton sortKey="active" label={t("dashboard.active")} />
+        <SortButton sortKey="blocked" label={t("dashboard.blocked")} />
+        <SortButton sortKey="avgBlockTime" label={t("dashboard.avgBlockTime")} />
+        <SortButton sortKey="removed" label={t("dashboard.removed")} />
+        <SortButton sortKey="underReview" label={t("dashboard.underReview")} />
       </div>
 
       {/* Platform Cards */}
@@ -226,8 +226,8 @@ export function PlatformComparisonMobile({
           // Match MatchOverview logic: <= targetMins = success, > targetMins = destructive
           const isWithinTarget = metrics.avgBlockTimeMinutes <= targetMins;
           const statusText = isWithinTarget
-            ? "Within target"
-            : "Over target";
+            ? t("dashboard.withinTarget")
+            : t("dashboard.overTarget");
 
           const minutes =
             metrics.avgBlockTimeMinutes % 1 === 0

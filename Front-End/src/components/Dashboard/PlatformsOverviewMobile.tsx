@@ -10,6 +10,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Platform {
   id: string;
@@ -90,6 +91,7 @@ export function PlatformsOverviewMobile({
   platforms,
   statsLoading,
 }: PlatformsOverviewMobileProps) {
+  const { t } = useLanguage();
   // Load saved chart view from localStorage, default to "violations"
   const [chartView, setChartView] = useState<ChartView>(() => {
     const saved = localStorage.getItem("platformsOverviewChartView");
@@ -129,7 +131,7 @@ export function PlatformsOverviewMobile({
         <div className="flex items-center justify-center py-8 sm:py-12">
           <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-muted-foreground mr-2" />
           <div className="text-xs sm:text-sm text-muted-foreground">
-            Loading platform data...
+            {t("dashboard.platformsOverview.loadingPlatformData")}
           </div>
         </div>
       </Card>
@@ -141,7 +143,7 @@ export function PlatformsOverviewMobile({
       <Card className="p-4 sm:p-6">
         <div className="flex items-center justify-center py-8 sm:py-12">
           <p className="text-xs sm:text-sm text-muted-foreground">
-            No platform data available
+            {t("dashboard.platformsOverview.noPlatformData")}
           </p>
         </div>
       </Card>
@@ -153,9 +155,9 @@ export function PlatformsOverviewMobile({
       {/* Header with Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 gap-3">
         <div>
-          <h3 className="text-sm sm:text-base font-semibold">Violations & Views by Platform</h3>
+          <h3 className="text-sm sm:text-base font-semibold">{t("dashboard.platformsOverview.title")}</h3>
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
-            Platform performance overview
+            {t("dashboard.platformsOverview.subtitle")}
           </p>
         </div>
         <div className="inline-flex rounded-lg bg-muted p-0.5 sm:p-1 w-full sm:w-auto">
@@ -166,7 +168,7 @@ export function PlatformsOverviewMobile({
                 ? "bg-background shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}>
-            Violations
+            {t("dashboard.platformsOverview.violations")}
           </button>
           <button
             onClick={() => setChartView("blocked")}
@@ -175,7 +177,7 @@ export function PlatformsOverviewMobile({
                 ? "bg-background shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}>
-            Blocked
+            {t("dashboard.platformsOverview.blocked")}
           </button>
           <button
             onClick={() => setChartView("views")}
@@ -184,7 +186,7 @@ export function PlatformsOverviewMobile({
                 ? "bg-background shadow-sm"
                 : "text-muted-foreground hover:text-foreground"
             }`}>
-            Views
+            {t("dashboard.platformsOverview.views")}
           </button>
         </div>
       </div>
@@ -212,11 +214,11 @@ export function PlatformsOverviewMobile({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                Top Platform by Views
+                {t("dashboard.platformsOverview.topPlatformByViews")}
               </p>
               <p className="text-xs sm:text-sm font-semibold truncate">
-                {topViewsPlatform.name} leads with{" "}
-                {formatViewsForDisplay(topViewsPlatform.views)} views
+                {topViewsPlatform.name} {t("dashboard.platformsOverview.leadsWith")}{" "}
+                {formatViewsForDisplay(topViewsPlatform.views)} {t("dashboard.platformsOverview.views")}
               </p>
             </div>
           </div>
@@ -229,11 +231,10 @@ export function PlatformsOverviewMobile({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
-                Fastest Response
+                {t("dashboard.platformsOverview.fastestResponse")}
               </p>
               <p className="text-xs sm:text-sm font-semibold truncate">
-                {fastestPlatform.name} with {fastestPlatform.avgBlockTime} min
-                avg
+                {fastestPlatform.name} {t("dashboard.platformsOverview.with")} {fastestPlatform.avgBlockTime} {t("dashboard.platformsOverview.minAvg")}
               </p>
             </div>
           </div>
@@ -271,8 +272,7 @@ export function PlatformsOverviewMobile({
                       {platform.name}
                     </p>
                     <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      {platform.matchesAffected} match
-                      {platform.matchesAffected !== 1 ? "es" : ""} affected
+                      {platform.matchesAffected} {platform.matchesAffected !== 1 ? t("dashboard.platformsOverview.matches") : t("dashboard.platformsOverview.match")} {t("dashboard.platformsOverview.affected")}
                     </p>
                   </div>
                 </div>
@@ -283,7 +283,7 @@ export function PlatformsOverviewMobile({
                 {/* Violations */}
                 <div className="space-y-1">
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Violations
+                    {t("dashboard.platformsOverview.violations")}
                   </p>
                   <p className="text-base sm:text-lg font-bold">
                     {platform.violations}
@@ -291,19 +291,19 @@ export function PlatformsOverviewMobile({
                   {chartView === "violations" && (
                     <div className="space-y-0.5 mt-1">
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px]">
-                        <span className="text-muted-foreground">Live:</span>
+                        <span className="text-muted-foreground">{t("dashboard.live")}:</span>
                         <span className="font-medium">
                           {platform.contentSplit.live.violations}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px]">
-                        <span className="text-muted-foreground">Highlights:</span>
+                        <span className="text-muted-foreground">{t("dashboard.highlights")}:</span>
                         <span className="font-medium">
                           {platform.contentSplit.highlights.violations}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px]">
-                        <span className="text-muted-foreground">Others:</span>
+                        <span className="text-muted-foreground">{t("dashboard.others")}:</span>
                         <span className="font-medium">
                           {platform.contentSplit.others.violations}
                         </span>
@@ -315,7 +315,7 @@ export function PlatformsOverviewMobile({
                 {/* Views */}
                 <div className="space-y-1">
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Views
+                    {t("dashboard.platformsOverview.views")}
                   </p>
                   <p className="text-base sm:text-lg font-bold">
                     {formatViewsForDisplay(platform.views)}
@@ -323,19 +323,19 @@ export function PlatformsOverviewMobile({
                   {chartView === "views" && (
                     <div className="space-y-0.5 mt-1">
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px]">
-                        <span className="text-muted-foreground">Live:</span>
+                        <span className="text-muted-foreground">{t("dashboard.live")}:</span>
                         <span className="font-medium">
                           {formatViewsForDisplay(platform.contentSplit.live.views)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px]">
-                        <span className="text-muted-foreground">Highlights:</span>
+                        <span className="text-muted-foreground">{t("dashboard.highlights")}:</span>
                         <span className="font-medium">
                           {formatViewsForDisplay(platform.contentSplit.highlights.views)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px]">
-                        <span className="text-muted-foreground">Others:</span>
+                        <span className="text-muted-foreground">{t("dashboard.others")}:</span>
                         <span className="font-medium">
                           {formatViewsForDisplay(platform.contentSplit.others.views)}
                         </span>
@@ -347,7 +347,7 @@ export function PlatformsOverviewMobile({
                 {/* Success Rate */}
                 <div className="space-y-1">
                   <p className="text-[10px] sm:text-xs text-muted-foreground">
-                    Success Rate
+                    {t("problematicAccounts.successRate")}
                   </p>
                   <p className="text-base sm:text-lg font-bold text-success">
                     {platform.successRate}%
@@ -358,27 +358,27 @@ export function PlatformsOverviewMobile({
                 {chartView === "blocked" ? (
                   <div className="space-y-1">
                     <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      Blocked
+                      {t("dashboard.platformsOverview.blocked")}
                     </p>
                     <p className="text-base sm:text-lg font-bold text-success">
                       {platform.statusBreakdown.blocked}
                     </p>
                     <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-1">
-                      Active: {platform.statusBreakdown.active}
+                      {t("dashboard.platformsOverview.active")}: {platform.statusBreakdown.active}
                     </p>
                   </div>
                 ) : (
                   <div className="space-y-1">
                     <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      Avg Block Time
+                      {t("dashboard.platformsOverview.avgBlockTime")}
                     </p>
                     {platform.avgBlockTime > 0 ? (
                       <p className="text-base sm:text-lg font-bold">
-                        {platform.avgBlockTime} min
+                        {platform.avgBlockTime} {t("dashboard.min")}
                       </p>
                     ) : (
                       <p className="text-xs sm:text-sm text-muted-foreground">
-                        N/A
+                        {t("whitelistedAccounts.nA")}
                       </p>
                     )}
                   </div>
@@ -389,7 +389,7 @@ export function PlatformsOverviewMobile({
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <p className="text-[9px] sm:text-[10px] text-muted-foreground">
-                        Removed
+                        {t("problematicAccounts.removed")}
                       </p>
                       <p className="text-xs sm:text-sm font-medium">
                         {platform.statusBreakdown.removed}
@@ -397,7 +397,7 @@ export function PlatformsOverviewMobile({
                     </div>
                     <div>
                       <p className="text-[9px] sm:text-[10px] text-muted-foreground">
-                        Under Review
+                        {t("dashboard.underReview")}
                       </p>
                       <p className="text-xs sm:text-sm font-medium">
                         {platform.statusBreakdown.underReview}

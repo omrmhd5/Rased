@@ -153,9 +153,7 @@ export const calculateAvgBlockTimeNumber = (
 
 export const calculateBlockedSuccess = (violations: Violation[]): string => {
   // Only calculate for "Blocked" status (Removed is separate)
-  const blockedViolations = violations.filter(
-    (v) => v.status === "Blocked"
-  );
+  const blockedViolations = violations.filter((v) => v.status === "Blocked");
 
   if (blockedViolations.length === 0) return "0%";
 
@@ -498,13 +496,16 @@ export const calculateAndSaveTopPlatform = async (
 
     // Find platform with most views
     const topPlatform = platformOperations.reduce((top, current) => {
-      const currentViews = parseInt(current.totalViews.replace(/[^0-9]/g, "")) || 0;
-      const topViews = parseInt((top?.totalViews || "0").replace(/[^0-9]/g, "")) || 0;
+      const currentViews =
+        parseInt(current.totalViews.replace(/[^0-9]/g, "")) || 0;
+      const topViews =
+        parseInt((top?.totalViews || "0").replace(/[^0-9]/g, "")) || 0;
       return currentViews > topViews ? current : top;
     }, platformOperations[0]);
 
     const topPlatformId = topPlatform.id;
-    const mostViews = parseInt(topPlatform.totalViews.replace(/[^0-9]/g, "")) || 0;
+    const mostViews =
+      parseInt(topPlatform.totalViews.replace(/[^0-9]/g, "")) || 0;
 
     // Update Match document
     const response = await fetch(`${API_URL}/matches/${externalMatchId}`, {

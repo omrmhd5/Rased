@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { ProblematicAccountsMobile } from "./ProblematicAccountsMobile";
 
 type League = string | null;
@@ -47,6 +48,7 @@ const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 export default function ProblematicAccounts() {
   const navigate = useNavigate();
   const { user, leagues, loadingLeagues } = useAuth();
+  const { t, isRTL } = useLanguage();
 
   // Get available leagues based on user role (memoized to prevent infinite loops)
   const availableLeagues = useMemo((): League[] => {
@@ -149,6 +151,7 @@ export default function ProblematicAccounts() {
   const [stageRangeEnd, setStageRangeEnd] = useState<string>("");
 
   // Hardcoded stages for Super Cups (similar to weeks for regular leagues)
+  // Backend expects English values, but we display translated versions
   const availableStages = [
     "16th Finals",
     "8th Finals",
@@ -156,6 +159,17 @@ export default function ProblematicAccounts() {
     "Semi-finals",
     "Final",
   ];
+  
+  const getStageDisplayName = (stage: string): string => {
+    const stageMap: Record<string, string> = {
+      "16th Finals": t("problematicAccounts.stages.16thFinals"),
+      "8th Finals": t("problematicAccounts.stages.8thFinals"),
+      "Quarter-finals": t("problematicAccounts.stages.quarterFinals"),
+      "Semi-finals": t("problematicAccounts.stages.semiFinals"),
+      "Final": t("problematicAccounts.stages.final"),
+    };
+    return stageMap[stage] || stage;
+  };
 
   const [selectedPlatform, setSelectedPlatform] = useState<string>("all");
 
@@ -407,7 +421,10 @@ export default function ProblematicAccounts() {
   const getLeagueName = (league: League): string => {
     if (!league) return "";
     const leagueInfo = leagues?.find((l) => l.league === league);
-    return leagueInfo?.name || leagueInfo?.arabicName || league;
+    if (isRTL) {
+      return leagueInfo?.arabicName || leagueInfo?.knownName || leagueInfo?.name || league;
+    }
+    return leagueInfo?.knownName || leagueInfo?.name || leagueInfo?.arabicName || league;
   };
 
   // Auto-select first available league for employees if they have only one league
@@ -423,16 +440,17 @@ export default function ProblematicAccounts() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">
-            Most Problematic Accounts
+            {t("problematicAccounts.title")}
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-            Accounts and channels with the most violations
+            {t("problematicAccounts.subtitle")}
           </p>
           {!loadingThresholds && (
             <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-              Showing accounts with views ≥{" "}
-              {viewsThreshold.toLocaleString("en-US")} or violations ≥{" "}
-              {violationsThreshold}
+              {t("problematicAccounts.showingAccounts", {
+                viewsThreshold: viewsThreshold.toLocaleString("en-US"),
+                violationsThreshold: violationsThreshold,
+              })}
             </p>
           )}
         </div>
@@ -443,13 +461,13 @@ export default function ProblematicAccounts() {
         <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
           <div className="flex items-center gap-2 flex-shrink-0">
             <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-            <span className="text-xs sm:text-sm font-medium">Filters:</span>
+            <span className="text-xs sm:text-sm font-medium">{t("problematicAccounts.filters")}</span>
           </div>
 
           {/* League Filter */}
           {availableLeagues.length === 0 ? (
             <div className="text-xs sm:text-sm text-muted-foreground">
-              No leagues available
+              {t("problematicAccounts.noLeaguesAvailable")}
             </div>
           ) : (
             <Select
@@ -469,14 +487,14 @@ export default function ProblematicAccounts() {
               }}>
               <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                 <div className="flex items-center gap-2">
-                  <SelectValue placeholder="League" />
+                  <SelectValue placeholder={t("problematicAccounts.league")} />
                 </div>
               </SelectTrigger>
               <SelectContent>
                 {/* Show "All Leagues" only if user has access to multiple leagues */}
                 {availableLeagues.length > 1 && (
                   <SelectItem value="all" className="text-xs sm:text-sm">
-                    All Leagues
+                    {t("problematicAccounts.allLeagues")}
                   </SelectItem>
                 )}
                 {availableLeagues.map((leagueSlug) => {
@@ -508,10 +526,15 @@ export default function ProblematicAccounts() {
                           />
                         )}
                         <span>
-                          {leagueInfo.knownName ||
-                            leagueInfo.name ||
-                            leagueInfo.arabicName ||
-                            leagueSlug}
+                          {isRTL
+                            ? (leagueInfo.arabicName ||
+                                leagueInfo.knownName ||
+                                leagueInfo.name ||
+                                leagueSlug)
+                            : (leagueInfo.knownName ||
+                                leagueInfo.name ||
+                                leagueInfo.arabicName ||
+                                leagueSlug)}
                         </span>
                       </div>
                     </SelectItem>
@@ -524,11 +547,11 @@ export default function ProblematicAccounts() {
           {/* Platform Filter */}
           <Select value={selectedPlatform} onValueChange={setSelectedPlatform}>
             <SelectTrigger className="w-full sm:w-[160px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-              <SelectValue placeholder="Platform" />
+              <SelectValue placeholder={t("problematicAccounts.platform")} />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all" className="text-xs sm:text-sm">
-                All Platforms
+                {t("problematicAccounts.allPlatforms")}
               </SelectItem>
               {platformOperations.map((platform) => (
                 <SelectItem
@@ -557,17 +580,17 @@ export default function ProblematicAccounts() {
                       setStageFilterType(value as WeekFilterType)
                     }>
                     <SelectTrigger className="w-full sm:w-[140px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                      <SelectValue placeholder="Stage Filter" />
+                      <SelectValue placeholder={t("problematicAccounts.stageFilter")} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all" className="text-xs sm:text-sm">
-                        All Stages
+                        {t("problematicAccounts.allStages")}
                       </SelectItem>
                       <SelectItem value="single" className="text-xs sm:text-sm">
-                        Single Stage
+                        {t("problematicAccounts.singleStage")}
                       </SelectItem>
                       <SelectItem value="range" className="text-xs sm:text-sm">
-                        Stage Range
+                        {t("problematicAccounts.stageRange")}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -576,7 +599,7 @@ export default function ProblematicAccounts() {
                   {stageFilterType === "single" && (
                     <Select value={singleStage} onValueChange={setSingleStage}>
                       <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                        <SelectValue placeholder="Stage" />
+                        <SelectValue placeholder={t("problematicAccounts.stage")} />
                       </SelectTrigger>
                       <SelectContent>
                         {availableStages.map((stage) => (
@@ -584,7 +607,7 @@ export default function ProblematicAccounts() {
                             key={stage}
                             value={stage}
                             className="text-xs sm:text-sm">
-                            {stage}
+                            {getStageDisplayName(stage)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -598,7 +621,7 @@ export default function ProblematicAccounts() {
                         value={stageRangeStart}
                         onValueChange={setStageRangeStart}>
                         <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                          <SelectValue placeholder="Start Stage" />
+                          <SelectValue placeholder={t("problematicAccounts.startStage")} />
                         </SelectTrigger>
                         <SelectContent>
                           {availableStages.map((stage) => (
@@ -606,19 +629,19 @@ export default function ProblematicAccounts() {
                               key={stage}
                               value={stage}
                               className="text-xs sm:text-sm">
-                              {stage}
+                              {getStageDisplayName(stage)}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                       <span className="text-muted-foreground text-xs sm:text-sm text-center sm:text-left">
-                        to
+                        {t("problematicAccounts.to")}
                       </span>
                       <Select
                         value={stageRangeEnd}
                         onValueChange={setStageRangeEnd}>
                         <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                          <SelectValue placeholder="End Stage" />
+                          <SelectValue placeholder={t("problematicAccounts.endStage")} />
                         </SelectTrigger>
                         <SelectContent>
                           {availableStages.map((stage) => (
@@ -626,7 +649,7 @@ export default function ProblematicAccounts() {
                               key={stage}
                               value={stage}
                               className="text-xs sm:text-sm">
-                              {stage}
+                              {getStageDisplayName(stage)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -645,17 +668,17 @@ export default function ProblematicAccounts() {
                       setWeekFilterType(value as WeekFilterType)
                     }>
                     <SelectTrigger className="w-full sm:w-[140px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                      <SelectValue placeholder="Week Filter" />
+                      <SelectValue placeholder={t("problematicAccounts.weekFilter")} />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all" className="text-xs sm:text-sm">
-                        All Weeks
+                        {t("problematicAccounts.allWeeks")}
                       </SelectItem>
                       <SelectItem value="single" className="text-xs sm:text-sm">
-                        Single Week
+                        {t("problematicAccounts.singleWeek")}
                       </SelectItem>
                       <SelectItem value="range" className="text-xs sm:text-sm">
-                        Week Range
+                        {t("problematicAccounts.weekRange")}
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -664,7 +687,7 @@ export default function ProblematicAccounts() {
                   {weekFilterType === "single" && (
                     <Select value={singleWeek} onValueChange={setSingleWeek}>
                       <SelectTrigger className="w-full sm:w-[100px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                        <SelectValue placeholder="Week" />
+                        <SelectValue placeholder={t("problematicAccounts.week")} />
                       </SelectTrigger>
                       <SelectContent>
                         {Array.from({ length: 38 }, (_, i) => i + 1).map(
@@ -673,7 +696,7 @@ export default function ProblematicAccounts() {
                               key={week}
                               value={week.toString()}
                               className="text-xs sm:text-sm">
-                              Week {week}
+                              {t("problematicAccounts.week")} {week}
                             </SelectItem>
                           )
                         )}
@@ -688,7 +711,7 @@ export default function ProblematicAccounts() {
                         value={weekRangeStart}
                         onValueChange={setWeekRangeStart}>
                         <SelectTrigger className="w-full sm:w-[100px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                          <SelectValue placeholder="Start Week" />
+                          <SelectValue placeholder={t("problematicAccounts.startWeek")} />
                         </SelectTrigger>
                         <SelectContent>
                           {Array.from({ length: 38 }, (_, i) => i + 1).map(
@@ -697,20 +720,20 @@ export default function ProblematicAccounts() {
                                 key={week}
                                 value={week.toString()}
                                 className="text-xs sm:text-sm">
-                                Week {week}
+                                {t("problematicAccounts.week")} {week}
                               </SelectItem>
                             )
                           )}
                         </SelectContent>
                       </Select>
                       <span className="text-muted-foreground text-xs sm:text-sm text-center sm:text-left">
-                        to
+                        {t("problematicAccounts.to")}
                       </span>
                       <Select
                         value={weekRangeEnd}
                         onValueChange={setWeekRangeEnd}>
                         <SelectTrigger className="w-full sm:w-[100px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                          <SelectValue placeholder="End Week" />
+                          <SelectValue placeholder={t("problematicAccounts.endWeek")} />
                         </SelectTrigger>
                         <SelectContent>
                           {Array.from({ length: 38 }, (_, i) => i + 1).map(
@@ -719,7 +742,7 @@ export default function ProblematicAccounts() {
                                 key={week}
                                 value={week.toString()}
                                 className="text-xs sm:text-sm">
-                                Week {week}
+                                {t("problematicAccounts.week")} {week}
                               </SelectItem>
                             )
                           )}
@@ -735,7 +758,7 @@ export default function ProblematicAccounts() {
           {/* Sort By */}
           <div className="w-full sm:w-auto sm:ml-auto flex items-center gap-2">
             <span className="text-xs sm:text-sm text-muted-foreground">
-              Sort by:
+              {t("problematicAccounts.sortBy")}
             </span>
             <Select
               value={sortBy}
@@ -745,13 +768,13 @@ export default function ProblematicAccounts() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="violations" className="text-xs sm:text-sm">
-                  Violations
+                  {t("problematicAccounts.violations")}
                 </SelectItem>
                 <SelectItem value="views" className="text-xs sm:text-sm">
-                  Views
+                  {t("problematicAccounts.views")}
                 </SelectItem>
                 <SelectItem value="matches" className="text-xs sm:text-sm">
-                  Matches
+                  {t("problematicAccounts.matches")}
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -775,13 +798,13 @@ export default function ProblematicAccounts() {
           <div className="flex items-center justify-center py-8 sm:py-12">
             <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground mr-2" />
             <span className="text-xs sm:text-sm text-muted-foreground">
-              Loading accounts...
+              {t("problematicAccounts.loadingAccounts")}
             </span>
           </div>
         ) : sortedAccounts.length === 0 ? (
           <div className="flex items-center justify-center py-8 sm:py-12">
             <p className="text-xs sm:text-sm text-muted-foreground">
-              No accounts found
+              {t("problematicAccounts.noAccountsFound")}
             </p>
           </div>
         ) : (
@@ -790,28 +813,28 @@ export default function ProblematicAccounts() {
               <thead className="border-b border-border bg-muted/30">
                 <tr>
                   <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                    Rank
+                    {t("problematicAccounts.rank")}
                   </th>
                   <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                    Account/Channel
+                    {t("problematicAccounts.accountChannel")}
                   </th>
                   <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                    Platform
+                    {t("problematicAccounts.platform")}
                   </th>
                   <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                    Violations
+                    {t("problematicAccounts.violations")}
                   </th>
                   <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                    Total Views
+                    {t("problematicAccounts.totalViews")}
                   </th>
                   <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                    Matches
+                    {t("problematicAccounts.matches")}
                   </th>
                   <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                    Status
+                    {t("problematicAccounts.status")}
                   </th>
                   <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-semibold">
-                    Content Type
+                    {t("problematicAccounts.contentType")}
                   </th>
                 </tr>
               </thead>
@@ -869,12 +892,12 @@ export default function ProblematicAccounts() {
                             <Badge
                               variant="destructive"
                               className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0">
-                              {account.activeCount} Active
+                              {account.activeCount} {t("problematicAccounts.active")}
                             </Badge>
                             <Badge
                               variant="secondary"
                               className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0">
-                              {account.blockedCount} Blocked
+                              {account.blockedCount} {t("problematicAccounts.blocked")}
                             </Badge>
                           </div>
                         </div>
@@ -899,28 +922,28 @@ export default function ProblematicAccounts() {
                               successRate >= 80 ? "default" : "secondary"
                             }
                             className="text-[9px] sm:text-[10px] px-1.5 sm:px-2 py-0">
-                            {successRate}% Success
+                            {successRate}% {t("problematicAccounts.success")}
                           </Badge>
                           <div className="flex items-center gap-1 text-[9px] sm:text-[10px] text-muted-foreground flex-wrap justify-end">
-                            <span>{account.blockedCount} Blocked</span>
+                            <span>{account.blockedCount} {t("problematicAccounts.blocked")}</span>
                             <span>•</span>
-                            <span>{account.removedCount} Removed</span>
+                            <span>{account.removedCount} {t("problematicAccounts.removed")}</span>
                             <span>•</span>
-                            <span>{account.underReviewCount} Review</span>
+                            <span>{account.underReviewCount} {t("problematicAccounts.review")}</span>
                           </div>
                         </div>
                       </td>
                       <td className="p-3 sm:p-4 text-right">
                         <div className="flex flex-col items-end gap-0.5 sm:gap-1 text-[9px] sm:text-[10px]">
                           <div className="flex items-center gap-1">
-                            <span className="text-muted-foreground">Live:</span>
+                            <span className="text-muted-foreground">{t("problematicAccounts.live")}</span>
                             <span className="font-medium">
                               {account.liveCount}
                             </span>
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="text-muted-foreground">
-                              Highlights:
+                              {t("problematicAccounts.highlights")}
                             </span>
                             <span className="font-medium">
                               {account.highlightsCount}
@@ -928,7 +951,7 @@ export default function ProblematicAccounts() {
                           </div>
                           <div className="flex items-center gap-1">
                             <span className="text-muted-foreground">
-                              Others:
+                              {t("problematicAccounts.others")}
                             </span>
                             <span className="font-medium">
                               {account.othersCount}

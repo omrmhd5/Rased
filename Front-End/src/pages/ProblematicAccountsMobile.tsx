@@ -6,6 +6,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ProblematicAccount {
   accountChannel: string;
@@ -40,6 +41,7 @@ export function ProblematicAccountsMobile({
   loading,
   sortBy,
 }: ProblematicAccountsMobileProps) {
+  const { t } = useLanguage();
   // Get platform operations for icons
   const platformOperations = getInitialPlatformOperations();
 
@@ -62,7 +64,7 @@ export function ProblematicAccountsMobile({
         <div className="flex items-center justify-center py-8 sm:py-12">
           <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground mr-2" />
           <span className="text-xs sm:text-sm text-muted-foreground">
-            Loading accounts...
+            {t("problematicAccounts.loadingAccounts")}
           </span>
         </div>
       </Card>
@@ -73,7 +75,7 @@ export function ProblematicAccountsMobile({
     return (
       <Card className="p-4 sm:p-6">
         <div className="flex items-center justify-center py-8 sm:py-12">
-          <p className="text-xs sm:text-sm text-muted-foreground">No accounts found</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">{t("problematicAccounts.noAccountsFound")}</p>
         </div>
       </Card>
     );
@@ -125,7 +127,7 @@ export function ProblematicAccountsMobile({
             <div className="grid grid-cols-2 gap-3 mb-3">
               {/* Violations */}
               <div className="space-y-1">
-                <p className="text-[10px] text-muted-foreground">Violations</p>
+                <p className="text-[10px] text-muted-foreground">{t("problematicAccounts.violations")}</p>
                 <p className="text-lg font-bold">
                   {account.totalViolations.toLocaleString()}
                 </p>
@@ -133,19 +135,19 @@ export function ProblematicAccountsMobile({
                   <Badge
                     variant="destructive"
                     className="text-[9px] px-1.5 py-0">
-                    {account.activeCount} Active
+                    {account.activeCount} {t("problematicAccounts.active")}
                   </Badge>
                   <Badge
                     variant="secondary"
                     className="text-[9px] px-1.5 py-0">
-                    {account.blockedCount} Blocked
+                    {account.blockedCount} {t("problematicAccounts.blocked")}
                   </Badge>
                 </div>
               </div>
 
               {/* Views */}
               <div className="space-y-1">
-                <p className="text-[10px] text-muted-foreground">Total Views</p>
+                <p className="text-[10px] text-muted-foreground">{t("problematicAccounts.totalViews")}</p>
                 <div className="flex items-center gap-1">
                   <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                   <p className="text-lg font-bold">
@@ -156,7 +158,7 @@ export function ProblematicAccountsMobile({
 
               {/* Matches Affected */}
               <div className="space-y-1">
-                <p className="text-[10px] text-muted-foreground">Matches</p>
+                <p className="text-[10px] text-muted-foreground">{t("problematicAccounts.matches")}</p>
                 <p className="text-lg font-bold">
                   {account.matchesAffected}
                 </p>
@@ -164,7 +166,7 @@ export function ProblematicAccountsMobile({
 
               {/* Success Rate */}
               <div className="space-y-1">
-                <p className="text-[10px] text-muted-foreground">Success Rate</p>
+                <p className="text-[10px] text-muted-foreground">{t("problematicAccounts.successRate")}</p>
                 <Badge
                   variant={successRate >= 80 ? "default" : "secondary"}
                   className="text-[10px] px-2 py-0.5">
@@ -175,30 +177,30 @@ export function ProblematicAccountsMobile({
 
             {/* Status Breakdown */}
             <div className="pt-3 border-t border-border/40">
-              <p className="text-[10px] text-muted-foreground mb-2">Status Breakdown</p>
+              <p className="text-[10px] text-muted-foreground mb-2">{t("problematicAccounts.statusBreakdown")}</p>
               <div className="flex items-center gap-2 flex-wrap text-[9px] text-muted-foreground">
-                <span>{account.blockedCount} Blocked</span>
+                <span>{account.blockedCount} {t("problematicAccounts.blocked")}</span>
                 <span>•</span>
-                <span>{account.removedCount} Removed</span>
+                <span>{account.removedCount} {t("problematicAccounts.removed")}</span>
                 <span>•</span>
-                <span>{account.underReviewCount} Review</span>
+                <span>{account.underReviewCount} {t("problematicAccounts.review")}</span>
               </div>
             </div>
 
             {/* Content Type Breakdown */}
             <div className="pt-2 border-t border-border/40 mt-2">
-              <p className="text-[10px] text-muted-foreground mb-2">Content Type</p>
+              <p className="text-[10px] text-muted-foreground mb-2">{t("problematicAccounts.contentType")}</p>
               <div className="grid grid-cols-3 gap-2 text-[9px]">
                 <div className="flex flex-col">
-                  <span className="text-muted-foreground">Live</span>
+                  <span className="text-muted-foreground">{t("dashboard.live")}</span>
                   <span className="font-medium">{account.liveCount}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-muted-foreground">Highlights</span>
+                  <span className="text-muted-foreground">{t("dashboard.highlights")}</span>
                   <span className="font-medium">{account.highlightsCount}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-muted-foreground">Others</span>
+                  <span className="text-muted-foreground">{t("dashboard.others")}</span>
                   <span className="font-medium">{account.othersCount}</span>
                 </div>
               </div>

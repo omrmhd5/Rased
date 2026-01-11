@@ -137,6 +137,12 @@ All colors MUST be HSL.
     direction: ltr;
   }
 
+  /* Apply Tajawal font for Arabic language only */
+  [lang="ar"],
+  [dir="rtl"] {
+    font-family: 'Tajawal', sans-serif;
+  }
+
   /* RTL-specific adjustments */
   [dir="rtl"] .text-left {
     text-align: right;

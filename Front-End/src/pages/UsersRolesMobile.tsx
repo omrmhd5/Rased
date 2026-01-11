@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit2, Trash2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { API_URL } from "@/components/MatchDashboard/types";
 
 type League = string;
@@ -35,6 +36,7 @@ export function UsersRolesMobile({
   saving,
 }: UsersRolesMobileProps) {
   const { leagues, fetchLeagues } = useAuth();
+  const { t, isRTL } = useLanguage();
 
   // Leagues are already fetched by AuthContext when user changes
   // No need to refetch here - AuthContext handles it
@@ -52,7 +54,9 @@ export function UsersRolesMobile({
         : "";
       return {
         value: league.league as League,
-        label: league.name || league.arabicName || league.league,
+        label: isRTL && league.arabicName
+          ? league.arabicName
+          : league.name || league.arabicName || league.league,
         icon: iconUrl,
       };
     });
@@ -96,7 +100,7 @@ export function UsersRolesMobile({
 
             {/* Role Badge */}
             <div className="mb-3">
-              <p className="text-[10px] text-muted-foreground mb-1.5">Role</p>
+              <p className="text-[10px] text-muted-foreground mb-1.5">{t("usersRoles.role")}</p>
               <span
                 className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-medium ${
                   user.role === "superAdmin"
@@ -106,10 +110,10 @@ export function UsersRolesMobile({
                     : "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400"
                 }`}>
                 {user.role === "superAdmin"
-                  ? "Super Admin"
+                  ? t("usersRoles.roles.superAdmin")
                   : user.role === "viewer"
-                  ? "Viewer"
-                  : "Employee"}
+                  ? t("usersRoles.roles.viewer")
+                  : t("usersRoles.roles.employee")}
               </span>
             </div>
 
@@ -119,7 +123,7 @@ export function UsersRolesMobile({
               user.leagues.length > 0 && (
                 <div className="mb-3">
                   <p className="text-[10px] text-muted-foreground mb-1.5">
-                    Leagues
+                    {t("usersRoles.leagues")}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {user.leagues.map((league) => {
@@ -148,10 +152,10 @@ export function UsersRolesMobile({
             {/* Created Date */}
             <div className="pt-2 border-t border-border/40">
               <p className="text-[9px] text-muted-foreground">
-                Created:{" "}
+                {t("usersRoles.tableHeaders.created")}:{" "}
                 {user.createdAt
-                  ? new Date(user.createdAt).toLocaleDateString()
-                  : "N/A"}
+                  ? new Date(user.createdAt).toLocaleDateString("en-US")
+                  : t("whitelistedAccounts.nA")}
               </p>
             </div>
           </Card>

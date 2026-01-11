@@ -85,8 +85,12 @@ export function MatchOverview({
 
   const getCompetitionName = () => {
     if (typeof match.competition === "object" && match.competition !== null) {
-      return (match.competition as { knownName?: string; name?: string }).knownName || 
-             (match.competition as { name?: string }).name || "";
+      return (
+        (match.competition as { knownName?: string; name?: string })
+          .knownName ||
+        (match.competition as { name?: string }).name ||
+        ""
+      );
     }
     return typeof match.competition === "string" ? match.competition : "";
   };
@@ -94,21 +98,35 @@ export function MatchOverview({
   const getStatusBadge = () => {
     const status = match.status;
     if (status === "live") {
-      return <Badge className="bg-red-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">● LIVE</Badge>;
+      return (
+        <Badge className="bg-red-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">
+          ● LIVE
+        </Badge>
+      );
     } else if (status === "finished") {
       return (
-        <Badge className="bg-green-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">COMPLETED</Badge>
+        <Badge className="bg-green-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">
+          COMPLETED
+        </Badge>
       );
     } else if (status === "postponed") {
       return (
-        <Badge className="bg-yellow-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">POSTPONED</Badge>
+        <Badge className="bg-yellow-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">
+          POSTPONED
+        </Badge>
       );
     } else if (status === "cancelled") {
       return (
-        <Badge className="bg-gray-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">CANCELLED</Badge>
+        <Badge className="bg-gray-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">
+          CANCELLED
+        </Badge>
       );
     } else {
-      return <Badge className="bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">UPCOMING</Badge>;
+      return (
+        <Badge className="bg-blue-500 text-white text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1">
+          UPCOMING
+        </Badge>
+      );
     }
   };
 
@@ -134,7 +152,9 @@ export function MatchOverview({
         </div>
         <div className="flex flex-row sm:flex-col sm:text-right sm:items-end gap-2 sm:gap-2 w-full sm:w-auto">
           <div className="flex items-center gap-2 flex-1 sm:flex-initial">
-            <p className="text-[10px] sm:text-xs font-medium">{formatMatchDateTime()}</p>
+            <p className="text-[10px] sm:text-xs font-medium">
+              {formatMatchDateTime()}
+            </p>
             {(onDownloadReport || onRoundReport) && (
               <HoverCard openDelay={100} closeDelay={200}>
                 <HoverCardTrigger asChild>
@@ -158,8 +178,8 @@ export function MatchOverview({
                     )}
                   </Button>
                 </HoverCardTrigger>
-                <HoverCardContent 
-                  align="end" 
+                <HoverCardContent
+                  align="end"
                   className="w-48 sm:w-56 p-1"
                   sideOffset={5}>
                   <div className="flex flex-col">
@@ -187,9 +207,7 @@ export function MatchOverview({
               </HoverCard>
             )}
           </div>
-          <div className="flex-shrink-0">
-            {getStatusBadge()}
-          </div>
+          <div className="flex-shrink-0">{getStatusBadge()}</div>
         </div>
       </div>
 
@@ -206,7 +224,9 @@ export function MatchOverview({
                 ? match.totalViolations
                 : totalViolations}
             </p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Total Violations</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              Total Violations
+            </p>
             <p className="text-[9px] sm:text-[10px] text-muted-foreground/70 mt-0.5 hidden sm:block">
               all platforms
             </p>
@@ -224,7 +244,9 @@ export function MatchOverview({
                 ? activeCount
                 : totalActive}
             </p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Active</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              Active
+            </p>
             <p className="text-[9px] sm:text-[10px] text-muted-foreground/70 mt-0.5 hidden sm:block">
               needs action
             </p>
@@ -269,7 +291,9 @@ export function MatchOverview({
                 ? removedCount
                 : 0}
             </p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Removed</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              Removed
+            </p>
             <p className="text-[9px] sm:text-[10px] text-muted-foreground/70 mt-0.5 hidden sm:block">
               removed violations
             </p>
@@ -287,7 +311,9 @@ export function MatchOverview({
                 ? underReviewCount
                 : 0}
             </p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">Under Review</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground">
+              Under Review
+            </p>
             <p className="text-[9px] sm:text-[10px] text-muted-foreground/70 mt-0.5 hidden sm:block">
               pending review
             </p>
@@ -310,7 +336,9 @@ export function MatchOverview({
               ? totalViews.toLocaleString("en-US")
               : formattedTotalViews}
           </p>
-          <p className="text-[10px] sm:text-xs text-muted-foreground">Across all platforms</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
+            Across all platforms
+          </p>
         </div>
 
         <div className="p-3 sm:p-4 rounded-lg bg-gradient-to-br from-success/5 to-success/10 border border-success/20 transition-all duration-300 active:scale-[0.98] active:shadow-lg active:shadow-success/20 cursor-pointer touch-manipulation">
@@ -383,7 +411,9 @@ export function MatchOverview({
               : topPlatform
               ? topPlatform.totalViews
               : "0"}
-            <span className="text-sm sm:text-base text-muted-foreground ml-1">views</span>
+            <span className="text-sm sm:text-base text-muted-foreground ml-1">
+              views
+            </span>
           </p>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
             {topPlatform ? `${topPlatform.name} • biggest source` : "N/A"}

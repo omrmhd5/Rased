@@ -695,7 +695,7 @@ export default function MatchDashboard() {
     // Only depend on platformOperations length, not the full array
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [match, platformOperations.length]);
-  
+
   // Platform slot system (max 2 platforms visible)
   const [selectedSlots, setSelectedSlots] = useState<string[]>([
     "twitter",
@@ -708,7 +708,7 @@ export default function MatchDashboard() {
   const [platformSearchQuery, setPlatformSearchQuery] = useState<{
     [key: string]: string;
   }>({});
-  
+
   // Add/Edit violation state
   const [isAddViolationOpen, setIsAddViolationOpen] = useState(false);
   const [selectedPlatformForAdd, setSelectedPlatformForAdd] =
@@ -717,7 +717,7 @@ export default function MatchDashboard() {
     null
   );
   const [isEditMode, setIsEditMode] = useState(false);
-  
+
   // Form state
   const [formUrl, setFormUrl] = useState("");
   const [formAccountHandle, setFormAccountHandle] = useState("");
@@ -730,7 +730,7 @@ export default function MatchDashboard() {
   const [formBlockedAt, setFormBlockedAt] = useState("");
   const [formStillActive, setFormStillActive] = useState(false);
   const [formNotes, setFormNotes] = useState<string[]>([]);
-  
+
   // Block confirmation dialog state
   const [isBlockConfirmOpen, setIsBlockConfirmOpen] = useState(false);
   const [blockConfirmViolation, setBlockConfirmViolation] = useState<{
@@ -805,8 +805,12 @@ export default function MatchDashboard() {
   const getCompetitionName = () => {
     if (!match) return "";
     if (typeof match.competition === "object" && match.competition !== null) {
-      return (match.competition as { knownName?: string; name?: string }).knownName || 
-             (match.competition as { name?: string }).name || "";
+      return (
+        (match.competition as { knownName?: string; name?: string })
+          .knownName ||
+        (match.competition as { name?: string }).name ||
+        ""
+      );
     }
     return typeof match.competition === "string" ? match.competition : "";
   };
@@ -872,17 +876,17 @@ export default function MatchDashboard() {
     const cardFilter = platformCardFilter[platformId] || "all";
     const searchQuery = platformSearchQuery[platformId] || "";
     let filtered = violations;
-    
+
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
         (v) =>
-        v.url.toLowerCase().includes(query) ||
-        (v.accountHandle && v.accountHandle.toLowerCase().includes(query))
+          v.url.toLowerCase().includes(query) ||
+          (v.accountHandle && v.accountHandle.toLowerCase().includes(query))
       );
     }
-    
+
     // Apply card filter (All/Active/Blocked/Removed/Review)
     if (cardFilter !== "all") {
       if (cardFilter === "active") {
@@ -901,7 +905,7 @@ export default function MatchDashboard() {
         filtered = filtered.filter((v) => v.statusBadge === statusBadge);
       }
     }
-    
+
     // Apply content type filter
     if (contentTypeFilter !== "all") {
       filtered = filtered.filter(
@@ -915,10 +919,10 @@ export default function MatchDashboard() {
       const timeB = b.timeAdded ? new Date(b.timeAdded).getTime() : 0;
       return timeB - timeA; // Descending order (most recent first)
     });
-    
+
     return filtered;
   };
-  
+
   // Open add violation drawer
   const openAddViolationDrawer = (platformId: string) => {
     setSelectedPlatformForAdd(platformId);
@@ -936,7 +940,7 @@ export default function MatchDashboard() {
     setFormNotes([]);
     setIsAddViolationOpen(true);
   };
-  
+
   // Open edit violation drawer
   const openEditViolationDrawer = (
     platformId: string,
@@ -997,7 +1001,7 @@ export default function MatchDashboard() {
     );
     setIsAddViolationOpen(true);
   };
-  
+
   // Toggle violation status (quick block/unblock)
   const toggleViolationStatus = (
     platformId: string,
@@ -1005,12 +1009,12 @@ export default function MatchDashboard() {
   ) => {
     const platform = platformOperations.find((p) => p.id === platformId);
     if (!platform) return;
-    
+
     const violation = platform.violations.find(
       (v) => v.id === violationId || v._id === violationId
     );
     if (!violation) return;
-    
+
     const isCurrentlyBlocked = violation.status === "Blocked";
     const isCurrentlyRemoved = violation.status === "Removed";
 
@@ -1056,23 +1060,23 @@ export default function MatchDashboard() {
 
           const updatedViolations = currentPlatform.violations.map((v) => {
             if (v.id !== violationId) return v;
-          
-          return {
-            ...v,
+
+            return {
+              ...v,
               status: "Active" as const,
               statusBadge: "Active" as const,
               blockedAt: undefined, // Clear blockedAt when unblocking
-          };
-        });
-        
+            };
+          });
+
           // Update local state - only update violations list, metrics will come from backend refetch
           setPlatformOperations((prev) =>
             prev.map((p) => {
               if (p.id !== platformId) return p;
               // Just update violations, keep existing metrics (will be updated by refetch)
-        return { 
-          ...p, 
-          violations: updatedViolations,
+              return {
+                ...p,
+                violations: updatedViolations,
               };
             })
           );
@@ -1117,11 +1121,11 @@ export default function MatchDashboard() {
       setIsBlockConfirmOpen(true);
     }
   };
-  
+
   // Confirm block with chosen time
   const confirmBlock = async () => {
     if (!blockConfirmViolation) return;
-    
+
     const { platformId, violationId, violation } = blockConfirmViolation;
     // Convert block time to UTC (customBlockTime is in KSA time from datetime-local input)
     const blockTime =
@@ -1172,7 +1176,7 @@ export default function MatchDashboard() {
       // Calculate updated violations
       const updatedViolations = currentPlatform.violations.map((v) => {
         if (v.id !== violationId && v._id !== violationId) return v;
-        
+
         return {
           ...v,
           status: "Blocked" as const,
@@ -1180,15 +1184,15 @@ export default function MatchDashboard() {
           blockedAt: convertedViolation.blockedAt || blockTime,
         };
       });
-      
+
       // Update local state - only update violations list, metrics will come from backend refetch
       setPlatformOperations((prev) =>
         prev.map((platform) => {
           if (platform.id !== platformId) return platform;
           // Just update violations, keep existing metrics (will be updated by refetch)
-      return {
-        ...platform,
-        violations: updatedViolations,
+          return {
+            ...platform,
+            violations: updatedViolations,
           };
         })
       );
@@ -1204,16 +1208,16 @@ export default function MatchDashboard() {
 
       // Trigger refetch of all data
       triggerRefetch();
-    
-    toast({
-      title: "Violation blocked",
+
+      toast({
+        title: "Violation blocked",
         description: `Violation marked as blocked at ${new Date(
           blockTime
         ).toLocaleString()}`,
-    });
-    
-    setIsBlockConfirmOpen(false);
-    setBlockConfirmViolation(null);
+      });
+
+      setIsBlockConfirmOpen(false);
+      setBlockConfirmViolation(null);
     } catch (error) {
       console.error("Error blocking violation:", error);
       toast({
@@ -1277,9 +1281,9 @@ export default function MatchDashboard() {
       (p) => p.id === violationData.platformId
     );
     if (!platform) return;
-    
+
     try {
-    if (isEditMode && editingViolation) {
+      if (isEditMode && editingViolation) {
         // Update existing violation - use _id if available, otherwise id
         const violationId =
           (editingViolation as Violation & { _id?: string })._id ||
@@ -1316,9 +1320,9 @@ export default function MatchDashboard() {
             });
 
             // Just update violations, keep existing metrics (will be updated by refetch)
-        return {
-          ...p,
-          violations: updatedViolations,
+            return {
+              ...p,
+              violations: updatedViolations,
             };
           })
         );
@@ -1348,13 +1352,13 @@ export default function MatchDashboard() {
 
         // Trigger refetch of all data
         triggerRefetch();
-      
-      toast({
-        title: "Violation updated",
-        description: "Changes saved successfully",
-      });
-    } else {
-      // Add new violation
+
+        toast({
+          title: "Violation updated",
+          description: "Changes saved successfully",
+        });
+      } else {
+        // Add new violation
         const response = await fetch(`${API_URL}/violations`, {
           method: "POST",
           headers: {
@@ -1377,14 +1381,14 @@ export default function MatchDashboard() {
 
         setPlatformOperations((prev) =>
           prev.map((p) => {
-        if (p.id !== selectedPlatformForAdd) return p;
-        
+            if (p.id !== selectedPlatformForAdd) return p;
+
             const updatedViolations = [frontendViolation, ...p.violations];
-        
+
             // Just update violations, keep existing metrics (will be updated by refetch)
-        return {
-          ...p,
-          violations: updatedViolations,
+            return {
+              ...p,
+              violations: updatedViolations,
             };
           })
         );
@@ -1409,14 +1413,14 @@ export default function MatchDashboard() {
 
         // Trigger refetch of all data
         triggerRefetch();
-      
-      toast({
-        title: "Violation added",
+
+        toast({
+          title: "Violation added",
           description: `New violation added to ${violationData.platformName}`,
-      });
-    }
-    
-    setIsAddViolationOpen(false);
+        });
+      }
+
+      setIsAddViolationOpen(false);
     } catch (error) {
       console.error("Error saving violation:", error);
       toast({
@@ -1431,16 +1435,16 @@ export default function MatchDashboard() {
   // Save violation (add or edit) - with whitelist check
   const saveViolation = async () => {
     if (!formUrl) {
-    toast({
+      toast({
         title: "Validation Error",
         description: "Violation URL is required",
         variant: "destructive",
-    });
+      });
       return;
     }
-  
+
     if (!formAccountHandle) {
-    toast({
+      toast({
         title: "Validation Error",
         description: "Account / Channel is required",
         variant: "destructive",
@@ -1726,22 +1730,22 @@ export default function MatchDashboard() {
           <RefreshCw className="h-6 w-6 sm:h-8 sm:w-8 animate-spin mx-auto mb-2 text-muted-foreground" />
           <p className="text-xs sm:text-sm text-muted-foreground">
             Loading match data...
-                              </p>
-                            </div>
-                  </div>
-                );
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (!match) {
-              return (
+    return (
       <div className="flex items-center justify-center h-48 sm:h-64">
         <div className="text-center">
           <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2 text-muted-foreground" />
           <p className="text-xs sm:text-sm text-muted-foreground">
             Match not found
-                      </p>
-                    </div>
-                    </div>
+          </p>
+        </div>
+      </div>
     );
   }
 
@@ -1814,8 +1818,12 @@ export default function MatchDashboard() {
           typeof match.competition === "object" &&
           match.competition !== null
         ) {
-          return (match.competition as { knownName?: string; name?: string }).knownName || 
-                 (match.competition as { name?: string }).name || "";
+          return (
+            (match.competition as { knownName?: string; name?: string })
+              .knownName ||
+            (match.competition as { name?: string }).name ||
+            ""
+          );
         }
         return typeof match.competition === "string" ? match.competition : "";
       };
@@ -2096,8 +2104,8 @@ export default function MatchDashboard() {
           onDownloadReport={handleDownloadReport}
           isDownloading={isDownloading}
           onRoundReport={() => setIsRoundReportOpen(true)}
-              />
-            </div>
+        />
+      </div>
 
       <div ref={statusBreakdownRef}>
         <MatchViolationsStatusBreakdown
@@ -2106,8 +2114,8 @@ export default function MatchDashboard() {
           blockedCount={totalBlocked}
           removedCount={totalRemoved}
           underReviewCount={totalUnderReview}
-              />
-            </div>
+        />
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div ref={contentSplitRef} className="lg:col-span-1">
@@ -2131,7 +2139,7 @@ export default function MatchDashboard() {
             isSuperAdmin={isSuperAdmin}
           />
         </div>
-            </div>
+      </div>
 
       <BlockConfirmDialog
         open={isBlockConfirmOpen}
@@ -2151,7 +2159,7 @@ export default function MatchDashboard() {
           <h2 className="text-base sm:text-lg font-semibold">
             Platform Operations (This Match)
           </h2>
-            </div>
+        </div>
 
         <PlatformFilters
           selectedSlots={selectedSlots}
@@ -2208,7 +2216,7 @@ export default function MatchDashboard() {
               );
             })}
         </div>
-            </div>
+      </div>
 
       <div ref={platformComparisonRef}>
         {/* Mobile Version */}
@@ -2226,8 +2234,8 @@ export default function MatchDashboard() {
             title="Platform Comparison (This Match)"
             description="Compare platforms for this match"
             showCard={true}
-              />
-            </div>
+          />
+        </div>
         {/* Desktop Version */}
         <div className="hidden md:block">
           <PlatformComparison
@@ -2242,7 +2250,7 @@ export default function MatchDashboard() {
             targetMins={targetMins}
           />
         </div>
-            </div>
+      </div>
 
       <AddViolationSheet
         open={isAddViolationOpen}
@@ -2395,7 +2403,7 @@ export default function MatchDashboard() {
                     return sum + Math.max(0, diffMins);
                   }
                   return sum;
-          }, 0);
+                }, 0);
                 avgBlockTime = Math.round(
                   totalBlockTime / blockedViolations.length
                 );
@@ -2411,9 +2419,9 @@ export default function MatchDashboard() {
                   .replace(/,/g, "");
                 return sum + (parseFloat(numStr) || 0);
               }, 0);
-          
-          return {
-            platform: platform.name,
+
+              return {
+                platform: platform.name,
                 icon: (
                   <IconComponent
                     className="h-4 w-4"
@@ -2425,8 +2433,8 @@ export default function MatchDashboard() {
                 successRate: successRate,
                 avgBlockTime: avgBlockTime,
                 views: views,
-          };
-        })}
+              };
+            })}
           highlightsMetrics={platformOperations
             .filter((platform) => {
               const highlightsViolations = platform.violations.filter(
@@ -2463,7 +2471,7 @@ export default function MatchDashboard() {
                     return sum + Math.max(0, diffMins);
                   }
                   return sum;
-          }, 0);
+                }, 0);
                 avgBlockTime = Math.round(
                   totalBlockTime / blockedViolations.length
                 );
@@ -2479,9 +2487,9 @@ export default function MatchDashboard() {
                   .replace(/,/g, "");
                 return sum + (parseFloat(numStr) || 0);
               }, 0);
-          
-          return {
-            platform: platform.name,
+
+              return {
+                platform: platform.name,
                 icon: (
                   <IconComponent
                     className="h-4 w-4"
@@ -2493,9 +2501,9 @@ export default function MatchDashboard() {
                 successRate: successRate,
                 avgBlockTime: avgBlockTime,
                 views: views,
-          };
-        })}
-      />
+              };
+            })}
+        />
       )}
     </div>
   );

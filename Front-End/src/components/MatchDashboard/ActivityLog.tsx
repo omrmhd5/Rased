@@ -248,8 +248,7 @@ export function ActivityLog({
               with{" "}
               <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                 {formatViewsString(views)} views
-              </code>
-              {" "}
+              </code>{" "}
               and status:{" "}
               <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                 {status}
@@ -343,8 +342,7 @@ export function ActivityLog({
                     with{" "}
                     <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                       {formatViewsString(views)} views
-                    </code>
-                    {" "}
+                    </code>{" "}
                     and status:{" "}
                     <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                       {status}

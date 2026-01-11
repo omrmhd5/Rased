@@ -52,6 +52,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { useAuth } from "@/contexts/AuthContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { WhitelistedAccountsMobile } from "./WhitelistedAccountsMobile";
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -89,6 +90,7 @@ interface Violation {
 export default function WhitelistedAccounts() {
   const navigate = useNavigate();
   const { user, leagues, loadingLeagues } = useAuth();
+  const { t } = useLanguage();
   const isSuperAdmin = user?.role === "superAdmin";
 
   // Get available leagues based on user role
@@ -259,7 +261,7 @@ export default function WhitelistedAccounts() {
       console.error("Error fetching whitelisted accounts:", error);
       toast({
         title: "Error",
-        description: "Failed to load whitelisted accounts.",
+        description: t("whitelistedAccounts.error.failedToLoad"),
         variant: "destructive",
       });
     } finally {
@@ -449,7 +451,7 @@ export default function WhitelistedAccounts() {
       setIsAddDialogOpen(false);
       toast({
         title: "Success",
-        description: `Account "${accountChannel.trim()}" has been whitelisted.`,
+        description: t("whitelistedAccounts.success.accountWhitelisted", { account: accountChannel.trim() }),
       });
       // Violations will be fetched automatically via useEffect
     } catch (error) {
@@ -458,11 +460,11 @@ export default function WhitelistedAccounts() {
         error instanceof Error ? error.message : "Failed to add account"
       );
       toast({
-        title: "Error",
+        title: t("whitelistedAccounts.error.failedToAdd"),
         description:
           error instanceof Error
             ? error.message
-            : "Failed to add whitelisted account",
+            : t("whitelistedAccounts.error.failedToAdd"),
         variant: "destructive",
       });
     } finally {
@@ -477,12 +479,12 @@ export default function WhitelistedAccounts() {
     setFormError("");
 
     if (!accountChannel.trim()) {
-      setFormError("Account channel is required.");
+      setFormError(t("whitelistedAccounts.accountChannelRequired"));
       return;
     }
 
     if (selectedPlatforms.length === 0) {
-      setFormError("At least one platform must be selected.");
+      setFormError(t("whitelistedAccounts.atLeastOnePlatform"));
       return;
     }
 
@@ -518,7 +520,7 @@ export default function WhitelistedAccounts() {
       setEditingAccount(null);
       toast({
         title: "Success",
-        description: `Account "${accountChannel.trim()}" has been updated.`,
+        description: t("whitelistedAccounts.success.accountUpdated", { account: accountChannel.trim() }),
       });
       // Violations will be fetched automatically via useEffect
     } catch (error) {
@@ -527,11 +529,11 @@ export default function WhitelistedAccounts() {
         error instanceof Error ? error.message : "Failed to update account"
       );
       toast({
-        title: "Error",
+        title: t("whitelistedAccounts.error.failedToUpdate"),
         description:
           error instanceof Error
             ? error.message
-            : "Failed to update whitelisted account",
+            : t("whitelistedAccounts.error.failedToUpdate"),
         variant: "destructive",
       });
     } finally {
@@ -565,7 +567,7 @@ export default function WhitelistedAccounts() {
       setDeletingAccount(null);
       toast({
         title: "Success",
-        description: `Account "${deletingAccount.accountChannel}" has been removed from whitelist.`,
+        description: t("whitelistedAccounts.success.accountRemoved", { account: deletingAccount.accountChannel }),
       });
     } catch (error) {
       console.error("Error deleting whitelisted account:", error);
@@ -574,7 +576,7 @@ export default function WhitelistedAccounts() {
         description:
           error instanceof Error
             ? error.message
-            : "Failed to delete whitelisted account",
+            : t("whitelistedAccounts.error.failedToDelete"),
         variant: "destructive",
       });
     } finally {
@@ -615,13 +617,23 @@ export default function WhitelistedAccounts() {
     );
   };
 
-  // Convert backend status to statusBadge format
-  const getStatusBadge = (status: string): string => {
+  // Convert backend status to statusBadge format (for comparison - keep English)
+  const getStatusBadgeKey = (status: string): string => {
     const statusLower = status.toLowerCase();
     if (statusLower === "removed") return "Removed";
     if (statusLower === "under review") return "Review";
     if (statusLower === "active") return "Active";
     if (statusLower === "blocked") return "Blocked";
+    return status;
+  };
+
+  // Convert backend status to translated display text
+  const getStatusBadge = (status: string): string => {
+    const statusLower = status.toLowerCase();
+    if (statusLower === "removed") return t("problematicAccounts.removed");
+    if (statusLower === "under review") return t("dashboard.underReview");
+    if (statusLower === "active") return t("dashboard.active");
+    if (statusLower === "blocked") return t("dashboard.blocked");
     return status;
   };
 
@@ -631,10 +643,10 @@ export default function WhitelistedAccounts() {
       <div>
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight flex items-center gap-2">
           <Shield className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8" />
-          Whitelisted Accounts
+          {t("whitelistedAccounts.title")}
         </h1>
         <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
-          Manage accounts that are whitelisted across platforms
+          {t("whitelistedAccounts.subtitle")}
         </p>
       </div>
 
@@ -645,7 +657,7 @@ export default function WhitelistedAccounts() {
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               <CardTitle className="text-lg sm:text-xl">
-                Whitelisted Accounts
+                {t("whitelistedAccounts.title")}
               </CardTitle>
             </div>
             {isSuperAdmin && (
@@ -655,18 +667,17 @@ export default function WhitelistedAccounts() {
                     onClick={() => resetForm()}
                     className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                     <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                    <span className="hidden xs:inline">Add Account</span>
-                    <span className="xs:hidden">Add</span>
+                    <span className="hidden xs:inline">{t("whitelistedAccounts.addAccount")}</span>
+                    <span className="xs:hidden">{t("whitelistedAccounts.add")}</span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="w-[95vw] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle className="text-lg sm:text-xl">
-                      Add Whitelisted Account
+                      {t("whitelistedAccounts.addWhitelistedAccount")}
                     </DialogTitle>
                     <DialogDescription className="text-xs sm:text-sm">
-                      Add an account to the whitelist. Select the platforms
-                      where this account should be whitelisted.
+                      {t("whitelistedAccounts.addDescription")}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
@@ -679,19 +690,19 @@ export default function WhitelistedAccounts() {
                       <Label
                         htmlFor="account-channel"
                         className="text-xs sm:text-sm">
-                        Account Channel
+                        {t("whitelistedAccounts.accountChannel")}
                       </Label>
                       <Input
                         id="account-channel"
                         value={accountChannel}
                         onChange={(e) => setAccountChannel(e.target.value)}
-                        placeholder="Enter account channel name (e.g., @username)"
+                        placeholder={t("whitelistedAccounts.accountChannelPlaceholder")}
                         className="h-9 sm:h-10 text-sm"
                       />
                     </div>
                     <div className="space-y-2 sm:space-y-3">
                       <Label className="text-xs sm:text-sm">
-                        Select Platforms
+                        {t("whitelistedAccounts.selectPlatforms")}
                       </Label>
                       <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 border rounded-lg">
                         {platformOperations.map((platform) => {
@@ -725,8 +736,7 @@ export default function WhitelistedAccounts() {
                                   <Label
                                     htmlFor={`platform-name-${platform.id}`}
                                     className="text-[10px] sm:text-xs text-muted-foreground">
-                                    Account name for {platform.name} (leave
-                                    empty to use main name)
+                                    {t("whitelistedAccounts.accountNameForPlatform", { platform: platform.name })}
                                   </Label>
                                   <Input
                                     id={`platform-name-${platform.id}`}
@@ -738,7 +748,7 @@ export default function WhitelistedAccounts() {
                                       )
                                     }
                                     placeholder={
-                                      accountChannel || "Same as main name"
+                                      accountChannel || t("whitelistedAccounts.sameAsMainName")
                                     }
                                     className="h-8 sm:h-9 text-xs sm:text-sm"
                                   />
@@ -750,19 +760,19 @@ export default function WhitelistedAccounts() {
                       </div>
                       {selectedPlatforms.length === 0 && (
                         <p className="text-xs text-muted-foreground">
-                          At least one platform must be selected
+                          {t("whitelistedAccounts.atLeastOnePlatform")}
                         </p>
                       )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="notes" className="text-xs sm:text-sm">
-                        Notes (Optional)
+                        {t("whitelistedAccounts.notesOptional")}
                       </Label>
                       <Textarea
                         id="notes"
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Add any notes about this account..."
+                        placeholder={t("whitelistedAccounts.notesPlaceholder")}
                         rows={3}
                         className="text-sm"
                       />
@@ -776,7 +786,7 @@ export default function WhitelistedAccounts() {
                         resetForm();
                       }}
                       className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                      Cancel
+                      {t("whitelistedAccounts.cancel")}
                     </Button>
                     <Button
                       onClick={handleAddAccount}
@@ -785,12 +795,12 @@ export default function WhitelistedAccounts() {
                       {saving ? (
                         <>
                           <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
-                          Saving...
+                          {t("whitelistedAccounts.saving")}
                         </>
                       ) : (
                         <>
                           <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                          Add Account
+                          {t("whitelistedAccounts.addAccount")}
                         </>
                       )}
                     </Button>
@@ -800,7 +810,7 @@ export default function WhitelistedAccounts() {
             )}
           </div>
           <CardDescription className="text-xs sm:text-sm">
-            Accounts in the whitelist are exempt from violation tracking
+            {t("whitelistedAccounts.exemptFromTracking")}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
@@ -808,15 +818,14 @@ export default function WhitelistedAccounts() {
             <div className="flex items-center justify-center py-8 sm:py-12">
               <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground mr-2" />
               <span className="text-xs sm:text-sm text-muted-foreground">
-                Loading whitelisted accounts...
+                {t("whitelistedAccounts.loadingAccounts")}
               </span>
             </div>
           ) : accounts.length === 0 ? (
             <div className="text-center py-8 sm:py-12 text-muted-foreground">
               <Shield className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 opacity-50" />
               <p className="text-xs sm:text-sm">
-                No whitelisted accounts found. Add your first account to get
-                started.
+                {t("whitelistedAccounts.noAccountsFound")}
               </p>
             </div>
           ) : (
@@ -841,12 +850,12 @@ export default function WhitelistedAccounts() {
                 <Table className="min-w-[800px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Account Channel</TableHead>
-                      <TableHead>Platforms</TableHead>
-                      <TableHead>Violations</TableHead>
-                      <TableHead>Notes</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>{t("whitelistedAccounts.accountChannel")}</TableHead>
+                      <TableHead>{t("whitelistedAccounts.platforms")}</TableHead>
+                      <TableHead>{t("whitelistedAccounts.violations")}</TableHead>
+                      <TableHead>{t("whitelistedAccounts.notes")}</TableHead>
+                      <TableHead>{t("whitelistedAccounts.created")}</TableHead>
+                      <TableHead className="text-right">{t("whitelistedAccounts.actions")}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -922,7 +931,7 @@ export default function WhitelistedAccounts() {
                                     <>
                                       <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                                       <span className="text-sm text-muted-foreground">
-                                        Loading...
+                                        {t("whitelistedAccounts.loading")}
                                       </span>
                                     </>
                                   ) : violationCount > 0 ? (
@@ -933,14 +942,13 @@ export default function WhitelistedAccounts() {
                                           variant="ghost"
                                           size="sm"
                                           className="h-auto p-0 text-sm font-normal text-amber-600 hover:text-amber-700">
-                                          {violationCount} violation
-                                          {violationCount !== 1 ? "s" : ""}
+                                          {violationCount} {violationCount !== 1 ? t("whitelistedAccounts.violations") : t("whitelistedAccounts.violation")}
                                         </Button>
                                       </CollapsibleTrigger>
                                     </>
                                   ) : (
                                     <span className="text-sm text-muted-foreground">
-                                      No violations
+                                      {t("whitelistedAccounts.noViolations")}
                                     </span>
                                   )}
                                 </div>
@@ -953,7 +961,7 @@ export default function WhitelistedAccounts() {
                                     </p>
                                   ) : (
                                     <span className="text-sm text-muted-foreground italic">
-                                      No notes
+                                      {t("whitelistedAccounts.noNotes")}
                                     </span>
                                   )}
                                 </div>
@@ -963,7 +971,7 @@ export default function WhitelistedAccounts() {
                                   ? new Date(
                                       account.createdAt
                                     ).toLocaleDateString()
-                                  : "N/A"}
+                                  : t("whitelistedAccounts.nA")}
                               </TableCell>
                               <TableCell className="text-right">
                                 {isSuperAdmin && (
@@ -986,7 +994,7 @@ export default function WhitelistedAccounts() {
                                 )}
                                 {!isSuperAdmin && (
                                   <span className="text-sm text-muted-foreground">
-                                    View only
+                                    {t("whitelistedAccounts.viewOnly")}
                                   </span>
                                 )}
                               </TableCell>
@@ -999,7 +1007,7 @@ export default function WhitelistedAccounts() {
                                     className="bg-muted/50 p-0">
                                     <div className="p-4 space-y-2">
                                       <h4 className="text-sm font-semibold mb-3">
-                                        Associated Violations ({violationCount})
+                                        {t("whitelistedAccounts.associatedViolations", { count: violationCount })}
                                       </h4>
                                       <div className="space-y-2 max-h-64 overflow-y-auto">
                                         {violations.map((violation) => {
@@ -1033,7 +1041,7 @@ export default function WhitelistedAccounts() {
                                                   );
                                                 }
                                               }}
-                                              title="Click to view match dashboard">
+                                              title={t("whitelistedAccounts.clickToViewMatch")}>
                                               <div className="flex-1 space-y-1">
                                                 <div className="flex items-center gap-2">
                                                   <Badge
@@ -1054,25 +1062,25 @@ export default function WhitelistedAccounts() {
                                                     variant="outline"
                                                     className={cn(
                                                       "text-xs",
-                                                      (getStatusBadge(
+                                                      (getStatusBadgeKey(
                                                         violation.status
                                                       ) === "Active" ||
-                                                        getStatusBadge(
+                                                        getStatusBadgeKey(
                                                           violation.status
                                                         ) === "Reported") &&
                                                         "bg-red-100 text-red-700 hover:bg-red-200 border-red-300 dark:bg-red-900/30 dark:text-red-400",
-                                                      getStatusBadge(
+                                                      getStatusBadgeKey(
                                                         violation.status
                                                       ) === "Blocked" &&
                                                         "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
-                                                      getStatusBadge(
+                                                      getStatusBadgeKey(
                                                         violation.status
                                                       ) === "Removed" &&
                                                         "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
-                                                      (getStatusBadge(
+                                                      (getStatusBadgeKey(
                                                         violation.status
                                                       ) === "Review" ||
-                                                        getStatusBadge(
+                                                        getStatusBadgeKey(
                                                           violation.status
                                                         ) === "Under Review") &&
                                                         "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
@@ -1093,7 +1101,7 @@ export default function WhitelistedAccounts() {
                                                   </p>
                                                 )}
                                                 <p className="text-xs text-muted-foreground">
-                                                  Added:{" "}
+                                                  {t("whitelistedAccounts.added")}{" "}
                                                   {new Date(
                                                     violation.timeAdded
                                                   ).toLocaleString()}
@@ -1125,10 +1133,10 @@ export default function WhitelistedAccounts() {
         <DialogContent className="w-[95vw] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">
-              Edit Whitelisted Account
+              {t("whitelistedAccounts.editWhitelistedAccount")}
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              Update the account channel and platform selections.
+              {t("whitelistedAccounts.editDescription")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
@@ -1141,18 +1149,18 @@ export default function WhitelistedAccounts() {
               <Label
                 htmlFor="edit-account-channel"
                 className="text-xs sm:text-sm">
-                Account Channel
+                {t("whitelistedAccounts.accountChannel")}
               </Label>
               <Input
                 id="edit-account-channel"
                 value={accountChannel}
                 onChange={(e) => setAccountChannel(e.target.value)}
-                placeholder="Enter account channel name"
+                placeholder={t("whitelistedAccounts.accountChannelPlaceholderEdit")}
                 className="h-9 sm:h-10 text-sm"
               />
             </div>
             <div className="space-y-2 sm:space-y-3">
-              <Label className="text-xs sm:text-sm">Select Platforms</Label>
+              <Label className="text-xs sm:text-sm">{t("whitelistedAccounts.selectPlatforms")}</Label>
               <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 border rounded-lg">
                 {platformOperations.map((platform) => {
                   const PlatformIcon = platform.icon;
@@ -1183,8 +1191,7 @@ export default function WhitelistedAccounts() {
                           <Label
                             htmlFor={`edit-platform-name-${platform.id}`}
                             className="text-[10px] sm:text-xs text-muted-foreground">
-                            Account name for {platform.name} (leave empty to use
-                            main name)
+                            {t("whitelistedAccounts.accountNameForPlatform", { platform: platform.name })}
                           </Label>
                           <Input
                             id={`edit-platform-name-${platform.id}`}
@@ -1195,7 +1202,7 @@ export default function WhitelistedAccounts() {
                                 e.target.value
                               )
                             }
-                            placeholder={accountChannel || "Same as main name"}
+                            placeholder={accountChannel || t("whitelistedAccounts.sameAsMainName")}
                             className="h-8 sm:h-9 text-xs sm:text-sm"
                           />
                         </div>
@@ -1206,19 +1213,19 @@ export default function WhitelistedAccounts() {
               </div>
               {selectedPlatforms.length === 0 && (
                 <p className="text-xs text-muted-foreground">
-                  At least one platform must be selected
+                  {t("whitelistedAccounts.atLeastOnePlatform")}
                 </p>
               )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-notes" className="text-xs sm:text-sm">
-                Notes (Optional)
+                {t("whitelistedAccounts.notesOptional")}
               </Label>
               <Textarea
                 id="edit-notes"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add any notes about this account..."
+                placeholder={t("whitelistedAccounts.notesPlaceholder")}
                 rows={3}
                 className="text-sm"
               />
@@ -1233,7 +1240,7 @@ export default function WhitelistedAccounts() {
                 setEditingAccount(null);
               }}
               className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-              Cancel
+              {t("whitelistedAccounts.cancel")}
             </Button>
             <Button
               onClick={handleEditAccount}
@@ -1242,12 +1249,12 @@ export default function WhitelistedAccounts() {
               {saving ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
-                  Saving...
+                  {t("whitelistedAccounts.saving")}
                 </>
               ) : (
                 <>
                   <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  Save Changes
+                  {t("whitelistedAccounts.saveChanges")}
                 </>
               )}
             </Button>
@@ -1260,19 +1267,17 @@ export default function WhitelistedAccounts() {
         <DialogContent className="w-[95vw] sm:w-full">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">
-              Remove from Whitelist
+              {t("whitelistedAccounts.removeFromWhitelist")}
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
-              Are you sure you want to remove this account from the whitelist?
-              This action cannot be undone.
+              {t("whitelistedAccounts.removeConfirm")}
             </DialogDescription>
           </DialogHeader>
           {deletingAccount && (
             <div className="py-3 sm:py-4">
               <Alert variant="destructive">
                 <AlertDescription className="text-xs sm:text-sm">
-                  <strong>{deletingAccount.accountChannel}</strong> will be
-                  removed from the whitelist.
+                  {t("whitelistedAccounts.willBeRemoved", { account: deletingAccount.accountChannel })}
                 </AlertDescription>
               </Alert>
             </div>
@@ -1285,7 +1290,7 @@ export default function WhitelistedAccounts() {
                 setDeletingAccount(null);
               }}
               className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-              Cancel
+              {t("whitelistedAccounts.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -1295,12 +1300,12 @@ export default function WhitelistedAccounts() {
               {saving ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
-                  Deleting...
+                  {t("whitelistedAccounts.deleting")}
                 </>
               ) : (
                 <>
                   <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  Remove from Whitelist
+                  {t("whitelistedAccounts.removeFromWhitelist")}
                 </>
               )}
             </Button>

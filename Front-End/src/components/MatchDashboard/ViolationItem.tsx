@@ -170,7 +170,8 @@ export function ViolationItem({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                  {violation.status === "Blocked" || violation.status === "Removed"
+                  {violation.status === "Blocked" ||
+                  violation.status === "Removed"
                     ? "Set to Active"
                     : "Mark as blocked"}
                 </TooltipContent>
@@ -178,7 +179,10 @@ export function ViolationItem({
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0">
                     <MoreHorizontal className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -226,11 +230,15 @@ export function ViolationItem({
                 }
                 className="flex items-center gap-1 sm:gap-1.5 min-w-0 flex-1 hover:text-foreground transition-colors rounded px-1 sm:px-1.5 py-0.5 hover:bg-accent touch-manipulation overflow-hidden max-w-full">
                 <LinkIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
-                <span className="truncate min-w-0 max-w-[120px] xs:max-w-[180px] sm:max-w-none">{truncatedUrl}</span>
+                <span className="truncate min-w-0 max-w-[120px] xs:max-w-[180px] sm:max-w-none">
+                  {truncatedUrl}
+                </span>
                 <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0 opacity-0 sm:group-hover:opacity-100" />
               </button>
             </TooltipTrigger>
-            <TooltipContent className="text-xs max-w-xs break-all">{violation.url}</TooltipContent>
+            <TooltipContent className="text-xs max-w-xs break-all">
+              {violation.url}
+            </TooltipContent>
           </Tooltip>
         </div>
         <div className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground shrink-0">
@@ -295,7 +303,8 @@ export function ViolationItem({
               switch (entry.action) {
                 case "created": {
                   const platformName = violation.platformName || "platform";
-                  const accountName = violation.accountChannel || violation.accountHandle || "";
+                  const accountName =
+                    violation.accountChannel || violation.accountHandle || "";
                   const views = violation.views || "0";
                   const status = violation.status || "";
                   description = (
@@ -306,7 +315,8 @@ export function ViolationItem({
                       </code>
                       {accountName && (
                         <>
-                          {" "}for channel/user{" "}
+                          {" "}
+                          for channel/user{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {accountName}
                           </code>
@@ -318,8 +328,7 @@ export function ViolationItem({
                           with{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {formatViewsString(views)} views
-                          </code>
-                          {" "}
+                          </code>{" "}
                           and status:{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {status}
@@ -380,11 +389,17 @@ export function ViolationItem({
                     description = (
                       <>
                         Status changed from{" "}
-                        <code className={`text-[9px] sm:text-xs ${getStatusColorClasses(oldStatus)} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
+                        <code
+                          className={`text-[9px] sm:text-xs ${getStatusColorClasses(
+                            oldStatus
+                          )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {oldStatus}
                         </code>{" "}
                         to{" "}
-                        <code className={`text-[9px] sm:text-xs ${getStatusColorClasses(newStatus)} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
+                        <code
+                          className={`text-[9px] sm:text-xs ${getStatusColorClasses(
+                            newStatus
+                          )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {newStatus}
                         </code>
                         <div className="mt-1 text-[10px] sm:text-xs text-muted-foreground">
@@ -399,11 +414,17 @@ export function ViolationItem({
                     description = (
                       <>
                         Status changed from{" "}
-                        <code className={`text-[9px] sm:text-xs ${getStatusColorClasses(oldStatus)} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
+                        <code
+                          className={`text-[9px] sm:text-xs ${getStatusColorClasses(
+                            oldStatus
+                          )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {oldStatus}
                         </code>{" "}
                         to{" "}
-                        <code className={`text-[9px] sm:text-xs ${getStatusColorClasses(newStatus)} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
+                        <code
+                          className={`text-[9px] sm:text-xs ${getStatusColorClasses(
+                            newStatus
+                          )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {newStatus}
                         </code>
                         <div className="mt-1 text-[10px] sm:text-xs text-muted-foreground">
@@ -415,11 +436,17 @@ export function ViolationItem({
                     description = (
                       <>
                         Status changed from{" "}
-                        <code className={`text-[9px] sm:text-xs ${getStatusColorClasses(oldStatus)} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
+                        <code
+                          className={`text-[9px] sm:text-xs ${getStatusColorClasses(
+                            oldStatus
+                          )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {oldStatus}
                         </code>{" "}
                         to{" "}
-                        <code className={`text-[9px] sm:text-xs ${getStatusColorClasses(newStatus)} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
+                        <code
+                          className={`text-[9px] sm:text-xs ${getStatusColorClasses(
+                            newStatus
+                          )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {newStatus}
                         </code>
                       </>
@@ -529,13 +556,19 @@ export function ViolationItem({
                         entry.oldValue &&
                         (typeof entry.oldValue === "string" ||
                           typeof entry.oldValue === "number")
-                          ? new Date(entry.oldValue).toLocaleString("en-US", timeOptions)
+                          ? new Date(entry.oldValue).toLocaleString(
+                              "en-US",
+                              timeOptions
+                            )
                           : "";
                       const newTime =
                         entry.newValue &&
                         (typeof entry.newValue === "string" ||
                           typeof entry.newValue === "number")
-                          ? new Date(entry.newValue).toLocaleString("en-US", timeOptions)
+                          ? new Date(entry.newValue).toLocaleString(
+                              "en-US",
+                              timeOptions
+                            )
                           : "";
                       description = (
                         <>
@@ -582,13 +615,19 @@ export function ViolationItem({
                           entry.oldValue &&
                           (typeof entry.oldValue === "string" ||
                             typeof entry.oldValue === "number")
-                            ? new Date(entry.oldValue).toLocaleString("en-US", timeOptions)
+                            ? new Date(entry.oldValue).toLocaleString(
+                                "en-US",
+                                timeOptions
+                              )
                             : "undefined";
                         const newBlocked =
                           entry.newValue &&
                           (typeof entry.newValue === "string" ||
                             typeof entry.newValue === "number")
-                            ? new Date(entry.newValue).toLocaleString("en-US", timeOptions)
+                            ? new Date(entry.newValue).toLocaleString(
+                                "en-US",
+                                timeOptions
+                              )
                             : "undefined";
                         description = (
                           <>
@@ -605,11 +644,19 @@ export function ViolationItem({
                       }
                     } else if (entry.field === "notes") {
                       // Check if it's a note deletion, edit, or other change
-                      if (entry.changes?.action === "deleted" && entry.changes?.removed) {
+                      if (
+                        entry.changes?.action === "deleted" &&
+                        entry.changes?.removed
+                      ) {
                         // Note was deleted
                         const removedNotes = entry.changes.removed;
-                        description = `Note${removedNotes.length > 1 ? "s" : ""} deleted: ${removedNotes.join(", ")}`;
-                      } else if (entry.changes?.action === "changed" && entry.changes?.edited) {
+                        description = `Note${
+                          removedNotes.length > 1 ? "s" : ""
+                        } deleted: ${removedNotes.join(", ")}`;
+                      } else if (
+                        entry.changes?.action === "changed" &&
+                        entry.changes?.edited
+                      ) {
                         // Note was edited - show "from X to Y" format
                         const edited = entry.changes.edited;
                         if (edited.length > 0) {
