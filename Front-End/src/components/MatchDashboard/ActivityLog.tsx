@@ -403,36 +403,21 @@ export function ActivityLog({
               <div className="text-left">
                 {isRTL ? (
                   <>
-                    {views && views !== "0" && status && (
+                    {status && (
                       <>
-                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                          {translateStatus(status)}
-                        </code>{" "}
                         {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
                         <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                          {formatViewsString(views)}{" "}
-                          {t("matchDashboard.activityLog.descriptions.views")}
-                        </code>{" "}
-                        {t("matchDashboard.activityLog.descriptions.with")}{" "}
-                      </>
-                    )}
-                    {views && views !== "0" && !status && (
-                      <>
-                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                          {formatViewsString(views)}{" "}
-                          {t("matchDashboard.activityLog.descriptions.views")}
-                        </code>{" "}
-                        {t("matchDashboard.activityLog.descriptions.with")}{" "}
-                      </>
-                    )}
-                    {!views && status && (
-                      <>
-                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                           {translateStatus(status)}
                         </code>{" "}
-                        {t(
-                          "matchDashboard.activityLog.descriptions.withStatus"
-                        )}{" "}
+                      </>
+                    )}
+                    {views && views !== "0" && (
+                      <>
+                        {t("matchDashboard.activityLog.descriptions.with")}{" "}
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {formatViewsString(views)}{" "}
+                          {t("matchDashboard.activityLog.descriptions.views")}
+                        </code>{" "}
                       </>
                     )}
                     {accountName && (
@@ -900,16 +885,33 @@ export function ActivityLog({
                     : "undefined";
                 description = (
                   <div className="text-left">
-                    {t(
-                      "matchDashboard.activityLog.descriptions.blockedAtChangedFrom"
-                    )}{" "}
-                    <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                      {oldBlocked}
-                    </code>{" "}
-                    {t("matchDashboard.activityLog.descriptions.to")}{" "}
-                    <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                      {newBlocked}
-                    </code>
+                    {isRTL ? (
+                      <>
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {newBlocked}
+                        </code>{" "}
+                        {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {oldBlocked}
+                        </code>{" "}
+                        {t(
+                          "matchDashboard.activityLog.descriptions.blockedAtChangedFrom"
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        {t(
+                          "matchDashboard.activityLog.descriptions.blockedAtChangedFrom"
+                        )}{" "}
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {oldBlocked}
+                        </code>{" "}
+                        {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {newBlocked}
+                        </code>
+                      </>
+                    )}
                   </div>
                 );
               }

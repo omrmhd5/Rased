@@ -116,67 +116,43 @@ export function ViolationItem({
   return (
     <div className="group rounded-md border bg-card p-2 sm:p-2.5 hover:bg-accent/50 transition-colors overflow-hidden">
       {/* Line 1: Status icon + time + status pill + actions */}
-      <div className="flex items-start justify-between gap-2 min-w-0">
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-          <div className="text-muted-foreground flex-shrink-0">
-            {getStatusIcon(violation.statusBadge || "Active")}
-          </div>
-          <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
-            {violation.time}
-          </span>
-          <Badge
-            variant="outline"
-            className={cn(
-              "text-[9px] sm:text-xs px-1.5 sm:px-2 py-0 flex-shrink-0",
-              (violation.statusBadge === "Active" ||
-                violation.statusBadge === "Reported") &&
-                "bg-red-100 text-red-700 hover:bg-red-200 border-red-300 dark:bg-red-900/30 dark:text-red-400",
-              violation.statusBadge === "Blocked" &&
-                "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
-              violation.statusBadge === "Removed" &&
-                "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
-              (violation.statusBadge === "Review" ||
-                violation.statusBadge === "Under Review") &&
-                "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
-            )}>
-            {translateStatus(violation.statusBadge || "Active")}
-          </Badge>
-        </div>
-        <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0"
-                onClick={() =>
-                  onCopyUrl(violation.violationUrl || violation.url || "")
-                }>
-                <Copy className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t("matchDashboard.violationItem.copyLink")}
-            </TooltipContent>
-          </Tooltip>
-
-          {canModifyViolations && (
-            <>
-              <Tooltip>
-                <TooltipTrigger asChild>
+      {isRTL ? (
+        <div className="flex items-start justify-between gap-2 min-w-0">
+          {/* Action buttons (left side in RTL) - reversed order: MoreHorizontal, Lock, Edit, Copy */}
+          <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
+            {/* MoreHorizontal (first in RTL) */}
+            {canModifyViolations && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0"
-                    onClick={() => onEdit(platform.id, violation)}>
-                    <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0">
+                    <MoreHorizontal className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {t("matchDashboard.violationItem.edit")}
-                </TooltipContent>
-              </Tooltip>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align={isRTL ? "start" : "end"}
+                  className="w-48 sm:w-56">
+                  <DropdownMenuItem
+                    onClick={() => onAddNote(platform.id, violation)}
+                    className="text-xs sm:text-sm touch-manipulation">
+                    <FileEdit className="mr-2 h-4 w-4" />
+                    {t("matchDashboard.violationItem.addNote")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-destructive text-xs sm:text-sm touch-manipulation"
+                    onClick={() => onDelete(platform.id, violation.id)}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {t("matchDashboard.violationItem.delete")}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
+            {/* Lock (second in RTL) */}
+            {canModifyViolations && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -194,36 +170,181 @@ export function ViolationItem({
                     : t("matchDashboard.violationItem.markAsBlocked")}
                 </TooltipContent>
               </Tooltip>
+            )}
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+            {/* Edit (third in RTL) */}
+            {canModifyViolations && (
+              <Tooltip>
+                <TooltipTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0">
-                    <MoreHorizontal className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0"
+                    onClick={() => onEdit(platform.id, violation)}>
+                    <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 sm:w-56">
-                  <DropdownMenuItem
-                    onClick={() => onAddNote(platform.id, violation)}
-                    className="text-xs sm:text-sm touch-manipulation">
-                    <FileEdit className="mr-2 h-4 w-4" />
-                    {t("matchDashboard.violationItem.addNote")}
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    className="text-destructive text-xs sm:text-sm touch-manipulation"
-                    onClick={() => onDelete(platform.id, violation.id)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    {t("matchDashboard.violationItem.delete")}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          )}
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t("matchDashboard.violationItem.edit")}
+                </TooltipContent>
+              </Tooltip>
+            )}
+
+            {/* Copy (last in RTL) */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0"
+                  onClick={() =>
+                    onCopyUrl(violation.violationUrl || violation.url || "")
+                  }>
+                  <Copy className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t("matchDashboard.violationItem.copyLink")}
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          {/* Status icon + time + status badge (right side in RTL) - reversed order */}
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 justify-end flex-row-reverse">
+            <div className="text-muted-foreground flex-shrink-0">
+              {getStatusIcon(violation.statusBadge || "Active")}
+            </div>
+            <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+              {violation.time}
+            </span>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[9px] sm:text-xs px-1.5 sm:px-2 py-0 flex-shrink-0",
+                (violation.statusBadge === "Active" ||
+                  violation.statusBadge === "Reported") &&
+                  "bg-red-100 text-red-700 hover:bg-red-200 border-red-300 dark:bg-red-900/30 dark:text-red-400",
+                violation.statusBadge === "Blocked" &&
+                  "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
+                violation.statusBadge === "Removed" &&
+                  "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
+                (violation.statusBadge === "Review" ||
+                  violation.statusBadge === "Under Review") &&
+                  "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
+              )}>
+              {translateStatus(violation.statusBadge || "Active")}
+            </Badge>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="flex items-start justify-between gap-2 min-w-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+            <div className="text-muted-foreground flex-shrink-0">
+              {getStatusIcon(violation.statusBadge || "Active")}
+            </div>
+            <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+              {violation.time}
+            </span>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[9px] sm:text-xs px-1.5 sm:px-2 py-0 flex-shrink-0",
+                (violation.statusBadge === "Active" ||
+                  violation.statusBadge === "Reported") &&
+                  "bg-red-100 text-red-700 hover:bg-red-200 border-red-300 dark:bg-red-900/30 dark:text-red-400",
+                violation.statusBadge === "Blocked" &&
+                  "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
+                violation.statusBadge === "Removed" &&
+                  "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
+                (violation.statusBadge === "Review" ||
+                  violation.statusBadge === "Under Review") &&
+                  "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
+              )}>
+              {translateStatus(violation.statusBadge || "Active")}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-0.5 sm:gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0"
+                  onClick={() =>
+                    onCopyUrl(violation.violationUrl || violation.url || "")
+                  }>
+                  <Copy className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {t("matchDashboard.violationItem.copyLink")}
+              </TooltipContent>
+            </Tooltip>
+
+            {canModifyViolations && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0"
+                      onClick={() => onEdit(platform.id, violation)}>
+                      <Edit className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t("matchDashboard.violationItem.edit")}
+                  </TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0"
+                      onClick={() => onToggleStatus(platform.id, violation.id)}>
+                      <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {violation.status === "Blocked" ||
+                    violation.status === "Removed"
+                      ? t("matchDashboard.violationItem.setToActive")
+                      : t("matchDashboard.violationItem.markAsBlocked")}
+                  </TooltipContent>
+                </Tooltip>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0">
+                      <MoreHorizontal className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 sm:w-56">
+                    <DropdownMenuItem
+                      onClick={() => onAddNote(platform.id, violation)}
+                      className="text-xs sm:text-sm touch-manipulation">
+                      <FileEdit className="mr-2 h-4 w-4" />
+                      {t("matchDashboard.violationItem.addNote")}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      className="text-destructive text-xs sm:text-sm touch-manipulation"
+                      onClick={() => onDelete(platform.id, violation.id)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      {t("matchDashboard.violationItem.delete")}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Line 2: Platform icon + account handle + URL + views */}
       {isRTL ? (
