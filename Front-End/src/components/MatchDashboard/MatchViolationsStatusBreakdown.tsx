@@ -1,5 +1,12 @@
 import { Card } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  Legend,
+} from "recharts";
 import { AlertTriangle, Shield, FileQuestion, XCircle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme } from "next-themes";
@@ -43,9 +50,10 @@ export function MatchViolationsStatusBreakdown({
   };
 
   // Use brighter red in dark mode
-  const activeColor = mounted && theme === "dark" 
-    ? "hsl(0 84% 60%)" // Brighter red for dark mode
-    : "hsl(var(--destructive))"; // Original destructive color for light mode
+  const activeColor =
+    mounted && theme === "dark"
+      ? "hsl(0 84% 60%)" // Brighter red for dark mode
+      : "hsl(var(--destructive))"; // Original destructive color for light mode
 
   // Prepare chart data - colors match MatchOverview component
   const chartData: ChartData[] = [
@@ -93,10 +101,12 @@ export function MatchViolationsStatusBreakdown({
             <p className="font-semibold text-sm">{data.name}</p>
           </div>
           <p className="text-xs text-muted-foreground">
-            {t("dashboard.violationsOverview.statusBreakdown.count")} <span className="font-semibold">{data.value}</span>
+            {t("dashboard.violationsOverview.statusBreakdown.count")}{" "}
+            <span className="font-semibold">{data.value}</span>
           </p>
           <p className="text-xs text-muted-foreground">
-            {t("dashboard.violationsOverview.statusBreakdown.percentage")} <span className="font-semibold">{data.percentage}%</span>
+            {t("dashboard.violationsOverview.statusBreakdown.percentage")}{" "}
+            <span className="font-semibold">{data.percentage}%</span>
           </p>
         </div>
       );
@@ -115,8 +125,7 @@ export function MatchViolationsStatusBreakdown({
           return (
             <div
               key={index}
-              className="flex items-center gap-2 group cursor-pointer transition-all duration-300 hover:scale-105"
-            >
+              className="flex items-center gap-2 group cursor-pointer transition-all duration-300 hover:scale-105">
               <div
                 className="w-3 h-3 rounded-full transition-all duration-300 group-hover:scale-110"
                 style={{ backgroundColor: entry.color }}
@@ -124,9 +133,7 @@ export function MatchViolationsStatusBreakdown({
               <span className="text-xs font-medium text-muted-foreground">
                 {entry.value}
               </span>
-              <span className="text-xs font-bold">
-                {data.percentage}%
-              </span>
+              <span className="text-xs font-bold">{data.percentage}%</span>
             </div>
           );
         })}
@@ -138,9 +145,13 @@ export function MatchViolationsStatusBreakdown({
   if (totalViolations === 0) {
     return (
       <Card className="p-4">
-        <h3 className="font-semibold mb-4 text-base text-left">{t("dashboard.violationsOverview.statusBreakdown.title")}</h3>
+        <h3 className="font-semibold mb-4 text-base text-left">
+          {t("dashboard.violationsOverview.statusBreakdown.title")}
+        </h3>
         <div className="flex items-center justify-center h-32">
-          <p className="text-sm text-muted-foreground text-left">{t("dashboard.violationsOverview.statusBreakdown.noViolations")}</p>
+          <p className="text-sm text-muted-foreground text-left">
+            {t("dashboard.violationsOverview.statusBreakdown.noViolations")}
+          </p>
         </div>
       </Card>
     );
@@ -148,8 +159,10 @@ export function MatchViolationsStatusBreakdown({
 
   return (
     <Card className="p-4 transition-all duration-300 hover:shadow-lg">
-      <h3 className="font-semibold mb-4 text-base text-left">{t("dashboard.violationsOverview.statusBreakdown.title")}</h3>
-      
+      <h3 className="font-semibold mb-4 text-base text-left">
+        {t("dashboard.violationsOverview.statusBreakdown.title")}
+      </h3>
+
       <div className="flex flex-col lg:flex-row items-center gap-3">
         {/* Pie Chart */}
         <div className="w-full lg:w-1/2">
@@ -165,8 +178,7 @@ export function MatchViolationsStatusBreakdown({
                 fill="#8884d8"
                 dataKey="value"
                 stroke="hsl(var(--background))"
-                strokeWidth={2}
-              >
+                strokeWidth={2}>
                 {chartData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
@@ -181,27 +193,34 @@ export function MatchViolationsStatusBreakdown({
           {chartData.map((item, index) => (
             <div
               key={index}
-              className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border transition-all duration-300 hover:scale-[1.02] hover:bg-muted/50 cursor-pointer group"
-            >
+              className="flex items-center justify-between p-2 rounded-lg bg-muted/30 border border-border transition-all duration-300 hover:scale-[1.02] hover:bg-muted/50 cursor-pointer group">
               <div className="flex items-center gap-2">
                 <div
                   className="p-1.5 rounded-lg transition-all duration-300 group-hover:scale-110"
                   style={{
                     backgroundColor: `${item.color}20`,
                     border: `2px solid ${item.color}`,
-                  }}
-                >
+                  }}>
                   <div style={{ color: item.color }}>{item.icon}</div>
                 </div>
                 <div>
                   <p className="font-semibold text-xs">{item.name}</p>
                   <p className="text-[10px] text-muted-foreground">
-                    {item.value} {item.value !== 1 ? t("dashboard.violationsOverview.statusBreakdown.violations") : t("dashboard.violationsOverview.statusBreakdown.violation")}
+                    {item.value}{" "}
+                    {item.value !== 1
+                      ? t(
+                          "dashboard.violationsOverview.statusBreakdown.violations"
+                        )
+                      : t(
+                          "dashboard.violationsOverview.statusBreakdown.violation"
+                        )}
                   </p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-base font-bold" style={{ color: item.color }}>
+                <p
+                  className="text-base font-bold"
+                  style={{ color: item.color }}>
                   {item.percentage}%
                 </p>
               </div>
@@ -212,4 +231,3 @@ export function MatchViolationsStatusBreakdown({
     </Card>
   );
 }
-

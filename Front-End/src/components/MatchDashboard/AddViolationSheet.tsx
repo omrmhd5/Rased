@@ -37,7 +37,9 @@ interface AddViolationSheetProps {
   formContentType: string;
   onFormContentTypeChange: (type: string) => void;
   formStatus: "Active" | "Blocked" | "Removed" | "Under Review";
-  onFormStatusChange: (status: "Active" | "Blocked" | "Removed" | "Under Review") => void;
+  onFormStatusChange: (
+    status: "Active" | "Blocked" | "Removed" | "Under Review"
+  ) => void;
   formViews: string;
   onFormViewsChange: (views: string) => void;
   formTimeAdded: string;
@@ -80,8 +82,8 @@ export function AddViolationSheet({
   onDeleteNote,
   onSave,
 }: AddViolationSheetProps) {
-  const { t } = useLanguage();
-  
+  const { t, isRTL } = useLanguage();
+
   const handleUrlChange = (url: string) => {
     onFormUrlChange(url);
     const extractedHandle = extractAccountHandleFromUrl(url);
@@ -100,7 +102,11 @@ export function AddViolationSheet({
     // Only set blockedAt for "Blocked" status, NOT "Removed" (they are different statuses)
     if (value === "Blocked" && !formBlockedAt) {
       onFormBlockedAtChange(getKSATime());
-    } else if (value === "Removed" || value === "Active" || value === "Under Review") {
+    } else if (
+      value === "Removed" ||
+      value === "Active" ||
+      value === "Under Review"
+    ) {
       // Clear blockedAt when changing to Removed, Active, or Under Review
       onFormBlockedAtChange("");
     }
@@ -120,7 +126,9 @@ export function AddViolationSheet({
       <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
         <SheetHeader>
           <SheetTitle>
-            {isEditMode ? t("matchDashboard.addViolationSheet.title.edit") : t("matchDashboard.addViolationSheet.title.add")}
+            {isEditMode
+              ? t("matchDashboard.addViolationSheet.title.edit")
+              : t("matchDashboard.addViolationSheet.title.add")}
           </SheetTitle>
           <SheetDescription>
             {isEditMode
@@ -142,92 +150,131 @@ export function AddViolationSheet({
             <Label>{t("matchDashboard.addViolationSheet.platform")}</Label>
             <Input
               value={
-                platformOperations.find(
-                  (p) => p.id === selectedPlatformForAdd
-                )?.name || ""
+                platformOperations.find((p) => p.id === selectedPlatformForAdd)
+                  ?.name || ""
               }
               disabled
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="violation-url">{t("matchDashboard.addViolationSheet.violationUrl")}</Label>
+            <Label htmlFor="violation-url">
+              {t("matchDashboard.addViolationSheet.violationUrl")}
+            </Label>
             <Input
               id="violation-url"
-              placeholder={t("matchDashboard.addViolationSheet.violationUrlPlaceholder")}
+              placeholder={t(
+                "matchDashboard.addViolationSheet.violationUrlPlaceholder"
+              )}
               value={formUrl}
               onChange={(e) => handleUrlChange(e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="account-handle">{t("matchDashboard.addViolationSheet.accountChannel")}</Label>
+            <Label htmlFor="account-handle">
+              {t("matchDashboard.addViolationSheet.accountChannel")}
+            </Label>
             <Input
               id="account-handle"
-              placeholder={t("matchDashboard.addViolationSheet.accountChannelPlaceholder")}
+              placeholder={t(
+                "matchDashboard.addViolationSheet.accountChannelPlaceholder"
+              )}
               value={formAccountHandle}
               onChange={(e) => onFormAccountHandleChange(e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="content-type">{t("matchDashboard.addViolationSheet.contentType")}</Label>
-            <Select value={formContentType} onValueChange={onFormContentTypeChange}>
+            <Label htmlFor="content-type">
+              {t("matchDashboard.addViolationSheet.contentType")}
+            </Label>
+            <Select
+              value={formContentType}
+              onValueChange={onFormContentTypeChange}>
               <SelectTrigger id="content-type">
-                <SelectValue placeholder={t("matchDashboard.addViolationSheet.contentTypePlaceholder")} />
+                <SelectValue
+                  placeholder={t(
+                    "matchDashboard.addViolationSheet.contentTypePlaceholder"
+                  )}
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="live">{t("dashboard.live")}</SelectItem>
-                <SelectItem value="highlights">{t("dashboard.highlights")}</SelectItem>
+                <SelectItem value="highlights">
+                  {t("dashboard.highlights")}
+                </SelectItem>
                 <SelectItem value="other">{t("dashboard.other")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="status">{t("matchDashboard.addViolationSheet.status")}</Label>
+            <Label htmlFor="status">
+              {t("matchDashboard.addViolationSheet.status")}
+            </Label>
             <Select value={formStatus} onValueChange={handleStatusChange}>
               <SelectTrigger id="status">
-                <SelectValue placeholder={t("matchDashboard.addViolationSheet.statusPlaceholder")} />
+                <SelectValue
+                  placeholder={t(
+                    "matchDashboard.addViolationSheet.statusPlaceholder"
+                  )}
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="Active">{t("dashboard.active")}</SelectItem>
-                <SelectItem value="Blocked">{t("dashboard.blocked")}</SelectItem>
-                <SelectItem value="Removed">{t("dashboard.removed")}</SelectItem>
-                <SelectItem value="Under Review">{t("dashboard.underReview")}</SelectItem>
+                <SelectItem value="Blocked">
+                  {t("dashboard.blocked")}
+                </SelectItem>
+                <SelectItem value="Removed">
+                  {t("dashboard.removed")}
+                </SelectItem>
+                <SelectItem value="Under Review">
+                  {t("dashboard.underReview")}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="views">{t("matchDashboard.addViolationSheet.views")}</Label>
+            <Label htmlFor="views">
+              {t("matchDashboard.addViolationSheet.views")}
+            </Label>
             <Input
               id="views"
               type="text"
-              placeholder={t("matchDashboard.addViolationSheet.viewsPlaceholder")}
+              placeholder={t(
+                "matchDashboard.addViolationSheet.viewsPlaceholder"
+              )}
               value={formViews}
               onChange={(e) => handleViewsChange(e.target.value)}
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="time-added">{t("matchDashboard.addViolationSheet.timeAdded")}</Label>
+            <Label htmlFor="time-added">
+              {t("matchDashboard.addViolationSheet.timeAdded")}
+            </Label>
             <Input
               id="time-added"
               type="datetime-local"
               value={formTimeAdded}
               onChange={(e) => onFormTimeAddedChange(e.target.value)}
+              className={isRTL ? "flex-row-reverse" : ""}
             />
           </div>
 
           {formStatus === "Blocked" && (
             <div className="space-y-2">
-              <Label htmlFor="blocked-at">{t("matchDashboard.addViolationSheet.blockedAt")}</Label>
+              <Label htmlFor="blocked-at">
+                {t("matchDashboard.addViolationSheet.blockedAt")}
+              </Label>
               <Input
                 id="blocked-at"
                 type="datetime-local"
                 value={formBlockedAt}
                 onChange={(e) => onFormBlockedAtChange(e.target.value)}
+                className={isRTL ? "flex-row-reverse" : ""}
               />
               <p className="text-xs text-muted-foreground">
                 {t("matchDashboard.addViolationSheet.blockedAtHint")}
@@ -257,7 +304,9 @@ export function AddViolationSheet({
                   <Input
                     value={note}
                     onChange={(e) => onNoteChange(index, e.target.value)}
-                    placeholder={t("matchDashboard.addViolationSheet.notePlaceholder")}
+                    placeholder={t(
+                      "matchDashboard.addViolationSheet.notePlaceholder"
+                    )}
                     className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                   <Button
@@ -284,11 +333,12 @@ export function AddViolationSheet({
             {t("matchDashboard.addViolationSheet.cancel")}
           </Button>
           <Button onClick={onSave}>
-            {isEditMode ? t("matchDashboard.addViolationSheet.save.edit") : t("matchDashboard.addViolationSheet.save.add")}
+            {isEditMode
+              ? t("matchDashboard.addViolationSheet.save.edit")
+              : t("matchDashboard.addViolationSheet.save.add")}
           </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>
   );
 }
-

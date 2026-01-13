@@ -7,6 +7,7 @@ import { toPng } from "html-to-image";
 import { toast } from "@/hooks/use-toast";
 import { useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useTheme } from "next-themes";
 
 interface PlatformMetrics {
   platform: string;
@@ -40,17 +41,20 @@ export const RoundReport = ({
   fileName,
 }: RoundReportProps) => {
   const { t } = useLanguage();
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
   const reportRef = useRef<HTMLDivElement>(null);
 
   const handleExportImage = async () => {
     if (!reportRef.current) return;
 
     try {
+      const backgroundColor = isDarkMode ? "#0F172A" : "#ffffff";
       const dataUrl = await toPng(reportRef.current, {
         quality: 1,
         pixelRatio: 2,
         width: 1200,
-        backgroundColor: "#ffffff",
+        backgroundColor,
       });
 
       // Generate a nice filename
@@ -81,9 +85,15 @@ export const RoundReport = ({
   };
 
   const getSuccessRateColor = (rate: number) => {
-    if (rate >= 80) return "text-green-600";
-    if (rate >= 50) return "text-yellow-600";
-    return "text-red-600";
+    if (isDarkMode) {
+      if (rate >= 80) return "text-green-400";
+      if (rate >= 50) return "text-yellow-400";
+      return "text-red-400";
+    } else {
+      if (rate >= 80) return "text-green-600";
+      if (rate >= 50) return "text-yellow-600";
+      return "text-red-600";
+    }
   };
 
   const formatBlockTime = (minutes: number) => {
@@ -105,7 +115,7 @@ export const RoundReport = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] w-[1280px] max-h-[95vh] overflow-y-auto p-0">
+      <DialogContent className="max-w-[95vw] w-[1280px] max-h-[95vh] overflow-y-auto p-0 bg-background">
         <div className="sticky top-0 z-10 bg-background border-b px-6 py-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">{t("roundReport.title")}</h2>
           <div className="flex items-center gap-2">
@@ -120,37 +130,64 @@ export const RoundReport = ({
           </div>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 bg-background">
           <div
             ref={reportRef}
-            className="bg-gradient-to-br from-background via-muted/20 to-background rounded-2xl shadow-2xl p-8 space-y-8">
+            className={`rounded-2xl shadow-2xl p-8 space-y-8 ${
+              isDarkMode
+                ? "bg-slate-950 text-foreground"
+                : "bg-gradient-to-br from-background via-muted/20 to-background"
+            }`}
+            style={
+              isDarkMode
+                ? { backgroundColor: "#0F172A", color: "#F8FAFC" }
+                : undefined
+            }>
             {/* Header */}
-            <div className="text-center space-y-3 pb-6 border-b">
-              <h1 className="text-3xl font-bold">
+            <div className={`text-center space-y-3 pb-6 ${
+              isDarkMode ? "border-b border-slate-800" : "border-b"
+            }`}>
+              <h1 className={`text-3xl font-bold ${
+                isDarkMode ? "text-slate-50" : ""
+              }`}>
                 {t("roundReport.mainTitle")}
               </h1>
-              <p className="text-lg text-muted-foreground">
+              <p className={`text-lg ${
+                isDarkMode ? "text-slate-300" : "text-muted-foreground"
+              }`}>
                 {competition} – {t("roundReport.week")} {week}
               </p>
               {dateRange && (
                 <div className="flex items-center justify-center gap-3 mt-3">
-                  <span className="text-sm font-medium">{dateRange}</span>
+                  <span className={`text-sm font-medium ${
+                    isDarkMode ? "text-slate-200" : ""
+                  }`}>{dateRange}</span>
                 </div>
               )}
-              <p className="text-xs text-muted-foreground mt-2">
+              <p className={`text-xs mt-2 ${
+                isDarkMode ? "text-slate-400" : "text-muted-foreground"
+              }`}>
                 {t("roundReport.dataIncludes")}
               </p>
             </div>
 
             {/* Live Stream Section */}
             <div className="space-y-4">
-              <h2 className="text-xl font-bold text-center">
+              <h2 className={`text-xl font-bold text-center ${
+                isDarkMode ? "text-slate-50" : ""
+              }`}>
                 {t("roundReport.liveStreamViolations")}
               </h2>
-              <Card className="overflow-hidden">
+              <Card className={`overflow-hidden ${
+                isDarkMode ? "bg-slate-900 border-slate-800" : ""
+              }`}>
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-muted/50 border-b">
+                    <thead className={`${
+                      isDarkMode 
+                        ? "bg-slate-800 border-b border-slate-700" 
+                        : "bg-muted/50 border-b"
+                    }`}>
                       <tr>
                         <th className="text-left text-sm font-semibold px-4 py-3">
                           {t("roundReport.tableHeaders.platform")}
@@ -176,8 +213,14 @@ export const RoundReport = ({
                       {liveMetrics.map((metric, index) => (
                         <tr
                           key={index}
-                          className="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3">
+                          className={`${
+                            isDarkMode
+                              ? "border-b border-slate-800 last:border-b-0 hover:bg-slate-800/50"
+                              : "border-b last:border-b-0 hover:bg-muted/30"
+                          } transition-colors`}>
+                          <td className={`px-4 py-3 ${
+                            isDarkMode ? "text-slate-200" : ""
+                          }`}>
                             <div className="flex items-center gap-2">
                               {metric.icon}
                               <span className="text-sm font-medium">
@@ -185,17 +228,27 @@ export const RoundReport = ({
                               </span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="inline-flex items-center justify-center px-3 py-1 bg-primary/10 text-primary rounded-md text-sm font-semibold">
+                          <td className={`px-4 py-3 text-center ${
+                            isDarkMode ? "text-slate-200" : ""
+                          }`}>
+                            <span className={`inline-flex items-center justify-center px-3 py-1 rounded-md text-sm font-semibold ${
+                              isDarkMode
+                                ? "bg-primary/20 text-primary"
+                                : "bg-primary/10 text-primary"
+                            }`}>
                               {metric.detected}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className={`px-4 py-3 text-center ${
+                            isDarkMode ? "text-slate-200" : ""
+                          }`}>
                             <span className="text-sm font-medium">
                               {metric.blocked}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className={`px-4 py-3 text-center ${
+                            isDarkMode ? "text-slate-200" : ""
+                          }`}>
                             <div className="flex items-center justify-center gap-1">
                               <span
                                 className={`text-sm font-bold ${getSuccessRateColor(
@@ -205,13 +258,21 @@ export const RoundReport = ({
                               </span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className={`px-4 py-3 text-center ${
+                            isDarkMode ? "text-slate-300" : ""
+                          }`}>
                             <span className="text-sm">
                               {formatBlockTime(metric.avgBlockTime)}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="inline-flex items-center justify-center px-3 py-1 bg-primary/10 text-primary rounded-md text-sm font-semibold">
+                          <td className={`px-4 py-3 text-center ${
+                            isDarkMode ? "text-slate-200" : ""
+                          }`}>
+                            <span className={`inline-flex items-center justify-center px-3 py-1 rounded-md text-sm font-semibold ${
+                              isDarkMode
+                                ? "bg-primary/20 text-primary"
+                                : "bg-primary/10 text-primary"
+                            }`}>
                               {formatViews(metric.views)}
                             </span>
                           </td>
@@ -225,30 +286,50 @@ export const RoundReport = ({
 
             {/* Highlights Section */}
             <div className="space-y-4">
-              <h2 className="text-xl font-bold text-center">
+              <h2 className={`text-xl font-bold text-center ${
+                isDarkMode ? "text-slate-50" : ""
+              }`}>
                 {t("roundReport.highlightsViolations")}
               </h2>
-              <Card className="overflow-hidden">
+              <Card className={`overflow-hidden ${
+                isDarkMode ? "bg-slate-900 border-slate-800" : ""
+              }`}>
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-muted/50 border-b">
+                    <thead className={`${
+                      isDarkMode 
+                        ? "bg-slate-800 border-b border-slate-700" 
+                        : "bg-muted/50 border-b"
+                    }`}>
                       <tr>
-                        <th className="text-left text-sm font-semibold px-4 py-3">
+                        <th className={`text-left text-sm font-semibold px-4 py-3 ${
+                          isDarkMode ? "text-slate-200" : ""
+                        }`}>
                           {t("roundReport.tableHeaders.platform")}
                         </th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">
+                        <th className={`text-center text-sm font-semibold px-4 py-3 ${
+                          isDarkMode ? "text-slate-200" : ""
+                        }`}>
                           {t("roundReport.tableHeaders.detected")}
                         </th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">
+                        <th className={`text-center text-sm font-semibold px-4 py-3 ${
+                          isDarkMode ? "text-slate-200" : ""
+                        }`}>
                           {t("roundReport.tableHeaders.blocked")}
                         </th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">
+                        <th className={`text-center text-sm font-semibold px-4 py-3 ${
+                          isDarkMode ? "text-slate-200" : ""
+                        }`}>
                           {t("roundReport.tableHeaders.successRate")}
                         </th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">
+                        <th className={`text-center text-sm font-semibold px-4 py-3 ${
+                          isDarkMode ? "text-slate-200" : ""
+                        }`}>
                           {t("roundReport.tableHeaders.avgBlockTime")}
                         </th>
-                        <th className="text-center text-sm font-semibold px-4 py-3">
+                        <th className={`text-center text-sm font-semibold px-4 py-3 ${
+                          isDarkMode ? "text-slate-200" : ""
+                        }`}>
                           {t("roundReport.tableHeaders.views")}
                         </th>
                       </tr>
@@ -257,8 +338,14 @@ export const RoundReport = ({
                       {highlightsMetrics.map((metric, index) => (
                         <tr
                           key={index}
-                          className="border-b last:border-b-0 hover:bg-muted/30 transition-colors">
-                          <td className="px-4 py-3">
+                          className={`${
+                            isDarkMode
+                              ? "border-b border-slate-800 last:border-b-0 hover:bg-slate-800/50"
+                              : "border-b last:border-b-0 hover:bg-muted/30"
+                          } transition-colors`}>
+                          <td className={`px-4 py-3 ${
+                            isDarkMode ? "text-slate-200" : ""
+                          }`}>
                             <div className="flex items-center gap-2">
                               {metric.icon}
                               <span className="text-sm font-medium">
@@ -266,17 +353,27 @@ export const RoundReport = ({
                               </span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="inline-flex items-center justify-center px-3 py-1 bg-primary/10 text-primary rounded-md text-sm font-semibold">
+                          <td className={`px-4 py-3 text-center ${
+                            isDarkMode ? "text-slate-200" : ""
+                          }`}>
+                            <span className={`inline-flex items-center justify-center px-3 py-1 rounded-md text-sm font-semibold ${
+                              isDarkMode
+                                ? "bg-primary/20 text-primary"
+                                : "bg-primary/10 text-primary"
+                            }`}>
                               {metric.detected}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className={`px-4 py-3 text-center ${
+                            isDarkMode ? "text-slate-200" : ""
+                          }`}>
                             <span className="text-sm font-medium">
                               {metric.blocked}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className={`px-4 py-3 text-center ${
+                            isDarkMode ? "text-slate-200" : ""
+                          }`}>
                             <div className="flex items-center justify-center gap-1">
                               <span
                                 className={`text-sm font-bold ${getSuccessRateColor(
@@ -286,13 +383,21 @@ export const RoundReport = ({
                               </span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className={`px-4 py-3 text-center ${
+                            isDarkMode ? "text-slate-300" : ""
+                          }`}>
                             <span className="text-sm">
                               {formatBlockTime(metric.avgBlockTime)}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-center">
-                            <span className="inline-flex items-center justify-center px-3 py-1 bg-primary/10 text-primary rounded-md text-sm font-semibold">
+                          <td className={`px-4 py-3 text-center ${
+                            isDarkMode ? "text-slate-200" : ""
+                          }`}>
+                            <span className={`inline-flex items-center justify-center px-3 py-1 rounded-md text-sm font-semibold ${
+                              isDarkMode
+                                ? "bg-primary/20 text-primary"
+                                : "bg-primary/10 text-primary"
+                            }`}>
                               {formatViews(metric.views)}
                             </span>
                           </td>

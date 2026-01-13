@@ -362,12 +362,23 @@ export const formatBlockedViolationText = (
     month: "short",
     day: "numeric",
   });
-  const timeStr = addedDate.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
-  const dateTimeStr = `${dateStr} ${timeStr}`;
+
+  // Format time in 12-hour format with Arabic/English period
+  const hours = addedDate.getHours();
+  const minutes = addedDate.getMinutes().toString().padStart(2, "0");
+  const isAM = hours < 12;
+  const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+
+  let timeStr: string;
+  if (isRTL) {
+    const timePeriod = isAM ? "صباحا" : "مساءا";
+    timeStr = `${timePeriod} ${hour12}:${minutes}`;
+  } else {
+    const timePeriod = isAM ? "AM" : "PM";
+    timeStr = `${hour12}:${minutes} ${timePeriod}`;
+  }
+
+  const dateTimeStr = isRTL ? `${timeStr} ${dateStr}` : `${dateStr} ${timeStr}`;
 
   // Calculate "added X ago" dynamically based on current time
   const now = new Date();
@@ -375,8 +386,12 @@ export const formatBlockedViolationText = (
   const addedDiffMs = now.getTime() - addedTime;
   const addedDiffMins = Math.floor(addedDiffMs / 60000);
 
-  const addedOnText = t ? t("matchDashboard.violationItem.addedOn") : "added on";
-  const justNowText = t ? t("matchDashboard.violationItem.justNow") : "just now";
+  const addedOnText = t
+    ? t("matchDashboard.violationItem.addedOn")
+    : "added on";
+  const justNowText = t
+    ? t("matchDashboard.violationItem.justNow")
+    : "just now";
   const agoText = t ? t("matchDashboard.violationItem.timeUnits.ago") : "ago";
   const mText = t ? t("matchDashboard.violationItem.timeUnits.m") : "m";
   const hText = t ? t("matchDashboard.violationItem.timeUnits.h") : "h";
@@ -384,14 +399,26 @@ export const formatBlockedViolationText = (
 
   let addedAgo = justNowText;
   if (addedDiffMins >= 1 && addedDiffMins < 60) {
-    addedAgo = `${addedDiffMins}${mText} ${agoText}`;
+    if (isRTL) {
+      addedAgo = `${agoText} ${addedDiffMins}${mText}`;
+    } else {
+      addedAgo = `${addedDiffMins}${mText} ${agoText}`;
+    }
   } else if (addedDiffMins >= 60) {
     const addedDiffHours = Math.floor(addedDiffMins / 60);
     if (addedDiffHours < 24) {
-      addedAgo = `${addedDiffHours}${hText} ${agoText}`;
+      if (isRTL) {
+        addedAgo = `${agoText} ${addedDiffHours}${hText}`;
+      } else {
+        addedAgo = `${addedDiffHours}${hText} ${agoText}`;
+      }
     } else {
       const addedDiffDays = Math.floor(addedDiffHours / 24);
-      addedAgo = `${addedDiffDays}${dText} ${agoText}`;
+      if (isRTL) {
+        addedAgo = `${agoText} ${addedDiffDays}${dText}`;
+      } else {
+        addedAgo = `${addedDiffDays}${dText} ${agoText}`;
+      }
     }
   }
 
@@ -400,14 +427,16 @@ export const formatBlockedViolationText = (
   const hasBlockedAt = violation.status === "Blocked" && violation.blockedAt;
   let blockedInText = "";
   let blockTimeText = "";
-  
+
   if (hasBlockedAt) {
     const blockedTime = new Date(violation.blockedAt).getTime();
     // Block time = blockedAt - timeAdded (time it took to block)
     const diffMs = blockedTime - addedTime;
     const diffMins = Math.floor(diffMs / 60000);
 
-    blockedInText = t ? t("matchDashboard.violationItem.blockedIn") : "blocked in";
+    blockedInText = t
+      ? t("matchDashboard.violationItem.blockedIn")
+      : "blocked in";
     const minText = t ? t("matchDashboard.violationItem.timeUnits.min") : "min";
 
     if (diffMins < 0) {
@@ -423,11 +452,12 @@ export const formatBlockedViolationText = (
     }
   }
 
-  // For RTL, reverse the order: time ago • date • added on • content type • (blocked info)
+  // For RTL, order: time ago • added on + date and time • content type • (blocked info)
+  // Note: flex-row-reverse will reverse the visual order, so we build it in reverse
   if (isRTL && t) {
-    let text = `${addedAgo} • ${dateTimeStr}, ${addedOnText} • ${contentType}`;
+    let text = `${contentType} • ${dateTimeStr} • ${addedAgo} •`;
     if (hasBlockedAt) {
-      text = `${blockTimeText} ${blockedInText} • ${text}`;
+      text = `${text}  • ${blockedInText} ${blockTimeText}`;
     }
     return text;
   }

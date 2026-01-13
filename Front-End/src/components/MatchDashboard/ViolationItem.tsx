@@ -109,19 +109,137 @@ export function ViolationItem({
     return () => clearInterval(interval);
   }, []);
 
+  // Helper function to format time to 12-hour format with Arabic/English period (UI only)
+  const formatTimeWithPeriod = (timeString: string): string => {
+    if (!timeString) return timeString;
+
+    try {
+      // Try to parse the time string as a Date
+      let date: Date;
+
+      // Check if it's already in 12-hour format with Arabic period
+      if (timeString.includes("صباحا") || timeString.includes("مساءا")) {
+        // Extract time part and period
+        const parts = timeString.split(" ");
+        const timePart = parts[0]; // e.g., "2:30"
+        const period = parts[1]; // "صباحا" or "مساءا"
+        const [hours, minutes] = timePart.split(":").map(Number);
+
+        // Convert to 24-hour format
+        let hour24 = hours;
+        if (period === "مساءا" && hours !== 12) hour24 = hours + 12;
+        if (period === "صباحا" && hours === 12) hour24 = 0;
+
+        const now = new Date();
+        date = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          hour24,
+          minutes
+        );
+      } else if (timeString.match(/^\d{1,2}:\d{2}/)) {
+        // Time-only format (e.g., "14:30" or "2:30 PM" or "2:30 AM")
+        const now = new Date();
+        const parts = timeString.split(" ");
+        const timePart = parts[0];
+        const period = parts[1];
+        const [hours, minutes] = timePart.split(":").map(Number);
+
+        if (
+          period &&
+          (period.toUpperCase() === "AM" || period.toUpperCase() === "PM")
+        ) {
+          // Already 12-hour format
+          let hour24 = hours;
+          if (period.toUpperCase() === "PM" && hours !== 12)
+            hour24 = hours + 12;
+          if (period.toUpperCase() === "AM" && hours === 12) hour24 = 0;
+          date = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate(),
+            hour24,
+            minutes
+          );
+        } else {
+          // 24-hour format
+          date = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate(),
+            hours,
+            minutes
+          );
+        }
+      } else if (timeString.includes("T") || timeString.includes(" ")) {
+        // ISO format or date-time string
+        date = new Date(timeString);
+      } else {
+        // Try parsing as Date directly
+        date = new Date(timeString);
+      }
+
+      if (isNaN(date.getTime())) {
+        // If parsing fails, return original string
+        return timeString;
+      }
+
+      const hours = date.getHours();
+      const minutes = date.getMinutes().toString().padStart(2, "0");
+      const isAM = hours < 12;
+      const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+
+      if (isRTL) {
+        const timePeriod = isAM ? "صباحا" : "مساءا";
+        return `${timePeriod} ${hour12}:${minutes}`;
+      } else {
+        const timePeriod = isAM ? "AM" : "PM";
+        return `${hour12}:${minutes} ${timePeriod}`;
+      }
+    } catch (error) {
+      // If any error occurs, return original string
+      return timeString;
+    }
+  };
+
+  // Helper function to format date with Arabic AM/PM (صباحا/مساءا) for RTL, AM/PM for LTR
+  const formatDateWithArabicTime = (dateValue: string | number): string => {
+    if (!dateValue) return "";
+    const date = new Date(dateValue);
+    const dateStr = date.toLocaleDateString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric",
+    });
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    const seconds = date.getSeconds().toString().padStart(2, "0");
+    const isAM = hours < 12;
+    const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+
+    if (isRTL) {
+      const timePeriod = isAM ? "صباحا" : "مساءا";
+      return `${dateStr}, ${hour12}:${minutes}:${seconds} ${timePeriod}`;
+    } else {
+      const timePeriod = isAM ? "AM" : "PM";
+      return `${dateStr}, ${hour12}:${minutes}:${seconds} ${timePeriod}`;
+    }
+  };
+
   // Truncate URL for display - shorter on mobile
   const url = violation.violationUrl || violation.url || "";
   const truncatedUrl = url.length > 25 ? url.slice(0, 22) + "..." : url;
 
   // Get violation ID for scrolling - ensure it's a string
-  const violationId = violation._id 
-    ? String(violation._id) 
-    : violation.id 
-    ? String(violation.id) 
+  const violationId = violation._id
+    ? String(violation._id)
+    : violation.id
+    ? String(violation.id)
     : "";
-  
+
   return (
-    <div 
+    <div
       id={violationId ? `violation-${violationId}` : undefined}
       className="group rounded-md border bg-card p-2 sm:p-2.5 hover:bg-accent/50 transition-colors overflow-hidden">
       {/* Line 1: Status icon + time + status pill + actions */}
@@ -223,7 +341,7 @@ export function ViolationItem({
               {getStatusIcon(violation.statusBadge || "Active")}
             </div>
             <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
-              {violation.time}
+              {formatTimeWithPeriod(violation.time || "")}
             </span>
             <Badge
               variant="outline"
@@ -251,7 +369,7 @@ export function ViolationItem({
               {getStatusIcon(violation.statusBadge || "Active")}
             </div>
             <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
-              {violation.time}
+              {formatTimeWithPeriod(violation.time || "")}
             </span>
             <Badge
               variant="outline"
@@ -446,9 +564,25 @@ export function ViolationItem({
       )}
 
       {/* Line 3: Meta text */}
-      <p className="text-[10px] sm:text-xs text-muted-foreground mt-1 break-words overflow-wrap-anywhere text-left">
-        {formatBlockedViolationText(violation, t, isRTL)}
-      </p>
+      <div
+        className={`text-[10px] sm:text-xs text-muted-foreground mt-1 break-words overflow-wrap-anywhere ${
+          isRTL ? "flex flex-row-reverse flex-wrap gap-1 items-center" : "text-left"
+        }`}>
+        {(() => {
+          const text = formatBlockedViolationText(violation, t, isRTL);
+          if (isRTL) {
+            // Split by • and reverse the order for RTL
+            const parts = text.split(" • ");
+            return parts.map((part, index) => (
+              <span key={index} className="whitespace-nowrap">
+                {part}
+                {index < parts.length - 1 && <span className="mx-1">•</span>}
+              </span>
+            ));
+          }
+          return text;
+        })()}
+      </div>
 
       {/* Line 4: Notes */}
       {violation.notes && violation.notes.length > 0 && (
@@ -637,9 +771,7 @@ export function ViolationItem({
                       entry.changes.blockedAtAdded &&
                       (typeof entry.changes.blockedAtAdded === "string" ||
                         typeof entry.changes.blockedAtAdded === "number")
-                        ? new Date(entry.changes.blockedAtAdded).toLocaleString(
-                            "en-US"
-                          )
+                        ? formatDateWithArabicTime(entry.changes.blockedAtAdded)
                         : "";
                     description = (
                       <div className="text-left">
@@ -860,7 +992,7 @@ export function ViolationItem({
                           entry.newValue &&
                           (typeof entry.newValue === "string" ||
                             typeof entry.newValue === "number")
-                            ? new Date(entry.newValue).toLocaleString()
+                            ? formatDateWithArabicTime(entry.newValue)
                             : "";
                         description = (
                           <div className="text-left">

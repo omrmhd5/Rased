@@ -31,8 +31,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface PlatformCardProps {
   platform: PlatformData;
@@ -67,8 +76,10 @@ export function PlatformCard({
   getPlatformIcon,
   canModifyViolations = true,
 }: PlatformCardProps) {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const [isMaximized, setIsMaximized] = useState(false);
+  const [violationsPage, setViolationsPage] = useState(1);
+  const violationsPerPage = 5;
   const IconComponent = platform.icon;
 
   // Use backend metrics from platform object (no local calculations)
@@ -92,6 +103,38 @@ export function PlatformCard({
   const othersCount = violations.filter(
     (v) => (v.contentType || v.type) === "Other"
   ).length;
+
+  // Pagination for violations
+  const totalViolationsPages = Math.ceil(filteredViolations.length / violationsPerPage);
+  const startViolationsIndex = (violationsPage - 1) * violationsPerPage;
+  const endViolationsIndex = startViolationsIndex + violationsPerPage;
+  const paginatedViolations = filteredViolations.slice(startViolationsIndex, endViolationsIndex);
+
+  // Create array of pages to display for pagination
+  const violationsPagesToShow: (number | string)[] = [];
+  if (totalViolationsPages > 1) {
+    for (let page = 1; page <= totalViolationsPages; page++) {
+      if (
+        page === 1 ||
+        page === totalViolationsPages ||
+        (page >= violationsPage - 1 && page <= violationsPage + 1)
+      ) {
+        violationsPagesToShow.push(page);
+      } else if (
+        page === violationsPage - 2 ||
+        page === violationsPage + 2
+      ) {
+        violationsPagesToShow.push("...");
+      }
+    }
+  }
+  // Reverse for RTL
+  const displayViolationsPages = isRTL ? [...violationsPagesToShow].reverse() : violationsPagesToShow;
+
+  // Reset to page 1 when filter or search changes
+  useEffect(() => {
+    setViolationsPage(1);
+  }, [cardFilter, searchQuery]);
 
   // Render the platform card content (used in both normal and maximized views)
   const renderCardContent = (isFullScreen?: boolean) => (
@@ -299,7 +342,7 @@ export function PlatformCard({
       </div>
 
       {isFullScreen ? (
-        <div>
+        <div className="flex flex-col">
           {filteredViolations.length === 0 ? (
             <div className="flex flex-col items-center justify-center text-center py-12">
               <AlertCircle className="h-8 w-8 text-muted-foreground mb-2" />
@@ -314,58 +357,336 @@ export function PlatformCard({
               )}
             </div>
           ) : (
-            <div className="space-y-2">
-              {filteredViolations.map((violation) => (
-                <ViolationItem
-                  key={violation.id}
-                  violation={violation}
-                  platform={platform}
-                  onEdit={onEdit}
-                  onToggleStatus={onToggleStatus}
-                  onDelete={onDelete}
-                  onCopyUrl={onCopyUrl}
-                  onAddNote={onAddNote}
-                  getPlatformIcon={getPlatformIcon}
-                  canModifyViolations={canModifyViolations}
-                />
-              ))}
-            </div>
+            <>
+              <div className="space-y-2 flex-1">
+                {paginatedViolations.map((violation) => (
+                  <ViolationItem
+                    key={violation.id}
+                    violation={violation}
+                    platform={platform}
+                    onEdit={onEdit}
+                    onToggleStatus={onToggleStatus}
+                    onDelete={onDelete}
+                    onCopyUrl={onCopyUrl}
+                    onAddNote={onAddNote}
+                    getPlatformIcon={getPlatformIcon}
+                    canModifyViolations={canModifyViolations}
+                  />
+                ))}
+              </div>
+              {/* Pagination Controls */}
+              {filteredViolations.length > 0 && totalViolationsPages > 1 && (
+                <div className="flex-shrink-0 pt-4 mt-4 border-t border-border/40">
+                  <Pagination>
+                    <PaginationContent
+                      className={`flex-wrap justify-center gap-1 ${
+                        isRTL ? "flex-row-reverse" : ""
+                      }`}>
+                      {isRTL ? (
+                        <>
+                          {/* RTL: Next on left, Previous on right */}
+                          <PaginationItem>
+                            <Button
+                              variant="ghost"
+                              size="default"
+                              onClick={() => {
+                                if (violationsPage < totalViolationsPages) {
+                                  setViolationsPage(violationsPage + 1);
+                                }
+                              }}
+                              disabled={violationsPage === totalViolationsPages}
+                              className="gap-1 pr-2.5 h-9 text-xs">
+                              <span>{t("dashboard.pagination.next")}</span>
+                              <ChevronRight className="h-4 w-4 scale-x-[-1]" />
+                            </Button>
+                          </PaginationItem>
+
+                          {displayViolationsPages.map((item, index) => {
+                            if (item === "...") {
+                              return (
+                                <PaginationItem key={`ellipsis-${index}`}>
+                                  <span className="px-2 text-muted-foreground">
+                                    ...
+                                  </span>
+                                </PaginationItem>
+                              );
+                            }
+                            const page = item as number;
+                            return (
+                              <PaginationItem key={page}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setViolationsPage(page);
+                                  }}
+                                  isActive={violationsPage === page}
+                                  className="cursor-pointer min-w-[32px] h-8 text-xs">
+                                  {page}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          })}
+
+                          <PaginationItem>
+                            <Button
+                              variant="ghost"
+                              size="default"
+                              onClick={() => {
+                                if (violationsPage > 1) {
+                                  setViolationsPage(violationsPage - 1);
+                                }
+                              }}
+                              disabled={violationsPage === 1}
+                              className="gap-1 pl-2.5 h-9 text-xs">
+                              <ChevronLeft className="h-4 w-4 scale-x-[-1]" />
+                              <span>{t("dashboard.pagination.previous")}</span>
+                            </Button>
+                          </PaginationItem>
+                        </>
+                      ) : (
+                        <>
+                          {/* LTR: Previous on left, Next on right */}
+                          <PaginationItem>
+                            <Button
+                              variant="ghost"
+                              size="default"
+                              onClick={() => {
+                                if (violationsPage > 1) {
+                                  setViolationsPage(violationsPage - 1);
+                                }
+                              }}
+                              disabled={violationsPage === 1}
+                              className="gap-1 pl-2.5 h-9 text-xs">
+                              <ChevronLeft className="h-4 w-4" />
+                              <span>{t("dashboard.pagination.previous")}</span>
+                            </Button>
+                          </PaginationItem>
+
+                          {displayViolationsPages.map((item, index) => {
+                            if (item === "...") {
+                              return (
+                                <PaginationItem key={`ellipsis-${index}`}>
+                                  <span className="px-2 text-muted-foreground">
+                                    ...
+                                  </span>
+                                </PaginationItem>
+                              );
+                            }
+                            const page = item as number;
+                            return (
+                              <PaginationItem key={page}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setViolationsPage(page);
+                                  }}
+                                  isActive={violationsPage === page}
+                                  className="cursor-pointer min-w-[32px] h-8 text-xs">
+                                  {page}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          })}
+
+                          <PaginationItem>
+                            <Button
+                              variant="ghost"
+                              size="default"
+                              onClick={() => {
+                                if (violationsPage < totalViolationsPages) {
+                                  setViolationsPage(violationsPage + 1);
+                                }
+                              }}
+                              disabled={violationsPage === totalViolationsPages}
+                              className="gap-1 pr-2.5 h-9 text-xs">
+                              <span>{t("dashboard.pagination.next")}</span>
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </PaginationItem>
+                        </>
+                      )}
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
+            </>
           )}
         </div>
       ) : (
-        <ScrollArea className="h-[280px]">
-          {filteredViolations.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center py-12">
-              <AlertCircle className="h-8 w-8 text-muted-foreground mb-2" />
-              <p className="text-sm text-muted-foreground mb-4">
-                {t("matchDashboard.violationItem.noViolationsFound")}
-              </p>
-              {canModifyViolations && (
-                <Button size="sm" variant="outline" onClick={onAddViolation}>
-                  <Plus className="h-3 w-3 mr-1.5" />
-                  {t("matchDashboard.platformCard.addViolation")}
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {filteredViolations.map((violation) => (
-                <ViolationItem
-                  key={violation.id}
-                  violation={violation}
-                  platform={platform}
-                  onEdit={onEdit}
-                  onToggleStatus={onToggleStatus}
-                  onDelete={onDelete}
-                  onCopyUrl={onCopyUrl}
-                  onAddNote={onAddNote}
-                  getPlatformIcon={getPlatformIcon}
-                  canModifyViolations={canModifyViolations}
-                />
-              ))}
+        <div className="flex flex-col">
+          <ScrollArea className="h-[280px] flex-1">
+            {filteredViolations.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                <AlertCircle className="h-8 w-8 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground mb-4">
+                  {t("matchDashboard.violationItem.noViolationsFound")}
+                </p>
+                {canModifyViolations && (
+                  <Button size="sm" variant="outline" onClick={onAddViolation}>
+                    <Plus className="h-3 w-3 mr-1.5" />
+                    {t("matchDashboard.platformCard.addViolation")}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {paginatedViolations.map((violation) => (
+                  <ViolationItem
+                    key={violation.id}
+                    violation={violation}
+                    platform={platform}
+                    onEdit={onEdit}
+                    onToggleStatus={onToggleStatus}
+                    onDelete={onDelete}
+                    onCopyUrl={onCopyUrl}
+                    onAddNote={onAddNote}
+                    getPlatformIcon={getPlatformIcon}
+                    canModifyViolations={canModifyViolations}
+                  />
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+          {/* Pagination Controls */}
+          {filteredViolations.length > 0 && totalViolationsPages > 1 && (
+            <div className="flex-shrink-0 pt-2 mt-2 border-t border-border/40">
+              <Pagination>
+                <PaginationContent
+                  className={`flex-wrap justify-center gap-1 ${
+                    isRTL ? "flex-row-reverse" : ""
+                  }`}>
+                  {isRTL ? (
+                    <>
+                      {/* RTL: Next on left, Previous on right */}
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="default"
+                          onClick={() => {
+                            if (violationsPage < totalViolationsPages) {
+                              setViolationsPage(violationsPage + 1);
+                            }
+                          }}
+                          disabled={violationsPage === totalViolationsPages}
+                          className="gap-1 pr-2.5 h-9 text-xs">
+                          <span>{t("dashboard.pagination.next")}</span>
+                          <ChevronRight className="h-4 w-4 scale-x-[-1]" />
+                        </Button>
+                      </PaginationItem>
+
+                      {displayViolationsPages.map((item, index) => {
+                        if (item === "...") {
+                          return (
+                            <PaginationItem key={`ellipsis-${index}`}>
+                              <span className="px-2 text-muted-foreground">
+                                ...
+                              </span>
+                            </PaginationItem>
+                          );
+                        }
+                        const page = item as number;
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setViolationsPage(page);
+                              }}
+                              isActive={violationsPage === page}
+                              className="cursor-pointer min-w-[32px] h-8 text-xs">
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      })}
+
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="default"
+                          onClick={() => {
+                            if (violationsPage > 1) {
+                              setViolationsPage(violationsPage - 1);
+                            }
+                          }}
+                          disabled={violationsPage === 1}
+                          className="gap-1 pl-2.5 h-9 text-xs">
+                          <ChevronLeft className="h-4 w-4 scale-x-[-1]" />
+                          <span>{t("dashboard.pagination.previous")}</span>
+                        </Button>
+                      </PaginationItem>
+                    </>
+                  ) : (
+                    <>
+                      {/* LTR: Previous on left, Next on right */}
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="default"
+                          onClick={() => {
+                            if (violationsPage > 1) {
+                              setViolationsPage(violationsPage - 1);
+                            }
+                          }}
+                          disabled={violationsPage === 1}
+                          className="gap-1 pl-2.5 h-9 text-xs">
+                          <ChevronLeft className="h-4 w-4" />
+                          <span>{t("dashboard.pagination.previous")}</span>
+                        </Button>
+                      </PaginationItem>
+
+                      {displayViolationsPages.map((item, index) => {
+                        if (item === "...") {
+                          return (
+                            <PaginationItem key={`ellipsis-${index}`}>
+                              <span className="px-2 text-muted-foreground">
+                                ...
+                              </span>
+                            </PaginationItem>
+                          );
+                        }
+                        const page = item as number;
+                        return (
+                          <PaginationItem key={page}>
+                            <PaginationLink
+                              href="#"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setViolationsPage(page);
+                              }}
+                              isActive={violationsPage === page}
+                              className="cursor-pointer min-w-[32px] h-8 text-xs">
+                              {page}
+                            </PaginationLink>
+                          </PaginationItem>
+                        );
+                      })}
+
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="default"
+                          onClick={() => {
+                            if (violationsPage < totalViolationsPages) {
+                              setViolationsPage(violationsPage + 1);
+                            }
+                          }}
+                          disabled={violationsPage === totalViolationsPages}
+                          className="gap-1 pr-2.5 h-9 text-xs">
+                          <span>{t("dashboard.pagination.next")}</span>
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </PaginationItem>
+                    </>
+                  )}
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
-        </ScrollArea>
+        </div>
       )}
     </>
   );
