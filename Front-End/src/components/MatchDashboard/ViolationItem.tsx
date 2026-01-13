@@ -113,8 +113,17 @@ export function ViolationItem({
   const url = violation.violationUrl || violation.url || "";
   const truncatedUrl = url.length > 25 ? url.slice(0, 22) + "..." : url;
 
+  // Get violation ID for scrolling - ensure it's a string
+  const violationId = violation._id 
+    ? String(violation._id) 
+    : violation.id 
+    ? String(violation.id) 
+    : "";
+  
   return (
-    <div className="group rounded-md border bg-card p-2 sm:p-2.5 hover:bg-accent/50 transition-colors overflow-hidden">
+    <div 
+      id={violationId ? `violation-${violationId}` : undefined}
+      className="group rounded-md border bg-card p-2 sm:p-2.5 hover:bg-accent/50 transition-colors overflow-hidden">
       {/* Line 1: Status icon + time + status pill + actions */}
       {isRTL ? (
         <div className="flex items-start justify-between gap-2 min-w-0">

@@ -130,6 +130,11 @@
     "active": "نشط",
     "underReview": "قيد المراجعة",
     "noViolationsFound": "لم يتم العثور على انتهاكات {filter}",
+    "searchViolations": "ابحث عن القناة أو المباراة أو الرابط...",
+    "pagination": {
+      "previous": "السابق",
+      "next": "التالي"
+    },
     "overdue": "متأخر",
     "slower": "أبطأ",
     "minutesAgo": "منذ {minutes} دقيقة",

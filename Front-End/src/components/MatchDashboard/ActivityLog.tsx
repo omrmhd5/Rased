@@ -150,6 +150,45 @@ export function ActivityLog({
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
 
+  // Helper function to format date with Arabic AM/PM (صباحا/مساءا) for RTL, AM/PM for LTR
+  const formatDateWithArabicTime = (dateValue: string | number): string => {
+    if (!dateValue) return "";
+    const date = new Date(dateValue);
+    const dateStr = date.toLocaleDateString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric",
+    });
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    const isAM = hours < 12;
+    const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+
+    if (isRTL) {
+      const timePeriod = isAM ? "صباحا" : "مساءا";
+      return `${dateStr}, ${hour12}:${minutes} ${timePeriod}`;
+    } else {
+      const timePeriod = isAM ? "AM" : "PM";
+      return `${dateStr}, ${hour12}:${minutes} ${timePeriod}`;
+    }
+  };
+
+  // Helper function to format time with Arabic AM/PM (صباحا/مساءا) for RTL, AM/PM for LTR
+  const formatTimeWithArabicPeriod = (date: Date): string => {
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    const isAM = hours < 12;
+    const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+
+    if (isRTL) {
+      const timePeriod = isAM ? "صباحا" : "مساءا";
+      return `${hour12}:${minutes} ${timePeriod}`;
+    } else {
+      const timePeriod = isAM ? "AM" : "PM";
+      return `${hour12}:${minutes} ${timePeriod}`;
+    }
+  };
+
   const handleDeleteLog = (item: ActivityLogItem) => {
     setDeleteConfirmItem(item);
     setIsDeleteConfirmOpen(true);
@@ -213,10 +252,7 @@ export function ActivityLog({
       day: "numeric",
       year: "numeric",
     });
-    const formattedTime = timestamp.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-    });
+    const formattedTime = formatTimeWithArabicPeriod(timestamp);
     const timeAgo = formatTimeAgoHelper(timestamp, t);
 
     const platformName =
@@ -228,9 +264,13 @@ export function ActivityLog({
 
     auditLogItems.push({
       type: "deleted",
-      time: `${formattedDate} ${t(
-        "matchDashboard.activityLog.dateTime.at"
-      )} ${formattedTime} • ${timeAgo}`,
+      time: isRTL
+        ? `${timeAgo} • ${formattedDate} ${t(
+            "matchDashboard.activityLog.dateTime.at"
+          )} ${formattedTime}`
+        : `${formattedDate} ${t(
+            "matchDashboard.activityLog.dateTime.at"
+          )} ${formattedTime} • ${timeAgo}`,
       badge: t("matchDashboard.activityLog.badges.deleted"),
       badgeVariant: "destructive",
       description: (
@@ -365,10 +405,7 @@ export function ActivityLog({
           day: "numeric",
           year: "numeric",
         });
-        const formattedTime = timestamp.toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-        });
+        const formattedTime = formatTimeWithArabicPeriod(timestamp);
         const timeAgo = formatTimeAgoHelper(timestamp, t);
 
         let type: string = entry.action;
@@ -536,9 +573,7 @@ export function ActivityLog({
                 entry.changes.blockedAtAdded &&
                 (typeof entry.changes.blockedAtAdded === "string" ||
                   typeof entry.changes.blockedAtAdded === "number")
-                  ? new Date(entry.changes.blockedAtAdded).toLocaleString(
-                      "en-US"
-                    )
+                  ? formatDateWithArabicTime(entry.changes.blockedAtAdded)
                   : "";
               description = (
                 <div className="text-left">
@@ -763,52 +798,32 @@ export function ActivityLog({
             } else if (entry.field === "timeAdded") {
               type = "time_added_changed";
               badge = t("matchDashboard.activityLog.badges.timeAddedChanged");
-              const timeOptions: Intl.DateTimeFormatOptions = {
-                month: "2-digit",
-                day: "2-digit",
-                year: "numeric",
-                hour: "numeric",
-                minute: "2-digit",
-                hour12: true,
-              };
               const oldTime =
-                entry.oldValue && typeof entry.oldValue === "string"
-                  ? new Date(entry.oldValue).toLocaleString(
-                      "en-US",
-                      timeOptions
-                    )
-                  : entry.oldValue && typeof entry.oldValue === "number"
-                  ? new Date(entry.oldValue).toLocaleString(
-                      "en-US",
-                      timeOptions
-                    )
+                entry.oldValue &&
+                (typeof entry.oldValue === "string" ||
+                  typeof entry.oldValue === "number")
+                  ? formatDateWithArabicTime(entry.oldValue)
                   : "";
               const newTime =
-                entry.newValue && typeof entry.newValue === "string"
-                  ? new Date(entry.newValue).toLocaleString(
-                      "en-US",
-                      timeOptions
-                    )
-                  : entry.newValue && typeof entry.newValue === "number"
-                  ? new Date(entry.newValue).toLocaleString(
-                      "en-US",
-                      timeOptions
-                    )
+                entry.newValue &&
+                (typeof entry.newValue === "string" ||
+                  typeof entry.newValue === "number")
+                  ? formatDateWithArabicTime(entry.newValue)
                   : "";
               description = (
                 <div className="text-left">
                   {isRTL ? (
                     <>
-                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                        {newTime}
-                      </code>{" "}
-                      {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                      {t(
+                        "matchDashboard.activityLog.descriptions.timeAddedChangedFrom"
+                      )}{" "}
                       <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                         {oldTime}
                       </code>{" "}
-                      {t(
-                        "matchDashboard.activityLog.descriptions.timeAddedChangedFrom"
-                      )}
+                      {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                      <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        {newTime}
+                      </code>
                     </>
                   ) : (
                     <>
@@ -835,7 +850,7 @@ export function ActivityLog({
                   entry.newValue &&
                   (typeof entry.newValue === "string" ||
                     typeof entry.newValue === "number")
-                    ? new Date(entry.newValue).toLocaleString("en-US")
+                    ? formatDateWithArabicTime(entry.newValue)
                     : "";
                 description = (
                   <div className="text-left">
@@ -857,46 +872,32 @@ export function ActivityLog({
                 // action === "changed" or no action (fallback) - this is when time is explicitly changed
                 type = "blocked_at_changed";
                 badge = t("matchDashboard.activityLog.badges.blockedAtChanged");
-                const timeOptions: Intl.DateTimeFormatOptions = {
-                  month: "2-digit",
-                  day: "2-digit",
-                  year: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
-                  hour12: true,
-                };
                 const oldBlocked =
                   entry.oldValue &&
                   (typeof entry.oldValue === "string" ||
                     typeof entry.oldValue === "number")
-                    ? new Date(entry.oldValue).toLocaleString(
-                        "en-US",
-                        timeOptions
-                      )
+                    ? formatDateWithArabicTime(entry.oldValue)
                     : "undefined";
                 const newBlocked =
                   entry.newValue &&
                   (typeof entry.newValue === "string" ||
                     typeof entry.newValue === "number")
-                    ? new Date(entry.newValue).toLocaleString(
-                        "en-US",
-                        timeOptions
-                      )
+                    ? formatDateWithArabicTime(entry.newValue)
                     : "undefined";
                 description = (
                   <div className="text-left">
                     {isRTL ? (
                       <>
-                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                          {newBlocked}
-                        </code>{" "}
-                        {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                        {t(
+                          "matchDashboard.activityLog.descriptions.blockedAtChangedFrom"
+                        )}{" "}
                         <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                           {oldBlocked}
                         </code>{" "}
-                        {t(
-                          "matchDashboard.activityLog.descriptions.blockedAtChangedFrom"
-                        )}
+                        {t("matchDashboard.activityLog.descriptions.to")}{" "}
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {newBlocked}
+                        </code>
                       </>
                     ) : (
                       <>
@@ -1056,9 +1057,13 @@ export function ActivityLog({
 
         auditLogItems.push({
           type,
-          time: `${formattedDate} ${t(
-            "matchDashboard.activityLog.dateTime.at"
-          )} ${formattedTime} • ${timeAgo}`,
+          time: isRTL
+            ? `${timeAgo} • ${formattedDate} ${t(
+                "matchDashboard.activityLog.dateTime.at"
+              )} ${formattedTime}`
+            : `${formattedDate} ${t(
+                "matchDashboard.activityLog.dateTime.at"
+              )} ${formattedTime} • ${timeAgo}`,
           badge,
           badgeVariant:
             type === "deleted"

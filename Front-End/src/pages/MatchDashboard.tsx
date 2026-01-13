@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import {
   AlertCircle,
   RefreshCw,
@@ -10,6 +10,7 @@ import {
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -61,8 +62,11 @@ import { PlatformComparisonMobile } from "@/components/MatchDashboard/PlatformCo
 
 export default function MatchDashboard() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { user, leagues } = useAuth();
   const { t, isRTL } = useLanguage();
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
   const isSuperAdmin = user?.role === "superAdmin";
   const canModifyViolations =
     user?.role === "superAdmin" || user?.role === "employee";
@@ -366,6 +370,50 @@ export default function MatchDashboard() {
       return () => clearTimeout(timeoutId);
     }
   }, [refetchTrigger, id, refetchAllData]);
+
+  // Scroll to violation when hash fragment is present in URL
+  useEffect(() => {
+    if (!loading && platformOperations.length > 0) {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith("#violation-")) {
+        const violationIdFromHash = hash.replace("#violation-", "");
+        // Wait a bit for DOM to render violations
+        const scrollTimeout = setTimeout(() => {
+          // Try to find the violation element by ID
+          // The ID could be the _id or id field, so we need to check both formats
+          let violationElement = document.getElementById(`violation-${violationIdFromHash}`);
+          
+          // If not found, try to find by checking all violation elements
+          if (!violationElement) {
+            // Get all violations from platformOperations and find matching one
+            const allViolations = platformOperations.flatMap((p) => p.violations);
+            const matchingViolation = allViolations.find((v) => {
+              const vId = String(v._id || v.id || "");
+              return vId === violationIdFromHash;
+            });
+            
+            if (matchingViolation) {
+              const actualId = String(matchingViolation._id || matchingViolation.id || "");
+              violationElement = document.getElementById(`violation-${actualId}`);
+            }
+          }
+          
+          if (violationElement) {
+            violationElement.scrollIntoView({ 
+              behavior: "smooth", 
+              block: "center" 
+            });
+            // Highlight the violation briefly
+            violationElement.classList.add("ring-2", "ring-primary", "ring-offset-2");
+            setTimeout(() => {
+              violationElement?.classList.remove("ring-2", "ring-primary", "ring-offset-2");
+            }, 2000);
+          }
+        }, 500); // Increased timeout to ensure violations are rendered
+        return () => clearTimeout(scrollTimeout);
+      }
+    }
+  }, [loading, platformOperations]);
 
   // Helper function to trigger refetch (call this after any violation change)
   const triggerRefetch = useCallback(() => {
@@ -1420,6 +1468,32 @@ export default function MatchDashboard() {
           title: "Violation added",
           description: `New violation added to ${violationData.platformName}`,
         });
+
+        // Navigate to the newly added violation
+        const violationId = frontendViolation._id || frontendViolation.id;
+        if (violationId && id) {
+          // Update URL hash and scroll to violation after a delay to ensure it's rendered
+          setTimeout(() => {
+            const violationIdStr = String(violationId);
+            window.location.hash = `violation-${violationIdStr}`;
+            
+            // Manually trigger scroll after hash update
+            setTimeout(() => {
+              const violationElement = document.getElementById(`violation-${violationIdStr}`);
+              if (violationElement) {
+                violationElement.scrollIntoView({ 
+                  behavior: "smooth", 
+                  block: "center" 
+                });
+                // Highlight the violation briefly
+                violationElement.classList.add("ring-2", "ring-primary", "ring-offset-2");
+                setTimeout(() => {
+                  violationElement.classList.remove("ring-2", "ring-primary", "ring-offset-2");
+                }, 2000);
+              }
+            }, 300);
+          }, 500);
+        }
       }
 
       setIsAddViolationOpen(false);
@@ -1798,6 +1872,11 @@ export default function MatchDashboard() {
     try {
       const images: string[] = [];
 
+      // Determine background color based on theme
+      const backgroundColor = isDarkMode ? "#0F172A" : "#ffffff";
+      const textColor = isDarkMode ? "#F8FAFC" : "#1a1a1a";
+      const secondaryTextColor = isDarkMode ? "#CBD5E1" : "#666";
+
       // Get target width from MatchOverview to match all components
       let targetWidth = 1200; // Default width
       if (matchOverviewRef.current) {
@@ -1810,7 +1889,7 @@ export default function MatchDashboard() {
       headerDiv.style.cssText = `
         width: ${targetWidth}px;
         padding: 40px;
-        background-color: #ffffff;
+        background-color: ${backgroundColor};
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       `;
 
@@ -1859,10 +1938,10 @@ export default function MatchDashboard() {
       const weekOrStageLabel = isSuperCup ? "Stage" : "Week";
 
       headerDiv.innerHTML = `
-        <h1 style="font-size: 32px; font-weight: bold; margin: 0 0 16px 0; color: #1a1a1a;">
+        <h1 style="font-size: 32px; font-weight: bold; margin: 0 0 16px 0; color: ${textColor};">
           ${match.team1} ${t("matchDashboard.report.vs")} ${match.team2}
         </h1>
-        <div style="font-size: 18px; color: #666; line-height: 1.8;">
+        <div style="font-size: 18px; color: ${secondaryTextColor}; line-height: 1.8;">
           <p style="margin: 0 0 8px 0;"><strong>${t("matchDashboard.report.league")}</strong> ${
             competitionName || "N/A"
           }</p>
@@ -1881,7 +1960,7 @@ export default function MatchDashboard() {
 
       // Capture header
       const headerImage = await htmlToImage.toPng(headerDiv, {
-        backgroundColor: "#ffffff",
+        backgroundColor: backgroundColor,
         quality: 1,
         pixelRatio: 2,
         width: targetWidth,
@@ -1895,7 +1974,7 @@ export default function MatchDashboard() {
       // Capture MatchOverview
       if (matchOverviewRef.current) {
         const dataUrl = await htmlToImage.toPng(matchOverviewRef.current, {
-          backgroundColor: "#ffffff",
+          backgroundColor: backgroundColor,
           quality: 1,
           pixelRatio: 2,
         });
@@ -1905,7 +1984,7 @@ export default function MatchDashboard() {
       // Capture Status Breakdown
       if (statusBreakdownRef.current) {
         const dataUrl = await htmlToImage.toPng(statusBreakdownRef.current, {
-          backgroundColor: "#ffffff",
+          backgroundColor: backgroundColor,
           quality: 1,
           pixelRatio: 2,
         });
@@ -1968,7 +2047,7 @@ export default function MatchDashboard() {
         await new Promise((resolve) => setTimeout(resolve, 200));
 
         const dataUrl = await htmlToImage.toPng(element, {
-          backgroundColor: "#ffffff",
+          backgroundColor: backgroundColor,
           quality: 1,
           pixelRatio: 2,
           width: targetWidth,
@@ -1992,7 +2071,7 @@ export default function MatchDashboard() {
       // Capture Platform Comparison
       if (platformComparisonRef.current) {
         const dataUrl = await htmlToImage.toPng(platformComparisonRef.current, {
-          backgroundColor: "#ffffff",
+          backgroundColor: backgroundColor,
           quality: 1,
           pixelRatio: 2,
         });

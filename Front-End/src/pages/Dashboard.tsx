@@ -10,6 +10,9 @@ import {
   Loader2,
   FileQuestion,
   Download,
+  ChevronLeft,
+  ChevronRight,
+  Search,
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -23,6 +26,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { toast } from "@/hooks/use-toast";
 import {
   HoverCard,
@@ -43,6 +55,7 @@ import { formatViews as formatViewsUtil } from "@/components/MatchDashboard/util
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useTheme } from "next-themes";
 
 type League = string | null;
 type WeekFilterType = "all" | "single" | "range";
@@ -56,6 +69,8 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user, leagues, loadingLeagues } = useAuth();
   const { t, isRTL } = useLanguage();
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
   const [isRoundReportOpen, setIsRoundReportOpen] = useState(false);
 
   // Helper to check if league is valid (exists in database and is visible)
@@ -203,6 +218,9 @@ export default function Dashboard() {
   const [troubleListFilter, setTroubleListFilter] = useState<
     "Active" | "Under Review"
   >("Active");
+  const [troubleListPage, setTroubleListPage] = useState(1);
+  const itemsPerPage = 10; // Number of violations per page
+  const [troubleListSearch, setTroubleListSearch] = useState("");
   const [troubleListViolations, setTroubleListViolations] = useState<
     Array<{
       _id?: string;
@@ -690,6 +708,7 @@ export default function Dashboard() {
     // Extract match information
     const match = v.matchId;
     let matchDescription = "";
+    let matchId: string | null = null;
     if (match) {
       if (typeof match === "object") {
         // Match is populated
@@ -698,6 +717,13 @@ export default function Dashboard() {
         } else if (match.description) {
           matchDescription = match.description;
         }
+        // Extract externalMatchId for navigation
+        if (match.externalMatchId) {
+          matchId = match.externalMatchId;
+        }
+      } else if (typeof match === "string") {
+        // Match is just an ID string
+        matchId = match;
       }
     }
     // Fallback to matchName if available
@@ -716,6 +742,7 @@ export default function Dashboard() {
       reportedAt: v.timeAdded || new Date().toISOString(),
       minutesSinceAdded,
       matchDescription,
+      matchId, // Add matchId for navigation
     };
   });
 
@@ -742,11 +769,62 @@ export default function Dashboard() {
     return b.minutesSinceAdded - a.minutesSinceAdded;
   });
 
+  // Filter violations based on search query
+  const filteredActiveViolations = sortedActiveViolations.filter(
+    (violation) => {
+      if (!troubleListSearch.trim()) return true;
+      const searchLower = troubleListSearch.toLowerCase();
+      return (
+        violation.platform.toLowerCase().includes(searchLower) ||
+        violation.account.toLowerCase().includes(searchLower) ||
+        violation.matchDescription.toLowerCase().includes(searchLower) ||
+        violation.url.toLowerCase().includes(searchLower)
+      );
+    }
+  );
+
+  // Pagination for Active Trouble List (using filtered results)
+  const totalPages = Math.ceil(filteredActiveViolations.length / itemsPerPage);
+  const startIndex = (troubleListPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedViolations = filteredActiveViolations.slice(
+    startIndex,
+    endIndex
+  );
+
+  // Create array of pages to display for pagination
+  const pagesToShow: (number | string)[] = [];
+  if (totalPages > 1) {
+    for (let page = 1; page <= totalPages; page++) {
+      if (
+        page === 1 ||
+        page === totalPages ||
+        (page >= troubleListPage - 1 && page <= troubleListPage + 1)
+      ) {
+        pagesToShow.push(page);
+      } else if (page === troubleListPage - 2 || page === troubleListPage + 2) {
+        pagesToShow.push("...");
+      }
+    }
+  }
+  // Reverse for RTL
+  const displayPages = isRTL ? [...pagesToShow].reverse() : pagesToShow;
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setTroubleListPage(1);
+  }, [troubleListFilter]);
+
   // Download report as PNG
   const handleDownloadReport = async () => {
     setIsDownloading(true);
     try {
       const images: string[] = [];
+
+      // Determine background color based on theme
+      const backgroundColor = isDarkMode ? "#0F172A" : "#ffffff";
+      const textColor = isDarkMode ? "#F8FAFC" : "#1a1a1a";
+      const secondaryTextColor = isDarkMode ? "#CBD5E1" : "#666";
 
       // Use a consistent target width for all components
       const targetWidth = 1100; // Fixed width for better control
@@ -756,7 +834,7 @@ export default function Dashboard() {
       headerDiv.style.cssText = `
         width: ${targetWidth}px;
         padding: 40px;
-        background-color: #ffffff;
+        background-color: ${backgroundColor};
         font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       `;
 
@@ -767,15 +845,22 @@ export default function Dashboard() {
           ? t("dashboard.allWeeks")
           : weekFilterType === "single"
           ? t("dashboard.week", { number: singleWeek })
-          : t("dashboard.weeksRangeOverview", { start: weekRangeStart, end: weekRangeEnd });
+          : t("dashboard.weeksRangeOverview", {
+              start: weekRangeStart,
+              end: weekRangeEnd,
+            });
 
       headerDiv.innerHTML = `
-        <h1 style="font-size: 32px; font-weight: bold; margin: 0 0 16px 0; color: #1a1a1a;">
+        <h1 style="font-size: 32px; font-weight: bold; margin: 0 0 16px 0; color: ${textColor};">
           ${t("dashboard.dashboardReport")}
         </h1>
-        <div style="font-size: 18px; color: #666; line-height: 1.8;">
-          <p style="margin: 0 0 8px 0;"><strong>${t("dashboard.league")}</strong> ${leagueName}</p>
-          <p style="margin: 0;"><strong>${t("dashboard.period")}</strong> ${weekInfo}</p>
+        <div style="font-size: 18px; color: ${secondaryTextColor}; line-height: 1.8;">
+          <p style="margin: 0 0 8px 0;"><strong>${t(
+            "dashboard.league"
+          )}</strong> ${leagueName}</p>
+          <p style="margin: 0;"><strong>${t(
+            "dashboard.period"
+          )}</strong> ${weekInfo}</p>
           </div>
       `;
 
@@ -787,7 +872,7 @@ export default function Dashboard() {
 
       // Capture header
       const headerImage = await htmlToImage.toPng(headerDiv, {
-        backgroundColor: "#ffffff",
+        backgroundColor: backgroundColor,
         quality: 1,
         pixelRatio: 2,
         width: targetWidth,
@@ -837,7 +922,7 @@ export default function Dashboard() {
 
         try {
           const dataUrl = await htmlToImage.toPng(element, {
-            backgroundColor: "#ffffff",
+            backgroundColor: backgroundColor,
             quality: 1,
             pixelRatio: 2,
             width: width,
@@ -877,7 +962,7 @@ export default function Dashboard() {
       smallCardsContainer.style.cssText = `
         width: ${targetWidth}px;
         padding: 20px;
-        background-color: #ffffff;
+        background-color: ${backgroundColor};
         display: grid;
         grid-template-columns: repeat(2, 1fr);
         gap: 16px;
@@ -915,7 +1000,7 @@ export default function Dashboard() {
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       const smallCardsImg = await htmlToImage.toPng(smallCardsContainer, {
-        backgroundColor: "#ffffff",
+        backgroundColor: backgroundColor,
         quality: 1,
         pixelRatio: 2,
         width: targetWidth,
@@ -1020,7 +1105,9 @@ export default function Dashboard() {
       toast({
         title: t("dashboard.error"),
         description:
-          error instanceof Error ? error.message : t("dashboard.failedToGenerateReport"),
+          error instanceof Error
+            ? error.message
+            : t("dashboard.failedToGenerateReport"),
         variant: "destructive",
       });
     } finally {
@@ -1033,15 +1120,20 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold">{t("dashboard.title")}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">
+            {t("dashboard.title")}
+          </h1>
           <p className="text-xs sm:text-sm text-muted-foreground">
             {(() => {
               const leagueInfo = leagues?.find(
                 (l) => l.league === selectedLeague
               );
               const leagueKnownName = isRTL
-                ? (leagueInfo?.arabicName || leagueInfo?.knownName || leagueInfo?.name || "")
-                : (leagueInfo?.knownName || leagueInfo?.name || "");
+                ? leagueInfo?.arabicName ||
+                  leagueInfo?.knownName ||
+                  leagueInfo?.name ||
+                  ""
+                : leagueInfo?.knownName || leagueInfo?.name || "";
               const isSuperCup = isSuperCupLeague(selectedLeague);
               if (isSuperCup) {
                 const stageText =
@@ -1049,7 +1141,10 @@ export default function Dashboard() {
                     ? t("dashboard.allStagesOverview")
                     : stageFilterType === "single"
                     ? t("dashboard.stageOverview", { stage: singleStage })
-                    : t("dashboard.stagesRangeOverview", { start: stageRangeStart, end: stageRangeEnd });
+                    : t("dashboard.stagesRangeOverview", {
+                        start: stageRangeStart,
+                        end: stageRangeEnd,
+                      });
                 return leagueKnownName
                   ? `${stageText} • ${leagueKnownName}`
                   : stageText;
@@ -1059,7 +1154,10 @@ export default function Dashboard() {
                     ? t("dashboard.allWeeksOverview")
                     : weekFilterType === "single"
                     ? t("dashboard.weekOverview", { week: singleWeek })
-                    : t("dashboard.weeksRangeOverview", { start: weekRangeStart, end: weekRangeEnd });
+                    : t("dashboard.weeksRangeOverview", {
+                        start: weekRangeStart,
+                        end: weekRangeEnd,
+                      });
                 return leagueKnownName
                   ? `${weekText} • ${leagueKnownName}`
                   : weekText;
@@ -1082,13 +1180,21 @@ export default function Dashboard() {
                   : leagueInfo.iconUrl
                 : null;
               const leagueDisplayName = isRTL
-                ? (leagueInfo?.arabicName || leagueInfo?.knownName || leagueInfo?.name || selectedLeague)
-                : (leagueInfo?.knownName || leagueInfo?.name || leagueInfo?.arabicName || selectedLeague);
-              
+                ? leagueInfo?.arabicName ||
+                  leagueInfo?.knownName ||
+                  leagueInfo?.name ||
+                  selectedLeague
+                : leagueInfo?.knownName ||
+                  leagueInfo?.name ||
+                  leagueInfo?.arabicName ||
+                  selectedLeague;
+
               return (
                 <Badge
                   variant="secondary"
-                  className={`text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 justify-center sm:justify-start px-2 sm:px-3 py-1.5 sm:py-2 ${isRTL ? "sm:justify-end" : ""}`}>
+                  className={`text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 justify-center sm:justify-start px-2 sm:px-3 py-1.5 sm:py-2 ${
+                    isRTL ? "sm:justify-end" : ""
+                  }`}>
                   {iconUrl && (
                     <img
                       src={iconUrl}
@@ -1096,7 +1202,10 @@ export default function Dashboard() {
                       className="h-8 sm:h-12 object-contain flex-shrink-0"
                     />
                   )}
-                  <span className={`hidden xs:inline ${isRTL ? "text-right" : "text-left"}`}>
+                  <span
+                    className={`hidden xs:inline ${
+                      isRTL ? "text-right" : "text-left"
+                    }`}>
                     {leagueDisplayName}
                   </span>
                 </Badge>
@@ -1113,20 +1222,37 @@ export default function Dashboard() {
                 disabled={isDownloading}>
                 {isDownloading ? (
                   <>
-                    <Loader2 className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${isRTL ? "ml-1 sm:ml-1.5" : "mr-1 sm:mr-1.5"} animate-spin`} />
-                    <span className="hidden sm:inline">{t("dashboard.downloading")}</span>
+                    <Loader2
+                      className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${
+                        isRTL ? "ml-1 sm:ml-1.5" : "mr-1 sm:mr-1.5"
+                      } animate-spin`}
+                    />
+                    <span className="hidden sm:inline">
+                      {t("dashboard.downloading")}
+                    </span>
                     <span className="sm:hidden">{t("dashboard.loading")}</span>
                   </>
                 ) : (
                   <>
-                    <Download className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${isRTL ? "ml-1 sm:ml-1.5" : "mr-1 sm:mr-1.5"}`} />
-                    <span className="hidden sm:inline">{t("dashboard.download")}</span>
-                    <span className="sm:hidden">{t("dashboard.downloadShort")}</span>
+                    <Download
+                      className={`h-3 w-3 sm:h-3.5 sm:w-3.5 ${
+                        isRTL ? "ml-1 sm:ml-1.5" : "mr-1 sm:mr-1.5"
+                      }`}
+                    />
+                    <span className="hidden sm:inline">
+                      {t("dashboard.download")}
+                    </span>
+                    <span className="sm:hidden">
+                      {t("dashboard.downloadShort")}
+                    </span>
                   </>
                 )}
               </Button>
             </HoverCardTrigger>
-            <HoverCardContent align={isRTL ? "start" : "end"} className="w-48 p-1" sideOffset={5}>
+            <HoverCardContent
+              align={isRTL ? "start" : "end"}
+              className="w-48 p-1"
+              sideOffset={5}>
               <div className="flex flex-col">
                 <Button
                   variant="ghost"
@@ -1220,7 +1346,9 @@ export default function Dashboard() {
                         value={stageRangeStart}
                         onValueChange={setStageRangeStart}>
                         <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                          <SelectValue placeholder={t("dashboard.startStage")} />
+                          <SelectValue
+                            placeholder={t("dashboard.startStage")}
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {availableStages.map((stage) => (
@@ -1403,7 +1531,10 @@ export default function Dashboard() {
                 <p className="text-xl sm:text-2xl font-bold text-foreground">
                   {dashboardStats.totalViews.toLocaleString("en-US")}
                 </p>
-                <p className={`text-[10px] sm:text-[11px] text-muted-foreground hidden sm:inline ${isRTL ? "text-right" : "text-left"}`}>
+                <p
+                  className={`text-[10px] sm:text-[11px] text-muted-foreground hidden sm:inline ${
+                    isRTL ? "text-right" : "text-left"
+                  }`}>
                   {t("dashboard.acrossAllPlatforms")}
                 </p>
               </div>
@@ -1432,10 +1563,14 @@ export default function Dashboard() {
                   return (
                     <>
                       {minutes}
-                      <span className={`text-xs sm:text-sm text-muted-foreground ${isRTL ? "mr-1" : "ml-1"}`}>
+                      <span
+                        className={`text-xs sm:text-sm text-muted-foreground ${
+                          isRTL ? "mr-1" : "ml-1"
+                        }`}>
                         {t("dashboard.min")}{" "}
                         <span className="text-medium text-muted-foreground hidden sm:inline">
-                          ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}{t("dashboard.hrs")})
+                          ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}
+                          {t("dashboard.hrs")})
                         </span>
                       </span>
                     </>
@@ -1467,7 +1602,8 @@ export default function Dashboard() {
                 {dashboardStats.topPlatform.name}
               </p>
               <p className="text-[10px] sm:text-[11px] text-muted-foreground text-left">
-                {dashboardStats.topPlatform.violations} {t("dashboard.violations")}
+                {dashboardStats.topPlatform.violations}{" "}
+                {t("dashboard.violations")}
               </p>
             </Card>
           )}
@@ -1487,9 +1623,9 @@ export default function Dashboard() {
                 {dashboardStats.topMatch.teams}
               </p>
               <p className="text-[10px] sm:text-[11px] text-muted-foreground text-left">
-                {t("dashboard.weekViolations", { 
-                  week: dashboardStats.topMatch.week, 
-                  violations: dashboardStats.topMatch.violations.toString() 
+                {t("dashboard.weekViolations", {
+                  week: dashboardStats.topMatch.week,
+                  violations: dashboardStats.topMatch.violations.toString(),
                 })}
               </p>
             </Card>
@@ -1534,8 +1670,8 @@ export default function Dashboard() {
               ];
 
               return (
-                <ContentSplitChart 
-                  data={contentSplitData} 
+                <ContentSplitChart
+                  data={contentSplitData}
                   compact={true}
                   title={t("dashboard.contentSplitTitle")}
                 />
@@ -1647,7 +1783,10 @@ export default function Dashboard() {
                     ? t("dashboard.allWeeks")
                     : weekFilterType === "single"
                     ? t("dashboard.week", { number: singleWeek })
-                    : t("dashboard.weeksRangeOverview", { start: weekRangeStart, end: weekRangeEnd })}
+                    : t("dashboard.weeksRangeOverview", {
+                        start: weekRangeStart,
+                        end: weekRangeEnd,
+                      })}
                 </Badge>
               </div>
             </div>
@@ -1658,7 +1797,10 @@ export default function Dashboard() {
                 <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground" />
               </div>
             ) : dashboardStats.matches.length === 0 ? (
-              <div className={`flex items-center justify-center h-full text-xs sm:text-sm text-muted-foreground ${isRTL ? "text-right" : "text-left"}`}>
+              <div
+                className={`flex items-center justify-center h-full text-xs sm:text-sm text-muted-foreground ${
+                  isRTL ? "text-right" : "text-left"
+                }`}>
                 {t("dashboard.noMatchesFound")}
               </div>
             ) : (
@@ -1666,20 +1808,33 @@ export default function Dashboard() {
                 return (
                   <div
                     key={match.id}
-                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-3 sm:p-4 rounded-lg border border-border/40 hover:border-primary/30 hover:bg-muted/20 transition-all cursor-pointer touch-manipulation active:scale-[0.98] ${isRTL ? "sm:justify-end" : "sm:justify-start"}`}
+                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-3 sm:p-4 rounded-lg border border-border/40 hover:border-primary/30 hover:bg-muted/20 transition-all cursor-pointer touch-manipulation active:scale-[0.98] ${
+                      isRTL ? "sm:justify-end" : "sm:justify-start"
+                    }`}
                     onClick={() => navigate(`/match/${match.id}`)}>
                     {/* Match Title */}
-                    <h4 className={`text-xs sm:text-[14px] font-semibold flex-1 min-w-0 truncate ${isRTL ? "sm:pl-4 sm:pr-0 text-right" : "sm:pr-4 text-left"}`}>
+                    <h4
+                      className={`text-xs sm:text-[14px] font-semibold flex-1 min-w-0 truncate ${
+                        isRTL
+                          ? "sm:pl-4 sm:pr-0 text-right"
+                          : "sm:pr-4 text-left"
+                      }`}>
                       {match.description}
                     </h4>
 
                     {/* Metrics */}
-                    <div className={`flex items-center gap-2 sm:gap-4 flex-shrink-0 ${isRTL ? "justify-start" : "justify-end"}`}>
+                    <div
+                      className={`flex items-center gap-2 sm:gap-4 flex-shrink-0 ${
+                        isRTL ? "justify-start" : "justify-end"
+                      }`}>
                       <div className="flex items-baseline gap-1 sm:gap-1.5">
                         <span className="text-sm sm:text-[16px] font-bold tabular-nums">
                           {match.violations}
                         </span>
-                        <span className={`text-[10px] sm:text-[11px] text-muted-foreground ${isRTL ? "text-right" : "text-left"}`}>
+                        <span
+                          className={`text-[10px] sm:text-[11px] text-muted-foreground ${
+                            isRTL ? "text-right" : "text-left"
+                          }`}>
                           {t("dashboard.violations")}
                         </span>
                       </div>
@@ -1690,7 +1845,10 @@ export default function Dashboard() {
                         <span className="text-sm sm:text-[16px] font-bold tabular-nums">
                           {formatViews(match.totalViews)}
                         </span>
-                        <span className={`text-[10px] sm:text-[11px] text-muted-foreground ${isRTL ? "text-right" : "text-left"}`}>
+                        <span
+                          className={`text-[10px] sm:text-[11px] text-muted-foreground ${
+                            isRTL ? "text-right" : "text-left"
+                          }`}>
                           {t("dashboard.views")}
                         </span>
                       </div>
@@ -1704,7 +1862,7 @@ export default function Dashboard() {
 
         {/* Active Trouble List */}
         <Card className="lg:col-span-3 h-[400px] sm:h-[340px] flex flex-col p-3 sm:p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-3 flex-shrink-0 gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 sm:mb-3 flex-shrink-0 gap-2">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <h3 className="text-sm sm:text-[15px] font-semibold text-left">
                 {t("dashboard.activeTroubleList")}
@@ -1713,9 +1871,30 @@ export default function Dashboard() {
                 variant="secondary"
                 className="h-5 px-2 bg-chart-1/10 text-chart-1 border-0 text-[9px] sm:text-[10px] w-fit flex items-center text-left">
                 <div className="w-1.5 h-1.5 rounded-full bg-chart-1 animate-pulse mr-1.5" />
-                {sortedActiveViolations.length}{" "}
-                {troubleListFilter === "Active" ? t("dashboard.active").toLowerCase() : t("dashboard.underReview").toLowerCase()}
+                {filteredActiveViolations.length}{" "}
+                {troubleListFilter === "Active"
+                  ? t("dashboard.active").toLowerCase()
+                  : t("dashboard.underReview").toLowerCase()}
               </Badge>
+            </div>
+            {/* Search Input */}
+            <div className="flex-1 max-w-[200px] sm:max-w-[600px]">
+              <div className="relative">
+                <Search
+                  className={`absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground ${
+                    isRTL ? "right-2.5 sm:right-3" : "left-2.5 sm:left-3"
+                  }`}
+                />
+                <Input
+                  type="text"
+                  placeholder={t("dashboard.searchViolations")}
+                  value={troubleListSearch}
+                  onChange={(e) => setTroubleListSearch(e.target.value)}
+                  className={`h-8 sm:h-9 text-xs sm:text-sm pl-8 sm:pl-9 pr-2.5 sm:pr-3 ${
+                    isRTL ? "text-right" : "text-left"
+                  }`}
+                />
+              </div>
             </div>
             <div className="flex items-center gap-1 justify-start">
               <Button
@@ -1741,26 +1920,41 @@ export default function Dashboard() {
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-muted-foreground" />
               </div>
-            ) : sortedActiveViolations.length === 0 ? (
+            ) : filteredActiveViolations.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-left">
                 <FileQuestion className="h-6 w-6 sm:h-8 sm:w-8 mb-2 opacity-50" />
                 <p className="text-xs sm:text-sm text-left">
-                  {t("dashboard.noViolationsFound", { 
-                    filter: troubleListFilter === "Active" ? t("dashboard.active").toLowerCase() : t("dashboard.underReview").toLowerCase() 
+                  {t("dashboard.noViolationsFound", {
+                    filter:
+                      troubleListFilter === "Active"
+                        ? t("dashboard.active").toLowerCase()
+                        : t("dashboard.underReview").toLowerCase(),
                   })}
                 </p>
               </div>
             ) : (
-              sortedActiveViolations.map((violation) => {
+              paginatedViolations.map((violation) => {
                 const timeSinceAdded = getTimeSinceAdded(violation.reportedAt);
                 const warningLevel = getWarningLevelForViolation(
                   violation.minutesSinceAdded,
                   currentWeekMinutesSinceAdded
                 );
+                // Convert violation ID to string for consistent hash fragment
+                const violationIdStr = String(violation.id || "");
+
                 return (
                   <div
                     key={violation.id}
-                    className="group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-h-[42px] sm:h-[42px] border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors px-2 py-2 sm:py-0 sm:justify-start">
+                    onClick={() => {
+                      if (violation.matchId && violationIdStr) {
+                        navigate(
+                          `/match/${violation.matchId}#violation-${violationIdStr}`
+                        );
+                      }
+                    }}
+                    className={`group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-h-[42px] sm:h-[42px] border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors px-2 py-2 sm:py-0 sm:justify-start ${
+                      violation.matchId ? "cursor-pointer" : ""
+                    }`}>
                     {/* Platform & Account */}
                     <div className="flex items-center gap-2 flex-1 sm:w-[180px] sm:flex-shrink-0 min-w-0 justify-start">
                       <div className="flex-shrink-0">
@@ -1799,6 +1993,7 @@ export default function Dashboard() {
                         href={violation.url}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="flex items-center gap-1.5 sm:gap-2 h-[24px] sm:h-[26px] px-2 sm:px-3 rounded-md bg-muted/40 hover:bg-muted/60 border border-border/40 hover:border-primary/30 text-[10px] sm:text-[11px] font-medium text-foreground/70 hover:text-primary transition-all w-full touch-manipulation justify-start"
                         title={violation.url}>
                         <Link className="h-2.5 w-2.5 sm:h-3 sm:w-3 flex-shrink-0 text-muted-foreground" />
@@ -1813,7 +2008,9 @@ export default function Dashboard() {
                     <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap sm:flex-nowrap sm:flex-1 sm:justify-end">
                       <span className="inline-flex items-center gap-1 h-[20px] sm:h-[22px] px-1.5 sm:px-2 rounded-full bg-muted/40 text-[10px] sm:text-[12px] font-medium tabular-nums">
                         <Eye className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground flex-shrink-0" />
-                        <span className="text-left">{formatViews(violation.views)}</span>
+                        <span className="text-left">
+                          {formatViews(violation.views)}
+                        </span>
                       </span>
                       <span className="inline-flex items-center gap-1 h-[20px] sm:h-[22px] px-1.5 sm:px-2 rounded-full bg-muted/40 text-[10px] sm:text-[12px] font-medium">
                         <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground flex-shrink-0" />
@@ -1854,6 +2051,146 @@ export default function Dashboard() {
               })
             )}
           </div>
+
+          {/* Pagination Controls */}
+          {!troubleListLoading &&
+            filteredActiveViolations.length > 0 &&
+            totalPages > 1 && (
+              <div className="flex-shrink-0 pt-2 mt-2 border-t border-border/40">
+                <Pagination>
+                  <PaginationContent
+                    className={`flex-wrap justify-center gap-1 ${
+                      isRTL ? "flex-row-reverse" : ""
+                    }`}>
+                    {isRTL ? (
+                      <>
+                        {/* RTL: Next on left, Previous on right */}
+                        <PaginationItem>
+                          <Button
+                            variant="ghost"
+                            size="default"
+                            onClick={() => {
+                              if (troubleListPage < totalPages) {
+                                setTroubleListPage(troubleListPage + 1);
+                              }
+                            }}
+                            disabled={troubleListPage === totalPages}
+                            className="gap-1 pr-2.5 h-9 text-xs">
+                            <span>{t("dashboard.pagination.next")}</span>
+                            <ChevronRight className="h-4 w-4 scale-x-[-1]" />
+                          </Button>
+                        </PaginationItem>
+
+                        {displayPages.map((item, index) => {
+                          if (item === "...") {
+                            return (
+                              <PaginationItem key={`ellipsis-${index}`}>
+                                <span className="px-2 text-muted-foreground">
+                                  ...
+                                </span>
+                              </PaginationItem>
+                            );
+                          }
+                          const page = item as number;
+                          return (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setTroubleListPage(page);
+                                }}
+                                isActive={troubleListPage === page}
+                                className="cursor-pointer min-w-[32px] h-8 text-xs">
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        })}
+
+                        <PaginationItem>
+                          <Button
+                            variant="ghost"
+                            size="default"
+                            onClick={() => {
+                              if (troubleListPage > 1) {
+                                setTroubleListPage(troubleListPage - 1);
+                              }
+                            }}
+                            disabled={troubleListPage === 1}
+                            className="gap-1 pl-2.5 h-9 text-xs">
+                            <ChevronLeft className="h-4 w-4 scale-x-[-1]" />
+                            <span>{t("dashboard.pagination.previous")}</span>
+                          </Button>
+                        </PaginationItem>
+                      </>
+                    ) : (
+                      <>
+                        {/* LTR: Previous on left, Next on right */}
+                        <PaginationItem>
+                          <Button
+                            variant="ghost"
+                            size="default"
+                            onClick={() => {
+                              if (troubleListPage > 1) {
+                                setTroubleListPage(troubleListPage - 1);
+                              }
+                            }}
+                            disabled={troubleListPage === 1}
+                            className="gap-1 pl-2.5 h-9 text-xs">
+                            <ChevronLeft className="h-4 w-4" />
+                            <span>{t("dashboard.pagination.previous")}</span>
+                          </Button>
+                        </PaginationItem>
+
+                        {displayPages.map((item, index) => {
+                          if (item === "...") {
+                            return (
+                              <PaginationItem key={`ellipsis-${index}`}>
+                                <span className="px-2 text-muted-foreground">
+                                  ...
+                                </span>
+                              </PaginationItem>
+                            );
+                          }
+                          const page = item as number;
+                          return (
+                            <PaginationItem key={page}>
+                              <PaginationLink
+                                href="#"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  setTroubleListPage(page);
+                                }}
+                                isActive={troubleListPage === page}
+                                className="cursor-pointer min-w-[32px] h-8 text-xs">
+                                {page}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        })}
+
+                        <PaginationItem>
+                          <Button
+                            variant="ghost"
+                            size="default"
+                            onClick={() => {
+                              if (troubleListPage < totalPages) {
+                                setTroubleListPage(troubleListPage + 1);
+                              }
+                            }}
+                            disabled={troubleListPage === totalPages}
+                            className="gap-1 pr-2.5 h-9 text-xs">
+                            <span>{t("dashboard.pagination.next")}</span>
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </PaginationItem>
+                      </>
+                    )}
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
         </Card>
       </div>
 

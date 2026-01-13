@@ -447,10 +447,23 @@ export default function ProblematicAccounts() {
           </p>
           {!loadingThresholds && (
             <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
-              {t("problematicAccounts.showingAccounts", {
-                viewsThreshold: viewsThreshold.toLocaleString("en-US"),
-                violationsThreshold: violationsThreshold,
-              })}
+              {isRTL ? (
+                <>
+                  عرض الحسابات التي لديها مشاهدات{" "}
+                  <span dir="ltr" className="inline">
+                    ≥ {viewsThreshold.toLocaleString("en-US")}
+                  </span>{" "}
+                  أو انتهاكات{" "}
+                  <span dir="ltr" className="inline">
+                    ≥ {violationsThreshold}
+                  </span>
+                </>
+              ) : (
+                t("problematicAccounts.showingAccounts", {
+                  viewsThreshold: viewsThreshold.toLocaleString("en-US"),
+                  violationsThreshold: violationsThreshold,
+                })
+              )}
             </p>
           )}
         </div>

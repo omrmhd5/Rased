@@ -130,6 +130,11 @@
     "active": "Active",
     "underReview": "Under Review",
     "noViolationsFound": "No {filter} violations found",
+    "searchViolations": "Search by channel, match, or link...",
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next"
+    },
     "overdue": "overdue",
     "slower": "slower",
     "minutesAgo": "{minutes}m ago",
