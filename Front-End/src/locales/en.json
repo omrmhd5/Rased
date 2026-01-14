@@ -259,6 +259,13 @@
     "others": "Others:",
     "successRate": "Success Rate",
     "statusBreakdown": "Status Breakdown",
+    "searchAccounts": "Search by account name...",
+    "exportToExcel": "Export to Excel",
+    "exporting": "Exporting...",
+    "exportSuccess": "Export Successful",
+    "exportSuccessDescription": "Problematic accounts data has been exported successfully.",
+    "exportError": "Export Failed",
+    "exportErrorDescription": "Failed to export data. Please try again.",
     "stages": {
       "16thFinals": "16th Finals",
       "8thFinals": "8th Finals",
@@ -470,6 +477,7 @@
     "accessDenied": "Access Denied",
     "onlySuperAdmin": "Only superAdmin can access this page.",
     "success": {
+      "title": "Success",
       "userAdded": "User \"{username}\" has been added successfully.",
       "userUpdated": "User \"{username}\" has been updated successfully.",
       "userDeleted": "User \"{username}\" has been deleted."
@@ -567,6 +575,7 @@
       "slugLabel": "Slug:",
       "codeLabel": "Code:",
       "success": {
+        "title": "Success",
         "leagueCreated": "League created successfully.",
         "leagueUpdated": "League updated successfully.",
         "leagueShown": "League shown successfully.",

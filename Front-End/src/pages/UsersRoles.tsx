@@ -107,9 +107,10 @@ export default function UsersRoles() {
         : "";
       return {
         value: league.league as League,
-        label: isRTL && league.arabicName
-          ? league.arabicName
-          : league.name || league.arabicName || league.league,
+        label:
+          isRTL && league.arabicName
+            ? league.arabicName
+            : league.name || league.arabicName || league.league,
         icon: iconUrl,
       };
     });
@@ -154,7 +155,9 @@ export default function UsersRoles() {
       toast({
         title: t("usersRoles.error.failedToLoad"),
         description:
-          error instanceof Error ? error.message : t("usersRoles.error.failedToLoad"),
+          error instanceof Error
+            ? error.message
+            : t("usersRoles.error.failedToLoad"),
         variant: "destructive",
       });
     } finally {
@@ -243,8 +246,10 @@ export default function UsersRoles() {
       resetForm();
       setIsAddUserOpen(false);
       toast({
-        title: "Success",
-        description: t("usersRoles.success.userAdded", { username: formUsername.trim() }),
+        title: t("usersRoles.success.title"),
+        description: t("usersRoles.success.userAdded", {
+          username: formUsername.trim(),
+        }),
       });
     } catch (error) {
       console.error("Error adding user:", error);
@@ -254,7 +259,9 @@ export default function UsersRoles() {
       toast({
         title: t("usersRoles.error.failedToAdd"),
         description:
-          error instanceof Error ? error.message : t("usersRoles.error.failedToAdd"),
+          error instanceof Error
+            ? error.message
+            : t("usersRoles.error.failedToAdd"),
         variant: "destructive",
       });
     } finally {
@@ -337,8 +344,10 @@ export default function UsersRoles() {
       setIsEditUserOpen(false);
       setEditingUser(null);
       toast({
-        title: "Success",
-        description: t("usersRoles.success.userUpdated", { username: formUsername.trim() }),
+        title: t("usersRoles.success.title"),
+        description: t("usersRoles.success.userUpdated", {
+          username: formUsername.trim(),
+        }),
       });
     } catch (error) {
       console.error("Error updating user:", error);
@@ -348,7 +357,9 @@ export default function UsersRoles() {
       toast({
         title: t("usersRoles.error.failedToUpdate"),
         description:
-          error instanceof Error ? error.message : t("usersRoles.error.failedToUpdate"),
+          error instanceof Error
+            ? error.message
+            : t("usersRoles.error.failedToUpdate"),
         variant: "destructive",
       });
     } finally {
@@ -377,8 +388,10 @@ export default function UsersRoles() {
       setIsDeleteUserOpen(false);
       setDeletingUser(null);
       toast({
-        title: "Success",
-        description: t("usersRoles.success.userDeleted", { username: deletingUser.username }),
+        title: t("usersRoles.success.title"),
+        description: t("usersRoles.success.userDeleted", {
+          username: deletingUser.username,
+        }),
         variant: "destructive",
       });
     } catch (error) {
@@ -386,7 +399,9 @@ export default function UsersRoles() {
       toast({
         title: t("usersRoles.error.failedToDelete"),
         description:
-          error instanceof Error ? error.message : t("usersRoles.error.failedToDelete"),
+          error instanceof Error
+            ? error.message
+            : t("usersRoles.error.failedToDelete"),
         variant: "destructive",
       });
     } finally {
@@ -457,7 +472,9 @@ export default function UsersRoles() {
                   onClick={() => resetForm()}
                   className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                   <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  <span className="hidden xs:inline">{t("usersRoles.addUser")}</span>
+                  <span className="hidden xs:inline">
+                    {t("usersRoles.addUser")}
+                  </span>
                   <span className="xs:hidden">{t("usersRoles.add")}</span>
                 </Button>
               </DialogTrigger>
@@ -680,12 +697,22 @@ export default function UsersRoles() {
                 <Table className="min-w-[800px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t("usersRoles.tableHeaders.username")}</TableHead>
-                      <TableHead>{t("usersRoles.tableHeaders.email")}</TableHead>
+                      <TableHead>
+                        {t("usersRoles.tableHeaders.username")}
+                      </TableHead>
+                      <TableHead>
+                        {t("usersRoles.tableHeaders.email")}
+                      </TableHead>
                       <TableHead>{t("usersRoles.tableHeaders.role")}</TableHead>
-                      <TableHead>{t("usersRoles.tableHeaders.leagues")}</TableHead>
-                      <TableHead>{t("usersRoles.tableHeaders.created")}</TableHead>
-                      <TableHead className="text-right">{t("usersRoles.tableHeaders.actions")}</TableHead>
+                      <TableHead>
+                        {t("usersRoles.tableHeaders.leagues")}
+                      </TableHead>
+                      <TableHead>
+                        {t("usersRoles.tableHeaders.created")}
+                      </TableHead>
+                      <TableHead className="text-right">
+                        {t("usersRoles.tableHeaders.actions")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -744,7 +771,9 @@ export default function UsersRoles() {
                         </TableCell>
                         <TableCell>
                           {user.createdAt
-                            ? new Date(user.createdAt).toLocaleDateString("en-US")
+                            ? new Date(user.createdAt).toLocaleDateString(
+                                "en-US"
+                              )
                             : t("whitelistedAccounts.nA")}
                         </TableCell>
                         <TableCell className="text-right">
@@ -784,7 +813,9 @@ export default function UsersRoles() {
       <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
         <DialogContent className="w-[95vw] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">{t("usersRoles.editUser")}</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">
+              {t("usersRoles.editUser")}
+            </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               {t("usersRoles.updateUserInfo")}{" "}
               {editingUser?.role === "superAdmin" &&
@@ -995,7 +1026,10 @@ export default function UsersRoles() {
             <div className="py-3 sm:py-4">
               <Alert variant="destructive">
                 <AlertDescription className="text-xs sm:text-sm">
-                  {t("usersRoles.willBeDeleted", { username: deletingUser.username, email: deletingUser.email })}
+                  {t("usersRoles.willBeDeleted", {
+                    username: deletingUser.username,
+                    email: deletingUser.email,
+                  })}
                 </AlertDescription>
               </Alert>
             </div>

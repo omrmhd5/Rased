@@ -105,7 +105,9 @@ export default function Settings() {
   const [formName, setFormName] = useState("");
   const [formIsManual, setFormIsManual] = useState(false);
   const [formIsHidden, setFormIsHidden] = useState(false);
-  const [formCompetitionType, setFormCompetitionType] = useState<"league" | "cup">("league");
+  const [formCompetitionType, setFormCompetitionType] = useState<
+    "league" | "cup"
+  >("league");
   const [formIcon, setFormIcon] = useState<File | null>(null);
   const [formError, setFormError] = useState("");
   const [addingLeague, setAddingLeague] = useState(false);
@@ -252,7 +254,9 @@ export default function Settings() {
     } else {
       // Regular league validation
       if (!formSlug.trim() || !formApiUrl.trim() || !formReferer.trim()) {
-        setFormError(t("settings.leaguesManagement.error.slugApiUrlRefererRequired"));
+        setFormError(
+          t("settings.leaguesManagement.error.slugApiUrlRefererRequired")
+        );
         return;
       }
       if (!formIcon) {
@@ -295,7 +299,7 @@ export default function Settings() {
       }
 
       toast({
-        title: "Success",
+        title: t("settings.leaguesManagement.success.title"),
         description: t("settings.leaguesManagement.success.leagueCreated"),
       });
 
@@ -305,7 +309,9 @@ export default function Settings() {
     } catch (error) {
       console.error("Error adding league:", error);
       setFormError(
-        error instanceof Error ? error.message : t("settings.leaguesManagement.error.failedToCreate")
+        error instanceof Error
+          ? error.message
+          : t("settings.leaguesManagement.error.failedToCreate")
       );
     } finally {
       setAddingLeague(false);
@@ -317,7 +323,9 @@ export default function Settings() {
     setFormError("");
 
     if (!formSlug.trim() || !formApiUrl.trim() || !formReferer.trim()) {
-      setFormError(t("settings.leaguesManagement.error.slugApiUrlRefererRequired"));
+      setFormError(
+        t("settings.leaguesManagement.error.slugApiUrlRefererRequired")
+      );
       return;
     }
 
@@ -354,7 +362,7 @@ export default function Settings() {
       }
 
       toast({
-        title: "Success",
+        title: t("settings.leaguesManagement.success.title"),
         description: t("settings.leaguesManagement.success.leagueUpdated"),
       });
 
@@ -364,7 +372,9 @@ export default function Settings() {
     } catch (error) {
       console.error("Error updating league:", error);
       setFormError(
-        error instanceof Error ? error.message : t("settings.leaguesManagement.error.failedToUpdate")
+        error instanceof Error
+          ? error.message
+          : t("settings.leaguesManagement.error.failedToUpdate")
       );
     } finally {
       setUpdatingLeague(false);
@@ -387,8 +397,8 @@ export default function Settings() {
       }
 
       toast({
-        title: "Success",
-        description: league.isHidden 
+        title: t("settings.leaguesManagement.success.title"),
+        description: league.isHidden
           ? t("settings.leaguesManagement.success.leagueShown")
           : t("settings.leaguesManagement.success.leagueHidden"),
       });
@@ -555,9 +565,9 @@ export default function Settings() {
 
       toast({
         title: t("settings.targetBlockTime.settingsSaved"),
-        description: t("settings.targetBlockTime.targetUpdated", { 
-          minutes: minutes.toString(), 
-          hours: hours.toFixed(2) 
+        description: t("settings.targetBlockTime.targetUpdated", {
+          minutes: minutes.toString(),
+          hours: hours.toFixed(2),
         }),
       });
     } catch (error) {
@@ -565,7 +575,9 @@ export default function Settings() {
       toast({
         title: t("settings.leaguesManagement.error.failedToSave"),
         description:
-          error instanceof Error ? error.message : t("settings.leaguesManagement.error.failedToSave"),
+          error instanceof Error
+            ? error.message
+            : t("settings.leaguesManagement.error.failedToSave"),
         variant: "destructive",
       });
     } finally {
@@ -578,7 +590,9 @@ export default function Settings() {
     if (viewsThreshold < 0 || violationsThreshold < 0) {
       toast({
         title: t("settings.problematicAccountsThresholds.validationError"),
-        description: t("settings.problematicAccountsThresholds.mustBeGreaterThanZero"),
+        description: t(
+          "settings.problematicAccountsThresholds.mustBeGreaterThanZero"
+        ),
         variant: "destructive",
       });
       return;
@@ -616,17 +630,26 @@ export default function Settings() {
 
       toast({
         title: t("settings.problematicAccountsThresholds.thresholdsSaved"),
-        description: t("settings.problematicAccountsThresholds.thresholdsUpdated", {
-          views: viewsThresh.toLocaleString("en-US"),
-          violations: violationsThresh.toString()
-        }),
+        description: t(
+          "settings.problematicAccountsThresholds.thresholdsUpdated",
+          {
+            views: viewsThresh.toLocaleString("en-US"),
+            violations: violationsThresh.toString(),
+          }
+        ),
       });
     } catch (error) {
       console.error("Error saving thresholds:", error);
       toast({
-        title: t("settings.problematicAccountsThresholds.error.failedToSaveThresholds"),
+        title: t(
+          "settings.problematicAccountsThresholds.error.failedToSaveThresholds"
+        ),
         description:
-          error instanceof Error ? error.message : t("settings.problematicAccountsThresholds.error.failedToSaveThresholds"),
+          error instanceof Error
+            ? error.message
+            : t(
+                "settings.problematicAccountsThresholds.error.failedToSaveThresholds"
+              ),
         variant: "destructive",
       });
     } finally {
@@ -752,7 +775,9 @@ export default function Settings() {
                     <Label
                       htmlFor="viewsThreshold"
                       className="text-xs sm:text-sm">
-                      {t("settings.problematicAccountsThresholds.viewsThreshold")}
+                      {t(
+                        "settings.problematicAccountsThresholds.viewsThreshold"
+                      )}
                     </Label>
                     <Input
                       id="viewsThreshold"
@@ -767,14 +792,18 @@ export default function Settings() {
                       disabled={saving}
                     />
                     <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      {t("settings.problematicAccountsThresholds.viewsDescription")}
+                      {t(
+                        "settings.problematicAccountsThresholds.viewsDescription"
+                      )}
                     </p>
                   </div>
                   <div className="space-y-1.5 sm:space-y-2">
                     <Label
                       htmlFor="violationsThreshold"
                       className="text-xs sm:text-sm">
-                      {t("settings.problematicAccountsThresholds.violationsThreshold")}
+                      {t(
+                        "settings.problematicAccountsThresholds.violationsThreshold"
+                      )}
                     </Label>
                     <Input
                       id="violationsThreshold"
@@ -788,7 +817,9 @@ export default function Settings() {
                       disabled={saving}
                     />
                     <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      {t("settings.problematicAccountsThresholds.violationsDescription")}
+                      {t(
+                        "settings.problematicAccountsThresholds.violationsDescription"
+                      )}
                     </p>
                   </div>
                 </div>
@@ -804,7 +835,9 @@ export default function Settings() {
                   ) : (
                     <>
                       <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                      {t("settings.problematicAccountsThresholds.saveThresholds")}
+                      {t(
+                        "settings.problematicAccountsThresholds.saveThresholds"
+                      )}
                     </>
                   )}
                 </Button>
@@ -837,8 +870,12 @@ export default function Settings() {
                   size="sm"
                   className="h-8 sm:h-9 text-xs sm:text-sm touch-manipulation">
                   <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                  <span className="hidden xs:inline">{t("settings.leaguesManagement.addLeague")}</span>
-                  <span className="xs:hidden">{t("settings.leaguesManagement.add")}</span>
+                  <span className="hidden xs:inline">
+                    {t("settings.leaguesManagement.addLeague")}
+                  </span>
+                  <span className="xs:hidden">
+                    {t("settings.leaguesManagement.add")}
+                  </span>
                 </Button>
               </DialogTrigger>
               <DialogContent className="w-[95vw] sm:w-full max-w-md max-h-[90vh] overflow-y-auto">
@@ -849,7 +886,9 @@ export default function Settings() {
                   <DialogDescription className="text-xs sm:text-sm">
                     {formIsManual
                       ? t("settings.leaguesManagement.manualLeagueDescription")
-                      : t("settings.leaguesManagement.regularLeagueDescription")}
+                      : t(
+                          "settings.leaguesManagement.regularLeagueDescription"
+                        )}
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
@@ -921,11 +960,19 @@ export default function Settings() {
                             setFormCompetitionType(value)
                           }>
                           <SelectTrigger className="h-9 sm:h-10 text-sm">
-                            <SelectValue placeholder={t("settings.leaguesManagement.selectType")} />
+                            <SelectValue
+                              placeholder={t(
+                                "settings.leaguesManagement.selectType"
+                              )}
+                            />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="league">{t("settings.leaguesManagement.league")}</SelectItem>
-                            <SelectItem value="cup">{t("settings.leaguesManagement.cup")}</SelectItem>
+                            <SelectItem value="league">
+                              {t("settings.leaguesManagement.league")}
+                            </SelectItem>
+                            <SelectItem value="cup">
+                              {t("settings.leaguesManagement.cup")}
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -941,7 +988,11 @@ export default function Settings() {
                             const file = e.target.files?.[0];
                             if (file) {
                               if (file.size > 5 * 1024 * 1024) {
-                                setFormError(t("settings.leaguesManagement.error.fileSizeTooLarge"));
+                                setFormError(
+                                  t(
+                                    "settings.leaguesManagement.error.fileSizeTooLarge"
+                                  )
+                                );
                                 return;
                               }
                               setFormIcon(file);
@@ -952,7 +1003,8 @@ export default function Settings() {
                         />
                         {formIcon && (
                           <p className="text-[10px] sm:text-xs text-muted-foreground">
-                            {t("settings.leaguesManagement.selected")} {formIcon.name}
+                            {t("settings.leaguesManagement.selected")}{" "}
+                            {formIcon.name}
                           </p>
                         )}
                       </div>
@@ -1009,11 +1061,19 @@ export default function Settings() {
                             setFormCompetitionType(value)
                           }>
                           <SelectTrigger className="h-9 sm:h-10 text-sm">
-                            <SelectValue placeholder={t("settings.leaguesManagement.selectType")} />
+                            <SelectValue
+                              placeholder={t(
+                                "settings.leaguesManagement.selectType"
+                              )}
+                            />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="league">{t("settings.leaguesManagement.league")}</SelectItem>
-                            <SelectItem value="cup">{t("settings.leaguesManagement.cup")}</SelectItem>
+                            <SelectItem value="league">
+                              {t("settings.leaguesManagement.league")}
+                            </SelectItem>
+                            <SelectItem value="cup">
+                              {t("settings.leaguesManagement.cup")}
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -1029,7 +1089,11 @@ export default function Settings() {
                             const file = e.target.files?.[0];
                             if (file) {
                               if (file.size > 5 * 1024 * 1024) {
-                                setFormError(t("settings.leaguesManagement.error.fileSizeTooLarge"));
+                                setFormError(
+                                  t(
+                                    "settings.leaguesManagement.error.fileSizeTooLarge"
+                                  )
+                                );
                                 return;
                               }
                               setFormIcon(file);
@@ -1040,7 +1104,8 @@ export default function Settings() {
                         />
                         {formIcon && (
                           <p className="text-[10px] sm:text-xs text-muted-foreground">
-                            {t("settings.leaguesManagement.selected")} {formIcon.name}
+                            {t("settings.leaguesManagement.selected")}{" "}
+                            {formIcon.name}
                           </p>
                         )}
                       </div>
@@ -1130,7 +1195,9 @@ export default function Settings() {
                               </span>
                               {league.isHidden && (
                                 <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
-                                  {t("settings.leaguesManagement.status.hidden")}
+                                  {t(
+                                    "settings.leaguesManagement.status.hidden"
+                                  )}
                                 </span>
                               )}
                             </div>
@@ -1140,10 +1207,13 @@ export default function Settings() {
                               </p>
                             )}
                             <p className="text-xs text-muted-foreground truncate">
-                              {t("settings.leaguesManagement.slugLabel")} {league.league}
+                              {t("settings.leaguesManagement.slugLabel")}{" "}
+                              {league.league}
                             </p>
                             <p className="text-xs text-muted-foreground truncate">
-                              {t("settings.leaguesManagement.codeLabel")} {league.competitionCode || t("whitelistedAccounts.nA")}
+                              {t("settings.leaguesManagement.codeLabel")}{" "}
+                              {league.competitionCode ||
+                                t("whitelistedAccounts.nA")}
                             </p>
                           </div>
                         </div>
@@ -1185,7 +1255,9 @@ export default function Settings() {
                         {t("settings.leaguesManagement.tableHeaders.name")}
                       </TableHead>
                       <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">
-                        {t("settings.leaguesManagement.tableHeaders.arabicName")}
+                        {t(
+                          "settings.leaguesManagement.tableHeaders.arabicName"
+                        )}
                       </TableHead>
                       <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">
                         {t("settings.leaguesManagement.tableHeaders.slug")}
@@ -1226,7 +1298,9 @@ export default function Settings() {
                           <TableCell className="p-3 sm:p-4 text-xs sm:text-sm">
                             {isRTL && league.arabicName
                               ? league.arabicName
-                              : league.knownName || league.name || league.league}
+                              : league.knownName ||
+                                league.name ||
+                                league.league}
                           </TableCell>
                           <TableCell className="p-3 sm:p-4 text-xs sm:text-sm">
                             {league.arabicName || "-"}
@@ -1353,11 +1427,17 @@ export default function Settings() {
                   setFormCompetitionType(value)
                 }>
                 <SelectTrigger className="h-9 sm:h-10 text-sm">
-                  <SelectValue placeholder={t("settings.leaguesManagement.selectType")} />
+                  <SelectValue
+                    placeholder={t("settings.leaguesManagement.selectType")}
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="league">{t("settings.leaguesManagement.league")}</SelectItem>
-                  <SelectItem value="cup">{t("settings.leaguesManagement.cup")}</SelectItem>
+                  <SelectItem value="league">
+                    {t("settings.leaguesManagement.league")}
+                  </SelectItem>
+                  <SelectItem value="cup">
+                    {t("settings.leaguesManagement.cup")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -1373,7 +1453,9 @@ export default function Settings() {
                   const file = e.target.files?.[0];
                   if (file) {
                     if (file.size > 5 * 1024 * 1024) {
-                      setFormError(t("settings.leaguesManagement.error.fileSizeTooLarge"));
+                      setFormError(
+                        t("settings.leaguesManagement.error.fileSizeTooLarge")
+                      );
                       return;
                     }
                     setFormIcon(file);
@@ -1389,7 +1471,8 @@ export default function Settings() {
               )}
               {editingLeague?.iconUrl && !formIcon && (
                 <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  {t("settings.leaguesManagement.currentIcon")} {editingLeague.iconUrl.split("/").pop()}
+                  {t("settings.leaguesManagement.currentIcon")}{" "}
+                  {editingLeague.iconUrl.split("/").pop()}
                 </p>
               )}
             </div>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -11,13 +12,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+} from "@/components/ui/pagination";
+import * as XLSX from "xlsx-js-style";
+import {
   AlertTriangle,
   Eye,
   TrendingUp,
   Loader2,
   ExternalLink,
   Filter,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Download,
 } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -159,14 +172,14 @@ export default function ProblematicAccounts() {
     "Semi-finals",
     "Final",
   ];
-  
+
   const getStageDisplayName = (stage: string): string => {
     const stageMap: Record<string, string> = {
       "16th Finals": t("problematicAccounts.stages.16thFinals"),
       "8th Finals": t("problematicAccounts.stages.8thFinals"),
       "Quarter-finals": t("problematicAccounts.stages.quarterFinals"),
       "Semi-finals": t("problematicAccounts.stages.semiFinals"),
-      "Final": t("problematicAccounts.stages.final"),
+      Final: t("problematicAccounts.stages.final"),
     };
     return stageMap[stage] || stage;
   };
@@ -179,6 +192,10 @@ export default function ProblematicAccounts() {
   const [sortBy, setSortBy] = useState<"violations" | "views" | "matches">(
     "violations"
   );
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+  const [isExporting, setIsExporting] = useState(false);
 
   // Thresholds from settings
   const [viewsThreshold, setViewsThreshold] = useState<number>(1000);
@@ -387,8 +404,15 @@ export default function ProblematicAccounts() {
     availableLeagues.length,
   ]);
 
+  // Filter accounts by search query (account name only)
+  const filteredAccounts = accounts.filter((account) => {
+    if (!searchQuery.trim()) return true;
+    const searchLower = searchQuery.toLowerCase();
+    return account.accountChannel.toLowerCase().includes(searchLower);
+  });
+
   // Sort accounts
-  const sortedAccounts = [...accounts].sort((a, b) => {
+  const sortedAccounts = [...filteredAccounts].sort((a, b) => {
     if (sortBy === "violations") {
       return b.totalViolations - a.totalViolations;
     } else if (sortBy === "views") {
@@ -397,6 +421,47 @@ export default function ProblematicAccounts() {
       return b.matchesAffected - a.matchesAffected;
     }
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(sortedAccounts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedAccounts = sortedAccounts.slice(startIndex, endIndex);
+
+  // Create array of pages to display for pagination
+  const pagesToShow: (number | string)[] = [];
+  if (totalPages > 1) {
+    for (let page = 1; page <= totalPages; page++) {
+      if (
+        page === 1 ||
+        page === totalPages ||
+        (page >= currentPage - 1 && page <= currentPage + 1)
+      ) {
+        pagesToShow.push(page);
+      } else if (page === currentPage - 2 || page === currentPage + 2) {
+        pagesToShow.push("...");
+      }
+    }
+  }
+  // Reverse for RTL
+  const displayPages = isRTL ? [...pagesToShow].reverse() : pagesToShow;
+
+  // Reset to page 1 when filters or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    league,
+    weekFilterType,
+    singleWeek,
+    weekRangeStart,
+    weekRangeEnd,
+    stageFilterType,
+    singleStage,
+    stageRangeStart,
+    stageRangeEnd,
+    selectedPlatform,
+    searchQuery,
+  ]);
 
   // Format views (pure numbers with commas, no abbreviations)
   const formatViews = (views: number) => {
@@ -422,9 +487,19 @@ export default function ProblematicAccounts() {
     if (!league) return "";
     const leagueInfo = leagues?.find((l) => l.league === league);
     if (isRTL) {
-      return leagueInfo?.arabicName || leagueInfo?.knownName || leagueInfo?.name || league;
+      return (
+        leagueInfo?.arabicName ||
+        leagueInfo?.knownName ||
+        leagueInfo?.name ||
+        league
+      );
     }
-    return leagueInfo?.knownName || leagueInfo?.name || leagueInfo?.arabicName || league;
+    return (
+      leagueInfo?.knownName ||
+      leagueInfo?.name ||
+      leagueInfo?.arabicName ||
+      league
+    );
   };
 
   // Auto-select first available league for employees if they have only one league
@@ -433,6 +508,207 @@ export default function ProblematicAccounts() {
       setLeague(availableLeagues[0]);
     }
   }, [user, availableLeagues, league]);
+
+  // Export to Excel function with styling
+  const handleExportToExcel = () => {
+    setIsExporting(true);
+    try {
+      // Create headers
+      const headers = isRTL
+        ? [
+            "الترتيب",
+            "الحساب",
+            "المنصة",
+            "إجمالي المشاهدات",
+            "عدد الانتهاكات",
+            "نشط",
+            "محظور",
+            "معدل نجاح الحظر",
+            "محذوف",
+            "قيد المراجعة",
+          ]
+        : [
+            "Rank",
+            "Account",
+            "Platform",
+            "Total Views",
+            "Violations Count",
+            "Active Count",
+            "Blocked Count",
+            "Block Success Rate",
+            "Removed Count",
+            "Under Review Count",
+          ];
+
+      // Create data rows
+      const data = sortedAccounts.map((account, index) => {
+        const successRate =
+          account.totalViolations > 0
+            ? Math.round(
+                ((account.blockedCount + account.removedCount) /
+                  account.totalViolations) *
+                  100
+              )
+            : 0;
+
+        return {
+          [headers[0]]: index + 1,
+          [headers[1]]: account.accountChannel,
+          [headers[2]]: account.platformName,
+          [headers[3]]: account.totalViews,
+          [headers[4]]: account.totalViolations,
+          [headers[5]]: account.activeCount,
+          [headers[6]]: account.blockedCount,
+          [headers[7]]: `${successRate}%`,
+          [headers[8]]: account.removedCount,
+          [headers[9]]: account.underReviewCount,
+        };
+      });
+
+      // Create worksheet
+      const worksheet = XLSX.utils.json_to_sheet(data);
+
+      // Set column widths
+      const columnWidths = [
+        { wch: 8 }, // Rank
+        { wch: 30 }, // Account
+        { wch: 15 }, // Platform
+        { wch: 15 }, // Total Views
+        { wch: 18 }, // Violations Count
+        { wch: 13 }, // Active Count
+        { wch: 15 }, // Blocked Count
+        { wch: 20 }, // Block Success Rate
+        { wch: 15 }, // Removed Count
+        { wch: 18 }, // Under Review Count
+      ];
+      worksheet["!cols"] = columnWidths;
+
+      // Style the header row (first row)
+      const range = XLSX.utils.decode_range(worksheet["!ref"] || "A1");
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+        if (!worksheet[cellAddress]) continue;
+
+        // Header styling
+        worksheet[cellAddress].s = {
+          font: {
+            bold: true,
+            color: { rgb: "FFFFFF" },
+            sz: 12,
+          },
+          fill: {
+            fgColor: { rgb: "4F46E5" }, // Indigo color
+          },
+          alignment: {
+            horizontal: "center",
+            vertical: "center",
+          },
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } },
+          },
+        };
+      }
+
+      // Style data rows with alternating colors
+      for (let row = range.s.r + 1; row <= range.e.r; row++) {
+        const isEvenRow = row % 2 === 0;
+        for (let col = range.s.c; col <= range.e.c; col++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+          if (!worksheet[cellAddress]) continue;
+
+          worksheet[cellAddress].s = {
+            font: {
+              sz: 11,
+            },
+            fill: {
+              fgColor: { rgb: isEvenRow ? "F3F4F6" : "FFFFFF" }, // Alternating gray/white
+            },
+            alignment: {
+              horizontal: col === 0 ? "center" : "left", // Center rank, left-align others
+              vertical: "center",
+            },
+            border: {
+              top: { style: "thin", color: { rgb: "E5E7EB" } },
+              bottom: { style: "thin", color: { rgb: "E5E7EB" } },
+              left: { style: "thin", color: { rgb: "E5E7EB" } },
+              right: { style: "thin", color: { rgb: "E5E7EB" } },
+            },
+          };
+
+          // Special styling for specific columns
+          // Active Count - Red background
+          if (col === 5) {
+            worksheet[cellAddress].s.fill = {
+              fgColor: { rgb: "FEE2E2" }, // Light red
+            };
+            worksheet[cellAddress].s.font = {
+              ...worksheet[cellAddress].s.font,
+              color: { rgb: "991B1B" }, // Dark red
+              bold: true,
+            };
+          }
+          // Blocked Count - Green background
+          else if (col === 6) {
+            worksheet[cellAddress].s.fill = {
+              fgColor: { rgb: "D1FAE5" }, // Light green
+            };
+            worksheet[cellAddress].s.font = {
+              ...worksheet[cellAddress].s.font,
+              color: { rgb: "065F46" }, // Dark green
+              bold: true,
+            };
+          }
+          // Success Rate - Blue background
+          else if (col === 7) {
+            worksheet[cellAddress].s.fill = {
+              fgColor: { rgb: "DBEAFE" }, // Light blue
+            };
+            worksheet[cellAddress].s.font = {
+              ...worksheet[cellAddress].s.font,
+              color: { rgb: "1E40AF" }, // Dark blue
+              bold: true,
+            };
+            worksheet[cellAddress].s.alignment = {
+              horizontal: "center",
+              vertical: "center",
+            };
+          }
+        }
+      }
+
+      // Create workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        isRTL ? "الحسابات الإشكالية" : "Problematic Accounts"
+      );
+
+      // Generate Excel file
+      XLSX.writeFile(
+        workbook,
+        `problematic-accounts-${new Date().toISOString().split("T")[0]}.xlsx`,
+        { cellStyles: true }
+      );
+
+      toast({
+        title: t("problematicAccounts.exportSuccess"),
+        description: t("problematicAccounts.exportSuccessDescription"),
+      });
+    } catch (error) {
+      console.error("Error exporting to Excel:", error);
+      toast({
+        title: t("problematicAccounts.exportError"),
+        description: t("problematicAccounts.exportErrorDescription"),
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -467,14 +743,50 @@ export default function ProblematicAccounts() {
             </p>
           )}
         </div>
+        {/* Export Button */}
+        <Button
+          onClick={handleExportToExcel}
+          disabled={isExporting || loading || sortedAccounts.length === 0}
+          className="h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
+          {isExporting ? (
+            <>
+              <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
+              {t("problematicAccounts.exporting")}
+            </>
+          ) : (
+            <>
+              <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+              {t("problematicAccounts.exportToExcel")}
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Filters */}
-      <Card className="p-3 sm:p-4">
+      <Card className="p-3 sm:p-4 ">
+        {/* Search Bar */}
+        <div className="relative mb-6">
+          <Search
+            className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground ${
+              isRTL ? "right-3" : "left-3"
+            }`}
+          />
+          <Input
+            type="text"
+            placeholder={t("problematicAccounts.searchAccounts")}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={`h-10 text-sm text-left placeholder:text-left ${
+              isRTL ? "pr-10 pl-3" : "pl-10 pr-3"
+            }`}
+          />
+        </div>
         <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3 sm:gap-4">
           <div className="flex items-center gap-2 flex-shrink-0">
             <Filter className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-            <span className="text-xs sm:text-sm font-medium">{t("problematicAccounts.filters")}</span>
+            <span className="text-xs sm:text-sm font-medium">
+              {t("problematicAccounts.filters")}
+            </span>
           </div>
 
           {/* League Filter */}
@@ -540,14 +852,14 @@ export default function ProblematicAccounts() {
                         )}
                         <span>
                           {isRTL
-                            ? (leagueInfo.arabicName ||
-                                leagueInfo.knownName ||
-                                leagueInfo.name ||
-                                leagueSlug)
-                            : (leagueInfo.knownName ||
-                                leagueInfo.name ||
-                                leagueInfo.arabicName ||
-                                leagueSlug)}
+                            ? leagueInfo.arabicName ||
+                              leagueInfo.knownName ||
+                              leagueInfo.name ||
+                              leagueSlug
+                            : leagueInfo.knownName ||
+                              leagueInfo.name ||
+                              leagueInfo.arabicName ||
+                              leagueSlug}
                         </span>
                       </div>
                     </SelectItem>
@@ -593,7 +905,9 @@ export default function ProblematicAccounts() {
                       setStageFilterType(value as WeekFilterType)
                     }>
                     <SelectTrigger className="w-full sm:w-[140px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                      <SelectValue placeholder={t("problematicAccounts.stageFilter")} />
+                      <SelectValue
+                        placeholder={t("problematicAccounts.stageFilter")}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all" className="text-xs sm:text-sm">
@@ -612,7 +926,9 @@ export default function ProblematicAccounts() {
                   {stageFilterType === "single" && (
                     <Select value={singleStage} onValueChange={setSingleStage}>
                       <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                        <SelectValue placeholder={t("problematicAccounts.stage")} />
+                        <SelectValue
+                          placeholder={t("problematicAccounts.stage")}
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {availableStages.map((stage) => (
@@ -634,7 +950,9 @@ export default function ProblematicAccounts() {
                         value={stageRangeStart}
                         onValueChange={setStageRangeStart}>
                         <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                          <SelectValue placeholder={t("problematicAccounts.startStage")} />
+                          <SelectValue
+                            placeholder={t("problematicAccounts.startStage")}
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {availableStages.map((stage) => (
@@ -654,7 +972,9 @@ export default function ProblematicAccounts() {
                         value={stageRangeEnd}
                         onValueChange={setStageRangeEnd}>
                         <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                          <SelectValue placeholder={t("problematicAccounts.endStage")} />
+                          <SelectValue
+                            placeholder={t("problematicAccounts.endStage")}
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {availableStages.map((stage) => (
@@ -681,7 +1001,9 @@ export default function ProblematicAccounts() {
                       setWeekFilterType(value as WeekFilterType)
                     }>
                     <SelectTrigger className="w-full sm:w-[140px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                      <SelectValue placeholder={t("problematicAccounts.weekFilter")} />
+                      <SelectValue
+                        placeholder={t("problematicAccounts.weekFilter")}
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all" className="text-xs sm:text-sm">
@@ -700,7 +1022,9 @@ export default function ProblematicAccounts() {
                   {weekFilterType === "single" && (
                     <Select value={singleWeek} onValueChange={setSingleWeek}>
                       <SelectTrigger className="w-full sm:w-[100px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                        <SelectValue placeholder={t("problematicAccounts.week")} />
+                        <SelectValue
+                          placeholder={t("problematicAccounts.week")}
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         {Array.from({ length: 38 }, (_, i) => i + 1).map(
@@ -724,7 +1048,9 @@ export default function ProblematicAccounts() {
                         value={weekRangeStart}
                         onValueChange={setWeekRangeStart}>
                         <SelectTrigger className="w-full sm:w-[100px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                          <SelectValue placeholder={t("problematicAccounts.startWeek")} />
+                          <SelectValue
+                            placeholder={t("problematicAccounts.startWeek")}
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {Array.from({ length: 38 }, (_, i) => i + 1).map(
@@ -746,7 +1072,9 @@ export default function ProblematicAccounts() {
                         value={weekRangeEnd}
                         onValueChange={setWeekRangeEnd}>
                         <SelectTrigger className="w-full sm:w-[100px] h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
-                          <SelectValue placeholder={t("problematicAccounts.endWeek")} />
+                          <SelectValue
+                            placeholder={t("problematicAccounts.endWeek")}
+                          />
                         </SelectTrigger>
                         <SelectContent>
                           {Array.from({ length: 38 }, (_, i) => i + 1).map(
@@ -799,10 +1127,147 @@ export default function ProblematicAccounts() {
       {/* Mobile Version */}
       <div className="md:hidden">
         <ProblematicAccountsMobile
-          accounts={sortedAccounts}
+          accounts={paginatedAccounts}
           loading={loading}
           sortBy={sortBy}
         />
+        {/* Mobile Pagination */}
+        {!loading && sortedAccounts.length > 0 && totalPages > 1 && (
+          <div className="mt-4">
+            <Pagination>
+              <PaginationContent
+                className={`flex-wrap justify-center gap-1 ${
+                  isRTL ? "flex-row-reverse" : ""
+                }`}>
+                {isRTL ? (
+                  <>
+                    {/* RTL: Next on left, Previous on right */}
+                    <PaginationItem>
+                      <Button
+                        variant="ghost"
+                        size="default"
+                        onClick={() => {
+                          if (currentPage < totalPages) {
+                            setCurrentPage(currentPage + 1);
+                          }
+                        }}
+                        disabled={currentPage === totalPages}
+                        className="gap-1 pr-2.5 h-9 text-xs">
+                        <span>{t("dashboard.pagination.next")}</span>
+                        <ChevronRight className="h-4 w-4 scale-x-[-1]" />
+                      </Button>
+                    </PaginationItem>
+
+                    {displayPages.map((item, index) => {
+                      if (item === "...") {
+                        return (
+                          <PaginationItem key={`ellipsis-${index}`}>
+                            <span className="px-2 text-muted-foreground">
+                              ...
+                            </span>
+                          </PaginationItem>
+                        );
+                      }
+                      const page = item as number;
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(page);
+                            }}
+                            isActive={currentPage === page}
+                            className="cursor-pointer min-w-[32px] h-8 text-xs">
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+
+                    <PaginationItem>
+                      <Button
+                        variant="ghost"
+                        size="default"
+                        onClick={() => {
+                          if (currentPage > 1) {
+                            setCurrentPage(currentPage - 1);
+                          }
+                        }}
+                        disabled={currentPage === 1}
+                        className="gap-1 pl-2.5 h-9 text-xs">
+                        <ChevronLeft className="h-4 w-4 scale-x-[-1]" />
+                        <span>{t("dashboard.pagination.previous")}</span>
+                      </Button>
+                    </PaginationItem>
+                  </>
+                ) : (
+                  <>
+                    {/* LTR: Previous on left, Next on right */}
+                    <PaginationItem>
+                      <Button
+                        variant="ghost"
+                        size="default"
+                        onClick={() => {
+                          if (currentPage > 1) {
+                            setCurrentPage(currentPage - 1);
+                          }
+                        }}
+                        disabled={currentPage === 1}
+                        className="gap-1 pl-2.5 h-9 text-xs">
+                        <ChevronLeft className="h-4 w-4" />
+                        <span>{t("dashboard.pagination.previous")}</span>
+                      </Button>
+                    </PaginationItem>
+
+                    {displayPages.map((item, index) => {
+                      if (item === "...") {
+                        return (
+                          <PaginationItem key={`ellipsis-${index}`}>
+                            <span className="px-2 text-muted-foreground">
+                              ...
+                            </span>
+                          </PaginationItem>
+                        );
+                      }
+                      const page = item as number;
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(page);
+                            }}
+                            isActive={currentPage === page}
+                            className="cursor-pointer min-w-[32px] h-8 text-xs">
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+
+                    <PaginationItem>
+                      <Button
+                        variant="ghost"
+                        size="default"
+                        onClick={() => {
+                          if (currentPage < totalPages) {
+                            setCurrentPage(currentPage + 1);
+                          }
+                        }}
+                        disabled={currentPage === totalPages}
+                        className="gap-1 pr-2.5 h-9 text-xs">
+                        <span>{t("dashboard.pagination.next")}</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </PaginationItem>
+                  </>
+                )}
+              </PaginationContent>
+            </Pagination>
+          </div>
+        )}
       </div>
 
       {/* Desktop Version */}
@@ -852,7 +1317,7 @@ export default function ProblematicAccounts() {
                 </tr>
               </thead>
               <tbody>
-                {sortedAccounts.map((account, index) => {
+                {paginatedAccounts.map((account, index) => {
                   const PlatformIcon = getPlatformIconComponent(
                     account.platformName
                   );
@@ -873,7 +1338,7 @@ export default function ProblematicAccounts() {
                       <td className="p-3 sm:p-4">
                         <div className="flex items-center gap-2">
                           <span className="text-xs sm:text-sm font-bold text-muted-foreground">
-                            #{index + 1}
+                            #{startIndex + index + 1}
                           </span>
                         </div>
                       </td>
@@ -905,12 +1370,14 @@ export default function ProblematicAccounts() {
                             <Badge
                               variant="destructive"
                               className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0 dark:bg-red-500 dark:text-white">
-                              {account.activeCount} {t("problematicAccounts.active")}
+                              {account.activeCount}{" "}
+                              {t("problematicAccounts.active")}
                             </Badge>
                             <Badge
                               variant="secondary"
                               className="text-[9px] sm:text-[10px] px-1 sm:px-1.5 py-0">
-                              {account.blockedCount} {t("problematicAccounts.blocked")}
+                              {account.blockedCount}{" "}
+                              {t("problematicAccounts.blocked")}
                             </Badge>
                           </div>
                         </div>
@@ -938,18 +1405,29 @@ export default function ProblematicAccounts() {
                             {successRate}% {t("problematicAccounts.success")}
                           </Badge>
                           <div className="flex items-center gap-1 text-[9px] sm:text-[10px] text-muted-foreground flex-wrap justify-end">
-                            <span>{account.blockedCount} {t("problematicAccounts.blocked")}</span>
+                            <span>
+                              {account.blockedCount}{" "}
+                              {t("problematicAccounts.blocked")}
+                            </span>
                             <span>•</span>
-                            <span>{account.removedCount} {t("problematicAccounts.removed")}</span>
+                            <span>
+                              {account.removedCount}{" "}
+                              {t("problematicAccounts.removed")}
+                            </span>
                             <span>•</span>
-                            <span>{account.underReviewCount} {t("problematicAccounts.review")}</span>
+                            <span>
+                              {account.underReviewCount}{" "}
+                              {t("problematicAccounts.review")}
+                            </span>
                           </div>
                         </div>
                       </td>
                       <td className="p-3 sm:p-4 text-right">
                         <div className="flex flex-col items-end gap-0.5 sm:gap-1 text-[9px] sm:text-[10px]">
                           <div className="flex items-center gap-1">
-                            <span className="text-muted-foreground">{t("problematicAccounts.live")}</span>
+                            <span className="text-muted-foreground">
+                              {t("problematicAccounts.live")}
+                            </span>
                             <span className="font-medium">
                               {account.liveCount}
                             </span>
@@ -977,6 +1455,143 @@ export default function ProblematicAccounts() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {/* Desktop Pagination */}
+        {!loading && sortedAccounts.length > 0 && totalPages > 1 && (
+          <div className="border-t border-border p-4">
+            <Pagination>
+              <PaginationContent
+                className={`flex-wrap justify-center gap-1 ${
+                  isRTL ? "flex-row-reverse" : ""
+                }`}>
+                {isRTL ? (
+                  <>
+                    {/* RTL: Next on left, Previous on right */}
+                    <PaginationItem>
+                      <Button
+                        variant="ghost"
+                        size="default"
+                        onClick={() => {
+                          if (currentPage < totalPages) {
+                            setCurrentPage(currentPage + 1);
+                          }
+                        }}
+                        disabled={currentPage === totalPages}
+                        className="gap-1 pr-2.5 h-9 text-xs">
+                        <span>{t("dashboard.pagination.next")}</span>
+                        <ChevronRight className="h-4 w-4 scale-x-[-1]" />
+                      </Button>
+                    </PaginationItem>
+
+                    {displayPages.map((item, index) => {
+                      if (item === "...") {
+                        return (
+                          <PaginationItem key={`ellipsis-${index}`}>
+                            <span className="px-2 text-muted-foreground">
+                              ...
+                            </span>
+                          </PaginationItem>
+                        );
+                      }
+                      const page = item as number;
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(page);
+                            }}
+                            isActive={currentPage === page}
+                            className="cursor-pointer min-w-[32px] h-8 text-xs">
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+
+                    <PaginationItem>
+                      <Button
+                        variant="ghost"
+                        size="default"
+                        onClick={() => {
+                          if (currentPage > 1) {
+                            setCurrentPage(currentPage - 1);
+                          }
+                        }}
+                        disabled={currentPage === 1}
+                        className="gap-1 pl-2.5 h-9 text-xs">
+                        <ChevronLeft className="h-4 w-4 scale-x-[-1]" />
+                        <span>{t("dashboard.pagination.previous")}</span>
+                      </Button>
+                    </PaginationItem>
+                  </>
+                ) : (
+                  <>
+                    {/* LTR: Previous on left, Next on right */}
+                    <PaginationItem>
+                      <Button
+                        variant="ghost"
+                        size="default"
+                        onClick={() => {
+                          if (currentPage > 1) {
+                            setCurrentPage(currentPage - 1);
+                          }
+                        }}
+                        disabled={currentPage === 1}
+                        className="gap-1 pl-2.5 h-9 text-xs">
+                        <ChevronLeft className="h-4 w-4" />
+                        <span>{t("dashboard.pagination.previous")}</span>
+                      </Button>
+                    </PaginationItem>
+
+                    {displayPages.map((item, index) => {
+                      if (item === "...") {
+                        return (
+                          <PaginationItem key={`ellipsis-${index}`}>
+                            <span className="px-2 text-muted-foreground">
+                              ...
+                            </span>
+                          </PaginationItem>
+                        );
+                      }
+                      const page = item as number;
+                      return (
+                        <PaginationItem key={page}>
+                          <PaginationLink
+                            href="#"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setCurrentPage(page);
+                            }}
+                            isActive={currentPage === page}
+                            className="cursor-pointer min-w-[32px] h-8 text-xs">
+                            {page}
+                          </PaginationLink>
+                        </PaginationItem>
+                      );
+                    })}
+
+                    <PaginationItem>
+                      <Button
+                        variant="ghost"
+                        size="default"
+                        onClick={() => {
+                          if (currentPage < totalPages) {
+                            setCurrentPage(currentPage + 1);
+                          }
+                        }}
+                        disabled={currentPage === totalPages}
+                        className="gap-1 pr-2.5 h-9 text-xs">
+                        <span>{t("dashboard.pagination.next")}</span>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </PaginationItem>
+                  </>
+                )}
+              </PaginationContent>
+            </Pagination>
           </div>
         )}
       </Card>

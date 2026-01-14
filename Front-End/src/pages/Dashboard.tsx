@@ -1447,7 +1447,9 @@ export default function Dashboard() {
                                 key={week}
                                 value={week.toString()}
                                 className="text-xs sm:text-sm">
-                                {t("dashboard.week", { number: week.toString() })}
+                                {t("dashboard.week", {
+                                  number: week.toString(),
+                                })}
                               </SelectItem>
                             )
                           )}
@@ -1469,7 +1471,9 @@ export default function Dashboard() {
                                 key={week}
                                 value={week.toString()}
                                 className="text-xs sm:text-sm">
-                                {t("dashboard.week", { number: week.toString() })}
+                                {t("dashboard.week", {
+                                  number: week.toString(),
+                                })}
                               </SelectItem>
                             )
                           )}
@@ -1890,8 +1894,10 @@ export default function Dashboard() {
                   placeholder={t("dashboard.searchViolations")}
                   value={troubleListSearch}
                   onChange={(e) => setTroubleListSearch(e.target.value)}
-                  className={`h-8 sm:h-9 text-xs sm:text-sm pl-8 sm:pl-9 pr-2.5 sm:pr-3 ${
-                    isRTL ? "text-right" : "text-left"
+                  className={`h-8 sm:h-9 text-xs sm:text-sm text-left placeholder:text-left ${
+                    isRTL
+                      ? "pr-8 sm:pr-9 pl-2.5 sm:pl-3"
+                      : "pl-8 sm:pl-9 pr-2.5 sm:pr-3"
                   }`}
                 />
               </div>

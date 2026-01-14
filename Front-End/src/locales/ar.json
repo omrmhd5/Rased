@@ -259,6 +259,13 @@
     "others": "أخرى:",
     "successRate": "معدل النجاح",
     "statusBreakdown": "تفصيل الحالة",
+    "searchAccounts": "البحث باسم الحساب...",
+    "exportToExcel": "تصدير إلى Excel",
+    "exporting": "جاري التصدير...",
+    "exportSuccess": "تم التصدير بنجاح",
+    "exportSuccessDescription": "تم تصدير بيانات الحسابات الإشكالية بنجاح.",
+    "exportError": "فشل التصدير",
+    "exportErrorDescription": "فشل تصدير البيانات. يرجى المحاولة مرة أخرى.",
     "stages": {
       "16thFinals": "دور الـ16",
       "8thFinals": "دور الثمانية",
@@ -470,6 +477,7 @@
     "accessDenied": "تم رفض الوصول",
     "onlySuperAdmin": "يمكن للمسؤول الرئيسي فقط الوصول إلى هذه الصفحة.",
     "success": {
+      "title": "نجاح",
       "userAdded": "تم إضافة المستخدم \"{username}\" بنجاح.",
       "userUpdated": "تم تحديث المستخدم \"{username}\" بنجاح.",
       "userDeleted": "تم حذف المستخدم \"{username}\"."
@@ -567,6 +575,7 @@
       "slugLabel": "المعرف:",
       "codeLabel": "الكود:",
       "success": {
+        "title": "نجاح",
         "leagueCreated": "تم إنشاء الدوري بنجاح.",
         "leagueUpdated": "تم تحديث الدوري بنجاح.",
         "leagueShown": "تم إظهار الدوري بنجاح.",
