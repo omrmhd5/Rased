@@ -9,9 +9,14 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  UserCircle,
 } from "lucide-react";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -37,6 +42,10 @@ interface Violation {
   timeAdded: string;
   matchName?: string;
   accountChannel?: string;
+  createdBy?: {
+    username?: string;
+    _id?: string;
+  };
   matchId?:
     | {
         _id?: string;
@@ -55,7 +64,10 @@ interface WhitelistedAccountsMobileProps {
   onToggleExpanded: (accountId: string) => void;
   onEdit: (account: WhitelistedAccount) => void;
   onDelete: (account: WhitelistedAccount) => void;
-  getAccountNameForPlatform: (account: WhitelistedAccount, platformId: string) => string;
+  getAccountNameForPlatform: (
+    account: WhitelistedAccount,
+    platformId: string
+  ) => string;
 }
 
 // Get platform name by ID
@@ -111,6 +123,15 @@ export function WhitelistedAccountsMobile({
     return status;
   };
 
+  // Convert content type to translated display text
+  const getContentTypeBadge = (contentType: string): string => {
+    const contentTypeLower = contentType.toLowerCase();
+    if (contentTypeLower === "live") return t("dashboard.live");
+    if (contentTypeLower === "highlights") return t("dashboard.highlights");
+    if (contentTypeLower === "others") return t("dashboard.others");
+    return contentType;
+  };
+
   return (
     <div className="space-y-3">
       {accounts.map((account) => {
@@ -151,7 +172,9 @@ export function WhitelistedAccountsMobile({
 
             {/* Platforms */}
             <div className="mb-3">
-              <p className="text-[10px] text-muted-foreground mb-1.5">{t("whitelistedAccounts.platforms")}</p>
+              <p className="text-[10px] text-muted-foreground mb-1.5">
+                {t("whitelistedAccounts.platforms")}
+              </p>
               <div className="flex flex-wrap gap-1.5">
                 {account.platforms.map((platformId) => {
                   const platform = platformOperations.find(
@@ -163,8 +186,7 @@ export function WhitelistedAccountsMobile({
                     platformId
                   );
                   const hasCustomName =
-                    account.platformNames &&
-                    account.platformNames[platformId];
+                    account.platformNames && account.platformNames[platformId];
                   return (
                     <Badge
                       key={platformId}
@@ -192,7 +214,9 @@ export function WhitelistedAccountsMobile({
 
             {/* Violations */}
             <div className="mb-3">
-              <p className="text-[10px] text-muted-foreground mb-1.5">{t("whitelistedAccounts.violations")}</p>
+              <p className="text-[10px] text-muted-foreground mb-1.5">
+                {t("whitelistedAccounts.violations")}
+              </p>
               <div className="flex items-center gap-2">
                 {isLoading ? (
                   <>
@@ -211,7 +235,10 @@ export function WhitelistedAccountsMobile({
                         size="sm"
                         className="h-auto p-1.5 text-xs font-normal text-amber-600 hover:text-amber-700 touch-manipulation">
                         <AlertTriangle className="h-3.5 w-3.5 mr-1" />
-                        {violationCount} {violationCount !== 1 ? t("whitelistedAccounts.violations") : t("whitelistedAccounts.violation")}
+                        {violationCount}{" "}
+                        {violationCount !== 1
+                          ? t("whitelistedAccounts.violations")
+                          : t("whitelistedAccounts.violation")}
                         {isExpanded ? (
                           <ChevronUp className="h-3 w-3 ml-1" />
                         ) : (
@@ -241,10 +268,7 @@ export function WhitelistedAccountsMobile({
                                 if (matchId) {
                                   navigate(`/match/${matchId}`);
                                 } else {
-                                  window.open(
-                                    violation.violationUrl,
-                                    "_blank"
-                                  );
+                                  window.open(violation.violationUrl, "_blank");
                                 }
                               }}>
                               <div className="flex items-center gap-1.5 flex-wrap">
@@ -262,20 +286,28 @@ export function WhitelistedAccountsMobile({
                                   variant="outline"
                                   className={cn(
                                     "text-[9px] px-1.5 py-0",
-                                    (getStatusBadgeKey(violation.status) === "Active" ||
-                                      getStatusBadgeKey(violation.status) === "Reported") &&
+                                    (getStatusBadgeKey(violation.status) ===
+                                      "Active" ||
+                                      getStatusBadgeKey(violation.status) ===
+                                        "Reported") &&
                                       "bg-red-100 text-red-700 hover:bg-red-200 border-red-300 dark:bg-red-900/30 dark:text-red-400",
-                                    getStatusBadgeKey(violation.status) === "Blocked" &&
+                                    getStatusBadgeKey(violation.status) ===
+                                      "Blocked" &&
                                       "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
-                                    getStatusBadgeKey(violation.status) === "Removed" &&
+                                    getStatusBadgeKey(violation.status) ===
+                                      "Removed" &&
                                       "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
-                                    (getStatusBadgeKey(violation.status) === "Review" ||
-                                      getStatusBadgeKey(violation.status) === "Under Review") &&
+                                    (getStatusBadgeKey(violation.status) ===
+                                      "Review" ||
+                                      getStatusBadgeKey(violation.status) ===
+                                        "Under Review") &&
                                       "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
                                   )}>
                                   {getStatusBadge(violation.status)}
                                 </Badge>
-                                <Badge variant="outline" className="text-[9px] px-1.5 py-0">
+                                <Badge
+                                  variant="outline"
+                                  className="text-[9px] px-1.5 py-0">
                                   {violation.contentType}
                                 </Badge>
                               </div>
@@ -285,7 +317,8 @@ export function WhitelistedAccountsMobile({
                                 </p>
                               )}
                               <p className="text-[9px] text-muted-foreground">
-                                {t("whitelistedAccounts.added")} {new Date(violation.timeAdded).toLocaleString()}
+                                {t("whitelistedAccounts.added")}{" "}
+                                {new Date(violation.timeAdded).toLocaleString()}
                               </p>
                             </div>
                           );
@@ -304,7 +337,9 @@ export function WhitelistedAccountsMobile({
             {/* Notes */}
             {account.notes && (
               <div className="mb-3">
-                <p className="text-[10px] text-muted-foreground mb-1">{t("whitelistedAccounts.notes")}</p>
+                <p className="text-[10px] text-muted-foreground mb-1">
+                  {t("whitelistedAccounts.notes")}
+                </p>
                 <p className="text-xs text-muted-foreground line-clamp-2">
                   {account.notes}
                 </p>
@@ -326,4 +361,3 @@ export function WhitelistedAccountsMobile({
     </div>
   );
 }
-

@@ -43,6 +43,10 @@ import {
   CheckCircle2,
   AlertTriangle,
   ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
@@ -51,6 +55,12 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+} from "@/components/ui/pagination";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { WhitelistedAccountsMobile } from "./WhitelistedAccountsMobile";
@@ -85,12 +95,16 @@ interface Violation {
       }
     | string;
   externalMatchId?: string;
+  auditLog?: {
+    action: string;
+    userName: string;
+  }[];
 }
 
 export default function WhitelistedAccounts() {
   const navigate = useNavigate();
   const { user, leagues, loadingLeagues } = useAuth();
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const isSuperAdmin = user?.role === "superAdmin";
 
   // Get available leagues based on user role
@@ -208,6 +222,16 @@ export default function WhitelistedAccounts() {
     useState<WhitelistedAccount | null>(null);
   const [deletingAccount, setDeletingAccount] =
     useState<WhitelistedAccount | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
+  // State for Violations Modal
+  const [violationsAccount, setViolationsAccount] =
+    useState<WhitelistedAccount | null>(null);
+  const [isViolationsDialogOpen, setIsViolationsDialogOpen] = useState(false);
+  const [dialogCurrentPage, setDialogCurrentPage] = useState(1);
+  const dialogItemsPerPage = 10;
 
   // Get platform operations for checkboxes
   const platformOperations = getInitialPlatformOperations();
@@ -215,6 +239,7 @@ export default function WhitelistedAccounts() {
   // Fetch whitelisted accounts
   useEffect(() => {
     fetchAccounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch violations for accounts when they change (only fetch once per account)
@@ -243,6 +268,42 @@ export default function WhitelistedAccounts() {
     }
     return account.accountChannel;
   };
+
+  // Filter accounts by search query
+  const filteredAccounts = accounts.filter((account) => {
+    if (!searchQuery.trim()) return true;
+    const searchLower = searchQuery.toLowerCase();
+    return account.accountChannel.toLowerCase().includes(searchLower);
+  });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredAccounts.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedAccounts = filteredAccounts.slice(startIndex, endIndex);
+
+  // Create array of pages to display for pagination
+  const pagesToShow: (number | string)[] = [];
+  if (totalPages > 1) {
+    for (let page = 1; page <= totalPages; page++) {
+      if (
+        page === 1 ||
+        page === totalPages ||
+        (page >= currentPage - 1 && page <= currentPage + 1)
+      ) {
+        pagesToShow.push(page);
+      } else if (page === currentPage - 2 || page === currentPage + 2) {
+        pagesToShow.push("...");
+      }
+    }
+  }
+  // Reverse for RTL
+  const displayPages = isRTL ? [...pagesToShow].reverse() : pagesToShow;
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
 
   const fetchAccounts = async () => {
     setLoading(true);
@@ -451,13 +512,17 @@ export default function WhitelistedAccounts() {
       setIsAddDialogOpen(false);
       toast({
         title: t("whitelistedAccounts.success.title"),
-        description: t("whitelistedAccounts.success.accountWhitelisted", { account: accountChannel.trim() }),
+        description: t("whitelistedAccounts.success.accountWhitelisted", {
+          account: accountChannel.trim(),
+        }),
       });
       // Violations will be fetched automatically via useEffect
     } catch (error) {
       console.error("Error adding whitelisted account:", error);
       setFormError(
-        error instanceof Error ? error.message : t("whitelistedAccounts.error.failedToAddAccount")
+        error instanceof Error
+          ? error.message
+          : t("whitelistedAccounts.error.failedToAddAccount")
       );
       toast({
         title: t("whitelistedAccounts.error.failedToAdd"),
@@ -520,13 +585,17 @@ export default function WhitelistedAccounts() {
       setEditingAccount(null);
       toast({
         title: t("whitelistedAccounts.success.title"),
-        description: t("whitelistedAccounts.success.accountUpdated", { account: accountChannel.trim() }),
+        description: t("whitelistedAccounts.success.accountUpdated", {
+          account: accountChannel.trim(),
+        }),
       });
       // Violations will be fetched automatically via useEffect
     } catch (error) {
       console.error("Error updating whitelisted account:", error);
       setFormError(
-        error instanceof Error ? error.message : t("whitelistedAccounts.error.failedToUpdateAccount")
+        error instanceof Error
+          ? error.message
+          : t("whitelistedAccounts.error.failedToUpdateAccount")
       );
       toast({
         title: t("whitelistedAccounts.error.failedToUpdate"),
@@ -567,7 +636,9 @@ export default function WhitelistedAccounts() {
       setDeletingAccount(null);
       toast({
         title: t("whitelistedAccounts.success.title"),
-        description: t("whitelistedAccounts.success.accountRemoved", { account: deletingAccount.accountChannel }),
+        description: t("whitelistedAccounts.success.accountRemoved", {
+          account: deletingAccount.accountChannel,
+        }),
       });
     } catch (error) {
       console.error("Error deleting whitelisted account:", error);
@@ -599,6 +670,17 @@ export default function WhitelistedAccounts() {
   const openDeleteDialog = (account: WhitelistedAccount) => {
     setDeletingAccount(account);
     setIsDeleteDialogOpen(true);
+  };
+
+  // Handle viewing violations in modal
+  const handleViewViolations = (account: WhitelistedAccount) => {
+    setViolationsAccount(account);
+    setDialogCurrentPage(1);
+    setIsViolationsDialogOpen(true);
+    // Fetch violations if not already loaded
+    if (!accountViolations[account._id]) {
+      fetchViolationsForAccount(account);
+    }
   };
 
   // Get platform name by ID
@@ -637,6 +719,15 @@ export default function WhitelistedAccounts() {
     return status;
   };
 
+  // Convert content type to translated display text
+  const getContentTypeBadge = (contentType: string): string => {
+    const contentTypeLower = contentType.toLowerCase();
+    if (contentTypeLower === "live") return t("dashboard.live");
+    if (contentTypeLower === "highlights") return t("dashboard.highlights");
+    if (contentTypeLower === "others") return t("dashboard.others");
+    return contentType;
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header */}
@@ -667,8 +758,12 @@ export default function WhitelistedAccounts() {
                     onClick={() => resetForm()}
                     className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm touch-manipulation">
                     <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
-                    <span className="hidden xs:inline">{t("whitelistedAccounts.addAccount")}</span>
-                    <span className="xs:hidden">{t("whitelistedAccounts.add")}</span>
+                    <span className="hidden xs:inline">
+                      {t("whitelistedAccounts.addAccount")}
+                    </span>
+                    <span className="xs:hidden">
+                      {t("whitelistedAccounts.add")}
+                    </span>
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="w-[95vw] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -696,7 +791,9 @@ export default function WhitelistedAccounts() {
                         id="account-channel"
                         value={accountChannel}
                         onChange={(e) => setAccountChannel(e.target.value)}
-                        placeholder={t("whitelistedAccounts.accountChannelPlaceholder")}
+                        placeholder={t(
+                          "whitelistedAccounts.accountChannelPlaceholder"
+                        )}
                         className="h-9 sm:h-10 text-sm"
                       />
                     </div>
@@ -736,7 +833,10 @@ export default function WhitelistedAccounts() {
                                   <Label
                                     htmlFor={`platform-name-${platform.id}`}
                                     className="text-[10px] sm:text-xs text-muted-foreground">
-                                    {t("whitelistedAccounts.accountNameForPlatform", { platform: platform.name })}
+                                    {t(
+                                      "whitelistedAccounts.accountNameForPlatform",
+                                      { platform: platform.name }
+                                    )}
                                   </Label>
                                   <Input
                                     id={`platform-name-${platform.id}`}
@@ -748,7 +848,8 @@ export default function WhitelistedAccounts() {
                                       )
                                     }
                                     placeholder={
-                                      accountChannel || t("whitelistedAccounts.sameAsMainName")
+                                      accountChannel ||
+                                      t("whitelistedAccounts.sameAsMainName")
                                     }
                                     className="h-8 sm:h-9 text-xs sm:text-sm"
                                   />
@@ -830,10 +931,28 @@ export default function WhitelistedAccounts() {
             </div>
           ) : (
             <>
+              {/* Search Bar */}
+              <div className="relative mb-4">
+                <Search
+                  className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground ${
+                    isRTL ? "right-3" : "left-3"
+                  }`}
+                />
+                <Input
+                  type="text"
+                  placeholder={t("whitelistedAccounts.searchAccounts")}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={`h-10 text-sm text-left placeholder:text-left ${
+                    isRTL ? "pr-10 pl-3" : "pl-10 pr-3"
+                  }`}
+                />
+              </div>
+
               {/* Mobile Version */}
               <div className="md:hidden">
                 <WhitelistedAccountsMobile
-                  accounts={accounts}
+                  accounts={paginatedAccounts}
                   accountViolations={accountViolations}
                   loadingViolations={loadingViolations}
                   expandedAccounts={expandedAccounts}
@@ -843,6 +962,141 @@ export default function WhitelistedAccounts() {
                   onDelete={openDeleteDialog}
                   getAccountNameForPlatform={getAccountNameForPlatform}
                 />
+                {/* Mobile Pagination */}
+                {filteredAccounts.length > 0 && totalPages > 1 && (
+                  <div className="mt-4">
+                    <Pagination>
+                      <PaginationContent
+                        className={`flex-wrap justify-center gap-1 ${
+                          isRTL ? "flex-row-reverse" : ""
+                        }`}>
+                        {isRTL ? (
+                          <>
+                            <PaginationItem>
+                              <Button
+                                variant="ghost"
+                                size="default"
+                                onClick={() => {
+                                  if (currentPage < totalPages) {
+                                    setCurrentPage(currentPage + 1);
+                                  }
+                                }}
+                                disabled={currentPage === totalPages}
+                                className="gap-1 pr-2.5 h-9 text-xs">
+                                <span>{t("dashboard.pagination.next")}</span>
+                                <ChevronRight className="h-4 w-4 scale-x-[-1]" />
+                              </Button>
+                            </PaginationItem>
+                            {displayPages.map((item, index) => {
+                              if (item === "...") {
+                                return (
+                                  <PaginationItem key={`ellipsis-${index}`}>
+                                    <span className="px-2 text-muted-foreground">
+                                      ...
+                                    </span>
+                                  </PaginationItem>
+                                );
+                              }
+                              const page = item as number;
+                              return (
+                                <PaginationItem key={page}>
+                                  <PaginationLink
+                                    href="#"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setCurrentPage(page);
+                                    }}
+                                    isActive={currentPage === page}
+                                    className="cursor-pointer min-w-[32px] h-8 text-xs">
+                                    {page}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              );
+                            })}
+                            <PaginationItem>
+                              <Button
+                                variant="ghost"
+                                size="default"
+                                onClick={() => {
+                                  if (currentPage > 1) {
+                                    setCurrentPage(currentPage - 1);
+                                  }
+                                }}
+                                disabled={currentPage === 1}
+                                className="gap-1 pl-2.5 h-9 text-xs">
+                                <ChevronLeft className="h-4 w-4 scale-x-[-1]" />
+                                <span>
+                                  {t("dashboard.pagination.previous")}
+                                </span>
+                              </Button>
+                            </PaginationItem>
+                          </>
+                        ) : (
+                          <>
+                            <PaginationItem>
+                              <Button
+                                variant="ghost"
+                                size="default"
+                                onClick={() => {
+                                  if (currentPage > 1) {
+                                    setCurrentPage(currentPage - 1);
+                                  }
+                                }}
+                                disabled={currentPage === 1}
+                                className="gap-1 pl-2.5 h-9 text-xs">
+                                <ChevronLeft className="h-4 w-4" />
+                                <span>
+                                  {t("dashboard.pagination.previous")}
+                                </span>
+                              </Button>
+                            </PaginationItem>
+                            {displayPages.map((item, index) => {
+                              if (item === "...") {
+                                return (
+                                  <PaginationItem key={`ellipsis-${index}`}>
+                                    <span className="px-2 text-muted-foreground">
+                                      ...
+                                    </span>
+                                  </PaginationItem>
+                                );
+                              }
+                              const page = item as number;
+                              return (
+                                <PaginationItem key={page}>
+                                  <PaginationLink
+                                    href="#"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      setCurrentPage(page);
+                                    }}
+                                    isActive={currentPage === page}
+                                    className="cursor-pointer min-w-[32px] h-8 text-xs">
+                                    {page}
+                                  </PaginationLink>
+                                </PaginationItem>
+                              );
+                            })}
+                            <PaginationItem>
+                              <Button
+                                variant="ghost"
+                                size="default"
+                                onClick={() => {
+                                  if (currentPage < totalPages) {
+                                    setCurrentPage(currentPage + 1);
+                                  }
+                                }}
+                                disabled={currentPage === totalPages}
+                                className="gap-1 pr-2.5 h-9 text-xs">
+                                <span>{t("dashboard.pagination.next")}</span>
+                                <ChevronRight className="h-4 w-4" />
+                              </Button>
+                            </PaginationItem>
+                          </>
+                        )}
+                      </PaginationContent>
+                    </Pagination>
+                  </div>
+                )}
               </div>
 
               {/* Desktop Version */}
@@ -850,283 +1104,632 @@ export default function WhitelistedAccounts() {
                 <Table className="min-w-[800px]">
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t("whitelistedAccounts.accountChannel")}</TableHead>
-                      <TableHead>{t("whitelistedAccounts.platforms")}</TableHead>
-                      <TableHead>{t("whitelistedAccounts.violations")}</TableHead>
+                      <TableHead>
+                        {t("whitelistedAccounts.accountChannel")}
+                      </TableHead>
+                      <TableHead>
+                        {t("whitelistedAccounts.platforms")}
+                      </TableHead>
+                      <TableHead>
+                        {t("whitelistedAccounts.violations")}
+                      </TableHead>
                       <TableHead>{t("whitelistedAccounts.notes")}</TableHead>
                       <TableHead>{t("whitelistedAccounts.created")}</TableHead>
-                      <TableHead className="text-right">{t("whitelistedAccounts.actions")}</TableHead>
+                      <TableHead className="text-right">
+                        {t("whitelistedAccounts.actions")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {accounts.map((account) => {
+                    {paginatedAccounts.map((account) => {
                       const violations = accountViolations[account._id] || [];
                       const isLoading = loadingViolations[account._id] || false;
-                      const isExpanded = expandedAccounts.has(account._id);
                       const violationCount = violations.length;
 
                       return (
-                        <Collapsible
-                          key={account._id}
-                          asChild
-                          open={isExpanded}
-                          onOpenChange={() =>
-                            toggleAccountExpanded(account._id)
-                          }>
-                          <>
-                            <TableRow>
-                              <TableCell className="font-medium">
-                                <div className="flex items-center gap-2">
-                                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                                  {account.accountChannel}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-wrap gap-2">
-                                  {account.platforms.map((platformId) => {
-                                    const platform = platformOperations.find(
-                                      (p) => p.id === platformId
-                                    );
-                                    const PlatformIcon = platform?.icon;
-                                    const accountNameForPlatform =
-                                      getAccountNameForPlatform(
-                                        account,
-                                        platformId
-                                      );
-                                    const hasCustomName =
-                                      account.platformNames &&
-                                      account.platformNames[platformId];
-                                    return (
-                                      <Badge
-                                        key={platformId}
-                                        variant="secondary"
-                                        className="flex items-center gap-1"
-                                        title={
-                                          hasCustomName
-                                            ? `${t("whitelistedAccounts.accountName")} ${accountNameForPlatform}`
-                                            : undefined
-                                        }>
-                                        {PlatformIcon && (
-                                          <PlatformIcon
-                                            className="h-3 w-3"
-                                            style={{ color: platform.color }}
-                                          />
-                                        )}
-                                        <span>
-                                          {getPlatformName(platformId)}
-                                        </span>
-                                        {hasCustomName && (
-                                          <span className="text-xs opacity-70 ml-1">
-                                            ({accountNameForPlatform})
-                                          </span>
-                                        )}
-                                      </Badge>
-                                    );
-                                  })}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex items-center gap-2">
-                                  {isLoading ? (
-                                    <>
-                                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                                      <span className="text-sm text-muted-foreground">
-                                        {t("whitelistedAccounts.loading")}
+                        <TableRow key={account._id}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle2 className="h-4 w-4 text-green-600" />
+                              {account.accountChannel}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-2">
+                              {account.platforms.map((platformId) => {
+                                const platform = platformOperations.find(
+                                  (p) => p.id === platformId
+                                );
+                                const PlatformIcon = platform?.icon;
+                                const accountNameForPlatform =
+                                  getAccountNameForPlatform(
+                                    account,
+                                    platformId
+                                  );
+                                const hasCustomName =
+                                  account.platformNames &&
+                                  account.platformNames[platformId];
+                                return (
+                                  <Badge
+                                    key={platformId}
+                                    variant="secondary"
+                                    className="flex items-center gap-1"
+                                    title={
+                                      hasCustomName
+                                        ? `${t(
+                                            "whitelistedAccounts.accountName"
+                                          )} ${accountNameForPlatform}`
+                                        : undefined
+                                    }>
+                                    {PlatformIcon && (
+                                      <PlatformIcon
+                                        className="h-3 w-3"
+                                        style={{ color: platform.color }}
+                                      />
+                                    )}
+                                    <span>{getPlatformName(platformId)}</span>
+                                    {hasCustomName && (
+                                      <span className="text-xs opacity-70 ml-1">
+                                        ({accountNameForPlatform})
                                       </span>
-                                    </>
-                                  ) : violationCount > 0 ? (
-                                    <>
-                                      <AlertTriangle className="h-4 w-4 text-amber-500" />
-                                      <CollapsibleTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-auto p-0 text-sm font-normal text-amber-600 hover:text-amber-700">
-                                          {violationCount} {violationCount !== 1 ? t("whitelistedAccounts.violations") : t("whitelistedAccounts.violation")}
-                                        </Button>
-                                      </CollapsibleTrigger>
-                                    </>
-                                  ) : (
-                                    <span className="text-sm text-muted-foreground">
-                                      {t("whitelistedAccounts.noViolations")}
-                                    </span>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="max-w-xs">
-                                  {account.notes ? (
-                                    <p className="text-sm text-muted-foreground line-clamp-2">
-                                      {account.notes}
-                                    </p>
-                                  ) : (
-                                    <span className="text-sm text-muted-foreground italic">
-                                      {t("whitelistedAccounts.noNotes")}
-                                    </span>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                {account.createdAt
-                                  ? new Date(
-                                      account.createdAt
-                                    ).toLocaleDateString()
-                                  : t("whitelistedAccounts.nA")}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {isSuperAdmin && (
-                                  <div className="flex justify-end gap-2">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => openEditDialog(account)}
-                                      className="h-8 w-8">
-                                      <Edit2 className="h-4 w-4" />
-                                    </Button>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      onClick={() => openDeleteDialog(account)}
-                                      className="h-8 w-8 text-destructive hover:text-destructive dark:text-red-400 dark:hover:text-red-300">
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                )}
-                                {!isSuperAdmin && (
+                                    )}
+                                  </Badge>
+                                );
+                              })}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {isLoading ? (
+                                <>
+                                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                                   <span className="text-sm text-muted-foreground">
-                                    {t("whitelistedAccounts.viewOnly")}
+                                    {t("whitelistedAccounts.loading")}
                                   </span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                            {violationCount > 0 && (
-                              <CollapsibleContent asChild>
-                                <TableRow>
-                                  <TableCell
-                                    colSpan={6}
-                                    className="bg-muted/50 p-0">
-                                    <div className="p-4 space-y-2">
-                                      <h4 className="text-sm font-semibold mb-3">
-                                        {t("whitelistedAccounts.associatedViolations", { count: violationCount })}
-                                      </h4>
-                                      <div className="space-y-2 max-h-64 overflow-y-auto">
-                                        {violations.map((violation) => {
-                                          // Get match ID - matchId is populated with externalMatchId
-                                          const matchId =
-                                            (typeof violation.matchId ===
-                                              "object" &&
-                                              violation.matchId
-                                                ?.externalMatchId) ||
-                                            violation.externalMatchId ||
-                                            (typeof violation.matchId ===
-                                            "string"
-                                              ? violation.matchId
-                                              : null);
-
-                                          return (
-                                            <div
-                                              key={violation._id}
-                                              className={cn(
-                                                "flex items-start justify-between p-3 border rounded-lg bg-background cursor-pointer transition-colors",
-                                                "hover:bg-accent/50 hover:border-primary/50"
-                                              )}
-                                              onClick={() => {
-                                                if (matchId) {
-                                                  navigate(`/match/${matchId}`);
-                                                } else {
-                                                  // Fallback to opening violation URL if match ID not available
-                                                  window.open(
-                                                    violation.violationUrl,
-                                                    "_blank"
-                                                  );
-                                                }
-                                              }}
-                                              title={t("whitelistedAccounts.clickToViewMatch")}>
-                                              <div className="flex-1 space-y-1">
-                                                <div className="flex items-center gap-2">
-                                                  <Badge
-                                                    variant="outline"
-                                                    className="text-xs flex items-center gap-1">
-                                                    {getPlatformIcon(
-                                                      violation.platformId
-                                                    ) && (
-                                                      <span>
-                                                        {getPlatformIcon(
-                                                          violation.platformId
-                                                        )}
-                                                      </span>
-                                                    )}
-                                                    {violation.platformName}
-                                                  </Badge>
-                                                  <Badge
-                                                    variant="outline"
-                                                    className={cn(
-                                                      "text-xs",
-                                                      (getStatusBadgeKey(
-                                                        violation.status
-                                                      ) === "Active" ||
-                                                        getStatusBadgeKey(
-                                                          violation.status
-                                                        ) === "Reported") &&
-                                                        "bg-red-100 text-red-700 hover:bg-red-200 border-red-300 dark:bg-red-900/30 dark:text-red-400",
-                                                      getStatusBadgeKey(
-                                                        violation.status
-                                                      ) === "Blocked" &&
-                                                        "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
-                                                      getStatusBadgeKey(
-                                                        violation.status
-                                                      ) === "Removed" &&
-                                                        "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
-                                                      (getStatusBadgeKey(
-                                                        violation.status
-                                                      ) === "Review" ||
-                                                        getStatusBadgeKey(
-                                                          violation.status
-                                                        ) === "Under Review") &&
-                                                        "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
-                                                    )}>
-                                                    {getStatusBadge(
-                                                      violation.status
-                                                    )}
-                                                  </Badge>
-                                                  <Badge
-                                                    variant="outline"
-                                                    className="text-xs">
-                                                    {violation.contentType}
-                                                  </Badge>
-                                                </div>
-                                                {violation.matchName && (
-                                                  <p className="text-sm text-muted-foreground">
-                                                    {violation.matchName}
-                                                  </p>
-                                                )}
-                                                <p className="text-xs text-muted-foreground">
-                                                  {t("whitelistedAccounts.added")}{" "}
-                                                  {new Date(
-                                                    violation.timeAdded
-                                                  ).toLocaleString()}
-                                                </p>
-                                              </div>
-                                            </div>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              </CollapsibleContent>
+                                </>
+                              ) : violationCount > 0 ? (
+                                <>
+                                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleViewViolations(account)
+                                    }
+                                    className="h-auto p-0 text-sm font-normal text-amber-600 hover:text-amber-700">
+                                    {violationCount}{" "}
+                                    {violationCount !== 1
+                                      ? t("whitelistedAccounts.violations")
+                                      : t("whitelistedAccounts.violation")}
+                                  </Button>
+                                </>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">
+                                  {t("whitelistedAccounts.noViolations")}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="max-w-xs">
+                              {account.notes ? (
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                  {account.notes}
+                                </p>
+                              ) : (
+                                <span className="text-sm text-muted-foreground italic">
+                                  {t("whitelistedAccounts.noNotes")}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {account.createdAt
+                              ? new Date(account.createdAt).toLocaleDateString()
+                              : t("whitelistedAccounts.nA")}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {isSuperAdmin && (
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openEditDialog(account)}
+                                  className="h-8 w-8">
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openDeleteDialog(account)}
+                                  className="h-8 w-8 text-destructive hover:text-destructive dark:text-red-400 dark:hover:text-red-300">
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             )}
-                          </>
-                        </Collapsible>
+                            {!isSuperAdmin && (
+                              <span className="text-sm text-muted-foreground">
+                                {t("whitelistedAccounts.viewOnly")}
+                              </span>
+                            )}
+                          </TableCell>
+                        </TableRow>
                       );
                     })}
                   </TableBody>
                 </Table>
               </div>
+              {/* Desktop Pagination */}
+              {filteredAccounts.length > 0 && totalPages > 1 && (
+                <div className="mt-4">
+                  <Pagination>
+                    <PaginationContent
+                      className={`flex-wrap justify-center gap-1 ${
+                        isRTL ? "flex-row-reverse" : ""
+                      }`}>
+                      {isRTL ? (
+                        <>
+                          <PaginationItem>
+                            <Button
+                              variant="ghost"
+                              size="default"
+                              onClick={() => {
+                                if (currentPage < totalPages) {
+                                  setCurrentPage(currentPage + 1);
+                                }
+                              }}
+                              disabled={currentPage === totalPages}
+                              className="gap-1 pr-2.5 h-9 text-xs">
+                              <span>{t("dashboard.pagination.next")}</span>
+                              <ChevronRight className="h-4 w-4 scale-x-[-1]" />
+                            </Button>
+                          </PaginationItem>
+                          {displayPages.map((item, index) => {
+                            if (item === "...") {
+                              return (
+                                <PaginationItem key={`ellipsis-${index}`}>
+                                  <span className="px-2 text-muted-foreground">
+                                    ...
+                                  </span>
+                                </PaginationItem>
+                              );
+                            }
+                            const page = item as number;
+                            return (
+                              <PaginationItem key={page}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setCurrentPage(page);
+                                  }}
+                                  isActive={currentPage === page}
+                                  className="cursor-pointer min-w-[32px] h-8 text-xs">
+                                  {page}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          })}
+                          <PaginationItem>
+                            <Button
+                              variant="ghost"
+                              size="default"
+                              onClick={() => {
+                                if (currentPage > 1) {
+                                  setCurrentPage(currentPage - 1);
+                                }
+                              }}
+                              disabled={currentPage === 1}
+                              className="gap-1 pl-2.5 h-9 text-xs">
+                              <ChevronLeft className="h-4 w-4 scale-x-[-1]" />
+                              <span>{t("dashboard.pagination.previous")}</span>
+                            </Button>
+                          </PaginationItem>
+                        </>
+                      ) : (
+                        <>
+                          <PaginationItem>
+                            <Button
+                              variant="ghost"
+                              size="default"
+                              onClick={() => {
+                                if (currentPage > 1) {
+                                  setCurrentPage(currentPage - 1);
+                                }
+                              }}
+                              disabled={currentPage === 1}
+                              className="gap-1 pl-2.5 h-9 text-xs">
+                              <ChevronLeft className="h-4 w-4" />
+                              <span>{t("dashboard.pagination.previous")}</span>
+                            </Button>
+                          </PaginationItem>
+                          {displayPages.map((item, index) => {
+                            if (item === "...") {
+                              return (
+                                <PaginationItem key={`ellipsis-${index}`}>
+                                  <span className="px-2 text-muted-foreground">
+                                    ...
+                                  </span>
+                                </PaginationItem>
+                              );
+                            }
+                            const page = item as number;
+                            return (
+                              <PaginationItem key={page}>
+                                <PaginationLink
+                                  href="#"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setCurrentPage(page);
+                                  }}
+                                  isActive={currentPage === page}
+                                  className="cursor-pointer min-w-[32px] h-8 text-xs">
+                                  {page}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          })}
+                          <PaginationItem>
+                            <Button
+                              variant="ghost"
+                              size="default"
+                              onClick={() => {
+                                if (currentPage < totalPages) {
+                                  setCurrentPage(currentPage + 1);
+                                }
+                              }}
+                              disabled={currentPage === totalPages}
+                              className="gap-1 pr-2.5 h-9 text-xs">
+                              <span>{t("dashboard.pagination.next")}</span>
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </PaginationItem>
+                        </>
+                      )}
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              )}
             </>
           )}
         </CardContent>
       </Card>
+
+      {/* Violations Dialog */}
+      <Dialog
+        open={isViolationsDialogOpen}
+        onOpenChange={setIsViolationsDialogOpen}>
+        <DialogContent className="w-[95vw] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg sm:text-xl">
+              {t("whitelistedAccounts.associatedViolations", {
+                count: violationsAccount
+                  ? accountViolations[violationsAccount._id]?.length || 0
+                  : 0,
+              })}
+            </DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
+              {violationsAccount?.accountChannel}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {violationsAccount && accountViolations[violationsAccount._id] && (
+              <>
+                <div className="space-y-2">
+                  {(() => {
+                    const violations = accountViolations[violationsAccount._id];
+                    const paginatedViolations = violations.slice(
+                      (dialogCurrentPage - 1) * dialogItemsPerPage,
+                      dialogCurrentPage * dialogItemsPerPage
+                    );
+
+                    return paginatedViolations.map((violation) => {
+                      // Get match ID
+                      const matchId =
+                        (typeof violation.matchId === "object" &&
+                          violation.matchId?.externalMatchId) ||
+                        violation.externalMatchId ||
+                        (typeof violation.matchId === "string"
+                          ? violation.matchId
+                          : null);
+
+                      // Convert violation ID to string
+                      const violationIdStr = String(violation._id || "");
+
+                      // Get creator
+                      const creator = violation.auditLog?.find(
+                        (log) => log.action === "created"
+                      )?.userName;
+
+                      return (
+                        <div
+                          key={violation._id}
+                          className={cn(
+                            "flex items-start justify-between p-3 border rounded-lg bg-background cursor-pointer transition-colors",
+                            "hover:bg-accent/50 hover:border-primary/50"
+                          )}
+                          onClick={() => {
+                            if (matchId && violationIdStr) {
+                              navigate(
+                                `/match/${matchId}#violation-${violationIdStr}`
+                              );
+                              setIsViolationsDialogOpen(false);
+                            } else if (matchId) {
+                              navigate(`/match/${matchId}`);
+                              setIsViolationsDialogOpen(false);
+                            } else {
+                              window.open(violation.violationUrl, "_blank");
+                            }
+                          }}
+                          title={t("whitelistedAccounts.clickToViewMatch")}>
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge
+                                variant="outline"
+                                className="text-xs flex items-center gap-1">
+                                {getPlatformIcon(violation.platformId) && (
+                                  <span>
+                                    {getPlatformIcon(violation.platformId)}
+                                  </span>
+                                )}
+                                {violation.platformName}
+                              </Badge>
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "text-xs",
+                                  (getStatusBadgeKey(violation.status) ===
+                                    "Active" ||
+                                    getStatusBadgeKey(violation.status) ===
+                                      "Reported") &&
+                                    "bg-red-100 text-red-700 hover:bg-red-200 border-red-300 dark:bg-red-900/30 dark:text-red-400",
+                                  getStatusBadgeKey(violation.status) ===
+                                    "Blocked" &&
+                                    "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
+                                  getStatusBadgeKey(violation.status) ===
+                                    "Removed" &&
+                                    "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
+                                  (getStatusBadgeKey(violation.status) ===
+                                    "Review" ||
+                                    getStatusBadgeKey(violation.status) ===
+                                      "Under Review") &&
+                                    "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                )}>
+                                {getStatusBadge(violation.status)}
+                              </Badge>
+                              <Badge variant="outline" className="text-xs">
+                                {getContentTypeBadge(violation.contentType)}
+                              </Badge>
+                              {creator && (
+                                <div
+                                  className={cn(
+                                    "flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/50",
+                                    isRTL ? "text-left" : ""
+                                  )}>
+                                  <UserCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                                  <span className="text-xs text-muted-foreground font-medium">
+                                    {creator}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            {violation.matchName && (
+                              <p className="text-sm text-muted-foreground">
+                                {violation.matchName}
+                              </p>
+                            )}
+                            <p className="text-xs text-muted-foreground">
+                              {t("whitelistedAccounts.added")}{" "}
+                              {new Date(violation.timeAdded).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+
+                {/* Dialog Pagination */}
+                {(() => {
+                  const violations = accountViolations[violationsAccount._id];
+                  const totalDialogPages = Math.ceil(
+                    violations.length / dialogItemsPerPage
+                  );
+
+                  if (totalDialogPages <= 1) return null;
+
+                  const pages: (number | string)[] = [];
+                  for (let i = 1; i <= totalDialogPages; i++) {
+                    if (
+                      i === 1 ||
+                      i === totalDialogPages ||
+                      (i >= dialogCurrentPage - 1 && i <= dialogCurrentPage + 1)
+                    ) {
+                      pages.push(i);
+                    } else if (
+                      i === dialogCurrentPage - 2 ||
+                      i === dialogCurrentPage + 2
+                    ) {
+                      pages.push("...");
+                    }
+                  }
+
+                  const displayPages = isRTL ? [...pages].reverse() : pages;
+
+                  return (
+                    <div className="mt-4 pt-4 border-t">
+                      <Pagination>
+                        <PaginationContent
+                          className={`flex-wrap justify-center gap-1 ${
+                            isRTL ? "flex-row-reverse" : ""
+                          }`}>
+                          {isRTL ? (
+                            <>
+                              <PaginationItem>
+                                <Button
+                                  variant="ghost"
+                                  size="default"
+                                  onClick={() => {
+                                    if (dialogCurrentPage < totalDialogPages) {
+                                      setDialogCurrentPage(
+                                        dialogCurrentPage + 1
+                                      );
+                                    }
+                                  }}
+                                  disabled={
+                                    dialogCurrentPage === totalDialogPages
+                                  }
+                                  className="gap-1 pr-2.5 h-8 text-[11px]">
+                                  <span>{t("dashboard.pagination.next")}</span>
+                                  <ChevronRight className="h-3.5 w-3.5 scale-x-[-1]" />
+                                </Button>
+                              </PaginationItem>
+                              {displayPages.map((item, index) => {
+                                if (item === "...") {
+                                  return (
+                                    <PaginationItem key={`ellipsis-${index}`}>
+                                      <span className="px-2 text-muted-foreground text-[11px]">
+                                        ...
+                                      </span>
+                                    </PaginationItem>
+                                  );
+                                }
+                                const page = item as number;
+                                return (
+                                  <PaginationItem key={page}>
+                                    <PaginationLink
+                                      href="#"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        setDialogCurrentPage(page);
+                                      }}
+                                      isActive={dialogCurrentPage === page}
+                                      className="cursor-pointer min-w-[28px] h-7 text-[11px]">
+                                      {page}
+                                    </PaginationLink>
+                                  </PaginationItem>
+                                );
+                              })}
+                              <PaginationItem>
+                                <Button
+                                  variant="ghost"
+                                  size="default"
+                                  onClick={() => {
+                                    if (dialogCurrentPage > 1) {
+                                      setDialogCurrentPage(
+                                        dialogCurrentPage - 1
+                                      );
+                                    }
+                                  }}
+                                  disabled={dialogCurrentPage === 1}
+                                  className="gap-1 pl-2.5 h-8 text-[11px]">
+                                  <ChevronLeft className="h-3.5 w-3.5 scale-x-[-1]" />
+                                  <span>
+                                    {t("dashboard.pagination.previous")}
+                                  </span>
+                                </Button>
+                              </PaginationItem>
+                            </>
+                          ) : (
+                            <>
+                              <PaginationItem>
+                                <Button
+                                  variant="ghost"
+                                  size="default"
+                                  onClick={() => {
+                                    if (dialogCurrentPage > 1) {
+                                      setDialogCurrentPage(
+                                        dialogCurrentPage - 1
+                                      );
+                                    }
+                                  }}
+                                  disabled={dialogCurrentPage === 1}
+                                  className="gap-1 pl-2.5 h-8 text-[11px]">
+                                  <ChevronLeft className="h-3.5 w-3.5" />
+                                  <span>
+                                    {t("dashboard.pagination.previous")}
+                                  </span>
+                                </Button>
+                              </PaginationItem>
+                              {displayPages.map((item, index) => {
+                                if (item === "...") {
+                                  return (
+                                    <PaginationItem key={`ellipsis-${index}`}>
+                                      <span className="px-2 text-muted-foreground text-[11px]">
+                                        ...
+                                      </span>
+                                    </PaginationItem>
+                                  );
+                                }
+                                const page = item as number;
+                                return (
+                                  <PaginationItem key={page}>
+                                    <PaginationLink
+                                      href="#"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        setDialogCurrentPage(page);
+                                      }}
+                                      isActive={dialogCurrentPage === page}
+                                      className="cursor-pointer min-w-[28px] h-7 text-[11px]">
+                                      {page}
+                                    </PaginationLink>
+                                  </PaginationItem>
+                                );
+                              })}
+                              <PaginationItem>
+                                <Button
+                                  variant="ghost"
+                                  size="default"
+                                  onClick={() => {
+                                    if (dialogCurrentPage < totalDialogPages) {
+                                      setDialogCurrentPage(
+                                        dialogCurrentPage + 1
+                                      );
+                                    }
+                                  }}
+                                  disabled={
+                                    dialogCurrentPage === totalDialogPages
+                                  }
+                                  className="gap-1 pr-2.5 h-8 text-[11px]">
+                                  <span>{t("dashboard.pagination.next")}</span>
+                                  <ChevronRight className="h-3.5 w-3.5" />
+                                </Button>
+                              </PaginationItem>
+                            </>
+                          )}
+                        </PaginationContent>
+                      </Pagination>
+                    </div>
+                  );
+                })()}
+              </>
+            )}
+            {violationsAccount &&
+              (!accountViolations[violationsAccount._id] ||
+                accountViolations[violationsAccount._id].length === 0) && (
+                <div className="text-center py-4 text-muted-foreground">
+                  {loadingViolations[violationsAccount._id] ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>{t("whitelistedAccounts.loading")}</span>
+                    </div>
+                  ) : (
+                    t("whitelistedAccounts.noViolations")
+                  )}
+                </div>
+              )}
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setIsViolationsDialogOpen(false)}>
+              {t("whitelistedAccounts.closed")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Account Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -1155,12 +1758,16 @@ export default function WhitelistedAccounts() {
                 id="edit-account-channel"
                 value={accountChannel}
                 onChange={(e) => setAccountChannel(e.target.value)}
-                placeholder={t("whitelistedAccounts.accountChannelPlaceholderEdit")}
+                placeholder={t(
+                  "whitelistedAccounts.accountChannelPlaceholderEdit"
+                )}
                 className="h-9 sm:h-10 text-sm"
               />
             </div>
             <div className="space-y-2 sm:space-y-3">
-              <Label className="text-xs sm:text-sm">{t("whitelistedAccounts.selectPlatforms")}</Label>
+              <Label className="text-xs sm:text-sm">
+                {t("whitelistedAccounts.selectPlatforms")}
+              </Label>
               <div className="space-y-2 sm:space-y-3 p-3 sm:p-4 border rounded-lg">
                 {platformOperations.map((platform) => {
                   const PlatformIcon = platform.icon;
@@ -1191,7 +1798,9 @@ export default function WhitelistedAccounts() {
                           <Label
                             htmlFor={`edit-platform-name-${platform.id}`}
                             className="text-[10px] sm:text-xs text-muted-foreground">
-                            {t("whitelistedAccounts.accountNameForPlatform", { platform: platform.name })}
+                            {t("whitelistedAccounts.accountNameForPlatform", {
+                              platform: platform.name,
+                            })}
                           </Label>
                           <Input
                             id={`edit-platform-name-${platform.id}`}
@@ -1202,7 +1811,10 @@ export default function WhitelistedAccounts() {
                                 e.target.value
                               )
                             }
-                            placeholder={accountChannel || t("whitelistedAccounts.sameAsMainName")}
+                            placeholder={
+                              accountChannel ||
+                              t("whitelistedAccounts.sameAsMainName")
+                            }
                             className="h-8 sm:h-9 text-xs sm:text-sm"
                           />
                         </div>
@@ -1277,7 +1889,9 @@ export default function WhitelistedAccounts() {
             <div className="py-3 sm:py-4">
               <Alert variant="destructive">
                 <AlertDescription className="text-xs sm:text-sm">
-                  {t("whitelistedAccounts.willBeRemoved", { account: deletingAccount.accountChannel })}
+                  {t("whitelistedAccounts.willBeRemoved", {
+                    account: deletingAccount.accountChannel,
+                  })}
                 </AlertDescription>
               </Alert>
             </div>
