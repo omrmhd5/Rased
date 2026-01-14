@@ -1362,7 +1362,7 @@ export default function Dashboard() {
                         </SelectContent>
                       </Select>
                       <span className="text-muted-foreground text-xs sm:text-sm text-center sm:text-left">
-                        to
+                        {t("dashboard.to")}
                       </span>
                       <Select
                         value={stageRangeEnd}
@@ -1447,14 +1447,14 @@ export default function Dashboard() {
                                 key={week}
                                 value={week.toString()}
                                 className="text-xs sm:text-sm">
-                                Week {week}
+                                {t("dashboard.week", { number: week.toString() })}
                               </SelectItem>
                             )
                           )}
                         </SelectContent>
                       </Select>
                       <span className="text-muted-foreground text-xs sm:text-sm text-center sm:text-left">
-                        to
+                        {t("dashboard.to")}
                       </span>
                       <Select
                         value={weekRangeEnd}
@@ -1469,7 +1469,7 @@ export default function Dashboard() {
                                 key={week}
                                 value={week.toString()}
                                 className="text-xs sm:text-sm">
-                                Week {week}
+                                {t("dashboard.week", { number: week.toString() })}
                               </SelectItem>
                             )
                           )}

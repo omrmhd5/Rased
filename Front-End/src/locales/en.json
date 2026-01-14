@@ -311,16 +311,21 @@
     "willBeRemoved": "{account} will be removed from the whitelist.",
     "deleting": "Deleting...",
     "accountChannelRequired": "Account channel is required.",
+    "accountName": "Account name:",
     "success": {
+      "title": "Success",
       "accountWhitelisted": "Account \"{account}\" has been whitelisted.",
       "accountUpdated": "Account \"{account}\" has been updated.",
       "accountRemoved": "Account \"{account}\" has been removed from whitelist."
     },
     "error": {
+      "title": "Error",
       "failedToLoad": "Failed to load whitelisted accounts.",
       "failedToAdd": "Failed to add whitelisted account",
       "failedToUpdate": "Failed to update whitelisted account",
-      "failedToDelete": "Failed to delete whitelisted account"
+      "failedToDelete": "Failed to delete whitelisted account",
+      "failedToAddAccount": "Failed to add account",
+      "failedToUpdateAccount": "Failed to update account"
     }
   },
   "matches": {
@@ -357,6 +362,34 @@
     "winner": "Winner:",
     "draw": "Draw",
     "selectStage": "Select Stage",
+    "statusOptions": {
+      "upcoming": "Upcoming",
+      "live": "Live",
+      "finished": "Completed",
+      "postponed": "Postponed"
+    },
+    "createNewMatch": "Create a new match for {league}",
+    "updateMatchDetails": "Update match details for {league}",
+    "deleteConfirm": {
+      "title": "Are you sure?",
+      "description": "This will permanently delete the match {match} and all associated violations. This action cannot be undone."
+    },
+    "success": {
+      "title": "Success",
+      "matchAdded": "Match added successfully",
+      "matchUpdated": "Match updated successfully",
+      "matchDeleted": "Match deleted successfully"
+    },
+    "error": {
+      "title": "Error",
+      "failedToLoad": "Failed to load matches",
+      "validationError": "Validation Error",
+      "fillAllFields": "Please fill in all required fields",
+      "selectLeagueFirst": "Please select a league first",
+      "failedToAddMatch": "Failed to add match",
+      "failedToUpdateMatch": "Failed to update match",
+      "failedToDeleteMatch": "Failed to delete match"
+    },
     "form": {
       "team1Name": "Team 1 Name",
       "team2Name": "Team 2 Name",
@@ -371,30 +404,11 @@
       "venue": "Venue (Optional)",
       "selectWinner": "Select winner",
       "team1": "Team 1",
-      "team2": "Team 2"
-    },
-    "statusOptions": {
-      "upcoming": "Upcoming",
-      "live": "Live",
-      "finished": "Completed",
-      "postponed": "Postponed"
-    },
-    "createNewMatch": "Create a new match for {league}",
-    "updateMatchDetails": "Update match details for {league}",
-    "deleteConfirm": {
-      "title": "Are you sure?",
-      "description": "This will permanently delete the match {match} and all associated violations. This action cannot be undone."
-    },
-    "success": {
-      "matchAdded": "Match added successfully",
-      "matchUpdated": "Match updated successfully",
-      "matchDeleted": "Match deleted successfully"
-    },
-    "error": {
-      "failedToLoad": "Failed to load matches",
-      "validationError": "Validation Error",
-      "fillAllFields": "Please fill in all required fields",
-      "selectLeagueFirst": "Please select a league first"
+      "team2": "Team 2",
+      "team1Placeholder": "e.g., Al Hilal",
+      "team2Placeholder": "e.g., Al Nassr",
+      "weekPlaceholder": "e.g., 12",
+      "venuePlaceholder": "e.g., King Fahd International Stadium"
     }
   },
   "usersRoles": {
@@ -591,7 +605,11 @@
       "failedToSave": "Failed to save violation",
       "noComponentsFound": "No components found to capture",
       "couldNotGetCanvasContext": "Could not get canvas context",
-      "failedToCreateImageBlob": "Failed to create image blob"
+      "failedToCreateImageBlob": "Failed to create image blob",
+      "matchNotFound": "Match not found",
+      "validationError": "Validation Error",
+      "violationUrlRequired": "Violation URL is required",
+      "accountChannelRequired": "Account / Channel is required"
     },
     "success": {
       "statusChangedToActive": "Status changed to Active",
@@ -603,10 +621,14 @@
       "violationSaved": "Violation saved successfully",
       "violationUpdated": "Violation updated successfully",
       "changesSaved": "Changes saved successfully",
+      "violationAdded": "Violation added",
+      "violationAddedTo": "New violation added to {platformName}",
       "noteAdded": "Note added",
       "noteAddedSuccess": "Note has been added successfully",
       "reportDownloaded": "Report Downloaded",
-      "reportDownloadedSuccess": "Match report has been downloaded successfully"
+      "reportDownloadedSuccess": "Match report has been downloaded successfully",
+      "urlCopied": "URL copied",
+      "urlCopiedToClipboard": "Violation URL copied to clipboard"
     },
     "whitelistWarning": {
       "title": "Whitelisted Account Warning",

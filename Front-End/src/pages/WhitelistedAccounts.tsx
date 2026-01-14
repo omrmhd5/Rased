@@ -260,7 +260,7 @@ export default function WhitelistedAccounts() {
     } catch (error) {
       console.error("Error fetching whitelisted accounts:", error);
       toast({
-        title: "Error",
+        title: t("whitelistedAccounts.error.title"),
         description: t("whitelistedAccounts.error.failedToLoad"),
         variant: "destructive",
       });
@@ -416,12 +416,12 @@ export default function WhitelistedAccounts() {
     setFormError("");
 
     if (!accountChannel.trim()) {
-      setFormError("Account channel is required.");
+      setFormError(t("whitelistedAccounts.accountChannelRequired"));
       return;
     }
 
     if (selectedPlatforms.length === 0) {
-      setFormError("At least one platform must be selected.");
+      setFormError(t("whitelistedAccounts.atLeastOnePlatform"));
       return;
     }
 
@@ -450,14 +450,14 @@ export default function WhitelistedAccounts() {
       resetForm();
       setIsAddDialogOpen(false);
       toast({
-        title: "Success",
+        title: t("whitelistedAccounts.success.title"),
         description: t("whitelistedAccounts.success.accountWhitelisted", { account: accountChannel.trim() }),
       });
       // Violations will be fetched automatically via useEffect
     } catch (error) {
       console.error("Error adding whitelisted account:", error);
       setFormError(
-        error instanceof Error ? error.message : "Failed to add account"
+        error instanceof Error ? error.message : t("whitelistedAccounts.error.failedToAddAccount")
       );
       toast({
         title: t("whitelistedAccounts.error.failedToAdd"),
@@ -519,14 +519,14 @@ export default function WhitelistedAccounts() {
       setIsEditDialogOpen(false);
       setEditingAccount(null);
       toast({
-        title: "Success",
+        title: t("whitelistedAccounts.success.title"),
         description: t("whitelistedAccounts.success.accountUpdated", { account: accountChannel.trim() }),
       });
       // Violations will be fetched automatically via useEffect
     } catch (error) {
       console.error("Error updating whitelisted account:", error);
       setFormError(
-        error instanceof Error ? error.message : "Failed to update account"
+        error instanceof Error ? error.message : t("whitelistedAccounts.error.failedToUpdateAccount")
       );
       toast({
         title: t("whitelistedAccounts.error.failedToUpdate"),
@@ -566,13 +566,13 @@ export default function WhitelistedAccounts() {
       setIsDeleteDialogOpen(false);
       setDeletingAccount(null);
       toast({
-        title: "Success",
+        title: t("whitelistedAccounts.success.title"),
         description: t("whitelistedAccounts.success.accountRemoved", { account: deletingAccount.accountChannel }),
       });
     } catch (error) {
       console.error("Error deleting whitelisted account:", error);
       toast({
-        title: "Error",
+        title: t("whitelistedAccounts.error.title"),
         description:
           error instanceof Error
             ? error.message
@@ -903,7 +903,7 @@ export default function WhitelistedAccounts() {
                                         className="flex items-center gap-1"
                                         title={
                                           hasCustomName
-                                            ? `Account name: ${accountNameForPlatform}`
+                                            ? `${t("whitelistedAccounts.accountName")} ${accountNameForPlatform}`
                                             : undefined
                                         }>
                                         {PlatformIcon && (

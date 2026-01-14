@@ -1465,8 +1465,10 @@ export default function MatchDashboard() {
         triggerRefetch();
 
         toast({
-          title: "Violation added",
-          description: `New violation added to ${violationData.platformName}`,
+          title: t("matchDashboard.success.violationAdded"),
+          description: t("matchDashboard.success.violationAddedTo", {
+            platformName: violationData.platformName,
+          }),
         });
 
         // Navigate to the newly added violation
@@ -1500,7 +1502,7 @@ export default function MatchDashboard() {
     } catch (error) {
       console.error("Error saving violation:", error);
       toast({
-        title: "Error",
+        title: t("matchDashboard.error.title"),
         description:
           error instanceof Error ? error.message : t("matchDashboard.error.failedToSave"),
         variant: "destructive",
@@ -1512,8 +1514,8 @@ export default function MatchDashboard() {
   const saveViolation = async () => {
     if (!formUrl) {
       toast({
-        title: "Validation Error",
-        description: "Violation URL is required",
+        title: t("matchDashboard.error.validationError"),
+        description: t("matchDashboard.error.violationUrlRequired"),
         variant: "destructive",
       });
       return;
@@ -1521,8 +1523,8 @@ export default function MatchDashboard() {
 
     if (!formAccountHandle) {
       toast({
-        title: "Validation Error",
-        description: "Account / Channel is required",
+        title: t("matchDashboard.error.validationError"),
+        description: t("matchDashboard.error.accountChannelRequired"),
         variant: "destructive",
       });
       return;
@@ -1530,8 +1532,8 @@ export default function MatchDashboard() {
 
     if (!match) {
       toast({
-        title: "Error",
-        description: "Match not found",
+        title: t("matchDashboard.error.title"),
+        description: t("matchDashboard.error.matchNotFound"),
         variant: "destructive",
       });
       return;
@@ -1691,8 +1693,8 @@ export default function MatchDashboard() {
       triggerRefetch();
 
       toast({
-        title: "Violation deleted",
-        description: "Violation has been removed successfully",
+        title: t("matchDashboard.success.violationDeleted"),
+        description: t("matchDashboard.success.violationRemoved"),
       });
 
       setIsDeleteConfirmOpen(false);
@@ -1711,8 +1713,8 @@ export default function MatchDashboard() {
   const copyViolationUrl = (url: string) => {
     navigator.clipboard.writeText(url);
     toast({
-      title: "URL copied",
-      description: "Violation URL copied to clipboard",
+      title: t("matchDashboard.success.urlCopied"),
+      description: t("matchDashboard.success.urlCopiedToClipboard"),
     });
   };
 

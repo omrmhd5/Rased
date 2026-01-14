@@ -673,7 +673,7 @@ export default function Matches() {
       );
 
       toast({
-        title: "Success",
+        title: t("matches.success.title"),
         description: t("matches.success.matchUpdated"),
       });
 
@@ -682,9 +682,9 @@ export default function Matches() {
       setIsEditMatchOpen(false);
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to update match";
+        error instanceof Error ? error.message : t("matches.error.failedToUpdateMatch");
       toast({
-        title: "Error",
+        title: t("matches.error.title"),
         description: errorMessage,
         variant: "destructive",
       });
@@ -721,7 +721,7 @@ export default function Matches() {
       );
 
       toast({
-        title: "Success",
+        title: t("matches.success.title"),
         description: t("matches.success.matchDeleted"),
       });
 
@@ -729,9 +729,9 @@ export default function Matches() {
       setIsDeleteDialogOpen(false);
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to delete match";
+        error instanceof Error ? error.message : t("matches.error.failedToDeleteMatch");
       toast({
-        title: "Error",
+        title: t("matches.error.title"),
         description: errorMessage,
         variant: "destructive",
       });
@@ -848,7 +848,7 @@ export default function Matches() {
       };
       setMatches([...matches, formattedMatch]);
       toast({
-        title: "Success",
+        title: t("matches.success.title"),
         description: t("matches.success.matchAdded"),
       });
 
@@ -857,9 +857,9 @@ export default function Matches() {
       setIsAddMatchOpen(false);
     } catch (error: unknown) {
       const errorMessage =
-        error instanceof Error ? error.message : "Failed to add match";
+        error instanceof Error ? error.message : t("matches.error.failedToAddMatch");
       toast({
-        title: "Error",
+        title: t("matches.error.title"),
         description: errorMessage,
         variant: "destructive",
       });
@@ -1401,7 +1401,7 @@ export default function Matches() {
               <Input
                 id="team1"
                 type="text"
-                placeholder="e.g., Al Hilal"
+                placeholder={t("matches.form.team1Placeholder")}
                 value={formTeam1}
                 onChange={(e) => setFormTeam1(e.target.value)}
                 required
@@ -1417,7 +1417,7 @@ export default function Matches() {
               <Input
                 id="team2"
                 type="text"
-                placeholder="e.g., Al Nassr"
+                placeholder={t("matches.form.team2Placeholder")}
                 value={formTeam2}
                 onChange={(e) => setFormTeam2(e.target.value)}
                 required
@@ -1557,7 +1557,7 @@ export default function Matches() {
                     <Input
                       id="week"
                       type="text"
-                      placeholder="e.g., 12"
+                      placeholder={t("matches.form.weekPlaceholder")}
                       value={formWeek}
                       onChange={(e) => setFormWeek(e.target.value)}
                       required
@@ -1606,7 +1606,7 @@ export default function Matches() {
               <Input
                 id="venue"
                 type="text"
-                placeholder="e.g., King Fahd International Stadium"
+                placeholder={t("matches.form.venuePlaceholder")}
                 value={formVenue}
                 onChange={(e) => setFormVenue(e.target.value)}
                 className="h-9 sm:h-10 text-sm"
@@ -1654,7 +1654,7 @@ export default function Matches() {
               <Input
                 id="edit-team1"
                 type="text"
-                placeholder="e.g., Al Hilal"
+                placeholder={t("matches.form.team1Placeholder")}
                 value={formTeam1}
                 onChange={(e) => setFormTeam1(e.target.value)}
                 required
@@ -1670,7 +1670,7 @@ export default function Matches() {
               <Input
                 id="edit-team2"
                 type="text"
-                placeholder="e.g., Al Nassr"
+                placeholder={t("matches.form.team2Placeholder")}
                 value={formTeam2}
                 onChange={(e) => setFormTeam2(e.target.value)}
                 required
@@ -1818,7 +1818,7 @@ export default function Matches() {
                     <Input
                       id="edit-week"
                       type="text"
-                      placeholder="e.g., 12"
+                      placeholder={t("matches.form.weekPlaceholder")}
                       value={formWeek}
                       onChange={(e) => setFormWeek(e.target.value)}
                       required
@@ -1867,7 +1867,7 @@ export default function Matches() {
               <Input
                 id="edit-venue"
                 type="text"
-                placeholder="e.g., King Fahd International Stadium"
+                placeholder={t("matches.form.venuePlaceholder")}
                 value={formVenue}
                 onChange={(e) => setFormVenue(e.target.value)}
                 className="h-9 sm:h-10 text-sm"

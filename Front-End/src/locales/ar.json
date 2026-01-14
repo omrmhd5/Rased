@@ -311,16 +311,21 @@
     "willBeRemoved": "{account} سيتم إزالته من القائمة المسموحة.",
     "deleting": "جاري الحذف...",
     "accountChannelRequired": "قناة الحساب مطلوبة.",
+    "accountName": "اسم الحساب:",
     "success": {
+      "title": "نجاح",
       "accountWhitelisted": "تم إضافة الحساب \"{account}\" إلى القائمة المسموحة.",
       "accountUpdated": "تم تحديث الحساب \"{account}\".",
       "accountRemoved": "تم إزالة الحساب \"{account}\" من القائمة المسموحة."
     },
     "error": {
+      "title": "خطأ",
       "failedToLoad": "فشل تحميل الحسابات المسموحة.",
       "failedToAdd": "فشل إضافة حساب مسموح",
       "failedToUpdate": "فشل تحديث حساب مسموح",
-      "failedToDelete": "فشل حذف حساب مسموح"
+      "failedToDelete": "فشل حذف حساب مسموح",
+      "failedToAddAccount": "فشل إضافة الحساب",
+      "failedToUpdateAccount": "فشل تحديث الحساب"
     }
   },
   "matches": {
@@ -357,6 +362,34 @@
     "winner": "الفائز:",
     "draw": "تعادل",
     "selectStage": "اختر المرحلة",
+    "statusOptions": {
+      "upcoming": "قادمة",
+      "live": "مباشر",
+      "finished": "مكتملة",
+      "postponed": "مؤجلة"
+    },
+    "createNewMatch": "إنشاء مباراة جديدة لـ {league}",
+    "updateMatchDetails": "تحديث تفاصيل المباراة لـ {league}",
+    "deleteConfirm": {
+      "title": "هل أنت متأكد؟",
+      "description": "سيتم حذف المباراة {match} وجميع الانتهاكات المرتبطة بها بشكل دائم. لا يمكن التراجع عن هذا الإجراء."
+    },
+    "success": {
+      "title": "نجاح",
+      "matchAdded": "تم إضافة المباراة بنجاح",
+      "matchUpdated": "تم تحديث المباراة بنجاح",
+      "matchDeleted": "تم حذف المباراة بنجاح"
+    },
+    "error": {
+      "title": "خطأ",
+      "failedToLoad": "فشل تحميل المباريات",
+      "validationError": "خطأ في التحقق",
+      "fillAllFields": "يرجى ملء جميع الحقول المطلوبة",
+      "selectLeagueFirst": "يرجى اختيار دوري أولاً",
+      "failedToAddMatch": "فشل إضافة المباراة",
+      "failedToUpdateMatch": "فشل تحديث المباراة",
+      "failedToDeleteMatch": "فشل حذف المباراة"
+    },
     "form": {
       "team1Name": "اسم الفريق الأول",
       "team2Name": "اسم الفريق الثاني",
@@ -371,30 +404,11 @@
       "venue": "الملعب (اختياري)",
       "selectWinner": "اختر الفائز",
       "team1": "الفريق الأول",
-      "team2": "الفريق الثاني"
-    },
-    "statusOptions": {
-      "upcoming": "قادمة",
-      "live": "مباشر",
-      "finished": "مكتملة",
-      "postponed": "مؤجلة"
-    },
-    "createNewMatch": "إنشاء مباراة جديدة لـ {league}",
-    "updateMatchDetails": "تحديث تفاصيل المباراة لـ {league}",
-    "deleteConfirm": {
-      "title": "هل أنت متأكد؟",
-      "description": "سيتم حذف المباراة {match} وجميع الانتهاكات المرتبطة بها بشكل دائم. لا يمكن التراجع عن هذا الإجراء."
-    },
-    "success": {
-      "matchAdded": "تم إضافة المباراة بنجاح",
-      "matchUpdated": "تم تحديث المباراة بنجاح",
-      "matchDeleted": "تم حذف المباراة بنجاح"
-    },
-    "error": {
-      "failedToLoad": "فشل تحميل المباريات",
-      "validationError": "خطأ في التحقق",
-      "fillAllFields": "يرجى ملء جميع الحقول المطلوبة",
-      "selectLeagueFirst": "يرجى اختيار دوري أولاً"
+      "team2": "الفريق الثاني",
+      "team1Placeholder": "مثال: الهلال",
+      "team2Placeholder": "مثال: النصر",
+      "weekPlaceholder": "مثال: 12",
+      "venuePlaceholder": "مثال: ملعب الملك فهد الدولي"
     }
   },
   "usersRoles": {
@@ -591,7 +605,11 @@
       "failedToSave": "فشل حفظ الانتهاك",
       "noComponentsFound": "لم يتم العثور على مكونات للالتقاط",
       "couldNotGetCanvasContext": "تعذر الحصول على سياق اللوحة",
-      "failedToCreateImageBlob": "فشل إنشاء كائن الصورة"
+      "failedToCreateImageBlob": "فشل إنشاء كائن الصورة",
+      "matchNotFound": "لم يتم العثور على المباراة",
+      "validationError": "خطأ في التحقق",
+      "violationUrlRequired": "رابط الانتهاك مطلوب",
+      "accountChannelRequired": "الحساب / القناة مطلوب"
     },
     "success": {
       "statusChangedToActive": "تم تغيير الحالة إلى نشط",
@@ -603,10 +621,14 @@
       "violationSaved": "تم حفظ الانتهاك بنجاح",
       "violationUpdated": "تم تحديث الانتهاك بنجاح",
       "changesSaved": "تم حفظ التغييرات بنجاح",
+      "violationAdded": "تم إضافة الانتهاك",
+      "violationAddedTo": "تم إضافة انتهاك جديد إلى {platformName}",
       "noteAdded": "تمت إضافة الملاحظة",
       "noteAddedSuccess": "تمت إضافة الملاحظة بنجاح",
       "reportDownloaded": "تم تنزيل التقرير",
-      "reportDownloadedSuccess": "تم تنزيل تقرير المباراة بنجاح"
+      "reportDownloadedSuccess": "تم تنزيل تقرير المباراة بنجاح",
+      "urlCopied": "تم نسخ الرابط",
+      "urlCopiedToClipboard": "تم نسخ رابط الانتهاك إلى الحافظة"
     },
     "whitelistWarning": {
       "title": "تحذير حساب في القائمة البيضاء",
