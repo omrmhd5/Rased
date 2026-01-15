@@ -131,6 +131,7 @@
     "underReview": "قيد المراجعة",
     "noViolationsFound": "لم يتم العثور على انتهاكات {filter}",
     "searchViolations": "ابحث عن القناة أو المباراة أو الرابط...",
+    "searchByMatch": "البحث عن طريق المباراة...",
     "pagination": {
       "previous": "السابق",
       "next": "التالي",
@@ -867,7 +868,7 @@
       "emptyState": {
         "noActivityFound": "لم يتم العثور على نشاط",
         "noViolationsYet": "لا توجد انتهاكات بعد",
-        "tryChangingFilter": "جرب تغيير المرشح"
+        "tryChangingFilter": "جرب تغيير المرشح أو البحث"
       },
       "badges": {
         "added": "تمت الإضافة",

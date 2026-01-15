@@ -72,6 +72,9 @@ export default function Dashboard() {
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const [isRoundReportOpen, setIsRoundReportOpen] = useState(false);
+  const [leaderboardSearchQuery, setLeaderboardSearchQuery] = useState("");
+  const [leaderboardPage, setLeaderboardPage] = useState(1);
+  const leaderboardItemsPerPage = 10;
 
   // Helper to check if league is valid (exists in database and is visible)
   const isValidLeague = (leagueSlug: League): boolean => {
@@ -1794,74 +1797,194 @@ export default function Dashboard() {
                 </Badge>
               </div>
             </div>
+            {/* Search Bar */}
+            <div className="mt-3 relative">
+              <Search
+                className={`absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground ${
+                  isRTL ? "right-3" : "left-3"
+                }`}
+              />
+              <Input
+                placeholder={t("dashboard.searchByMatch", {
+                  defaultValue: "Search by match",
+                })}
+                value={leaderboardSearchQuery}
+                onChange={(e) => {
+                  setLeaderboardSearchQuery(e.target.value);
+                  setLeaderboardPage(1); // Reset to first page on search
+                }}
+                className={`h-8 text-[11px] sm:text-xs ${
+                  isRTL ? "pr-8 sm:pr-9" : "pl-8 sm:pl-9"
+                }`}
+              />
+            </div>
           </div>
           <div className="flex-1 overflow-y-auto space-y-1.5 sm:space-y-2">
             {statsLoading ? (
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-muted-foreground" />
               </div>
-            ) : dashboardStats.matches.length === 0 ? (
-              <div
-                className={`flex items-center justify-center h-full text-xs sm:text-sm text-muted-foreground ${
-                  isRTL ? "text-right" : "text-left"
-                }`}>
-                {t("dashboard.noMatchesFound")}
-              </div>
             ) : (
-              dashboardStats.matches.map((match) => {
-                return (
-                  <div
-                    key={match.id}
-                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-3 sm:p-4 rounded-lg border border-border/40 hover:border-primary/30 hover:bg-muted/20 transition-all cursor-pointer touch-manipulation active:scale-[0.98] ${
-                      isRTL ? "sm:justify-end" : "sm:justify-start"
-                    }`}
-                    onClick={() => navigate(`/match/${match.id}`)}>
-                    {/* Match Title */}
-                    <h4
-                      className={`text-xs sm:text-[14px] font-semibold flex-1 min-w-0 truncate ${
-                        isRTL
-                          ? "sm:pl-4 sm:pr-0 text-right"
-                          : "sm:pr-4 text-left"
-                      }`}>
-                      {match.description}
-                    </h4>
-
-                    {/* Metrics */}
-                    <div
-                      className={`flex items-center gap-2 sm:gap-4 flex-shrink-0 ${
-                        isRTL ? "justify-start" : "justify-end"
-                      }`}>
-                      <div className="flex items-baseline gap-1 sm:gap-1.5">
-                        <span className="text-sm sm:text-[16px] font-bold tabular-nums">
-                          {match.violations}
-                        </span>
-                        <span
-                          className={`text-[10px] sm:text-[11px] text-muted-foreground ${
-                            isRTL ? "text-right" : "text-left"
-                          }`}>
-                          {t("dashboard.violations")}
-                        </span>
-                      </div>
-                      <span className="text-muted-foreground/30 hidden sm:inline">
-                        •
-                      </span>
-                      <div className="flex items-baseline gap-1 sm:gap-1.5">
-                        <span className="text-sm sm:text-[16px] font-bold tabular-nums">
-                          {formatViews(match.totalViews)}
-                        </span>
-                        <span
-                          className={`text-[10px] sm:text-[11px] text-muted-foreground ${
-                            isRTL ? "text-right" : "text-left"
-                          }`}>
-                          {t("dashboard.views")}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+              (() => {
+                // Filter and Paginate Matches
+                const filteredMatches = dashboardStats.matches.filter((match) =>
+                  match.description
+                    .toLowerCase()
+                    .includes(leaderboardSearchQuery.toLowerCase())
                 );
-              })
+
+                const totalLeaderboardPages = Math.ceil(
+                  filteredMatches.length / leaderboardItemsPerPage
+                );
+                const startIndex =
+                  (leaderboardPage - 1) * leaderboardItemsPerPage;
+                const endIndex = startIndex + leaderboardItemsPerPage;
+                const paginatedMatches = filteredMatches.slice(
+                  startIndex,
+                  endIndex
+                );
+
+                if (filteredMatches.length === 0) {
+                  return (
+                    <div
+                      className={`flex items-center justify-center h-full text-xs sm:text-sm text-muted-foreground ${
+                        isRTL ? "text-right" : "text-left"
+                      }`}>
+                      {leaderboardSearchQuery
+                        ? t("dashboard.noMatchesFound") // You might want a specific "no search results" string
+                        : t("dashboard.noMatchesFound")}
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    {paginatedMatches.map((match) => (
+                      <div
+                        key={match.id}
+                        className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 p-3 sm:p-4 rounded-lg border border-border/40 hover:border-primary/30 hover:bg-muted/20 transition-all cursor-pointer touch-manipulation active:scale-[0.98] ${
+                          isRTL ? "sm:justify-end" : "sm:justify-start"
+                        }`}
+                        onClick={() => navigate(`/match/${match.id}`)}>
+                        {/* Match Title */}
+                        <h4
+                          className={`text-xs sm:text-[14px] font-semibold flex-1 min-w-0 truncate ${
+                            isRTL
+                              ? "sm:pl-4 sm:pr-0 text-right"
+                              : "sm:pr-4 text-left"
+                          }`}>
+                          {match.description}
+                        </h4>
+
+                        {/* Metrics */}
+                        <div
+                          className={`flex items-center gap-2 sm:gap-4 flex-shrink-0 ${
+                            isRTL ? "justify-start" : "justify-end"
+                          }`}>
+                          <div className="flex items-baseline gap-1 sm:gap-1.5">
+                            <span className="text-sm sm:text-[16px] font-bold tabular-nums">
+                              {match.violations}
+                            </span>
+                            <span
+                              className={`text-[10px] sm:text-[11px] text-muted-foreground ${
+                                isRTL ? "text-right" : "text-left"
+                              }`}>
+                              {t("dashboard.violations")}
+                            </span>
+                          </div>
+                          <span className="text-muted-foreground/30 hidden sm:inline">
+                            •
+                          </span>
+                          <div className="flex items-baseline gap-1 sm:gap-1.5">
+                            <span className="text-sm sm:text-[16px] font-bold tabular-nums">
+                              {formatViews(match.totalViews)}
+                            </span>
+                            <span
+                              className={`text-[10px] sm:text-[11px] text-muted-foreground ${
+                                isRTL ? "text-right" : "text-left"
+                              }`}>
+                              {t("dashboard.views")}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                );
+              })()
             )}
           </div>
+          {/* Pagination Controls - Outside scroll area */}
+          {!statsLoading &&
+            (() => {
+              const filteredMatches = dashboardStats.matches.filter((match) =>
+                match.description
+                  .toLowerCase()
+                  .includes(leaderboardSearchQuery.toLowerCase())
+              );
+              const totalLeaderboardPages = Math.ceil(
+                filteredMatches.length / leaderboardItemsPerPage
+              );
+
+              if (totalLeaderboardPages <= 1) return null;
+
+              return (
+                <div className="flex items-center justify-center pt-2 border-t mt-2">
+                  <Pagination>
+                    <PaginationContent className="flex-wrap justify-center gap-1">
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            leaderboardPage > 1 &&
+                            setLeaderboardPage(leaderboardPage - 1)
+                          }
+                          disabled={leaderboardPage === 1}
+                          className={`gap-1 h-7 text-[10px] sm:text-xs ${
+                            isRTL ? "pr-2" : "pl-2"
+                          }`}>
+                          {isRTL ? (
+                            <ChevronRight className="h-3 w-3" />
+                          ) : (
+                            <ChevronLeft className="h-3 w-3" />
+                          )}
+                          <span>{t("dashboard.pagination.previous")}</span>
+                        </Button>
+                      </PaginationItem>
+
+                      <div className="flex items-center gap-1 mx-2">
+                        <span className="text-[10px] sm:text-xs text-muted-foreground">
+                          {t("dashboard.pagination.page")} {leaderboardPage}{" "}
+                          {t("dashboard.pagination.of")} {totalLeaderboardPages}
+                        </span>
+                      </div>
+
+                      <PaginationItem>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            leaderboardPage < totalLeaderboardPages &&
+                            setLeaderboardPage(leaderboardPage + 1)
+                          }
+                          disabled={leaderboardPage === totalLeaderboardPages}
+                          className={`gap-1 h-7 text-[10px] sm:text-xs ${
+                            isRTL ? "pl-2" : "pr-2"
+                          }`}>
+                          <span>{t("dashboard.pagination.next")}</span>
+                          {isRTL ? (
+                            <ChevronLeft className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </PaginationItem>
+                    </PaginationContent>
+                  </Pagination>
+                </div>
+              );
+            })()}
         </Card>
 
         {/* Active Trouble List */}

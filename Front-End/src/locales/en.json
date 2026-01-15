@@ -131,6 +131,7 @@
     "underReview": "Under Review",
     "noViolationsFound": "No {filter} violations found",
     "searchViolations": "Search by channel, match, or link...",
+    "searchByMatch": "Search by match...",
     "pagination": {
       "previous": "Previous",
       "next": "Next",
@@ -867,7 +868,7 @@
       "emptyState": {
         "noActivityFound": "No activity found",
         "noViolationsYet": "No violations yet",
-        "tryChangingFilter": "Try changing the filter"
+        "tryChangingFilter": "Try changing the filter or search"
       },
       "badges": {
         "added": "Added",
