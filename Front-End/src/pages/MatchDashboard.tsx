@@ -1980,6 +1980,289 @@ export default function MatchDashboard() {
     }
   };
 
+  // Bulk delete violations
+  const handleBulkDelete = async (
+    platformId: string,
+    violations: Violation[]
+  ) => {
+    try {
+      await Promise.all(
+        violations.map(async (violation) => {
+          let violationId: string;
+          if (typeof violation._id === "string") {
+            violationId = violation._id;
+          } else if (
+            violation._id &&
+            typeof violation._id === "object" &&
+            "$oid" in violation._id
+          ) {
+            violationId = (violation._id as { $oid: string }).$oid;
+          } else {
+            violationId = String(violation.id);
+          }
+
+          const response = await fetch(`${API_URL}/violations/${violationId}`, {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "include",
+          });
+
+          if (!response.ok) {
+            throw new Error(`Failed to delete violation ${violationId}`);
+          }
+        })
+      );
+
+      // Update local state - remove deleted violations
+      setPlatformOperations((prev) =>
+        prev.map((p) => {
+          if (p.id !== platformId) return p;
+
+          // Get IDs of deleted violations
+          const deletedIds = violations.map((v) => {
+            if (typeof v._id === "string") return v._id;
+            if (v._id && typeof v._id === "object" && "$oid" in v._id)
+              return (v._id as { $oid: string }).$oid;
+            return String(v.id);
+          });
+
+          const updatedViolations = p.violations.filter((v) => {
+            const vId =
+              typeof v._id === "string"
+                ? v._id
+                : v._id && typeof v._id === "object" && "$oid" in v._id
+                ? (v._id as { $oid: string }).$oid
+                : String(v.id);
+            return !deletedIds.includes(vId);
+          });
+
+          return {
+            ...p,
+            violations: updatedViolations,
+          };
+        })
+      );
+
+      // Save stats
+      if (match?.externalMatchId) {
+        const currentPlatform = platformOperations.find(
+          (p) => p.id === platformId
+        );
+        if (currentPlatform) {
+          const deletedIds = violations.map((v) => {
+            if (typeof v._id === "string") return v._id;
+            if (v._id && typeof v._id === "object" && "$oid" in v._id)
+              return (v._id as { $oid: string }).$oid;
+            return String(v.id);
+          });
+          const updatedViolations = currentPlatform.violations.filter((v) => {
+            const vId =
+              typeof v._id === "string"
+                ? v._id
+                : v._id && typeof v._id === "object" && "$oid" in v._id
+                ? (v._id as { $oid: string }).$oid
+                : String(v.id);
+            return !deletedIds.includes(vId);
+          });
+          calculateAndSavePlatformStats(
+            platformId,
+            match.externalMatchId,
+            updatedViolations
+          );
+        }
+      }
+
+      triggerRefetch();
+
+      toast({
+        title: t("matchDashboard.success.violationDeleted"),
+        description: t("matchDashboard.success.multipleViolationsRemoved", {
+          count: violations.length,
+        }),
+      });
+    } catch (error) {
+      console.error("Error deleting violations:", error);
+      toast({
+        title: t("matchDashboard.error.title"),
+        description: t("matchDashboard.error.failedToDelete"),
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Bulk status change
+  const handleBulkStatusChange = async (
+    platformId: string,
+    violations: Violation[],
+    status: "Active" | "Blocked" | "Removed" | "Under Review",
+    blockedAt?: string
+  ) => {
+    try {
+      await Promise.all(
+        violations.map(async (violation) => {
+          let violationId: string;
+          if (typeof violation._id === "string") {
+            violationId = violation._id;
+          } else if (
+            violation._id &&
+            typeof violation._id === "object" &&
+            "$oid" in violation._id
+          ) {
+            violationId = (violation._id as { $oid: string }).$oid;
+          } else {
+            violationId = String(violation.id);
+          }
+
+          const body: { status: string; blockedAt?: string } = { status };
+          if (status === "Blocked" && blockedAt) {
+            // Check if blockedAt is already in UTC or not
+            // Assuming it comes from the dialog as KSA time string (e.g. "YYYY-MM-DDTHH:mm")
+            // We should use convertKSATimeToUTC
+            body.blockedAt = convertKSATimeToUTC(blockedAt);
+          }
+
+          const response = await fetch(
+            `${API_URL}/violations/${violationId}/status`,
+            {
+              method: "PATCH",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              credentials: "include",
+              body: JSON.stringify(body),
+            }
+          );
+
+          if (!response.ok) {
+            throw new Error(`Failed to update violation ${violationId}`);
+          }
+        })
+      );
+
+      // Update local state
+      setPlatformOperations((prev) =>
+        prev.map((p) => {
+          if (p.id !== platformId) return p;
+
+          const updatedIds = violations.map((v) => {
+            if (typeof v._id === "string") return v._id;
+            if (v._id && typeof v._id === "object" && "$oid" in v._id)
+              return (v._id as { $oid: string }).$oid;
+            return String(v.id);
+          });
+
+          const updatedViolations = p.violations.map((v) => {
+            const vId =
+              typeof v._id === "string"
+                ? v._id
+                : v._id && typeof v._id === "object" && "$oid" in v._id
+                ? (v._id as { $oid: string }).$oid
+                : String(v.id);
+            if (updatedIds.includes(vId)) {
+              return {
+                ...v,
+                status: status,
+                statusBadge:
+                  status === "Under Review"
+                    ? ("Review" as const)
+                    : (status as
+                        | "Active"
+                        | "Blocked"
+                        | "Removed"
+                        | "Reported"
+                        | "Pending"
+                        | "Review"),
+                blockedAt:
+                  status === "Blocked" && blockedAt
+                    ? convertKSATimeToUTC(blockedAt)
+                    : status !== "Blocked"
+                    ? undefined
+                    : v.blockedAt,
+              };
+            }
+            return v;
+          });
+
+          return {
+            ...p,
+            violations: updatedViolations,
+          };
+        })
+      );
+
+      // Save stats
+      if (match?.externalMatchId) {
+        const currentPlatform = platformOperations.find(
+          (p) => p.id === platformId
+        );
+        if (currentPlatform) {
+          const updatedIds = violations.map((v) => {
+            if (typeof v._id === "string") return v._id;
+            if (v._id && typeof v._id === "object" && "$oid" in v._id)
+              return (v._id as { $oid: string }).$oid;
+            return String(v.id);
+          });
+
+          const updatedViolationsList = currentPlatform.violations.map((v) => {
+            const vId =
+              typeof v._id === "string"
+                ? v._id
+                : v._id && typeof v._id === "object" && "$oid" in v._id
+                ? (v._id as { $oid: string }).$oid
+                : String(v.id);
+            if (updatedIds.includes(vId)) {
+              return {
+                ...v,
+                status: status,
+                statusBadge:
+                  status === "Under Review"
+                    ? ("Review" as const)
+                    : (status as
+                        | "Active"
+                        | "Blocked"
+                        | "Removed"
+                        | "Reported"
+                        | "Pending"
+                        | "Review"),
+                blockedAt:
+                  status === "Blocked" && blockedAt
+                    ? convertKSATimeToUTC(blockedAt)
+                    : status !== "Blocked"
+                    ? undefined
+                    : v.blockedAt,
+              };
+            }
+            return v;
+          });
+
+          calculateAndSavePlatformStats(
+            platformId,
+            match.externalMatchId,
+            updatedViolationsList
+          );
+        }
+      }
+
+      triggerRefetch();
+
+      toast({
+        title: t("matchDashboard.success.statusChanged"),
+        description: t("matchDashboard.success.multipleViolationsUpdated", {
+          count: violations.length,
+        }),
+      });
+    } catch (error) {
+      console.error("Error updating violations:", error);
+      toast({
+        title: t("matchDashboard.error.title"),
+        description: t("matchDashboard.error.failedToUpdate"),
+        variant: "destructive",
+      });
+    }
+  };
+
   // Copy violation URL
   const copyViolationUrl = (url: string) => {
     navigator.clipboard.writeText(url);
@@ -2570,6 +2853,8 @@ export default function MatchDashboard() {
                   onDelete={deleteViolation}
                   onCopyUrl={copyViolationUrl}
                   onAddNote={openAddNoteDialog}
+                  onBulkDelete={handleBulkDelete}
+                  onBulkStatusChange={handleBulkStatusChange}
                   getPlatformIcon={getPlatformIcon}
                   canModifyViolations={canModifyViolations}
                   onRefetch={triggerRefetch}

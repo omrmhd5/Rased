@@ -56,10 +56,22 @@ export function BulkDeleteConfirmDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={(e) => {
+              e.preventDefault();
+              onOpenChange(false);
+            }}>
             {t("matchDashboard.bulk.deleteConfirm.cancel") || "Cancel"}
           </Button>
-          <Button variant="destructive" onClick={onConfirm}>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={(e) => {
+              e.preventDefault();
+              onConfirm();
+            }}>
             {t("matchDashboard.bulk.deleteConfirm.confirm") || "Delete All"}
           </Button>
         </DialogFooter>

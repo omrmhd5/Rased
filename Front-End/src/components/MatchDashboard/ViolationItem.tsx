@@ -229,7 +229,7 @@ export function ViolationItem({
 
   // Truncate URL for display - shorter on mobile
   const url = violation.violationUrl || violation.url || "";
-  const truncatedUrl = url.length > 25 ? url.slice(0, 22) + "..." : url;
+  const truncatedUrl = url.length > 50 ? url.slice(0, 50) + "..." : url;
 
   // Get violation ID for scrolling - ensure it's a string
   const violationId = violation._id

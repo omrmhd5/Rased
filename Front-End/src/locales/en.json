@@ -626,6 +626,9 @@
       "unexpectedErrorSaving": "An unexpected error occurred while saving violations"
     },
     "success": {
+      "statusChanged": "Status Changed",
+      "multipleViolationsUpdated": "{count} violations have been updated.",
+      "multipleViolationsRemoved": "{count} violations have been removed.",
       "statusChangedToActive": "Status changed to Active",
       "violationNowActive": "Violation is now active again",
       "violationBlocked": "Violation blocked",

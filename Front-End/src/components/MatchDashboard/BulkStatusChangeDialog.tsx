@@ -145,10 +145,21 @@ export function BulkStatusChangeDialog({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={(e) => {
+              e.preventDefault();
+              onOpenChange(false);
+            }}>
             {t("matchDashboard.bulk.statusChange.cancel") || "Cancel"}
           </Button>
-          <Button onClick={onConfirm}>
+          <Button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              onConfirm();
+            }}>
             {t("matchDashboard.bulk.statusChange.confirm") || "Change Status"}
           </Button>
         </DialogFooter>

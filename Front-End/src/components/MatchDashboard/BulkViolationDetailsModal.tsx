@@ -9,7 +9,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Layers, Eye, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import {
+  Layers,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  Edit,
+  Trash2,
+} from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Violation, PlatformData } from "./types";
 import { ViolationItem } from "./ViolationItem";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -28,6 +41,8 @@ interface BulkViolationDetailsModalProps {
   onAddNote: (platformId: string, violation: Violation) => void;
   getPlatformIcon: (platformName: string) => React.ReactNode;
   canModifyViolations: boolean;
+  onOpenBulkStatusDialog: (e: React.MouseEvent) => void;
+  onOpenBulkDeleteDialog: (e: React.MouseEvent) => void;
 }
 
 export function BulkViolationDetailsModal({
@@ -43,6 +58,8 @@ export function BulkViolationDetailsModal({
   onAddNote,
   getPlatformIcon,
   canModifyViolations,
+  onOpenBulkStatusDialog,
+  onOpenBulkDeleteDialog,
 }: BulkViolationDetailsModalProps) {
   const { t, isRTL } = useLanguage();
   const [currentPage, setCurrentPage] = useState(1);
@@ -141,6 +158,46 @@ export function BulkViolationDetailsModal({
               </DialogDescription>
             </div>
           </div>
+
+          {/* Bulk Actions - Top Right */}
+          {canModifyViolations && (
+            <div
+              className={`flex items-center gap-1 absolute top-6 ${
+                isRTL ? "left-6" : "right-6"
+              }`}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={onOpenBulkStatusDialog}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t("matchDashboard.bulk.changeStatus") || "Change Status"}
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:text-destructive"
+                    onClick={onOpenBulkDeleteDialog}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t("matchDashboard.bulk.deleteAll") || "Delete All"}
+                </TooltipContent>
+              </Tooltip>
+            </div>
+          )}
 
           {/* Stats Row 1: Status Badges */}
           <div className="flex items-center gap-2 flex-wrap mt-4">

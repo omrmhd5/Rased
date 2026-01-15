@@ -14,6 +14,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { toast } from "@/hooks/use-toast";
 
 interface BulkViolationItemProps {
   bulkId: string;
@@ -28,6 +29,13 @@ interface BulkViolationItemProps {
   getPlatformIcon: (platformName: string) => React.ReactNode;
   canModifyViolations: boolean;
   onRefetch?: () => void; // Callback to refetch data after bulk operations
+  onBulkDelete?: (platformId: string, violations: Violation[]) => void;
+  onBulkStatusChange?: (
+    platformId: string,
+    violations: Violation[],
+    status: "Active" | "Blocked" | "Removed" | "Under Review",
+    blockedAt?: string
+  ) => void;
 }
 
 export function BulkViolationItem({
@@ -43,6 +51,8 @@ export function BulkViolationItem({
   getPlatformIcon,
   canModifyViolations,
   onRefetch,
+  onBulkDelete,
+  onBulkStatusChange,
 }: BulkViolationItemProps) {
   const { t, isRTL } = useLanguage();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -161,170 +171,20 @@ export function BulkViolationItem({
   const dateCreated = formatDate(representative.timeAdded);
   const timeAgo = formatTimeAgo(representative.timeAdded);
 
-  // Handle bulk delete - call API directly
-  const handleBulkDelete = async () => {
-    try {
-      // Delete each violation via API
-      await Promise.all(
-        violations.map(async (violation) => {
-          // Ensure we use the string _id from MongoDB
-          // Handle both string _id and MongoDB extended JSON format { $oid: "..." }
-          let violationId: string;
-          if (typeof violation._id === "string") {
-            violationId = violation._id;
-          } else if (
-            violation._id &&
-            typeof violation._id === "object" &&
-            "$oid" in violation._id
-          ) {
-            violationId = (violation._id as { $oid: string }).$oid;
-          } else {
-            violationId = String(violation.id);
-          }
-
-          console.log(
-            "Deleting violation with ID:",
-            violationId,
-            "Full violation:",
-            violation
-          );
-
-          console.log(
-            "Making DELETE request to:",
-            `${API_URL}/violations/${violationId}`
-          );
-
-          const response = await fetch(`${API_URL}/violations/${violationId}`, {
-            method: "DELETE",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-          });
-
-          console.log(
-            "DELETE Response status:",
-            response.status,
-            response.statusText
-          );
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(
-              `Failed to delete violation ${violationId}:`,
-              "Status:",
-              response.status,
-              "Error:",
-              errorText
-            );
-            throw new Error(`Failed to delete violation ${violationId}`);
-          }
-
-          console.log(`Successfully deleted violation ${violationId}`);
-        })
-      );
-
-      setDeleteDialogOpen(false);
-      // Trigger data refetch instead of page reload
-      if (onRefetch) {
-        onRefetch();
-      }
-    } catch (error) {
-      console.error("Error deleting violations:", error);
-      alert("Failed to delete some violations. Please try again.");
+  // Handle bulk delete
+  const handleBulkDelete = () => {
+    if (onBulkDelete) {
+      onBulkDelete(platformId, violations);
     }
+    setDeleteDialogOpen(false);
   };
 
-  // Handle bulk status change - call API directly
-  const handleBulkStatusChange = async () => {
-    try {
-      // Update each violation's status via API
-      await Promise.all(
-        violations.map(async (violation) => {
-          // Ensure we use the string _id from MongoDB
-          // Handle both string _id and MongoDB extended JSON format { $oid: "..." }
-          let violationId: string;
-          if (typeof violation._id === "string") {
-            violationId = violation._id;
-          } else if (
-            violation._id &&
-            typeof violation._id === "object" &&
-            "$oid" in violation._id
-          ) {
-            violationId = (violation._id as { $oid: string }).$oid;
-          } else {
-            violationId = String(violation.id);
-          }
-
-          console.log(
-            "Updating violation with ID:",
-            violationId,
-            "to status:",
-            selectedStatus
-          );
-
-          console.log(
-            "Making PATCH request to:",
-            `${API_URL}/violations/${violationId}/status`
-          );
-          console.log(
-            "Request body:",
-            JSON.stringify({
-              status: selectedStatus,
-              ...(selectedStatus === "Blocked" && blockedAt
-                ? { blockedAt: convertKSATimeToUTC(blockedAt) }
-                : {}),
-            })
-          );
-
-          const response = await fetch(
-            `${API_URL}/violations/${violationId}/status`,
-            {
-              method: "PATCH",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              credentials: "include",
-              body: JSON.stringify({
-                status: selectedStatus,
-                ...(selectedStatus === "Blocked" && blockedAt
-                  ? { blockedAt: convertKSATimeToUTC(blockedAt) }
-                  : {}),
-              }),
-            }
-          );
-
-          console.log(
-            "PATCH Response status:",
-            response.status,
-            response.statusText
-          );
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(
-              `Failed to update violation ${violationId}:`,
-              "Status:",
-              response.status,
-              "Error:",
-              errorText
-            );
-            throw new Error(`Failed to update violation ${violationId}`);
-          }
-
-          console.log(`Successfully updated violation ${violationId}`);
-        })
-      );
-
-      setStatusDialogOpen(false);
-      // Trigger data refetch instead of page reload
-      if (onRefetch) {
-        onRefetch();
-      }
-    } catch (error) {
-      console.error("Error updating violations:", error);
-      alert("Failed to update some violations. Please try again.");
+  // Handle bulk status change
+  const handleBulkStatusChange = () => {
+    if (onBulkStatusChange) {
+      onBulkStatusChange(platformId, violations, selectedStatus, blockedAt);
     }
+    setStatusDialogOpen(false);
   };
 
   // Open status dialog
@@ -354,7 +214,15 @@ export function BulkViolationItem({
             <Badge
               variant="secondary"
               className="font-mono text-xs flex flex-row-reverse">
-              {count} {t("matchDashboard.bulk.violations")}
+              {isRTL ? (
+                <>
+                  {count} :{t("matchDashboard.bulk.violations")}
+                </>
+              ) : (
+                <>
+                  {count} {t("matchDashboard.bulk.violations")}
+                </>
+              )}
             </Badge>
           </div>
 
@@ -365,29 +233,64 @@ export function BulkViolationItem({
             )}>
             {activeCount > 0 && (
               <Badge className="bg-red-500/10 text-red-600 dark:text-red-400 text-xs">
-                {activeCount} {t("dashboard.active")}
+                {isRTL ? (
+                  <>
+                    {activeCount} :{t("dashboard.active")}
+                  </>
+                ) : (
+                  <>
+                    {activeCount} {t("dashboard.active")}
+                  </>
+                )}
               </Badge>
             )}
             {blockedCount > 0 && (
               <Badge className="bg-green-500/10 text-green-600 dark:text-green-400 text-xs">
-                {blockedCount} {t("dashboard.blocked")}
+                {isRTL ? (
+                  <>
+                    {blockedCount} :{t("dashboard.blocked")}
+                  </>
+                ) : (
+                  <>
+                    {blockedCount} {t("dashboard.blocked")}
+                  </>
+                )}
               </Badge>
             )}
             {removedCount > 0 && (
               <Badge className="bg-purple-500/10 text-purple-600 dark:text-purple-400 text-xs">
-                {removedCount} {t("dashboard.removed")}
+                {isRTL ? (
+                  <>
+                    {removedCount} :{t("dashboard.removed")}
+                  </>
+                ) : (
+                  <>
+                    {removedCount} {t("dashboard.removed")}
+                  </>
+                )}
               </Badge>
             )}
             {underReviewCount > 0 && (
               <Badge className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 text-xs">
-                {underReviewCount} {t("dashboard.underReview")}
+                {isRTL ? (
+                  <>
+                    {underReviewCount} :{t("dashboard.underReview")}
+                  </>
+                ) : (
+                  <>
+                    {underReviewCount} {t("dashboard.underReview")}
+                  </>
+                )}
               </Badge>
             )}
           </div>
 
           {/* Action Buttons */}
           {canModifyViolations && (
-            <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0">
+            <div
+              className={`${
+                isRTL ? "flex-row-reverse" : ""
+              } flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0`}>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -465,6 +368,8 @@ export function BulkViolationItem({
         onAddNote={onAddNote}
         getPlatformIcon={getPlatformIcon}
         canModifyViolations={canModifyViolations}
+        onOpenBulkStatusDialog={openStatusDialog}
+        onOpenBulkDeleteDialog={openDeleteDialog}
       />
 
       {/* Bulk Delete Confirmation Dialog */}

@@ -61,6 +61,13 @@ interface PlatformCardProps {
   getPlatformIcon: (platformName: string) => React.ReactNode;
   canModifyViolations?: boolean; // Whether user can modify violations
   onRefetch?: () => void; // Callback to refetch data
+  onBulkDelete?: (platformId: string, violations: Violation[]) => void;
+  onBulkStatusChange?: (
+    platformId: string,
+    violations: Violation[],
+    status: "Active" | "Blocked" | "Removed" | "Under Review",
+    blockedAt?: string
+  ) => void;
 }
 
 export function PlatformCard({
@@ -79,6 +86,8 @@ export function PlatformCard({
   getPlatformIcon,
   canModifyViolations = false,
   onRefetch,
+  onBulkDelete,
+  onBulkStatusChange,
 }: PlatformCardProps) {
   const { t, isRTL } = useLanguage();
   const [isMaximized, setIsMaximized] = useState(false);
@@ -453,6 +462,8 @@ export function PlatformCard({
                         getPlatformIcon={getPlatformIcon}
                         canModifyViolations={canModifyViolations}
                         onRefetch={onRefetch}
+                        onBulkDelete={onBulkDelete}
+                        onBulkStatusChange={onBulkStatusChange}
                       />
                     );
                   } else if (item.type === "individual" && item.violation) {
@@ -649,6 +660,8 @@ export function PlatformCard({
                         getPlatformIcon={getPlatformIcon}
                         canModifyViolations={canModifyViolations}
                         onRefetch={onRefetch}
+                        onBulkDelete={onBulkDelete}
+                        onBulkStatusChange={onBulkStatusChange}
                       />
                     );
                   } else if (item.type === "individual" && item.violation) {

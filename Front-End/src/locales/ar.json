@@ -626,6 +626,9 @@
       "unexpectedErrorSaving": "حدث خطأ غير متوقع أثناء حفظ الانتهاكات"
     },
     "success": {
+      "statusChanged": "تم تغيير الحالة",
+      "multipleViolationsUpdated": "تم تحديث {count} انتهاك.",
+      "multipleViolationsRemoved": "تم إزالة {count} انتهاك.",
       "statusChangedToActive": "تم تغيير الحالة إلى نشط",
       "violationNowActive": "الانتهاك نشط الآن مرة أخرى",
       "violationBlocked": "تم حظر الانتهاك",
