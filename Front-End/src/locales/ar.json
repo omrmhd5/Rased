@@ -309,6 +309,8 @@
     "associatedViolations": "الانتهاكات المرتبطة ({count})",
     "added": "تمت الإضافة:",
     "clickToViewMatch": "انقر لعرض لوحة تحكم المباراة",
+    "searchViolations": "البحث بإسم المباراة أو الحساب...",
+    "noViolationsFound": "لا توجد مخالفات تطابق بحثك.",
     "editWhitelistedAccount": "تعديل حساب مسموح",
     "editDescription": "تحديث قناة الحساب واختيارات المنصات.",
     "accountChannelPlaceholderEdit": "أدخل اسم قناة الحساب",

@@ -38,11 +38,9 @@ import {
   Edit2,
   Trash2,
   Save,
-  X,
   Loader2,
   CheckCircle2,
   AlertTriangle,
-  ExternalLink,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -50,11 +48,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   Pagination,
   PaginationContent,
@@ -201,9 +194,6 @@ export default function WhitelistedAccounts() {
   const [loadingViolations, setLoadingViolations] = useState<{
     [key: string]: boolean;
   }>({});
-  const [expandedAccounts, setExpandedAccounts] = useState<Set<string>>(
-    new Set()
-  );
 
   // Form states
   const [accountChannel, setAccountChannel] = useState("");
@@ -231,6 +221,7 @@ export default function WhitelistedAccounts() {
     useState<WhitelistedAccount | null>(null);
   const [isViolationsDialogOpen, setIsViolationsDialogOpen] = useState(false);
   const [dialogCurrentPage, setDialogCurrentPage] = useState(1);
+  const [dialogSearchQuery, setDialogSearchQuery] = useState("");
   const dialogItemsPerPage = 10;
 
   // Get platform operations for checkboxes
@@ -418,19 +409,6 @@ export default function WhitelistedAccounts() {
     } finally {
       setLoadingViolations((prev) => ({ ...prev, [key]: false }));
     }
-  };
-
-  // Toggle expanded state for an account
-  const toggleAccountExpanded = (accountId: string) => {
-    setExpandedAccounts((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(accountId)) {
-        newSet.delete(accountId);
-      } else {
-        newSet.add(accountId);
-      }
-      return newSet;
-    });
   };
 
   // Reset form
@@ -676,6 +654,7 @@ export default function WhitelistedAccounts() {
   const handleViewViolations = (account: WhitelistedAccount) => {
     setViolationsAccount(account);
     setDialogCurrentPage(1);
+    setDialogSearchQuery("");
     setIsViolationsDialogOpen(true);
     // Fetch violations if not already loaded
     if (!accountViolations[account._id]) {
@@ -955,9 +934,8 @@ export default function WhitelistedAccounts() {
                   accounts={paginatedAccounts}
                   accountViolations={accountViolations}
                   loadingViolations={loadingViolations}
-                  expandedAccounts={expandedAccounts}
                   isSuperAdmin={isSuperAdmin}
-                  onToggleExpanded={toggleAccountExpanded}
+                  onViewViolations={handleViewViolations}
                   onEdit={openEditDialog}
                   onDelete={openDeleteDialog}
                   getAccountNameForPlatform={getAccountNameForPlatform}
@@ -1415,13 +1393,64 @@ export default function WhitelistedAccounts() {
           <div className="space-y-4 py-4">
             {violationsAccount && accountViolations[violationsAccount._id] && (
               <>
+                <div className="relative mb-4">
+                  <Search
+                    className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground ${
+                      isRTL ? "right-3" : "left-3"
+                    }`}
+                  />
+                  <Input
+                    type="text"
+                    placeholder={t("whitelistedAccounts.searchViolations")}
+                    value={dialogSearchQuery}
+                    onChange={(e) => {
+                      setDialogSearchQuery(e.target.value);
+                      setDialogCurrentPage(1);
+                    }}
+                    className={`h-9 text-xs sm:text-sm text-left placeholder:text-left ${
+                      isRTL ? "pr-9 pl-3" : "pl-9 pr-3"
+                    }`}
+                  />
+                </div>
+
                 <div className="space-y-2">
                   {(() => {
                     const violations = accountViolations[violationsAccount._id];
-                    const paginatedViolations = violations.slice(
+
+                    // Filter violations
+                    const filteredViolations = violations.filter(
+                      (violation) => {
+                        if (!dialogSearchQuery.trim()) return true;
+
+                        const query = dialogSearchQuery.toLowerCase();
+                        const matchName = (
+                          violation.matchName || ""
+                        ).toLowerCase();
+                        const creator =
+                          violation.auditLog
+                            ?.find((log) => log.action === "created")
+                            ?.userName?.toLowerCase() || "";
+
+                        return (
+                          matchName.includes(query) || creator.includes(query)
+                        );
+                      }
+                    );
+
+                    const paginatedViolations = filteredViolations.slice(
                       (dialogCurrentPage - 1) * dialogItemsPerPage,
                       dialogCurrentPage * dialogItemsPerPage
                     );
+
+                    if (filteredViolations.length === 0) {
+                      return (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <p className="text-xs sm:text-sm">
+                            {t("whitelistedAccounts.noViolationsFound")}
+                          </p>
+                        </div>
+                      );
+                    }
 
                     return paginatedViolations.map((violation) => {
                       // Get match ID
@@ -1532,8 +1561,23 @@ export default function WhitelistedAccounts() {
                 {/* Dialog Pagination */}
                 {(() => {
                   const violations = accountViolations[violationsAccount._id];
+
+                  // Filter violations for pagination
+                  const filteredViolations = violations.filter((violation) => {
+                    if (!dialogSearchQuery.trim()) return true;
+
+                    const query = dialogSearchQuery.toLowerCase();
+                    const matchName = (violation.matchName || "").toLowerCase();
+                    const creator =
+                      violation.auditLog
+                        ?.find((log) => log.action === "created")
+                        ?.userName?.toLowerCase() || "";
+
+                    return matchName.includes(query) || creator.includes(query);
+                  });
+
                   const totalDialogPages = Math.ceil(
-                    violations.length / dialogItemsPerPage
+                    filteredViolations.length / dialogItemsPerPage
                   );
 
                   if (totalDialogPages <= 1) return null;

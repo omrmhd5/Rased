@@ -7,18 +7,9 @@ import {
   Edit2,
   Trash2,
   Loader2,
-  ChevronDown,
-  ChevronUp,
   UserCircle,
 } from "lucide-react";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
-import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface WhitelistedAccount {
@@ -59,9 +50,8 @@ interface WhitelistedAccountsMobileProps {
   accounts: WhitelistedAccount[];
   accountViolations: { [key: string]: Violation[] };
   loadingViolations: { [key: string]: boolean };
-  expandedAccounts: Set<string>;
   isSuperAdmin: boolean;
-  onToggleExpanded: (accountId: string) => void;
+  onViewViolations: (account: WhitelistedAccount) => void;
   onEdit: (account: WhitelistedAccount) => void;
   onDelete: (account: WhitelistedAccount) => void;
   getAccountNameForPlatform: (
@@ -102,14 +92,12 @@ export function WhitelistedAccountsMobile({
   accounts,
   accountViolations,
   loadingViolations,
-  expandedAccounts,
   isSuperAdmin,
-  onToggleExpanded,
+  onViewViolations,
   onEdit,
   onDelete,
   getAccountNameForPlatform,
 }: WhitelistedAccountsMobileProps) {
-  const navigate = useNavigate();
   const { t } = useLanguage();
   const platformOperations = getInitialPlatformOperations();
 
@@ -137,7 +125,6 @@ export function WhitelistedAccountsMobile({
       {accounts.map((account) => {
         const violations = accountViolations[account._id] || [];
         const isLoading = loadingViolations[account._id] || false;
-        const isExpanded = expandedAccounts.has(account._id);
         const violationCount = violations.length;
 
         return (
@@ -226,106 +213,29 @@ export function WhitelistedAccountsMobile({
                     </span>
                   </>
                 ) : violationCount > 0 ? (
-                  <Collapsible
-                    open={isExpanded}
-                    onOpenChange={() => onToggleExpanded(account._id)}>
-                    <CollapsibleTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-auto p-1.5 text-xs font-normal text-amber-600 hover:text-amber-700 touch-manipulation">
-                        <AlertTriangle className="h-3.5 w-3.5 mr-1" />
-                        {violationCount}{" "}
-                        {violationCount !== 1
-                          ? t("whitelistedAccounts.violations")
-                          : t("whitelistedAccounts.violation")}
-                        {isExpanded ? (
-                          <ChevronUp className="h-3 w-3 ml-1" />
-                        ) : (
-                          <ChevronDown className="h-3 w-3 ml-1" />
-                        )}
-                      </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
-                        {violations.map((violation) => {
-                          const matchId =
-                            (typeof violation.matchId === "object" &&
-                              violation.matchId?.externalMatchId) ||
-                            violation.externalMatchId ||
-                            (typeof violation.matchId === "string"
-                              ? violation.matchId
-                              : null);
-
-                          return (
-                            <div
-                              key={violation._id}
-                              className={cn(
-                                "flex flex-col gap-2 p-2.5 border rounded-lg bg-background cursor-pointer transition-colors touch-manipulation",
-                                "active:bg-accent/50 active:border-primary/50"
-                              )}
-                              onClick={() => {
-                                if (matchId) {
-                                  navigate(`/match/${matchId}`);
-                                } else {
-                                  window.open(violation.violationUrl, "_blank");
-                                }
-                              }}>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <Badge
-                                  variant="outline"
-                                  className="text-[9px] flex items-center gap-1 px-1.5 py-0">
-                                  {getPlatformIcon(violation.platformId) && (
-                                    <span>
-                                      {getPlatformIcon(violation.platformId)}
-                                    </span>
-                                  )}
-                                  {violation.platformName}
-                                </Badge>
-                                <Badge
-                                  variant="outline"
-                                  className={cn(
-                                    "text-[9px] px-1.5 py-0",
-                                    (getStatusBadgeKey(violation.status) ===
-                                      "Active" ||
-                                      getStatusBadgeKey(violation.status) ===
-                                        "Reported") &&
-                                      "bg-red-100 text-red-700 hover:bg-red-200 border-red-300 dark:bg-red-900/30 dark:text-red-400",
-                                    getStatusBadgeKey(violation.status) ===
-                                      "Blocked" &&
-                                      "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
-                                    getStatusBadgeKey(violation.status) ===
-                                      "Removed" &&
-                                      "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
-                                    (getStatusBadgeKey(violation.status) ===
-                                      "Review" ||
-                                      getStatusBadgeKey(violation.status) ===
-                                        "Under Review") &&
-                                      "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
-                                  )}>
-                                  {getStatusBadge(violation.status)}
-                                </Badge>
-                                <Badge
-                                  variant="outline"
-                                  className="text-[9px] px-1.5 py-0">
-                                  {violation.contentType}
-                                </Badge>
-                              </div>
-                              {violation.matchName && (
-                                <p className="text-xs text-muted-foreground line-clamp-1">
-                                  {violation.matchName}
-                                </p>
-                              )}
-                              <p className="text-[9px] text-muted-foreground">
-                                {t("whitelistedAccounts.added")}{" "}
-                                {new Date(violation.timeAdded).toLocaleString()}
-                              </p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onViewViolations(account)}
+                    className="h-auto p-1.5 text-xs font-normal text-amber-600 hover:text-amber-700 touch-manipulation">
+                    <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                    {violationCount}{" "}
+                    {violationCount !== 1
+                      ? t("whitelistedAccounts.violations")
+                      : t("whitelistedAccounts.violation")}
+                  </Button>
+                ) : violationCount > 0 ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onViewViolations(account)}
+                    className="h-auto p-1.5 text-xs font-normal text-amber-600 hover:text-amber-700 touch-manipulation">
+                    <AlertTriangle className="h-3.5 w-3.5 mr-1" />
+                    {violationCount}{" "}
+                    {violationCount !== 1
+                      ? t("whitelistedAccounts.violations")
+                      : t("whitelistedAccounts.violation")}
+                  </Button>
                 ) : (
                   <span className="text-xs text-muted-foreground">
                     {t("whitelistedAccounts.noViolations")}
