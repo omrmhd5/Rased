@@ -15,7 +15,6 @@ import { ViolationItem } from "./ViolationItem";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-
 interface BulkViolationDetailsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -45,7 +44,7 @@ export function BulkViolationDetailsModal({
   getPlatformIcon,
   canModifyViolations,
 }: BulkViolationDetailsModalProps) {
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
@@ -269,7 +268,7 @@ export function BulkViolationDetailsModal({
                     return (
                       <div key={violation.id} className="relative">
                         {/* Violation Item */}
-                        <div className="pr-10">
+                        <div className={isRTL ? "pr-10" : "pl-10"}>
                           <ViolationItem
                             violation={violation}
                             platform={platform}
@@ -284,7 +283,12 @@ export function BulkViolationDetailsModal({
                         </div>
 
                         {/* Violation Number Badge - Much More Visible */}
-                        <div className="absolute -right-3 top-1/2 -translate-y-1/2 z-10">
+                        <div
+                          className={
+                            isRTL
+                              ? "absolute -right-3 top-1/2 -translate-y-1/2 z-10"
+                              : "absolute -left-3 top-1/2 -translate-y-1/2 z-10"
+                          }>
                           <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-base font-black shadow-xl border-4 border-background ring-2 ring-primary/20">
                             {globalIndex}
                           </div>

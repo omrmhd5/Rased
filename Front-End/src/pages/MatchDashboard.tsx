@@ -1742,6 +1742,24 @@ export default function MatchDashboard() {
           })
         );
 
+        // Calculate and save platform stats
+        if (match?.externalMatchId) {
+          const currentPlatform = platformOperations.find(
+            (p) => p.id === selectedPlatformForAdd
+          );
+          if (currentPlatform) {
+            const updatedViolations = [
+              ...frontendViolations,
+              ...currentPlatform.violations,
+            ];
+            calculateAndSavePlatformStats(
+              selectedPlatformForAdd,
+              match.externalMatchId,
+              updatedViolations
+            );
+          }
+        }
+
         // Trigger refetch
         triggerRefetch();
 

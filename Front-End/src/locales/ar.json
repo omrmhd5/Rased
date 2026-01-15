@@ -791,6 +791,12 @@
       "cancel": "إلغاء",
       "confirm": "تأكيد الحظر"
     },
+    "deleteConfirmDialog": {
+      "title": "حذف الانتهاك",
+      "description": "هل أنت متأكد أنك تريد حذف هذا الانتهاك؟ لا يمكن التراجع عن هذا الإجراء.",
+      "cancel": "إلغاء",
+      "confirm": "حذف"
+    },
     "bulk": {
       "violations": "انتهاكات",
       "expandAll": "توسيع الكل",

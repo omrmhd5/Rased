@@ -791,6 +791,12 @@
       "cancel": "Cancel",
       "confirm": "Confirm block"
     },
+    "deleteConfirmDialog": {
+      "title": "Delete Violation",
+      "description": "Are you sure you want to delete this violation? This action cannot be undone.",
+      "cancel": "Cancel",
+      "confirm": "Delete"
+    },
     "bulk": {
       "violations": "violations",
       "expandAll": "Expand All",

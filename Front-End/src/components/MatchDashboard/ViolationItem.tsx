@@ -354,8 +354,7 @@ export function ViolationItem({
                   "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
                 violation.statusBadge === "Removed" &&
                   "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
-                (violation.statusBadge === "Review" ||
-                  violation.statusBadge === "Under Review") &&
+                violation.statusBadge === "Review" &&
                   "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
               )}>
               {translateStatus(violation.statusBadge || "Active")}
@@ -382,8 +381,7 @@ export function ViolationItem({
                   "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
                 violation.statusBadge === "Removed" &&
                   "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
-                (violation.statusBadge === "Review" ||
-                  violation.statusBadge === "Under Review") &&
+                violation.statusBadge === "Review" &&
                   "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
               )}>
               {translateStatus(violation.statusBadge || "Active")}
@@ -566,7 +564,9 @@ export function ViolationItem({
       {/* Line 3: Meta text */}
       <div
         className={`text-[10px] sm:text-xs text-muted-foreground mt-1 break-words overflow-wrap-anywhere ${
-          isRTL ? "flex flex-row-reverse flex-wrap gap-1 items-center" : "text-left"
+          isRTL
+            ? "flex flex-row-reverse flex-wrap gap-1 items-center"
+            : "text-left"
         }`}>
         {(() => {
           const text = formatBlockedViolationText(violation, t, isRTL);
@@ -645,34 +645,21 @@ export function ViolationItem({
                     <div className="text-left">
                       {isRTL ? (
                         <>
-                          {views && views !== "0" && status && (
+                          {status && (
                             <>
-                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
-                                {translateStatus(status)}
-                              </code>{" "}
                               {t("matchDashboard.violationItem.andStatus")}{" "}
                               <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
-                                {formatViewsString(views)}{" "}
-                                {t("matchDashboard.violationItem.views")}
-                              </code>{" "}
-                              {t("matchDashboard.violationItem.with")}{" "}
-                            </>
-                          )}
-                          {views && views !== "0" && !status && (
-                            <>
-                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
-                                {formatViewsString(views)}{" "}
-                                {t("matchDashboard.violationItem.views")}
-                              </code>{" "}
-                              {t("matchDashboard.violationItem.with")}{" "}
-                            </>
-                          )}
-                          {!views && status && (
-                            <>
-                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                                 {translateStatus(status)}
                               </code>{" "}
-                              {t("matchDashboard.violationItem.withStatus")}{" "}
+                            </>
+                          )}
+                          {views && views !== "0" && (
+                            <>
+                              {t("matchDashboard.violationItem.with")}{" "}
+                              <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                                {formatViewsString(views)}{" "}
+                                {t("matchDashboard.violationItem.views")}
+                              </code>{" "}
                             </>
                           )}
                           {accountName && (
@@ -1078,7 +1065,7 @@ export function ViolationItem({
                       ) {
                         // Note was edited - show "from X to Y" format
                         const edited = entry.changes.edited;
-                        if (edited.length > 0) {
+                        if (Array.isArray(edited) && edited.length > 0) {
                           const firstEdit = edited[0];
                           description = (
                             <div className="text-left">

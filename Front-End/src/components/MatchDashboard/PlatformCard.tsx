@@ -81,6 +81,9 @@ export function PlatformCard({
   const { t, isRTL } = useLanguage();
   const [isMaximized, setIsMaximized] = useState(false);
   const [violationsPage, setViolationsPage] = useState(1);
+  const [viewMetaFilter, setViewMetaFilter] = useState<
+    "all" | "bulk" | "individual"
+  >("all");
   const violationsPerPage = 5;
   const IconComponent = platform.icon;
 
@@ -106,13 +109,54 @@ export function PlatformCard({
     (v) => (v.contentType || v.type) === "Other"
   ).length;
 
-  // Pagination for violations
+  // Group violations by bulkId FIRST, before pagination
+  const allBulkGroups = groupViolationsByBulkId(filteredViolations);
+  const allDisplayItems: Array<{
+    type: "bulk" | "individual";
+    bulkId?: string;
+    violations?: Violation[];
+    violation?: Violation;
+  }> = [];
+
+  const addedBulkIds = new Set<string>();
+
+  filteredViolations.forEach((violation) => {
+    const isBulk =
+      violation.bulkId && isPartOfBulkGroup(violation, filteredViolations);
+
+    // Apply View Type Filter
+    if (viewMetaFilter === "bulk" && !isBulk) return;
+    if (viewMetaFilter === "individual" && isBulk) return;
+
+    if (isBulk) {
+      // This is part of a bulk group within the current filtered set
+      if (violation.bulkId && !addedBulkIds.has(violation.bulkId)) {
+        // Add the bulk group once
+        allDisplayItems.push({
+          type: "bulk",
+          bulkId: violation.bulkId,
+          violations: allBulkGroups[violation.bulkId],
+        });
+        addedBulkIds.add(violation.bulkId);
+      }
+    } else {
+      // Individual violation (or single item in a bulk group)
+      allDisplayItems.push({
+        type: "individual",
+        violation: violation,
+      });
+    }
+  });
+
+  // Pagination for display items (treating bulk as one item)
   const totalViolationsPages = Math.ceil(
-    filteredViolations.length / violationsPerPage
+    allDisplayItems.length / violationsPerPage
   );
   const startViolationsIndex = (violationsPage - 1) * violationsPerPage;
   const endViolationsIndex = startViolationsIndex + violationsPerPage;
-  const paginatedViolations = filteredViolations.slice(
+
+  // These are the items to actually render
+  const processedViolations = allDisplayItems.slice(
     startViolationsIndex,
     endViolationsIndex
   );
@@ -137,43 +181,10 @@ export function PlatformCard({
     ? [...violationsPagesToShow].reverse()
     : violationsPagesToShow;
 
-  // Group violations by bulkId for rendering
-  // We need to process paginatedViolations to group bulk violations together
-  const bulkGroups = groupViolationsByBulkId(paginatedViolations);
-  const processedViolations: Array<{
-    type: "bulk" | "individual";
-    bulkId?: string;
-    violations?: Violation[];
-    violation?: Violation;
-  }> = [];
-
-  const addedBulkIds = new Set<string>();
-
-  paginatedViolations.forEach((violation) => {
-    if (violation.bulkId && isPartOfBulkGroup(violation, paginatedViolations)) {
-      // This is part of a bulk group
-      if (!addedBulkIds.has(violation.bulkId)) {
-        // Add the bulk group once
-        processedViolations.push({
-          type: "bulk",
-          bulkId: violation.bulkId,
-          violations: bulkGroups[violation.bulkId],
-        });
-        addedBulkIds.add(violation.bulkId);
-      }
-    } else {
-      // Individual violation (no bulkId or only one with this bulkId)
-      processedViolations.push({
-        type: "individual",
-        violation: violation,
-      });
-    }
-  });
-
   // Reset to page 1 when filter or search changes
   useEffect(() => {
     setViolationsPage(1);
-  }, [cardFilter, searchQuery]);
+  }, [cardFilter, searchQuery, viewMetaFilter]);
 
   // Render the platform card content (used in both normal and maximized views)
   const renderCardContent = (isFullScreen?: boolean) => (
@@ -367,6 +378,28 @@ export function PlatformCard({
             className="cursor-pointer text-xs"
             onClick={() => onFilterChange("review")}>
             {t("matchDashboard.expandedPlatformDialog.filters.review")}
+          </Badge>
+        </div>
+
+        {/* View Type Filter */}
+        <div className="flex gap-1 pt-2 border-t mt-1">
+          <Badge
+            variant={viewMetaFilter === "all" ? "secondary" : "outline"}
+            className="cursor-pointer text-[10px]"
+            onClick={() => setViewMetaFilter("all")}>
+            {isRTL ? "الكل" : "All Items"}
+          </Badge>
+          <Badge
+            variant={viewMetaFilter === "bulk" ? "secondary" : "outline"}
+            className="cursor-pointer text-[10px]"
+            onClick={() => setViewMetaFilter("bulk")}>
+            {isRTL ? "مجمعة فقط" : "Bulks Only"}
+          </Badge>
+          <Badge
+            variant={viewMetaFilter === "individual" ? "secondary" : "outline"}
+            className="cursor-pointer text-[10px]"
+            onClick={() => setViewMetaFilter("individual")}>
+            {isRTL ? "فردية فقط" : "Singles Only"}
           </Badge>
         </div>
 

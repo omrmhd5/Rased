@@ -150,7 +150,9 @@ export function BulkViolationItem({
           )}>
           <div className="flex items-center gap-2 shrink-0">
             <Layers className="h-4 w-4 text-muted-foreground" />
-            <Badge variant="secondary" className="font-mono text-xs">
+            <Badge
+              variant="secondary"
+              className="font-mono text-xs flex flex-row-reverse">
               {count} {t("matchDashboard.bulk.violations")}
             </Badge>
           </div>

@@ -7,6 +7,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { useLanguage } from "@/contexts/LanguageContext";
+
 interface DeleteConfirmDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -19,28 +21,31 @@ export function DeleteConfirmDialog({
   open,
   onOpenChange,
   onConfirm,
-  title = "Delete Violation",
-  description = "Are you sure you want to delete this violation? This action cannot be undone.",
+  title,
+  description,
 }: DeleteConfirmDialogProps) {
+  const { t } = useLanguage();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle>
+            {title || t("matchDashboard.deleteConfirmDialog.title")}
+          </DialogTitle>
+          <DialogDescription>
+            {description || t("matchDashboard.deleteConfirmDialog.description")}
+          </DialogDescription>
         </DialogHeader>
         <div className="flex justify-end gap-3 mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {t("matchDashboard.deleteConfirmDialog.cancel")}
           </Button>
           <Button variant="destructive" onClick={onConfirm}>
-            Delete
+            {t("matchDashboard.deleteConfirmDialog.confirm")}
           </Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
-
-
