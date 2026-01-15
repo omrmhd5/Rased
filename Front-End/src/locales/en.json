@@ -133,7 +133,9 @@
     "searchViolations": "Search by channel, match, or link...",
     "pagination": {
       "previous": "Previous",
-      "next": "Next"
+      "next": "Next",
+      "page": "Page",
+      "of": "of"
     },
     "overdue": "overdue",
     "slower": "slower",
@@ -838,6 +840,7 @@
     },
     "activityLog": {
       "title": "Match Activity Log",
+      "searchPlaceholder": "Search by account or link...",
       "filters": {
         "allActivity": "All Activity",
         "violationAdded": "Violation Added",

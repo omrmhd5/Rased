@@ -1,5 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
@@ -8,6 +9,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import {
   Zap,
   AlertTriangle,
@@ -26,6 +36,9 @@ import {
   X,
   Maximize2,
   Minimize2,
+  Search,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   Violation,
@@ -56,6 +69,8 @@ interface ActivityLogItem {
   violationId?: string; // Violation ID for audit log entries
   logEntryId?: string; // Audit log entry ID
   deletedLogId?: string; // Deleted violation log ID
+  accountChannel?: string; // Account channel name (target of action)
+  violationUrl?: string; // Violation URL (target of action)
 }
 
 type ActivityFilter =
@@ -149,6 +164,9 @@ export function ActivityLog({
     useState<ActivityLogItem | null>(null);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [isMaximized, setIsMaximized] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const itemsPerPage = 10;
 
   // Helper function to format date with Arabic AM/PM (صباحا/مساءا) for RTL, AM/PM for LTR
   const formatDateWithArabicTime = (dateValue: string | number): string => {
@@ -382,6 +400,8 @@ export function ActivityLog({
       timestamp: timestamp.getTime(),
       userName: deletedLog.userName,
       deletedLogId: deletedLog._id,
+      accountChannel: accountName,
+      violationUrl: deletedLog.changes?.violationUrl,
     });
   });
 
@@ -1082,6 +1102,8 @@ export function ActivityLog({
             entry && typeof entry === "object" && "_id" in entry
               ? String((entry as { _id: unknown })._id)
               : undefined,
+          accountChannel: violation.accountChannel || violation.accountHandle,
+          violationUrl: violation.violationUrl,
         });
       });
     }
@@ -1157,12 +1179,56 @@ export function ActivityLog({
       return false;
     }
 
+    // Filter by user
+    if (userFilter !== "all" && item.userName !== userFilter) {
+      return false;
+    }
+
+    // Filter by search query (account channel or link)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      const accountMatch = item.accountChannel?.toLowerCase().includes(query);
+      const urlMatch = item.violationUrl?.toLowerCase().includes(query);
+      // Also check inside description for good measure if it's a string, though specifically requested account/link
+      // But user asked strictly for account channel and link.
+      if (!accountMatch && !urlMatch) {
+        return false;
+      }
+    }
+
     return true;
   });
+
+  // Pagination Logic
+  const totalPages = Math.ceil(filteredLog.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedLog = filteredLog.slice(startIndex, endIndex);
+
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, platformFilter, userFilter, searchQuery]);
 
   // Render the log content (used in both normal and maximized views)
   const renderLogContent = (scrollHeight?: string) => (
     <>
+      {/* Search Bar */}
+      <div className="mb-4 relative">
+        <Search
+          className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground ${
+            isRTL ? "right-3" : "left-3"
+          }`}
+        />
+        <Input
+          type="text"
+          placeholder={t("matchDashboard.activityLog.searchPlaceholder")}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className={`h-9 text-xs ${isRTL ? "pr-9" : "pl-9"}`}
+        />
+      </div>
+
       <div className="mb-4 flex flex-wrap gap-2">
         <Select
           value={filter}
@@ -1274,11 +1340,11 @@ export function ActivityLog({
               <p className="text-xs text-muted-foreground/70 mt-1">
                 {violations.length === 0
                   ? "No violations yet"
-                  : "Try changing the filter"}
+                  : "Try changing the filter or search"}
               </p>
             </div>
           ) : (
-            filteredLog.map((item, i) => {
+            paginatedLog.map((item, i) => {
               const EventIcon = getEventIcon(item.type);
               return (
                 <div
@@ -1372,6 +1438,62 @@ export function ActivityLog({
           )}
         </div>
       </ScrollArea>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-center">
+          <Pagination>
+            <PaginationContent className="flex-wrap justify-center gap-1">
+              <PaginationItem>
+                <Button
+                  variant="ghost"
+                  size="default"
+                  onClick={() =>
+                    currentPage > 1 && setCurrentPage(currentPage - 1)
+                  }
+                  disabled={currentPage === 1}
+                  className={`gap-1 h-8 text-xs ${
+                    isRTL ? "pr-2.5" : "pl-2.5"
+                  }`}>
+                  {isRTL ? (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  )}
+                  <span>{t("dashboard.pagination.previous")}</span>
+                </Button>
+              </PaginationItem>
+
+              <div className="flex items-center gap-1 mx-2">
+                <span className="text-xs text-muted-foreground">
+                  {t("dashboard.pagination.page")} {currentPage}{" "}
+                  {t("dashboard.pagination.of")} {totalPages}
+                </span>
+              </div>
+
+              <PaginationItem>
+                <Button
+                  variant="ghost"
+                  size="default"
+                  onClick={() =>
+                    currentPage < totalPages && setCurrentPage(currentPage + 1)
+                  }
+                  disabled={currentPage === totalPages}
+                  className={`gap-1 h-8 text-xs ${
+                    isRTL ? "pl-2.5" : "pr-2.5"
+                  }`}>
+                  <span>{t("dashboard.pagination.next")}</span>
+                  {isRTL ? (
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      )}
     </>
   );
 

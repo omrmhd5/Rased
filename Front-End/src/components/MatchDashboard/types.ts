@@ -43,6 +43,9 @@ export type DeletedViolationLog = {
     platformId?: string;
     platformName?: string;
     accountChannel?: string;
+    violationUrl?: string;
+    status?: string;
+    views?: string;
   };
 };
 
@@ -113,7 +116,12 @@ export interface Match {
   competition?: string;
   stadium?: string;
   status: "upcoming" | "live" | "finished" | "cancelled" | "postponed";
-  league: "saudi" | "italian" | "spanish" | "saudi-super-cup" | "spanish-super-cup";
+  league:
+    | "saudi"
+    | "italian"
+    | "spanish"
+    | "saudi-super-cup"
+    | "spanish-super-cup";
   winner?: "home" | "away" | "draw" | null;
   scores?: {
     home: number;

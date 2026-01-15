@@ -133,7 +133,9 @@
     "searchViolations": "ابحث عن القناة أو المباراة أو الرابط...",
     "pagination": {
       "previous": "السابق",
-      "next": "التالي"
+      "next": "التالي",
+      "page": "صفحة",
+      "of": "من"
     },
     "overdue": "متأخر",
     "slower": "أبطأ",
@@ -838,6 +840,7 @@
     },
     "activityLog": {
       "title": "سجل نشاط المباراة",
+      "searchPlaceholder": "البحث عن طريق الحساب أو الرابط...",
       "filters": {
         "allActivity": "كل النشاط",
         "violationAdded": "تمت إضافة انتهاك",
