@@ -241,6 +241,7 @@ export const convertBackendViolationToFrontend = (
     views: backendViolation.views || "0",
     violationUrl: backendViolation.violationUrl,
     accountChannel: backendViolation.accountChannel,
+    bulkId: backendViolation.bulkId, // Include bulkId for grouping
     auditLog: backendViolation.auditLog || [],
     platformName: backendViolation.platformName,
     timeAdded: backendViolation.timeAdded,
@@ -595,4 +596,53 @@ export const calculateAndSaveTopPlatform = async (
   } catch (error) {
     console.error("Error calculating and saving top platform:", error);
   }
+};
+
+/**
+ * Group violations by bulkId
+ * Returns an object with bulkId as key and array of violations as value
+ */
+export const groupViolationsByBulkId = (
+  violations: Violation[]
+): Record<string, Violation[]> => {
+  const grouped: Record<string, Violation[]> = {};
+
+  violations.forEach((violation) => {
+    if (violation.bulkId) {
+      if (!grouped[violation.bulkId]) {
+        grouped[violation.bulkId] = [];
+      }
+      grouped[violation.bulkId].push(violation);
+    }
+  });
+
+  return grouped;
+};
+
+/**
+ * Check if a violation is part of a bulk group (has bulkId and there are multiple violations with the same bulkId)
+ */
+export const isPartOfBulkGroup = (
+  violation: Violation,
+  allViolations: Violation[]
+): boolean => {
+  if (!violation.bulkId) return false;
+
+  const violationsWithSameBulkId = allViolations.filter(
+    (v) => v.bulkId === violation.bulkId
+  );
+
+  return violationsWithSameBulkId.length > 1;
+};
+
+/**
+ * Get all violations in the same bulk group
+ */
+export const getBulkGroupViolations = (
+  violation: Violation,
+  allViolations: Violation[]
+): Violation[] => {
+  if (!violation.bulkId) return [violation];
+
+  return allViolations.filter((v) => v.bulkId === violation.bulkId);
 };

@@ -64,6 +64,7 @@ export type Violation = {
   externalMatchId?: string; // Match external ID
   auditLog?: AuditLogEntry[]; // Audit log entries
   platformName?: string; // Platform name for display
+  bulkId?: string; // Bulk ID for grouping violations created together
   // Computed/display fields (not from backend)
   time?: string;
   addedAgo?: string;
@@ -152,6 +153,7 @@ export interface BackendViolation {
   platformName?: string;
   violationUrl: string;
   accountChannel: string;
+  bulkId?: string; // Bulk ID for grouping violations created together
   contentType: "Live" | "Highlights" | "Other";
   status:
     | "Active"

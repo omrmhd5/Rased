@@ -622,7 +622,8 @@
       "matchNotFound": "Match not found",
       "validationError": "Validation Error",
       "violationUrlRequired": "Violation URL is required",
-      "accountChannelRequired": "Account / Channel is required"
+      "accountChannelRequired": "Account / Channel is required",
+      "unexpectedErrorSaving": "An unexpected error occurred while saving violations"
     },
     "success": {
       "statusChangedToActive": "Status changed to Active",
@@ -636,6 +637,10 @@
       "changesSaved": "Changes saved successfully",
       "violationAdded": "Violation added",
       "violationAddedTo": "New violation added to {platformName}",
+      "multipleViolationsAdded": "{count} violations added successfully",
+      "partialSuccess": "Partial Success",
+      "multipleViolationsPartial": "{successCount} violations added, {failCount} failed",
+      "multipleViolationsFailed": "Failed to add {count} violations",
       "noteAdded": "Note added",
       "noteAddedSuccess": "Note has been added successfully",
       "reportDownloaded": "Report Downloaded",
@@ -743,7 +748,9 @@
       "platform": "Platform",
       "violationUrl": "Violation URL *",
       "violationUrlPlaceholder": "https://x.com/...",
-      "accountChannel": "Account / Channel *",
+      "multipleUrlsHint": "Enter one URL per line to add multiple violations",
+      "accountChannel": "Account / Channel",
+      "optional": "optional",
       "accountChannelPlaceholder": "@username or channel name",
       "contentType": "Content Type *",
       "contentTypePlaceholder": "Select content type",
@@ -783,6 +790,11 @@
       "setCustomTime": "Set custom block time",
       "cancel": "Cancel",
       "confirm": "Confirm block"
+    },
+    "bulk": {
+      "violations": "violations",
+      "expandAll": "Expand All",
+      "collapseAll": "Collapse All"
     },
     "sections": {
       "platformOperations": "Platform Operations (This Match)",

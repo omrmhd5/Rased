@@ -381,32 +381,48 @@ export default function MatchDashboard() {
         const scrollTimeout = setTimeout(() => {
           // Try to find the violation element by ID
           // The ID could be the _id or id field, so we need to check both formats
-          let violationElement = document.getElementById(`violation-${violationIdFromHash}`);
-          
+          let violationElement = document.getElementById(
+            `violation-${violationIdFromHash}`
+          );
+
           // If not found, try to find by checking all violation elements
           if (!violationElement) {
             // Get all violations from platformOperations and find matching one
-            const allViolations = platformOperations.flatMap((p) => p.violations);
+            const allViolations = platformOperations.flatMap(
+              (p) => p.violations
+            );
             const matchingViolation = allViolations.find((v) => {
               const vId = String(v._id || v.id || "");
               return vId === violationIdFromHash;
             });
-            
+
             if (matchingViolation) {
-              const actualId = String(matchingViolation._id || matchingViolation.id || "");
-              violationElement = document.getElementById(`violation-${actualId}`);
+              const actualId = String(
+                matchingViolation._id || matchingViolation.id || ""
+              );
+              violationElement = document.getElementById(
+                `violation-${actualId}`
+              );
             }
           }
-          
+
           if (violationElement) {
-            violationElement.scrollIntoView({ 
-              behavior: "smooth", 
-              block: "center" 
+            violationElement.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
             });
             // Highlight the violation briefly
-            violationElement.classList.add("ring-2", "ring-primary", "ring-offset-2");
+            violationElement.classList.add(
+              "ring-2",
+              "ring-primary",
+              "ring-offset-2"
+            );
             setTimeout(() => {
-              violationElement?.classList.remove("ring-2", "ring-primary", "ring-offset-2");
+              violationElement?.classList.remove(
+                "ring-2",
+                "ring-primary",
+                "ring-offset-2"
+              );
             }, 2000);
           }
         }, 500); // Increased timeout to ensure violations are rendered
@@ -1262,7 +1278,7 @@ export default function MatchDashboard() {
       toast({
         title: t("matchDashboard.success.violationBlocked"),
         description: t("matchDashboard.success.violationBlockedAt", {
-          time: new Date(blockTime).toLocaleString(isRTL ? "ar-SA" : "en-US")
+          time: new Date(blockTime).toLocaleString(isRTL ? "ar-SA" : "en-US"),
         }),
       });
 
@@ -1478,19 +1494,29 @@ export default function MatchDashboard() {
           setTimeout(() => {
             const violationIdStr = String(violationId);
             window.location.hash = `violation-${violationIdStr}`;
-            
+
             // Manually trigger scroll after hash update
             setTimeout(() => {
-              const violationElement = document.getElementById(`violation-${violationIdStr}`);
+              const violationElement = document.getElementById(
+                `violation-${violationIdStr}`
+              );
               if (violationElement) {
-                violationElement.scrollIntoView({ 
-                  behavior: "smooth", 
-                  block: "center" 
+                violationElement.scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
                 });
                 // Highlight the violation briefly
-                violationElement.classList.add("ring-2", "ring-primary", "ring-offset-2");
+                violationElement.classList.add(
+                  "ring-2",
+                  "ring-primary",
+                  "ring-offset-2"
+                );
                 setTimeout(() => {
-                  violationElement.classList.remove("ring-2", "ring-primary", "ring-offset-2");
+                  violationElement.classList.remove(
+                    "ring-2",
+                    "ring-primary",
+                    "ring-offset-2"
+                  );
                 }, 2000);
               }
             }, 300);
@@ -1504,7 +1530,9 @@ export default function MatchDashboard() {
       toast({
         title: t("matchDashboard.error.title"),
         description:
-          error instanceof Error ? error.message : t("matchDashboard.error.failedToSave"),
+          error instanceof Error
+            ? error.message
+            : t("matchDashboard.error.failedToSave"),
         variant: "destructive",
       });
     }
@@ -1521,14 +1549,7 @@ export default function MatchDashboard() {
       return;
     }
 
-    if (!formAccountHandle) {
-      toast({
-        title: t("matchDashboard.error.validationError"),
-        description: t("matchDashboard.error.accountChannelRequired"),
-        variant: "destructive",
-      });
-      return;
-    }
+    // Account/Channel is now optional - no validation required
 
     if (!match) {
       toast({
@@ -1543,6 +1564,21 @@ export default function MatchDashboard() {
       (p) => p.id === selectedPlatformForAdd
     );
     if (!platform) return;
+
+    // Parse URLs - split by newlines and filter out empty lines
+    const urls = formUrl
+      .split("\n")
+      .map((url) => url.trim())
+      .filter((url) => url.length > 0);
+
+    if (urls.length === 0) {
+      toast({
+        title: t("matchDashboard.error.validationError"),
+        description: t("matchDashboard.error.violationUrlRequired"),
+        variant: "destructive",
+      });
+      return;
+    }
 
     // Map contentType to match backend schema exactly: "Live", "Highlights", or "Other"
     let contentType: "Live" | "Highlights" | "Other" = "Other";
@@ -1570,40 +1606,183 @@ export default function MatchDashboard() {
       blockedAtValue = null;
     }
 
-    const violationData = {
-      matchId: match.externalMatchId,
-      matchName: `${match.team1} vs ${match.team2}`,
-      platformId: platform.id,
-      platformName: platform.name,
-      violationUrl: formUrl,
-      accountChannel: formAccountHandle,
-      contentType,
-      status,
-      views: formViews
-        ? parseInt(formViews.replace(/,/g, "")).toLocaleString("en-US")
-        : undefined,
-      timeAdded: convertKSATimeToUTC(formTimeAdded),
-      blockedAt: blockedAtValue,
-      notes: formNotes.filter((note) => note.trim() !== ""),
-    };
-
-    // Check if account is whitelisted (only for new violations, not edits)
-    if (
-      !isEditMode &&
-      checkWhitelistedAccount(formAccountHandle, platform.id)
-    ) {
-      // Show confirmation dialog
-      setPendingViolationData({
-        violationData,
-        isEditMode,
-        editingViolation,
+    // If editing, only allow single URL
+    if (isEditMode && urls.length > 1) {
+      toast({
+        title: t("matchDashboard.error.validationError"),
+        description:
+          "Cannot edit multiple violations at once. Please provide a single URL.",
+        variant: "destructive",
       });
-      setIsWhitelistConfirmOpen(true);
       return;
     }
 
-    // Not whitelisted or editing, proceed with save
-    await actuallySaveViolation(violationData, isEditMode, editingViolation);
+    // For edit mode, use the single URL
+    if (isEditMode) {
+      const violationData = {
+        matchId: match.externalMatchId,
+        matchName: `${match.team1} vs ${match.team2}`,
+        platformId: platform.id,
+        platformName: platform.name,
+        violationUrl: urls[0],
+        accountChannel: formAccountHandle || "N/A", // Use N/A if empty
+        contentType,
+        status,
+        views: formViews
+          ? parseInt(formViews.replace(/,/g, "")).toLocaleString("en-US")
+          : undefined,
+        timeAdded: convertKSATimeToUTC(formTimeAdded),
+        blockedAt: blockedAtValue,
+        notes: formNotes.filter((note) => note.trim() !== ""),
+      };
+
+      // Check if account is whitelisted (only if account is provided)
+      if (
+        formAccountHandle &&
+        checkWhitelistedAccount(formAccountHandle, platform.id)
+      ) {
+        // Show confirmation dialog
+        setPendingViolationData({
+          violationData,
+          isEditMode,
+          editingViolation,
+        });
+        setIsWhitelistConfirmOpen(true);
+        return;
+      }
+
+      // Not whitelisted or editing, proceed with save
+      await actuallySaveViolation(violationData, isEditMode, editingViolation);
+      return;
+    }
+
+    // For add mode, create multiple violations if multiple URLs
+    try {
+      // Check if account is whitelisted (only if account is provided)
+      if (
+        formAccountHandle &&
+        checkWhitelistedAccount(formAccountHandle, platform.id)
+      ) {
+        // For violations with whitelisted account, show warning
+        setPendingViolationData({
+          violationData: {
+            matchId: match.externalMatchId,
+            matchName: `${match.team1} vs ${match.team2}`,
+            platformId: platform.id,
+            platformName: platform.name,
+            violationUrl: urls.join("\n"), // Store all URLs for batch processing
+            accountChannel: formAccountHandle || "N/A",
+            contentType,
+            status,
+            views: formViews
+              ? parseInt(formViews.replace(/,/g, "")).toLocaleString("en-US")
+              : undefined,
+            timeAdded: convertKSATimeToUTC(formTimeAdded),
+            blockedAt: blockedAtValue,
+            notes: formNotes.filter((note) => note.trim() !== ""),
+          },
+          isEditMode: false,
+          editingViolation: null,
+        });
+        setIsWhitelistConfirmOpen(true);
+        return;
+      }
+
+      // Use bulk endpoint for multiple URLs, single endpoint for one URL
+      if (urls.length > 1) {
+        // Bulk creation
+        const response = await fetch(`${API_URL}/violations/bulk`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            matchId: match.externalMatchId,
+            matchName: `${match.team1} vs ${match.team2}`,
+            platformId: platform.id,
+            platformName: platform.name,
+            violationUrls: urls, // Send array of URLs
+            accountChannel: formAccountHandle || "N/A",
+            contentType,
+            status,
+            views: formViews
+              ? parseInt(formViews.replace(/,/g, "")).toLocaleString("en-US")
+              : undefined,
+            timeAdded: convertKSATimeToUTC(formTimeAdded),
+            blockedAt: blockedAtValue,
+            notes: formNotes.filter((note) => note.trim() !== ""),
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to add violations");
+        }
+
+        const result = await response.json();
+        const { bulkId, count, violations: newViolations } = result;
+
+        // Convert backend violations to frontend format
+        const frontendViolations = newViolations.map((v: BackendViolation) =>
+          convertBackendViolationToFrontend(v)
+        );
+
+        // Update local state with all new violations
+        setPlatformOperations((prev) =>
+          prev.map((p) => {
+            if (p.id !== selectedPlatformForAdd) return p;
+
+            const updatedViolations = [...frontendViolations, ...p.violations];
+
+            return {
+              ...p,
+              violations: updatedViolations,
+            };
+          })
+        );
+
+        // Trigger refetch
+        triggerRefetch();
+
+        toast({
+          title: t("matchDashboard.success.violationAdded"),
+          description: t("matchDashboard.success.multipleViolationsAdded", {
+            count: count.toString(),
+          }),
+        });
+
+        // Close the sheet
+        setIsAddViolationOpen(false);
+      } else {
+        // Single URL - use existing single endpoint
+        const violationData = {
+          matchId: match.externalMatchId,
+          matchName: `${match.team1} vs ${match.team2}`,
+          platformId: platform.id,
+          platformName: platform.name,
+          violationUrl: urls[0],
+          accountChannel: formAccountHandle || "N/A",
+          contentType,
+          status,
+          views: formViews
+            ? parseInt(formViews.replace(/,/g, "")).toLocaleString("en-US")
+            : undefined,
+          timeAdded: convertKSATimeToUTC(formTimeAdded),
+          blockedAt: blockedAtValue,
+          notes: formNotes.filter((note) => note.trim() !== ""),
+        };
+
+        await actuallySaveViolation(violationData, false, null);
+      }
+    } catch (error) {
+      console.error("Error saving violations:", error);
+      toast({
+        title: t("matchDashboard.error.title"),
+        description: t("matchDashboard.error.unexpectedErrorSaving"),
+        variant: "destructive",
+      });
+    }
   };
 
   // Confirm whitelist violation save
@@ -1611,11 +1790,85 @@ export default function MatchDashboard() {
     if (!pendingViolationData) return;
 
     setIsWhitelistConfirmOpen(false);
-    await actuallySaveViolation(
-      pendingViolationData.violationData,
-      pendingViolationData.isEditMode,
-      pendingViolationData.editingViolation
-    );
+
+    // Check if there are multiple URLs (separated by newlines)
+    const urls = pendingViolationData.violationData.violationUrl
+      .split("\n")
+      .map((url) => url.trim())
+      .filter((url) => url.length > 0);
+
+    if (urls.length > 1) {
+      // Multiple URLs - use bulk endpoint
+      try {
+        const response = await fetch(`${API_URL}/violations/bulk`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            ...pendingViolationData.violationData,
+            violationUrls: urls, // Send array of URLs
+            violationUrl: undefined, // Remove single URL field
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || "Failed to add violations");
+        }
+
+        const result = await response.json();
+        const { bulkId, count, violations: newViolations } = result;
+
+        // Convert backend violations to frontend format
+        const frontendViolations = newViolations.map((v: BackendViolation) =>
+          convertBackendViolationToFrontend(v)
+        );
+
+        // Update local state with all new violations
+        setPlatformOperations((prev) =>
+          prev.map((p) => {
+            if (p.id !== selectedPlatformForAdd) return p;
+
+            const updatedViolations = [...frontendViolations, ...p.violations];
+
+            return {
+              ...p,
+              violations: updatedViolations,
+            };
+          })
+        );
+
+        // Trigger refetch
+        triggerRefetch();
+
+        toast({
+          title: t("matchDashboard.success.violationAdded"),
+          description: t("matchDashboard.success.multipleViolationsAdded", {
+            count: count.toString(),
+          }),
+        });
+
+        // Close the sheet
+        setIsAddViolationOpen(false);
+      } catch (error) {
+        console.error("Error saving violations:", error);
+        toast({
+          title: t("matchDashboard.error.title"),
+          description: t("matchDashboard.error.unexpectedErrorSaving"),
+          variant: "destructive",
+        });
+      }
+    } else {
+      // Single URL - save normally
+      await actuallySaveViolation(
+        pendingViolationData.violationData,
+        pendingViolationData.isEditMode,
+        pendingViolationData.editingViolation
+      );
+    }
+
     setPendingViolationData(null);
   };
 
@@ -1944,13 +2197,13 @@ export default function MatchDashboard() {
           ${match.team1} ${t("matchDashboard.report.vs")} ${match.team2}
         </h1>
         <div style="font-size: 18px; color: ${secondaryTextColor}; line-height: 1.8;">
-          <p style="margin: 0 0 8px 0;"><strong>${t("matchDashboard.report.league")}</strong> ${
-            competitionName || "N/A"
-          }</p>
+          <p style="margin: 0 0 8px 0;"><strong>${t(
+            "matchDashboard.report.league"
+          )}</strong> ${competitionName || "N/A"}</p>
           <p style="margin: 0 0 8px 0;"><strong>${weekOrStageLabel}:</strong> ${weekOrStage}</p>
-          <p style="margin: 0;"><strong>${t("matchDashboard.report.dateTime")}</strong> ${
-            matchDateTime || "N/A"
-          }</p>
+          <p style="margin: 0;"><strong>${t(
+            "matchDashboard.report.dateTime"
+          )}</strong> ${matchDateTime || "N/A"}</p>
             </div>
       `;
 
@@ -2139,8 +2392,12 @@ export default function MatchDashboard() {
           .toString()
           .replace(/\s+/g, "-");
         const dateFormatted = new Date().toISOString().split("T")[0];
-        const label = isSuperCup ? t("matchDashboard.report.stage") : t("matchDashboard.report.week");
-        link.download = `Match-Report-${label}-${weekOrStageFormatted}-${match.team1}-${t("matchDashboard.report.vs")}-${match.team2}-${dateFormatted}.png`;
+        const label = isSuperCup
+          ? t("matchDashboard.report.stage")
+          : t("matchDashboard.report.week");
+        link.download = `Match-Report-${label}-${weekOrStageFormatted}-${
+          match.team1
+        }-${t("matchDashboard.report.vs")}-${match.team2}-${dateFormatted}.png`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -2156,7 +2413,9 @@ export default function MatchDashboard() {
       toast({
         title: t("matchDashboard.error.title"),
         description:
-          error instanceof Error ? error.message : t("matchDashboard.error.failedToGenerateReport"),
+          error instanceof Error
+            ? error.message
+            : t("matchDashboard.error.failedToGenerateReport"),
         variant: "destructive",
       });
     } finally {
@@ -2315,7 +2574,9 @@ export default function MatchDashboard() {
             onSelectedSlotsChange={setSelectedSlots}
             targetMins={targetMins}
             title={t("matchDashboard.sections.platformComparison")}
-            description={t("matchDashboard.sections.platformComparisonDescription")}
+            description={t(
+              "matchDashboard.sections.platformComparisonDescription"
+            )}
             showCard={true}
           />
         </div>
@@ -2332,7 +2593,9 @@ export default function MatchDashboard() {
             onSelectedSlotsChange={setSelectedSlots}
             targetMins={targetMins}
             title={t("matchDashboard.sections.platformComparison")}
-            description={t("matchDashboard.sections.platformComparisonDescription")}
+            description={t(
+              "matchDashboard.sections.platformComparisonDescription"
+            )}
           />
         </div>
       </div>

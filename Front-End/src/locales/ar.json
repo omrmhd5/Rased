@@ -622,7 +622,8 @@
       "matchNotFound": "لم يتم العثور على المباراة",
       "validationError": "خطأ في التحقق",
       "violationUrlRequired": "رابط الانتهاك مطلوب",
-      "accountChannelRequired": "الحساب / القناة مطلوب"
+      "accountChannelRequired": "الحساب / القناة مطلوب",
+      "unexpectedErrorSaving": "حدث خطأ غير متوقع أثناء حفظ الانتهاكات"
     },
     "success": {
       "statusChangedToActive": "تم تغيير الحالة إلى نشط",
@@ -636,6 +637,10 @@
       "changesSaved": "تم حفظ التغييرات بنجاح",
       "violationAdded": "تم إضافة الانتهاك",
       "violationAddedTo": "تم إضافة انتهاك جديد إلى {platformName}",
+      "multipleViolationsAdded": "تم إضافة {count} انتهاك بنجاح",
+      "partialSuccess": "نجاح جزئي",
+      "multipleViolationsPartial": "تم إضافة {successCount} انتهاك، فشل {failCount}",
+      "multipleViolationsFailed": "فشل إضافة {count} انتهاك",
       "noteAdded": "تمت إضافة الملاحظة",
       "noteAddedSuccess": "تمت إضافة الملاحظة بنجاح",
       "reportDownloaded": "تم تنزيل التقرير",
@@ -743,7 +748,9 @@
       "platform": "المنصة",
       "violationUrl": "رابط الانتهاك *",
       "violationUrlPlaceholder": "https://x.com/...",
-      "accountChannel": "الحساب / القناة *",
+      "multipleUrlsHint": "أدخل رابطاً واحداً في كل سطر لإضافة انتهاكات متعددة",
+      "accountChannel": "الحساب / القناة",
+      "optional": "اختياري",
       "accountChannelPlaceholder": "@username أو اسم القناة",
       "contentType": "نوع المحتوى *",
       "contentTypePlaceholder": "اختر نوع المحتوى",
@@ -783,6 +790,11 @@
       "setCustomTime": "تعيين وقت حظر مخصص",
       "cancel": "إلغاء",
       "confirm": "تأكيد الحظر"
+    },
+    "bulk": {
+      "violations": "انتهاكات",
+      "expandAll": "توسيع الكل",
+      "collapseAll": "طي الكل"
     },
     "sections": {
       "platformOperations": "عمليات المنصات (هذه المباراة)",

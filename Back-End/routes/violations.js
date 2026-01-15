@@ -342,11 +342,9 @@ router.get("/problematic-accounts", async (req, res) => {
       // Check if league exists in database
       leagueInfo = await Competition.findOne({ league: league }).lean();
       if (!leagueInfo) {
-        return res
-          .status(400)
-          .json({
-            error: `Invalid league. League '${league}' not found in database.`,
-          });
+        return res.status(400).json({
+          error: `Invalid league. League '${league}' not found in database.`,
+        });
       }
       matchFilter.league = league;
     }
@@ -378,12 +376,10 @@ router.get("/problematic-accounts", async (req, res) => {
           endNum < 1 ||
           startNum > endNum
         ) {
-          return res
-            .status(400)
-            .json({
-              error:
-                "Invalid week range. Start must be <= end and both must be >= 1.",
-            });
+          return res.status(400).json({
+            error:
+              "Invalid week range. Start must be <= end and both must be >= 1.",
+          });
         }
         const weekNumbers = [];
         for (let w = startNum; w <= endNum; w++) {
@@ -662,6 +658,166 @@ router.post(
       await updateMatchContentTypeCounts(internalMatchId);
 
       res.status(201).json(populated);
+    } catch (error) {
+      if (error.name === "CastError") {
+        return res.status(400).json({ error: "Invalid match ID" });
+      }
+      if (error.name === "ValidationError") {
+        return res.status(400).json({ error: error.message });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  }
+);
+
+// POST /api/violations/bulk - Create multiple violations at once (superAdmin and employee only)
+router.post(
+  "/bulk",
+  authenticateToken,
+  requireSuperAdminOrEmployee,
+  async (req, res) => {
+    try {
+      const {
+        matchId,
+        matchName,
+        platformId,
+        platformName,
+        violationUrls, // Array of URLs
+        accountChannel,
+        contentType,
+        status,
+        views,
+        timeAdded,
+        blockedAt,
+        active,
+        notes,
+      } = req.body;
+
+      // Required fields validation
+      if (
+        !matchId ||
+        !matchName ||
+        !platformId ||
+        !platformName ||
+        !violationUrls ||
+        !Array.isArray(violationUrls) ||
+        violationUrls.length === 0 ||
+        !accountChannel ||
+        !contentType
+      ) {
+        return res.status(400).json({
+          error:
+            "Missing required fields: matchId, matchName, platformId, platformName, violationUrls (array), accountChannel, contentType",
+        });
+      }
+
+      // Verify match exists - support both externalMatchId and internal _id
+      let match = await Match.findById(matchId).catch(() => null);
+
+      // If not found by _id, try externalMatchId
+      if (!match) {
+        match = await Match.findOne({ externalMatchId: matchId });
+      }
+
+      if (!match) {
+        return res.status(404).json({ error: "Match not found" });
+      }
+
+      // Use the match's internal _id for the violation
+      const internalMatchId = match._id;
+      const externalMatchId = match.externalMatchId || null;
+
+      // Convert notes to array if it's a string
+      let notesArray = [];
+      if (notes) {
+        if (typeof notes === "string") {
+          notesArray = notes.trim() ? [notes.trim()] : [];
+        } else if (Array.isArray(notes)) {
+          notesArray = notes.filter((n) => n && n.trim());
+        }
+      }
+
+      // Handle blockedAt - set it if provided, or based on status
+      let blockedAtValue = undefined;
+      const finalStatus = status || "Active";
+      const statusLower = finalStatus.toLowerCase();
+
+      if (blockedAt !== undefined && blockedAt !== null && blockedAt !== "") {
+        // If blockedAt is explicitly provided, use it
+        blockedAtValue = new Date(blockedAt);
+      } else if (statusLower === "blocked") {
+        // If status is blocked and no blockedAt provided, set to now
+        blockedAtValue = new Date();
+      } else if (
+        statusLower === "active" ||
+        statusLower === "under review" ||
+        statusLower === "removed"
+      ) {
+        // If status is active, under review, or removed, don't set blockedAt
+        blockedAtValue = undefined;
+      }
+
+      // Generate a unique bulkId for this batch
+      const bulkId = `bulk_${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(2, 9)}`;
+
+      // Create all violations with the same bulkId
+      const violationsToCreate = violationUrls.map((url) => ({
+        matchId: internalMatchId,
+        matchName,
+        externalMatchId: externalMatchId,
+        platformId,
+        platformName,
+        violationUrl: url.trim(),
+        accountChannel,
+        contentType,
+        status: finalStatus,
+        views: views || undefined,
+        timeAdded: timeAdded ? new Date(timeAdded) : new Date(),
+        blockedAt: blockedAtValue,
+        active: active !== undefined ? active : true,
+        notes: notesArray,
+        bulkId: bulkId, // Add bulkId to group these violations
+      }));
+
+      // Insert all violations at once
+      const savedViolations = await Violation.insertMany(violationsToCreate);
+
+      // Populate match data for all violations
+      const populatedViolations = await Violation.find({
+        _id: { $in: savedViolations.map((v) => v._id) },
+      })
+        .populate(
+          "matchId",
+          "team1 team2 date time week competition stadium externalMatchId"
+        )
+        .lean();
+
+      // Log creation for each violation
+      for (const violation of savedViolations) {
+        await logViolationChange(violation._id, "created", {
+          user: req.user,
+          changes: {
+            violationUrl: violation.violationUrl,
+            accountChannel,
+            contentType,
+            status: finalStatus,
+            platformId,
+            platformName,
+            bulkId: bulkId, // Include bulkId in the log
+          },
+        });
+      }
+
+      // Update match content type counts
+      await updateMatchContentTypeCounts(internalMatchId);
+
+      res.status(201).json({
+        bulkId: bulkId,
+        count: populatedViolations.length,
+        violations: populatedViolations,
+      });
     } catch (error) {
       if (error.name === "CastError") {
         return res.status(400).json({ error: "Invalid match ID" });

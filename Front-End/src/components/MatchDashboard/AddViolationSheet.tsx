@@ -86,9 +86,13 @@ export function AddViolationSheet({
 
   const handleUrlChange = (url: string) => {
     onFormUrlChange(url);
-    const extractedHandle = extractAccountHandleFromUrl(url);
-    if (extractedHandle) {
-      onFormAccountHandleChange(extractedHandle);
+    // Extract account handle from the first URL only
+    const firstUrl = url.split("\n")[0].trim();
+    if (firstUrl) {
+      const extractedHandle = extractAccountHandleFromUrl(firstUrl);
+      if (extractedHandle) {
+        onFormAccountHandleChange(extractedHandle);
+      }
     }
   };
 
@@ -161,19 +165,26 @@ export function AddViolationSheet({
             <Label htmlFor="violation-url">
               {t("matchDashboard.addViolationSheet.violationUrl")}
             </Label>
-            <Input
+            <Textarea
               id="violation-url"
               placeholder={t(
                 "matchDashboard.addViolationSheet.violationUrlPlaceholder"
               )}
               value={formUrl}
               onChange={(e) => handleUrlChange(e.target.value)}
+              className="min-h-[80px] resize-y"
             />
+            <p className="text-xs text-muted-foreground">
+              {t("matchDashboard.addViolationSheet.multipleUrlsHint")}
+            </p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="account-handle">
               {t("matchDashboard.addViolationSheet.accountChannel")}
+              <span className="text-xs text-muted-foreground ml-2">
+                {""} ({t("matchDashboard.addViolationSheet.optional")})
+              </span>
             </Label>
             <Input
               id="account-handle"

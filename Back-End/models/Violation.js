@@ -38,6 +38,12 @@ const violationSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    bulkId: {
+      type: String,
+      required: false,
+      trim: true,
+      index: true, // Index for efficient querying of bulk violations
+    },
     contentType: {
       type: String,
       enum: ["Live", "Highlights", "Other"],

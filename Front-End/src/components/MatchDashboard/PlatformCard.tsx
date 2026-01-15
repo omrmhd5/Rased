@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { PlatformData, Violation } from "./types";
 import { ViolationItem } from "./ViolationItem";
+import { BulkViolationItem } from "./BulkViolationItem";
+import { groupViolationsByBulkId, isPartOfBulkGroup } from "./utils";
 import {
   Dialog,
   DialogContent,
@@ -105,10 +107,15 @@ export function PlatformCard({
   ).length;
 
   // Pagination for violations
-  const totalViolationsPages = Math.ceil(filteredViolations.length / violationsPerPage);
+  const totalViolationsPages = Math.ceil(
+    filteredViolations.length / violationsPerPage
+  );
   const startViolationsIndex = (violationsPage - 1) * violationsPerPage;
   const endViolationsIndex = startViolationsIndex + violationsPerPage;
-  const paginatedViolations = filteredViolations.slice(startViolationsIndex, endViolationsIndex);
+  const paginatedViolations = filteredViolations.slice(
+    startViolationsIndex,
+    endViolationsIndex
+  );
 
   // Create array of pages to display for pagination
   const violationsPagesToShow: (number | string)[] = [];
@@ -120,16 +127,48 @@ export function PlatformCard({
         (page >= violationsPage - 1 && page <= violationsPage + 1)
       ) {
         violationsPagesToShow.push(page);
-      } else if (
-        page === violationsPage - 2 ||
-        page === violationsPage + 2
-      ) {
+      } else if (page === violationsPage - 2 || page === violationsPage + 2) {
         violationsPagesToShow.push("...");
       }
     }
   }
   // Reverse for RTL
-  const displayViolationsPages = isRTL ? [...violationsPagesToShow].reverse() : violationsPagesToShow;
+  const displayViolationsPages = isRTL
+    ? [...violationsPagesToShow].reverse()
+    : violationsPagesToShow;
+
+  // Group violations by bulkId for rendering
+  // We need to process paginatedViolations to group bulk violations together
+  const bulkGroups = groupViolationsByBulkId(paginatedViolations);
+  const processedViolations: Array<{
+    type: "bulk" | "individual";
+    bulkId?: string;
+    violations?: Violation[];
+    violation?: Violation;
+  }> = [];
+
+  const addedBulkIds = new Set<string>();
+
+  paginatedViolations.forEach((violation) => {
+    if (violation.bulkId && isPartOfBulkGroup(violation, paginatedViolations)) {
+      // This is part of a bulk group
+      if (!addedBulkIds.has(violation.bulkId)) {
+        // Add the bulk group once
+        processedViolations.push({
+          type: "bulk",
+          bulkId: violation.bulkId,
+          violations: bulkGroups[violation.bulkId],
+        });
+        addedBulkIds.add(violation.bulkId);
+      }
+    } else {
+      // Individual violation (no bulkId or only one with this bulkId)
+      processedViolations.push({
+        type: "individual",
+        violation: violation,
+      });
+    }
+  });
 
   // Reset to page 1 when filter or search changes
   useEffect(() => {
@@ -235,7 +274,8 @@ export function PlatformCard({
                   <span className="text-xs text-muted-foreground ml-1">
                     {t("matchDashboard.platformCard.min")}{" "}
                     <span className="text-xs text-muted-foreground">
-                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}{t("matchDashboard.platformCard.hrs")})
+                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}
+                      {t("matchDashboard.platformCard.hrs")})
                     </span>
                   </span>
                 </>
@@ -333,7 +373,9 @@ export function PlatformCard({
         <div className="relative">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder={t("matchDashboard.expandedPlatformDialog.searchPlaceholder")}
+            placeholder={t(
+              "matchDashboard.expandedPlatformDialog.searchPlaceholder"
+            )}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             className="h-8 pl-8 text-xs"
@@ -359,20 +401,42 @@ export function PlatformCard({
           ) : (
             <>
               <div className="space-y-2 flex-1">
-                {paginatedViolations.map((violation) => (
-                  <ViolationItem
-                    key={violation.id}
-                    violation={violation}
-                    platform={platform}
-                    onEdit={onEdit}
-                    onToggleStatus={onToggleStatus}
-                    onDelete={onDelete}
-                    onCopyUrl={onCopyUrl}
-                    onAddNote={onAddNote}
-                    getPlatformIcon={getPlatformIcon}
-                    canModifyViolations={canModifyViolations}
-                  />
-                ))}
+                {processedViolations.map((item, index) => {
+                  if (item.type === "bulk" && item.violations && item.bulkId) {
+                    return (
+                      <BulkViolationItem
+                        key={`bulk-${item.bulkId}`}
+                        bulkId={item.bulkId}
+                        violations={item.violations}
+                        platformId={platform.id}
+                        platform={platform}
+                        onEdit={onEdit}
+                        onToggleStatus={onToggleStatus}
+                        onDelete={onDelete}
+                        onCopyUrl={onCopyUrl}
+                        onAddNote={onAddNote}
+                        getPlatformIcon={getPlatformIcon}
+                        canModifyViolations={canModifyViolations}
+                      />
+                    );
+                  } else if (item.type === "individual" && item.violation) {
+                    return (
+                      <ViolationItem
+                        key={item.violation.id}
+                        violation={item.violation}
+                        platform={platform}
+                        onEdit={onEdit}
+                        onToggleStatus={onToggleStatus}
+                        onDelete={onDelete}
+                        onCopyUrl={onCopyUrl}
+                        onAddNote={onAddNote}
+                        getPlatformIcon={getPlatformIcon}
+                        canModifyViolations={canModifyViolations}
+                      />
+                    );
+                  }
+                  return null;
+                })}
               </div>
               {/* Pagination Controls */}
               {filteredViolations.length > 0 && totalViolationsPages > 1 && (
@@ -532,20 +596,42 @@ export function PlatformCard({
               </div>
             ) : (
               <div className="space-y-2">
-                {paginatedViolations.map((violation) => (
-                  <ViolationItem
-                    key={violation.id}
-                    violation={violation}
-                    platform={platform}
-                    onEdit={onEdit}
-                    onToggleStatus={onToggleStatus}
-                    onDelete={onDelete}
-                    onCopyUrl={onCopyUrl}
-                    onAddNote={onAddNote}
-                    getPlatformIcon={getPlatformIcon}
-                    canModifyViolations={canModifyViolations}
-                  />
-                ))}
+                {processedViolations.map((item, index) => {
+                  if (item.type === "bulk" && item.violations && item.bulkId) {
+                    return (
+                      <BulkViolationItem
+                        key={`bulk-${item.bulkId}`}
+                        bulkId={item.bulkId}
+                        violations={item.violations}
+                        platformId={platform.id}
+                        platform={platform}
+                        onEdit={onEdit}
+                        onToggleStatus={onToggleStatus}
+                        onDelete={onDelete}
+                        onCopyUrl={onCopyUrl}
+                        onAddNote={onAddNote}
+                        getPlatformIcon={getPlatformIcon}
+                        canModifyViolations={canModifyViolations}
+                      />
+                    );
+                  } else if (item.type === "individual" && item.violation) {
+                    return (
+                      <ViolationItem
+                        key={item.violation.id}
+                        violation={item.violation}
+                        platform={platform}
+                        onEdit={onEdit}
+                        onToggleStatus={onToggleStatus}
+                        onDelete={onDelete}
+                        onCopyUrl={onCopyUrl}
+                        onAddNote={onAddNote}
+                        getPlatformIcon={getPlatformIcon}
+                        canModifyViolations={canModifyViolations}
+                      />
+                    );
+                  }
+                  return null;
+                })}
               </div>
             )}
           </ScrollArea>
@@ -704,8 +790,9 @@ export function PlatformCard({
               <h3 className="font-semibold">{platform.name}</h3>
             </div>
             <p className="text-xs text-muted-foreground ml-7">
-              {t("matchDashboard.platformCard.live")} {liveCount} • {t("matchDashboard.platformCard.highlights")} {highlightsCount} • {t("matchDashboard.platformCard.others")}{" "}
-              {othersCount}
+              {t("matchDashboard.platformCard.live")} {liveCount} •{" "}
+              {t("matchDashboard.platformCard.highlights")} {highlightsCount} •{" "}
+              {t("matchDashboard.platformCard.others")} {othersCount}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -716,7 +803,7 @@ export function PlatformCard({
               <Maximize2 className="h-4 w-4" />
             </button>
             {canModifyViolations && (
-                <Button size="sm" className="text-xs" onClick={onAddViolation}>
+              <Button size="sm" className="text-xs" onClick={onAddViolation}>
                 <Plus className="h-3 w-3 mr-1.5" />
                 {t("matchDashboard.platformCard.addViolation")}
               </Button>
@@ -740,10 +827,13 @@ export function PlatformCard({
               </div>
               <div className="flex items-center gap-2">
                 {canModifyViolations && (
-                <Button size="sm" className="text-xs" onClick={onAddViolation}>
-                <Plus className="h-3 w-3 mr-1.5" />
-                {t("matchDashboard.platformCard.addViolation")}
-              </Button>
+                  <Button
+                    size="sm"
+                    className="text-xs"
+                    onClick={onAddViolation}>
+                    <Plus className="h-3 w-3 mr-1.5" />
+                    {t("matchDashboard.platformCard.addViolation")}
+                  </Button>
                 )}
                 <button
                   onClick={() => setIsMaximized(false)}

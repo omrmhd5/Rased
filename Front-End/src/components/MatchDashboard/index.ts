@@ -14,3 +14,5 @@ export { AddViolationSheet } from "./AddViolationSheet";
 export { BlockConfirmDialog } from "./BlockConfirmDialog";
 export { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 export { AddNoteDialog } from "./AddNoteDialog";
+export { BulkViolationItem } from "./BulkViolationItem";
+export { BulkViolationDetailsModal } from "./BulkViolationDetailsModal";
