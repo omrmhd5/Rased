@@ -253,11 +253,14 @@ export const convertBackendViolationToFrontend = (
     active:
       backendViolation.active !== undefined ? backendViolation.active : true,
     notes: Array.isArray(backendViolation.notes) ? backendViolation.notes : [],
-    time: new Date(timeAdded).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }),
+    time: (() => {
+      const utcDate = new Date(timeAdded);
+      // Add 3 hours for KSA
+      const ksaDate = new Date(utcDate.getTime() + 3 * 60 * 60 * 1000);
+      const hours = String(ksaDate.getUTCHours()).padStart(2, "0");
+      const minutes = String(ksaDate.getUTCMinutes()).padStart(2, "0");
+      return `${hours}:${minutes}`;
+    })(),
     addedAgo,
     type: backendViolation.contentType,
     url: backendViolation.violationUrl,
@@ -344,7 +347,7 @@ export const formatBlockedViolationText = (
 ): string => {
   // Translate content type
   const contentTypeRaw = violation.contentType || violation.type || "Other";
-  let contentType = contentTypeRaw;
+  let contentType: string = contentTypeRaw;
   if (t) {
     const contentTypeLower = contentTypeRaw.toLowerCase();
     if (contentTypeLower === "live") {
@@ -356,17 +359,20 @@ export const formatBlockedViolationText = (
     }
   }
 
-  // Format date and time
-  const addedDate = new Date(violation.timeAdded);
-  const dateStr = addedDate.toLocaleDateString("en-US", {
+  // Format date and time in KSA (UTC+3)
+  const utcDate = new Date(violation.timeAdded);
+  const ksaDate = new Date(utcDate.getTime() + 3 * 60 * 60 * 1000);
+
+  const dateStr = ksaDate.toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
+    timeZone: "UTC", // Use UTC methods on the shifted date
   });
 
   // Format time in 12-hour format with Arabic/English period
-  const hours = addedDate.getHours();
-  const minutes = addedDate.getMinutes().toString().padStart(2, "0");
+  const hours = ksaDate.getUTCHours();
+  const minutes = ksaDate.getUTCMinutes().toString().padStart(2, "0");
   const isAM = hours < 12;
   const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
 
@@ -383,7 +389,7 @@ export const formatBlockedViolationText = (
 
   // Calculate "added X ago" dynamically based on current time
   const now = new Date();
-  const addedTime = addedDate.getTime();
+  const addedTime = utcDate.getTime();
   const addedDiffMs = now.getTime() - addedTime;
   const addedDiffMins = Math.floor(addedDiffMs / 60000);
 

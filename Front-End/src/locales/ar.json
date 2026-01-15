@@ -799,8 +799,23 @@
     },
     "bulk": {
       "violations": "انتهاكات",
+      "changeStatus": "تغيير الحالة",
+      "deleteAll": "حذف الكل",
       "expandAll": "توسيع الكل",
-      "collapseAll": "طي الكل"
+      "collapseAll": "طي الكل",
+      "statusChange": {
+        "title": "تغيير الحالة للكل",
+        "description": "تغيير الحالة لجميع {count} انتهاكاً.",
+        "cancel": "إلغاء",
+        "confirm": "تغيير الحالة"
+      },
+      "deleteConfirm": {
+        "title": "حذف جميع الانتهاكات",
+        "description": "لا يمكن التراجع عن هذا الإجراء.",
+        "message": "هل أنت متأكد أنك تريد حذف جميع {count} انتهاكاً؟ سيتم إزالتهم نهائياً من النظام.",
+        "cancel": "إلغاء",
+        "confirm": "حذف الكل"
+      }
     },
     "sections": {
       "platformOperations": "عمليات المنصات (هذه المباراة)",

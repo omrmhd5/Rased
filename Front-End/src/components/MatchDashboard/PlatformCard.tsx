@@ -60,6 +60,7 @@ interface PlatformCardProps {
   onAddNote: (platformId: string, violation: Violation) => void;
   getPlatformIcon: (platformName: string) => React.ReactNode;
   canModifyViolations?: boolean; // Whether user can modify violations
+  onRefetch?: () => void; // Callback to refetch data
 }
 
 export function PlatformCard({
@@ -76,7 +77,8 @@ export function PlatformCard({
   onCopyUrl,
   onAddNote,
   getPlatformIcon,
-  canModifyViolations = true,
+  canModifyViolations = false,
+  onRefetch,
 }: PlatformCardProps) {
   const { t, isRTL } = useLanguage();
   const [isMaximized, setIsMaximized] = useState(false);
@@ -450,6 +452,7 @@ export function PlatformCard({
                         onAddNote={onAddNote}
                         getPlatformIcon={getPlatformIcon}
                         canModifyViolations={canModifyViolations}
+                        onRefetch={onRefetch}
                       />
                     );
                   } else if (item.type === "individual" && item.violation) {
@@ -645,6 +648,7 @@ export function PlatformCard({
                         onAddNote={onAddNote}
                         getPlatformIcon={getPlatformIcon}
                         canModifyViolations={canModifyViolations}
+                        onRefetch={onRefetch}
                       />
                     );
                   } else if (item.type === "individual" && item.violation) {

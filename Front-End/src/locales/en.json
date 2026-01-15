@@ -799,8 +799,23 @@
     },
     "bulk": {
       "violations": "violations",
+      "changeStatus": "Change Status",
+      "deleteAll": "Delete All",
       "expandAll": "Expand All",
-      "collapseAll": "Collapse All"
+      "collapseAll": "Collapse All",
+      "statusChange": {
+        "title": "Change Status for All",
+        "description": "Change the status for all {count} violations.",
+        "cancel": "Cancel",
+        "confirm": "Change Status"
+      },
+      "deleteConfirm": {
+        "title": "Delete All Violations",
+        "description": "This action cannot be undone.",
+        "message": "Are you sure you want to delete all {count} violations? This will permanently remove them from the system.",
+        "cancel": "Cancel",
+        "confirm": "Delete All"
+      }
     },
     "sections": {
       "platformOperations": "Platform Operations (This Match)",

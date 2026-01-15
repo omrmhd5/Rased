@@ -2572,6 +2572,7 @@ export default function MatchDashboard() {
                   onAddNote={openAddNoteDialog}
                   getPlatformIcon={getPlatformIcon}
                   canModifyViolations={canModifyViolations}
+                  onRefetch={triggerRefetch}
                 />
               );
             })}

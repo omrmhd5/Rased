@@ -1281,19 +1281,22 @@ router.patch(
       // Normalize status to match schema enum (capitalized)
       const normalizedStatus =
         status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+      // Handle "Under Review" specially (same as PUT endpoint)
+      const finalNormalizedStatus =
+        normalizedStatus === "Under review" ? "Under Review" : normalizedStatus;
       const validStatuses = ["Active", "Blocked", "Removed", "Under Review"];
 
-      if (!validStatuses.includes(normalizedStatus)) {
+      if (!validStatuses.includes(finalNormalizedStatus)) {
         return res.status(400).json({ error: "Invalid status value" });
       }
 
-      violation.status = normalizedStatus;
+      violation.status = finalNormalizedStatus;
 
       // Handle blockedAt based on status:
       // - Set blockedAt ONLY when status changes TO Blocked (from any other status)
       // - Clear blockedAt when status changes TO Active, Removed, or Under Review
       // - Removed is a different status and should NOT have blockedAt
-      const statusLower = normalizedStatus.toLowerCase();
+      const statusLower = finalNormalizedStatus.toLowerCase();
       const hadBlockedAt = !!violation.blockedAt;
 
       if (statusLower === "blocked") {
@@ -1320,8 +1323,8 @@ router.patch(
         .lean();
 
       // Log status change
-      if (normalizedStatus !== originalStatus) {
-        const statusLower = normalizedStatus.toLowerCase();
+      if (finalNormalizedStatus !== originalStatus) {
+        const statusLower = finalNormalizedStatus.toLowerCase();
         const oldStatusLower = originalStatus.toLowerCase();
         const changesObj = {};
 
@@ -1341,7 +1344,7 @@ router.patch(
           user: req.user,
           field: "status",
           oldValue: originalStatus,
-          newValue: normalizedStatus,
+          newValue: finalNormalizedStatus,
           changes: Object.keys(changesObj).length > 0 ? changesObj : undefined,
         });
       }
