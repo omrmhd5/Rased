@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { useSocket } from "@/hooks/useSocket";
 import {
   HoverCard,
   HoverCardContent,
@@ -435,6 +436,127 @@ export default function MatchDashboard() {
   const triggerRefetch = useCallback(() => {
     setRefetchTrigger((prev) => prev + 1);
   }, []);
+
+  // Socket event handlers for real-time updates
+  const handleViolationUpdated = useCallback(
+    (data: any) => {
+      console.log("📡 Violation updated:", data);
+
+      // Update local state optimistically
+      setPlatformOperations((prev) =>
+        prev.map((platform) => {
+          if (platform.id === data.violation?.platformId) {
+            return {
+              ...platform,
+              violations: platform.violations.map((v) =>
+                v.id === data.violation.id || v._id === data.violation._id
+                  ? convertBackendViolationToFrontend(data.violation)
+                  : v
+              ),
+            };
+          }
+          return platform;
+        })
+      );
+
+      // Show toast notification
+      toast({
+        title: t("matchDashboard.success.violationUpdated"),
+        description: "Updated by another user",
+      });
+
+      // Refetch to ensure consistency
+      triggerRefetch();
+    },
+    [toast, t, triggerRefetch]
+  );
+
+  const handleViolationDeleted = useCallback(
+    (data: any) => {
+      console.log("📡 Violation deleted:", data);
+
+      // Remove from local state
+      setPlatformOperations((prev) =>
+        prev.map((platform) => {
+          if (platform.id === data.platformId) {
+            return {
+              ...platform,
+              violations: platform.violations.filter(
+                (v) => v.id !== data.violationId && v._id !== data.violationId
+              ),
+            };
+          }
+          return platform;
+        })
+      );
+
+      toast({
+        title: t("matchDashboard.success.violationDeleted"),
+        description: "Deleted by another user",
+      });
+
+      triggerRefetch();
+    },
+    [toast, t, triggerRefetch]
+  );
+
+  const handleBulkViolationsAdded = useCallback(
+    (data: any) => {
+      console.log("📡 Bulk violations added:", data);
+
+      toast({
+        title: t("matchDashboard.success.violationAdded"),
+        description: t("matchDashboard.success.multipleViolationsAdded", {
+          count: data.count?.toString() || "0",
+        }),
+      });
+
+      // Refetch to get new violations
+      triggerRefetch();
+    },
+    [toast, t, triggerRefetch]
+  );
+
+  const handleBulkViolationsDeleted = useCallback(
+    (data: any) => {
+      console.log("📡 Bulk violations deleted:", data);
+
+      toast({
+        title: t("matchDashboard.success.violationDeleted"),
+        description: t("matchDashboard.success.multipleViolationsRemoved", {
+          count: data.count?.toString() || "0",
+        }),
+      });
+
+      triggerRefetch();
+    },
+    [toast, t, triggerRefetch]
+  );
+
+  const handleBulkStatusChanged = useCallback(
+    (data: any) => {
+      console.log("📡 Bulk status changed:", data);
+
+      toast({
+        title: t("matchDashboard.success.statusChanged"),
+        description: t("matchDashboard.success.multipleViolationsUpdated", {
+          count: data.count?.toString() || "0",
+        }),
+      });
+
+      triggerRefetch();
+    },
+    [toast, t, triggerRefetch]
+  );
+
+  // Initialize WebSocket connection
+  useSocket(id, {
+    "violation-updated": handleViolationUpdated,
+    "violation-deleted": handleViolationDeleted,
+    "bulk-violations-added": handleBulkViolationsAdded,
+    "bulk-violations-deleted": handleBulkViolationsDeleted,
+    "bulk-status-changed": handleBulkStatusChanged,
+  });
 
   // Fetch settings on mount
   useEffect(() => {

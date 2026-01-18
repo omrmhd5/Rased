@@ -64,6 +64,8 @@
     "searching": "جاري البحث..."
   },
   "dashboard": {
+    "realTimeUpdate": "تحديث مباشر",
+    "dataUpdated": "تم تحديث بيانات اللوحة",
     "title": "لوحة التحكم",
     "allLeagues": "جميع الدوريات",
     "allWeeksOverview": "نظرة عامة على جميع الأسابيع",

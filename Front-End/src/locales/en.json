@@ -64,6 +64,8 @@
     "searching": "Searching..."
   },
   "dashboard": {
+    "realTimeUpdate": "Real-time Update",
+    "dataUpdated": "Dashboard data has been updated",
     "title": "Dashboard",
     "allLeagues": "All Leagues",
     "allWeeksOverview": "All Weeks Overview",

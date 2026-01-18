@@ -6,6 +6,7 @@ import DeletedViolationLog from "../models/DeletedViolationLog.js";
 import User from "../models/User.js";
 import { optionalAuth, authenticateToken } from "../middleware/auth.js";
 import { logViolationChange } from "../utils/violationLogger.js";
+import { emitViolationEvent, emitBulkEvent } from "../utils/socket.js";
 
 // Middleware to check if user is superAdmin or employee (not viewer)
 const requireSuperAdminOrEmployee = async (req, res, next) => {
@@ -813,6 +814,23 @@ router.post(
       // Update match content type counts
       await updateMatchContentTypeCounts(internalMatchId);
 
+      // Emit bulk violation created event
+      try {
+        emitBulkEvent(
+          externalMatchId || internalMatchId,
+          "bulk-violations-added",
+          {
+            bulkId,
+            count: populatedViolations.length,
+            violations: populatedViolations,
+            platformId,
+            platformName,
+          }
+        );
+      } catch (error) {
+        console.error("Error emitting bulk-violations-added event:", error);
+      }
+
       res.status(201).json({
         bulkId: bulkId,
         count: populatedViolations.length,
@@ -1348,12 +1366,25 @@ router.patch(
           field: "status",
           oldValue: originalStatus,
           newValue: finalNormalizedStatus,
-          changes: Object.keys(changesObj).length > 0 ? { ...changesObj, bulkId: bulkId || undefined } : { bulkId: bulkId || undefined },
+          changes:
+            Object.keys(changesObj).length > 0
+              ? { ...changesObj, bulkId: bulkId || undefined }
+              : { bulkId: bulkId || undefined },
         });
       }
 
       // Update match content type counts
       await updateMatchContentTypeCounts(violation.matchId);
+
+      // Emit violation updated event
+      try {
+        const emitMatchId = violation.externalMatchId || violation.matchId;
+        emitViolationEvent(emitMatchId, "violation-updated", {
+          violation: populated,
+        });
+      } catch (error) {
+        console.error("Error emitting violation-updated event:", error);
+      }
 
       res.json(populated);
     } catch (error) {
@@ -1434,6 +1465,17 @@ router.delete(
 
       // Update match content type counts
       await updateMatchContentTypeCounts(matchId);
+
+      // Emit violation deleted event
+      try {
+        emitViolationEvent(externalMatchId || matchId, "violation-deleted", {
+          violationId: req.params.id,
+          platformId: violation.platformId,
+          bulkId: bulkId || undefined,
+        });
+      } catch (error) {
+        console.error("Error emitting violation-deleted event:", error);
+      }
 
       res.json({ message: "Violation deleted" });
     } catch (error) {

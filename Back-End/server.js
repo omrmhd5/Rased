@@ -5,6 +5,8 @@ import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
+import { createServer } from "http";
+import { initializeSocket } from "./utils/socket.js";
 import matchRoutes from "./routes/matches.js";
 import violationRoutes from "./routes/violations.js";
 import platformRoutes from "./routes/platforms.js";
@@ -97,15 +99,22 @@ app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
+// Create HTTP server
+const httpServer = createServer(app);
+
+// Initialize Socket.IO
+initializeSocket(httpServer, allowedOrigins);
+
 // Connect to MongoDB
 mongoose
   .connect(MONGODB_URI)
   .then(() => {
     console.log("✅ Connected to MongoDB");
     // Start server
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📡 API available at http://localhost:${PORT}/api`);
+      console.log(`🔌 WebSocket available at ws://localhost:${PORT}`);
     });
   })
   .catch((error) => {

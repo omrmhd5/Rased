@@ -7,7 +7,6 @@ export { ContentSplitChart } from "./ContentSplitChart";
 export { ActivityLog } from "./ActivityLog";
 export { ViolationItem } from "./ViolationItem";
 export { PlatformCard } from "./PlatformCard";
-export { ExpandedPlatformDialog } from "./ExpandedPlatformDialog";
 export { PlatformFilters } from "./PlatformFilters";
 export { PlatformComparison } from "./PlatformComparison";
 export { AddViolationSheet } from "./AddViolationSheet";

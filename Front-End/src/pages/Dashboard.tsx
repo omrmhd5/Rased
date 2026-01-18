@@ -56,6 +56,8 @@ import { getInitialPlatformOperations } from "@/components/MatchDashboard/consta
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme } from "next-themes";
+import { useGlobalSocket } from "@/hooks/useGlobalSocket";
+import { useCallback } from "react";
 
 type League = string | null;
 type WeekFilterType = "all" | "single" | "range";
@@ -267,6 +269,24 @@ export default function Dashboard() {
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
+  // Refetch trigger for real-time updates
+  const [refetchTrigger, setRefetchTrigger] = useState(0);
+
+  // Global socket listener for real-time updates
+  const handleGlobalChange = useCallback(() => {
+    console.log("📡 Dashboard: Violation change detected, refetching data...");
+    setRefetchTrigger((prev) => prev + 1);
+
+    // Show toast notification
+    toast({
+      title: t("dashboard.realTimeUpdate"),
+      description: t("dashboard.dataUpdated"),
+      duration: 2000,
+    });
+  }, [t, toast]);
+
+  useGlobalSocket(handleGlobalChange);
+
   // Load selected league from localStorage on mount and validate it
   useEffect(() => {
     // Wait until leagues are loaded before validating
@@ -456,6 +476,7 @@ export default function Dashboard() {
     stageRangeEnd,
     API_URL,
     leagues,
+    refetchTrigger, // Add refetch trigger for real-time updates
   ]);
 
   // Fetch trouble list violations when filters change
@@ -539,6 +560,7 @@ export default function Dashboard() {
     troubleListFilter,
     API_URL,
     leagues,
+    refetchTrigger, // Add refetch trigger for real-time updates
   ]);
 
   // Get platform operations (for icon lookup)
@@ -670,12 +692,12 @@ export default function Dashboard() {
     liveMatches.length > 0
       ? liveMatches[0].week
       : upcomingMatches.length > 0
-      ? upcomingMatches[0].week
-      : dashboardStats.matches.length > 0
-      ? Math.max(
-          ...dashboardStats.matches.map((m) => parseInt(m.week) || 0)
-        ).toString()
-      : "1";
+        ? upcomingMatches[0].week
+        : dashboardStats.matches.length > 0
+          ? Math.max(
+              ...dashboardStats.matches.map((m) => parseInt(m.week) || 0)
+            ).toString()
+          : "1";
 
   // Get all matches for current week (already sorted by violations from API)
   const currentWeekMatches = dashboardStats.matches.filter(
@@ -847,11 +869,11 @@ export default function Dashboard() {
         weekFilterType === "all"
           ? t("dashboard.allWeeks")
           : weekFilterType === "single"
-          ? t("dashboard.week", { number: singleWeek })
-          : t("dashboard.weeksRangeOverview", {
-              start: weekRangeStart,
-              end: weekRangeEnd,
-            });
+            ? t("dashboard.week", { number: singleWeek })
+            : t("dashboard.weeksRangeOverview", {
+                start: weekRangeStart,
+                end: weekRangeEnd,
+              });
 
       headerDiv.innerHTML = `
         <h1 style="font-size: 32px; font-weight: bold; margin: 0 0 16px 0; color: ${textColor};">
@@ -1089,8 +1111,8 @@ export default function Dashboard() {
           weekFilterType === "all"
             ? "All-Weeks"
             : weekFilterType === "single"
-            ? `Week-${singleWeek}`
-            : `Weeks-${weekRangeStart}-${weekRangeEnd}`;
+              ? `Week-${singleWeek}`
+              : `Weeks-${weekRangeStart}-${weekRangeEnd}`;
         const dateFormatted = new Date().toISOString().split("T")[0];
         link.download = `Dashboard-Report-${leagueFormatted}-${weekFormatted}-${dateFormatted}.png`;
         document.body.appendChild(link);
@@ -1143,11 +1165,11 @@ export default function Dashboard() {
                   stageFilterType === "all"
                     ? t("dashboard.allStagesOverview")
                     : stageFilterType === "single"
-                    ? t("dashboard.stageOverview", { stage: singleStage })
-                    : t("dashboard.stagesRangeOverview", {
-                        start: stageRangeStart,
-                        end: stageRangeEnd,
-                      });
+                      ? t("dashboard.stageOverview", { stage: singleStage })
+                      : t("dashboard.stagesRangeOverview", {
+                          start: stageRangeStart,
+                          end: stageRangeEnd,
+                        });
                 return leagueKnownName
                   ? `${stageText} • ${leagueKnownName}`
                   : stageText;
@@ -1156,11 +1178,11 @@ export default function Dashboard() {
                   weekFilterType === "all"
                     ? t("dashboard.allWeeksOverview")
                     : weekFilterType === "single"
-                    ? t("dashboard.weekOverview", { week: singleWeek })
-                    : t("dashboard.weeksRangeOverview", {
-                        start: weekRangeStart,
-                        end: weekRangeEnd,
-                      });
+                      ? t("dashboard.weekOverview", { week: singleWeek })
+                      : t("dashboard.weeksRangeOverview", {
+                          start: weekRangeStart,
+                          end: weekRangeEnd,
+                        });
                 return leagueKnownName
                   ? `${weekText} • ${leagueKnownName}`
                   : weekText;
@@ -1789,11 +1811,11 @@ export default function Dashboard() {
                   {weekFilterType === "all"
                     ? t("dashboard.allWeeks")
                     : weekFilterType === "single"
-                    ? t("dashboard.week", { number: singleWeek })
-                    : t("dashboard.weeksRangeOverview", {
-                        start: weekRangeStart,
-                        end: weekRangeEnd,
-                      })}
+                      ? t("dashboard.week", { number: singleWeek })
+                      : t("dashboard.weeksRangeOverview", {
+                          start: weekRangeStart,
+                          end: weekRangeEnd,
+                        })}
                 </Badge>
               </div>
             </div>
@@ -2150,15 +2172,15 @@ export default function Dashboard() {
                           violation.status === "active"
                             ? "destructive"
                             : violation.status === "under review"
-                            ? "default"
-                            : "secondary"
+                              ? "default"
+                              : "secondary"
                         }
                         className="h-[16px] sm:h-[18px] text-[9px] sm:text-[10px] px-1 sm:px-1.5 text-left">
                         {violation.status === "under review"
                           ? t("dashboard.underReview").toLowerCase()
                           : violation.status === "active"
-                          ? t("dashboard.active").toLowerCase()
-                          : violation.status}
+                            ? t("dashboard.active").toLowerCase()
+                            : violation.status}
                       </Badge>
                       {warningLevel === "urgent" && (
                         <Badge
@@ -2331,8 +2353,8 @@ export default function Dashboard() {
           weekFilterType === "all"
             ? "All"
             : weekFilterType === "single"
-            ? singleWeek
-            : `${weekRangeStart}-${weekRangeEnd}`
+              ? singleWeek
+              : `${weekRangeStart}-${weekRangeEnd}`
         }
         competition={getLeagueName(selectedLeague)}
         fileName={
@@ -2342,18 +2364,18 @@ export default function Dashboard() {
                 "-"
               )}-All-Weeks-${new Date().toISOString().split("T")[0]}.png`
             : weekFilterType === "single"
-            ? `Round-Report-${getLeagueName(selectedLeague).replace(
-                /\s+/g,
-                "-"
-              )}-Week-${singleWeek}-${
-                new Date().toISOString().split("T")[0]
-              }.png`
-            : `Round-Report-${getLeagueName(selectedLeague).replace(
-                /\s+/g,
-                "-"
-              )}-Weeks-${weekRangeStart}-${weekRangeEnd}-${
-                new Date().toISOString().split("T")[0]
-              }.png`
+              ? `Round-Report-${getLeagueName(selectedLeague).replace(
+                  /\s+/g,
+                  "-"
+                )}-Week-${singleWeek}-${
+                  new Date().toISOString().split("T")[0]
+                }.png`
+              : `Round-Report-${getLeagueName(selectedLeague).replace(
+                  /\s+/g,
+                  "-"
+                )}-Weeks-${weekRangeStart}-${weekRangeEnd}-${
+                  new Date().toISOString().split("T")[0]
+                }.png`
         }
         liveMetrics={dashboardStats.platforms
           .filter((platform) => platform.contentSplit.live.violations > 0)
