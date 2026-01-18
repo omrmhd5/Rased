@@ -379,7 +379,7 @@ export const formatBlockedViolationText = (
   let timeStr: string;
   if (isRTL) {
     const timePeriod = isAM ? "صباحا" : "مساءا";
-    timeStr = `${timePeriod} ${hour12}:${minutes}`;
+    timeStr = `${hour12}:${minutes} ${timePeriod} `;
   } else {
     const timePeriod = isAM ? "AM" : "PM";
     timeStr = `${hour12}:${minutes} ${timePeriod}`;
@@ -462,7 +462,7 @@ export const formatBlockedViolationText = (
   // For RTL, order: time ago • added on + date and time • content type • (blocked info)
   // Note: flex-row-reverse will reverse the visual order, so we build it in reverse
   if (isRTL && t) {
-    let text = `${contentType} • ${dateTimeStr} • ${addedAgo} •`;
+    let text = `${contentType} • ${addedOnText} ${dateTimeStr}, • ${addedAgo}`;
     if (hasBlockedAt) {
       text = `${text}  • ${blockedInText} ${blockTimeText}`;
     }

@@ -102,7 +102,7 @@ export function BulkViolationItem({
 
       if (isRTL) {
         const timePeriod = isAM ? "صباحا" : "مساءا";
-        return `${timePeriod} ${hour12}:${minutes}`;
+        return `${hour12}:${minutes} ${timePeriod}`;
       } else {
         const timePeriod = isAM ? "AM" : "PM";
         return `${hour12}:${minutes} ${timePeriod}`;
@@ -209,20 +209,15 @@ export function BulkViolationItem({
             isRTL && "flex-row-reverse"
           )}
           onClick={() => setIsModalOpen(true)}>
-          <div className="flex items-center gap-2 shrink-0">
+          <div
+            className={`flex ${isRTL ? "flex-row-reverse" : "flex-row"} items-center gap-2 shrink-0`}>
             <Layers className="h-4 w-4 text-muted-foreground" />
             <Badge
               variant="secondary"
               className="font-mono text-xs flex flex-row-reverse">
-              {isRTL ? (
-                <>
-                  {count} :{t("matchDashboard.bulk.violations")}
-                </>
-              ) : (
-                <>
-                  {count} {t("matchDashboard.bulk.violations")}
-                </>
-              )}
+              <div dir={isRTL ? "rtl" : "ltr"}>
+                {count} {t("matchDashboard.bulk.violations")}
+              </div>
             </Badge>
           </div>
 
@@ -233,54 +228,30 @@ export function BulkViolationItem({
             )}>
             {activeCount > 0 && (
               <Badge className="bg-red-500/10 text-red-600 dark:text-red-400 text-xs">
-                {isRTL ? (
-                  <>
-                    {activeCount} :{t("dashboard.active")}
-                  </>
-                ) : (
-                  <>
-                    {activeCount} {t("dashboard.active")}
-                  </>
-                )}
+                <div dir={isRTL ? "rtl" : "ltr"}>
+                  {activeCount} {t("dashboard.active")}
+                </div>
               </Badge>
             )}
             {blockedCount > 0 && (
               <Badge className="bg-green-500/10 text-green-600 dark:text-green-400 text-xs">
-                {isRTL ? (
-                  <>
-                    {blockedCount} :{t("dashboard.blocked")}
-                  </>
-                ) : (
-                  <>
-                    {blockedCount} {t("dashboard.blocked")}
-                  </>
-                )}
+                <div dir={isRTL ? "rtl" : "ltr"}>
+                  {blockedCount} {t("dashboard.blocked")}
+                </div>
               </Badge>
             )}
             {removedCount > 0 && (
               <Badge className="bg-purple-500/10 text-purple-600 dark:text-purple-400 text-xs">
-                {isRTL ? (
-                  <>
-                    {removedCount} :{t("dashboard.removed")}
-                  </>
-                ) : (
-                  <>
-                    {removedCount} {t("dashboard.removed")}
-                  </>
-                )}
+                <div dir={isRTL ? "rtl" : "ltr"}>
+                  {removedCount} {t("dashboard.removed")}
+                </div>
               </Badge>
             )}
             {underReviewCount > 0 && (
               <Badge className="bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 text-xs">
-                {isRTL ? (
-                  <>
-                    {underReviewCount} :{t("dashboard.underReview")}
-                  </>
-                ) : (
-                  <>
-                    {underReviewCount} {t("dashboard.underReview")}
-                  </>
-                )}
+                <div dir={isRTL ? "rtl" : "ltr"}>
+                  {underReviewCount} {t("dashboard.underReview")}
+                </div>
               </Badge>
             )}
           </div>
@@ -338,7 +309,7 @@ export function BulkViolationItem({
             "px-3 pb-3 flex items-center gap-2 text-xs text-muted-foreground flex-wrap",
             isRTL && "flex-row-reverse"
           )}>
-          <span>{timeCreated}</span>
+          <span dir={isRTL ? "rtl" : "ltr"}>{timeCreated}</span>
           <span>•</span>
           <span>{dateCreated}</span>
           <span>•</span>
@@ -346,7 +317,7 @@ export function BulkViolationItem({
           {totalViews > 0 && (
             <>
               <span>•</span>
-              <span className="font-medium">
+              <span className="font-medium" dir={isRTL ? "rtl" : "ltr"}>
                 {formattedTotalViews} {t("dashboard.views")}
               </span>
             </>

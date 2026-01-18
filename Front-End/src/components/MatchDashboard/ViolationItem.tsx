@@ -192,7 +192,7 @@ export function ViolationItem({
 
       if (isRTL) {
         const timePeriod = isAM ? "صباحا" : "مساءا";
-        return `${timePeriod} ${hour12}:${minutes}`;
+        return `${hour12}:${minutes} ${timePeriod}`;
       } else {
         const timePeriod = isAM ? "AM" : "PM";
         return `${hour12}:${minutes} ${timePeriod}`;
@@ -235,8 +235,8 @@ export function ViolationItem({
   const violationId = violation._id
     ? String(violation._id)
     : violation.id
-    ? String(violation.id)
-    : "";
+      ? String(violation.id)
+      : "";
 
   return (
     <div
@@ -340,7 +340,9 @@ export function ViolationItem({
             <div className="text-muted-foreground flex-shrink-0">
               {getStatusIcon(violation.statusBadge || "Active")}
             </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+            <span
+              className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex-shrink-0"
+              dir={isRTL ? "rtl" : "ltr"}>
               {formatTimeWithPeriod(violation.time || "")}
             </span>
             <Badge
@@ -367,7 +369,9 @@ export function ViolationItem({
             <div className="text-muted-foreground flex-shrink-0">
               {getStatusIcon(violation.statusBadge || "Active")}
             </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+            <span
+              className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap flex-shrink-0"
+              dir={isRTL ? "rtl" : "ltr"}>
               {formatTimeWithPeriod(violation.time || "")}
             </span>
             <Badge
@@ -563,23 +567,10 @@ export function ViolationItem({
 
       {/* Line 3: Meta text */}
       <div
-        className={`text-[10px] sm:text-xs text-muted-foreground mt-1 break-words overflow-wrap-anywhere ${
-          isRTL
-            ? "flex flex-row-reverse flex-wrap gap-1 items-center"
-            : "text-left"
-        }`}>
+        className={`text-[10px] sm:text-xs text-muted-foreground mt-1 break-words overflow-wrap-anywhere`}
+        dir={isRTL ? "rtl" : "ltr"}>
         {(() => {
           const text = formatBlockedViolationText(violation, t, isRTL);
-          if (isRTL) {
-            // Split by • and reverse the order for RTL
-            const parts = text.split(" • ");
-            return parts.map((part, index) => (
-              <span key={index} className="whitespace-nowrap">
-                {part}
-                {index < parts.length - 1 && <span className="mx-1">•</span>}
-              </span>
-            ));
-          }
           return text;
         })()}
       </div>
@@ -606,7 +597,8 @@ export function ViolationItem({
           open={isAuditLogOpen}
           onOpenChange={setIsAuditLogOpen}
           className="mt-2 pt-2 border-t border-border/50">
-          <CollapsibleTrigger className="flex items-center gap-2 w-full text-[10px] sm:text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation">
+          <CollapsibleTrigger
+            className={`flex ${isRTL ? "flex-row-reverse" : "flex-row"} items-center gap-2 w-full text-[10px] sm:text-xs text-muted-foreground hover:text-foreground transition-colors touch-manipulation`}>
             <History className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
             <span>
               {t("matchDashboard.violationItem.changeHistory")} (
@@ -667,7 +659,9 @@ export function ViolationItem({
                               <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                                 {accountName}
                               </code>{" "}
-                              {t("matchDashboard.violationItem.forChannelUser")}{" "}
+                              {t(
+                                "matchDashboard.violationItem.forChannelUser"
+                              )}{" "}
                             </>
                           )}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
@@ -778,7 +772,9 @@ export function ViolationItem({
                         </code>
                         <div className="mt-1 text-[10px] sm:text-xs text-muted-foreground">
                           {t("matchDashboard.violationItem.blockedAtTimeAdded")}{" "}
-                          <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                          <code
+                            className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono"
+                            dir={isRTL ? "rtl" : "ltr"}>
                             {blockedAtTime}
                           </code>
                         </div>
@@ -986,7 +982,9 @@ export function ViolationItem({
                             {t(
                               "matchDashboard.violationItem.blockedAtTimeAddedLabel"
                             )}{" "}
-                            <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
+                            <code
+                              className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono"
+                              dir={isRTL ? "rtl" : "ltr"}>
                               {newBlocked}
                             </code>
                           </div>
@@ -1196,7 +1194,9 @@ export function ViolationItem({
                               <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                                 {translateStatus(status)}
                               </code>{" "}
-                              {t("matchDashboard.violationItem.withStatus")}{" "}
+                              {t(
+                                "matchDashboard.violationItem.withStatus"
+                              )}{" "}
                             </>
                           )}
                           {accountName && (
@@ -1204,7 +1204,9 @@ export function ViolationItem({
                               <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                                 {accountName}
                               </code>{" "}
-                              {t("matchDashboard.violationItem.forChannelUser")}{" "}
+                              {t(
+                                "matchDashboard.violationItem.forChannelUser"
+                              )}{" "}
                             </>
                           )}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">

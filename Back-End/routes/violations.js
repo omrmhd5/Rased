@@ -1340,12 +1340,15 @@ router.patch(
           changesObj.blockedAtRemoved = true;
         }
 
+        // Get bulkId from query params if provided (for bulk operations)
+        const bulkId = req.query.bulkId;
+
         await logViolationChange(updatedViolation._id, "status_changed", {
           user: req.user,
           field: "status",
           oldValue: originalStatus,
           newValue: finalNormalizedStatus,
-          changes: Object.keys(changesObj).length > 0 ? changesObj : undefined,
+          changes: Object.keys(changesObj).length > 0 ? { ...changesObj, bulkId: bulkId || undefined } : { bulkId: bulkId || undefined },
         });
       }
 
@@ -1397,6 +1400,9 @@ router.delete(
       }
 
       // Save deleted violation log to separate collection before deleting
+      // Get bulkId from query params if provided (for bulk operations)
+      const bulkId = req.query.bulkId;
+
       await DeletedViolationLog.create({
         externalMatchId: externalMatchId || null, // Required for querying
         action: "deleted",
@@ -1409,6 +1415,8 @@ router.delete(
           accountChannel: violation.accountChannel,
           status: violation.status,
           views: violation.views || "0",
+          violationUrl: violation.violationUrl,
+          bulkId: bulkId || undefined, // Include bulkId if provided
         },
       });
 

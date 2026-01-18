@@ -46,6 +46,7 @@ export type DeletedViolationLog = {
     violationUrl?: string;
     status?: string;
     views?: string;
+    bulkId?: string; // Bulk ID for grouping bulk operations
   };
 };
 

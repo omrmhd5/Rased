@@ -247,8 +247,8 @@ export default function MatchDashboard() {
                   ? avgBlockTimeMinutes < 60
                     ? `${avgBlockTimeMinutes} min`
                     : avgBlockTimeMinutes < 1440
-                    ? `${Math.round(avgBlockTimeMinutes / 60)}h`
-                    : `${Math.round(avgBlockTimeMinutes / 1440)}d`
+                      ? `${Math.round(avgBlockTimeMinutes / 60)}h`
+                      : `${Math.round(avgBlockTimeMinutes / 1440)}d`
                   : "0 min";
               // Use blockSuccessRate directly from backend (0-100)
               const blockSuccessRate = backendStats.blockSuccessRate ?? 0;
@@ -595,8 +595,8 @@ export default function MatchDashboard() {
                   ? avgBlockTimeMinutes < 60
                     ? `${avgBlockTimeMinutes} min`
                     : avgBlockTimeMinutes < 1440
-                    ? `${Math.round(avgBlockTimeMinutes / 60)}h`
-                    : `${Math.round(avgBlockTimeMinutes / 1440)}d`
+                      ? `${Math.round(avgBlockTimeMinutes / 60)}h`
+                      : `${Math.round(avgBlockTimeMinutes / 1440)}d`
                   : "0 min";
               // Use blockSuccessRate directly from backend (0-100)
               const blockSuccessRate = backendStats.blockSuccessRate ?? 0;
@@ -1062,8 +1062,8 @@ export default function MatchDashboard() {
       Array.isArray(violation.notes)
         ? violation.notes
         : violation.notes
-        ? [violation.notes]
-        : []
+          ? [violation.notes]
+          : []
     );
     setIsAddViolationOpen(true);
   };
@@ -1198,8 +1198,8 @@ export default function MatchDashboard() {
       blockTimeChoice === "current"
         ? new Date().toISOString() // Current time is already in UTC
         : customBlockTime
-        ? convertKSATimeToUTC(customBlockTime) // Convert KSA time to UTC
-        : new Date().toISOString();
+          ? convertKSATimeToUTC(customBlockTime) // Convert KSA time to UTC
+          : new Date().toISOString();
 
     try {
       const violationDbId =
@@ -1986,6 +1986,11 @@ export default function MatchDashboard() {
     violations: Violation[]
   ) => {
     try {
+      // Generate a unique bulkId for this bulk operation
+      const bulkId = `bulk_${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(2, 9)}`;
+
       await Promise.all(
         violations.map(async (violation) => {
           let violationId: string;
@@ -2001,13 +2006,16 @@ export default function MatchDashboard() {
             violationId = String(violation.id);
           }
 
-          const response = await fetch(`${API_URL}/violations/${violationId}`, {
-            method: "DELETE",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            credentials: "include",
-          });
+          const response = await fetch(
+            `${API_URL}/violations/${violationId}?bulkId=${encodeURIComponent(bulkId)}`,
+            {
+              method: "DELETE",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              credentials: "include",
+            }
+          );
 
           if (!response.ok) {
             throw new Error(`Failed to delete violation ${violationId}`);
@@ -2033,8 +2041,8 @@ export default function MatchDashboard() {
               typeof v._id === "string"
                 ? v._id
                 : v._id && typeof v._id === "object" && "$oid" in v._id
-                ? (v._id as { $oid: string }).$oid
-                : String(v.id);
+                  ? (v._id as { $oid: string }).$oid
+                  : String(v.id);
             return !deletedIds.includes(vId);
           });
 
@@ -2062,8 +2070,8 @@ export default function MatchDashboard() {
               typeof v._id === "string"
                 ? v._id
                 : v._id && typeof v._id === "object" && "$oid" in v._id
-                ? (v._id as { $oid: string }).$oid
-                : String(v.id);
+                  ? (v._id as { $oid: string }).$oid
+                  : String(v.id);
             return !deletedIds.includes(vId);
           });
           calculateAndSavePlatformStats(
@@ -2100,6 +2108,11 @@ export default function MatchDashboard() {
     blockedAt?: string
   ) => {
     try {
+      // Generate a unique bulkId for this bulk operation
+      const bulkId = `bulk_${Date.now()}_${Math.random()
+        .toString(36)
+        .substring(2, 9)}`;
+
       await Promise.all(
         violations.map(async (violation) => {
           let violationId: string;
@@ -2124,7 +2137,7 @@ export default function MatchDashboard() {
           }
 
           const response = await fetch(
-            `${API_URL}/violations/${violationId}/status`,
+            `${API_URL}/violations/${violationId}/status?bulkId=${encodeURIComponent(bulkId)}`,
             {
               method: "PATCH",
               headers: {
@@ -2158,8 +2171,8 @@ export default function MatchDashboard() {
               typeof v._id === "string"
                 ? v._id
                 : v._id && typeof v._id === "object" && "$oid" in v._id
-                ? (v._id as { $oid: string }).$oid
-                : String(v.id);
+                  ? (v._id as { $oid: string }).$oid
+                  : String(v.id);
             if (updatedIds.includes(vId)) {
               return {
                 ...v,
@@ -2178,8 +2191,8 @@ export default function MatchDashboard() {
                   status === "Blocked" && blockedAt
                     ? convertKSATimeToUTC(blockedAt)
                     : status !== "Blocked"
-                    ? undefined
-                    : v.blockedAt,
+                      ? undefined
+                      : v.blockedAt,
               };
             }
             return v;
@@ -2210,8 +2223,8 @@ export default function MatchDashboard() {
               typeof v._id === "string"
                 ? v._id
                 : v._id && typeof v._id === "object" && "$oid" in v._id
-                ? (v._id as { $oid: string }).$oid
-                : String(v.id);
+                  ? (v._id as { $oid: string }).$oid
+                  : String(v.id);
             if (updatedIds.includes(vId)) {
               return {
                 ...v,
@@ -2230,8 +2243,8 @@ export default function MatchDashboard() {
                   status === "Blocked" && blockedAt
                     ? convertKSATimeToUTC(blockedAt)
                     : status !== "Blocked"
-                    ? undefined
-                    : v.blockedAt,
+                      ? undefined
+                      : v.blockedAt,
               };
             }
             return v;

@@ -968,6 +968,19 @@
       },
       "error": {
         "failedToDelete": "Failed to delete log entry. Please try again."
+      },
+      "bulk": {
+        "violationsCreated": "violations created in bulk",
+        "violationsDeleted": "violations deleted in bulk",
+        "violationsStatusChanged": "violations status changed in bulk",
+        "bulkId": "Bulk ID",
+        "bulkCreation": "Bulk Violation Creation",
+        "bulkDeletion": "Bulk Violation Deletion",
+        "bulkStatusChange": "Bulk Status Change",
+        "bulkAction": "Bulk Action",
+        "performedBy": "Performed by",
+        "totalLogs": "{count} total logs",
+        "andMore": "and {count} more..."
       }
     }
   },

@@ -253,11 +253,6 @@ export function BulkViolationDetailsModal({
                 </span>
               )}
             </div>
-
-            {/* Bulk ID */}
-            <Badge variant="outline" className="font-mono text-xs ml-auto">
-              ID: {bulkId.split("_")[1]}
-            </Badge>
           </div>
         </DialogHeader>
 

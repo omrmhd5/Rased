@@ -968,6 +968,19 @@
       },
       "error": {
         "failedToDelete": "فشل حذف إدخال السجل. يرجى المحاولة مرة أخرى."
+      },
+      "bulk": {
+        "violationsCreated": "انتهاكات تم إنشاؤها دفعة واحدة",
+        "violationsDeleted": "انتهاكات تم حذفها دفعة واحدة",
+        "violationsStatusChanged": "انتهاكات تم تغيير حالتها دفعة واحدة",
+        "bulkId": "معرف الدفعة",
+        "bulkCreation": "إنشاء انتهاكات دفعة واحدة",
+        "bulkDeletion": "حذف انتهاكات دفعة واحدة",
+        "bulkStatusChange": "تغيير الحالة دفعة واحدة",
+        "bulkAction": "إجراء دفعة واحدة",
+        "performedBy": "تم بواسطة",
+        "totalLogs": "{count} سجل إجمالي",
+        "andMore": "و {count} أخرى..."
       }
     }
   },
