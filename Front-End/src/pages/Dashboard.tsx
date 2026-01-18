@@ -274,7 +274,6 @@ export default function Dashboard() {
 
   // Global socket listener for real-time updates
   const handleGlobalChange = useCallback(() => {
-    console.log("📡 Dashboard: Violation change detected, refetching data...");
     setRefetchTrigger((prev) => prev + 1);
 
     // Show toast notification

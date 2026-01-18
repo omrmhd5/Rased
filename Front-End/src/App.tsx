@@ -20,39 +20,110 @@ import Settings from "./pages/Settings";
 import ProblematicAccounts from "./pages/ProblematicAccounts";
 import WhitelistedAccounts from "./pages/WhitelistedAccounts";
 import UsersRoles from "./pages/UsersRoles";
+import { useUserLeaguesListener } from "@/hooks/useUserLeaguesListener";
 
 const queryClient = new QueryClient();
 
 // Component for routes that require authentication and sidebar
 const AuthenticatedLayout = () => {
   const { isRTL } = useLanguage();
-  
+
+  // Listen for user leagues updates (admin changing user's leagues)
+  useUserLeaguesListener();
+
   return (
-        <SidebarProvider>
-          <div className="min-h-screen flex w-full">
-            <AppSidebar />
-            <div className={`flex-1 flex flex-col ${isRTL ? "mr-0" : "ml-0"}`} style={{ minWidth: 0 }}>
-              <TopBar />
-              <main className="flex-1 p-4 sm:p-6 bg-background overflow-x-hidden" style={{ width: '100%', maxWidth: '100%' }}>
-                <div className="max-w-7xl mx-auto">
-                  <Routes>
-                <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-                <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/matches" element={<ProtectedRoute><Matches /></ProtectedRoute>} />
-                <Route path="/match/:id" element={<ProtectedRoute><MatchDashboard /></ProtectedRoute>} />
-                <Route path="/problematic-accounts" element={<ProtectedRoute><ProblematicAccounts /></ProtectedRoute>} />
-                <Route path="/whitelisted-accounts" element={<ProtectedRoute><WhitelistedAccounts /></ProtectedRoute>} />
-                <Route path="/reports" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-                <Route path="/users" element={<ProtectedRoute><UsersRoles /></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                    {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </div>
-              </main>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <div
+          className={`flex-1 flex flex-col ${isRTL ? "mr-0" : "ml-0"}`}
+          style={{ minWidth: 0 }}>
+          <TopBar />
+          <main
+            className="flex-1 p-4 sm:p-6 bg-background overflow-x-hidden"
+            style={{ width: "100%", maxWidth: "100%" }}>
+            <div className="max-w-7xl mx-auto">
+              <Routes>
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <Home />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/matches"
+                  element={
+                    <ProtectedRoute>
+                      <Matches />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/match/:id"
+                  element={
+                    <ProtectedRoute>
+                      <MatchDashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/problematic-accounts"
+                  element={
+                    <ProtectedRoute>
+                      <ProblematicAccounts />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/whitelisted-accounts"
+                  element={
+                    <ProtectedRoute>
+                      <WhitelistedAccounts />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reports"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/users"
+                  element={
+                    <ProtectedRoute>
+                      <UsersRoles />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute>
+                      <Settings />
+                    </ProtectedRoute>
+                  }
+                />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
             </div>
-          </div>
-        </SidebarProvider>
+          </main>
+        </div>
+      </div>
+    </SidebarProvider>
   );
 };
 
@@ -68,7 +139,7 @@ const App = () => (
               <Routes>
                 {/* Public routes */}
                 <Route path="/login" element={<Login />} />
-                
+
                 {/* Protected routes with sidebar */}
                 <Route path="/*" element={<AuthenticatedLayout />} />
               </Routes>

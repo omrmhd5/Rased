@@ -42,24 +42,17 @@ export const useSocket = (
         transports: ["websocket", "polling"], // Try WebSocket first, fallback to polling
       });
 
-      socketInstance.on("connect", () => {
-        console.log("✅ Socket connected:", socketInstance?.id);
-      });
+      socketInstance.on("connect", () => {});
 
-      socketInstance.on("disconnect", () => {
-        console.log("❌ Socket disconnected");
-      });
+      socketInstance.on("disconnect", () => {});
 
-      socketInstance.on("connect_error", (error) => {
-        console.error("Socket connection error:", error);
-      });
+      socketInstance.on("connect_error", (error) => {});
     }
 
     const socket = socketInstance;
 
     // Join match room
     socket.emit("join-match", matchId);
-    console.log(`👤 Joined match room: ${matchId}`);
 
     // Register event handlers
     const eventHandlers: [string, (data: any) => void][] = [
@@ -95,10 +88,8 @@ export const useSocket = (
       socket.on(event, handler);
     });
 
-    // Cleanup
     return () => {
       socket.emit("leave-match", matchId);
-      console.log(`👋 Left match room: ${matchId}`);
 
       eventHandlers.forEach(([event, handler]) => {
         socket.off(event, handler);
@@ -114,6 +105,5 @@ export const disconnectSocket = () => {
   if (socketInstance) {
     socketInstance.disconnect();
     socketInstance = null;
-    console.log("🔌 Socket disconnected and cleaned up");
   }
 };

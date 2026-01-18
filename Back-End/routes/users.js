@@ -2,6 +2,7 @@ import express from "express";
 import User from "../models/User.js";
 import Competition from "../models/Competition.js";
 import { authenticateToken } from "../middleware/auth.js";
+import { getIO } from "../utils/socket.js";
 
 const router = express.Router();
 
@@ -270,6 +271,19 @@ router.put("/:id", authenticateToken, requireSuperAdmin, async (req, res) => {
     }
 
     await user.save();
+
+    // Emit socket event to notify the user that their leagues have been updated
+    try {
+      const io = getIO();
+      io.emit("user-leagues-updated", {
+        userId: user._id.toString(),
+        username: user.username,
+        newLeagues: user.leagues || [],
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      // Silently fail if socket not available
+    }
 
     // Return updated user data
     res.json({

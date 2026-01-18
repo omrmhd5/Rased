@@ -52,7 +52,6 @@ export const initializeSocket = (httpServer, allowedOrigins) => {
       socket.data.user = decoded;
       next();
     } catch (error) {
-      console.error("Socket authentication error:", error.message);
       // Allow connection but mark as unauthenticated
       socket.data.user = null;
       next();
@@ -62,12 +61,10 @@ export const initializeSocket = (httpServer, allowedOrigins) => {
   // Connection handler
   io.on("connection", (socket) => {
     const userId = socket.data.user?.userId || "anonymous";
-    console.log(`✅ Socket connected: ${socket.id} (User: ${userId})`);
 
     // Join match-specific room
     socket.on("join-match", (matchId) => {
       socket.join(`match-${matchId}`);
-      console.log(`👤 User ${userId} joined match room: match-${matchId}`);
 
       // Notify others in the room (optional - for user presence)
       socket.to(`match-${matchId}`).emit("user-joined", {
@@ -79,7 +76,6 @@ export const initializeSocket = (httpServer, allowedOrigins) => {
     // Leave match room
     socket.on("leave-match", (matchId) => {
       socket.leave(`match-${matchId}`);
-      console.log(`👋 User ${userId} left match room: match-${matchId}`);
 
       // Notify others in the room (optional - for user presence)
       socket.to(`match-${matchId}`).emit("user-left", {
@@ -89,12 +85,8 @@ export const initializeSocket = (httpServer, allowedOrigins) => {
     });
 
     // Handle disconnection
-    socket.on("disconnect", () => {
-      console.log(`❌ Socket disconnected: ${socket.id} (User: ${userId})`);
-    });
+    socket.on("disconnect", () => {});
   });
-
-  console.log("🔌 Socket.IO initialized");
   return io;
 };
 
@@ -141,10 +133,6 @@ export const emitActivityLogEvent = (matchId, data) => {
 
   io.to(`match-${matchId}`).emit("activity-log-updated", eventData);
   io.to("match-dashboard").emit("activity-log-updated", eventData);
-
-  console.log(
-    `📡 Emitted activity-log-updated to match-${matchId} and dashboard`
-  );
 };
 
 /**
@@ -160,6 +148,4 @@ export const emitBulkEvent = (matchId, eventType, data) => {
 
   io.to(`match-${matchId}`).emit(eventType, eventData);
   io.to("match-dashboard").emit(eventType, eventData);
-
-  console.log(`📡 Emitted ${eventType} to match-${matchId} and dashboard`);
 };
