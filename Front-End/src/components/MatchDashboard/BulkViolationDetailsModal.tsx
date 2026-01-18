@@ -5,7 +5,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -306,70 +305,77 @@ export function BulkViolationDetailsModal({
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
-          <ScrollArea className="h-full">
-            <div className="px-6 pb-6 pt-4">
-              <div className="space-y-3">
-                {paginatedViolations.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    {t("matchDashboard.violationItem.noViolationsFound")}
-                  </div>
-                ) : (
-                  paginatedViolations.map((violation, index) => {
-                    const globalIndex = startIndex + index + 1;
-                    return (
-                      <div key={violation.id} className="relative">
-                        {/* Violation Item */}
-                        <div className={isRTL ? "pr-10" : "pl-10"}>
-                          <ViolationItem
-                            violation={violation}
-                            platform={platform}
-                            onEdit={onEdit}
-                            onToggleStatus={onToggleStatus}
-                            onDelete={onDelete}
-                            onCopyUrl={onCopyUrl}
-                            onAddNote={onAddNote}
-                            getPlatformIcon={getPlatformIcon}
-                            canModifyViolations={canModifyViolations}
-                          />
-                        </div>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="px-6 pb-6 pt-4">
+            <div className="space-y-3">
+              {paginatedViolations.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground">
+                  {t("matchDashboard.violationItem.noViolationsFound")}
+                </div>
+              ) : (
+                paginatedViolations.map((violation, index) => {
+                  const globalIndex = startIndex + index + 1;
+                  return (
+                    <div key={violation.id} className="relative">
+                      {/* Violation Item */}
+                      <div
+                        className={isRTL ? "pr-10" : "pl-10"}
+                        dir={isRTL ? "ltr" : ""}>
+                        <ViolationItem
+                          violation={violation}
+                          platform={platform}
+                          onEdit={onEdit}
+                          onToggleStatus={onToggleStatus}
+                          onDelete={onDelete}
+                          onCopyUrl={onCopyUrl}
+                          onAddNote={onAddNote}
+                          getPlatformIcon={getPlatformIcon}
+                          canModifyViolations={canModifyViolations}
+                        />
+                      </div>
 
-                        {/* Violation Number Badge - Much More Visible */}
-                        <div
-                          className={
-                            isRTL
-                              ? "absolute -right-3 top-1/2 -translate-y-1/2 z-10"
-                              : "absolute -left-3 top-1/2 -translate-y-1/2 z-10"
-                          }>
-                          <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-base font-black shadow-xl border-4 border-background ring-2 ring-primary/20">
-                            {globalIndex}
-                          </div>
+                      {/* Violation Number Badge - Much More Visible */}
+                      <div
+                        className={
+                          isRTL
+                            ? "absolute -right-3 top-1/2 -translate-y-1/2 z-10"
+                            : "absolute -left-3 top-1/2 -translate-y-1/2 z-10"
+                        }>
+                        <div className="flex items-center justify-center h-10 w-10 rounded-full bg-gradient-to-br from-primary to-primary/80 text-primary-foreground text-base font-black shadow-xl border-4 border-background ring-2 ring-primary/20">
+                          {globalIndex}
                         </div>
                       </div>
-                    );
-                  })
-                )}
-              </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
-          </ScrollArea>
+          </div>
         </div>
 
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="px-6 pb-4 pt-2 border-t flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
-              Showing {startIndex + 1}-
-              {Math.min(endIndex, filteredViolations.length)} of{" "}
-              {filteredViolations.length}
+              {t("pagination.showing", {
+                start: startIndex + 1,
+                end: Math.min(endIndex, filteredViolations.length),
+                total: filteredViolations.length,
+              })}
             </div>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}>
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
+                disabled={currentPage === 1}
+                className="gap-1">
+                {isRTL ? (
+                  <ChevronRight className="h-4 w-4" />
+                ) : (
+                  <ChevronLeft className="h-4 w-4" />
+                )}
+                {t("pagination.previous")}
               </Button>
               <div className="flex items-center gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(
@@ -410,9 +416,14 @@ export function BulkViolationDetailsModal({
                 onClick={() =>
                   setCurrentPage((p) => Math.min(totalPages, p + 1))
                 }
-                disabled={currentPage === totalPages}>
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
+                disabled={currentPage === totalPages}
+                className="gap-1">
+                {t("pagination.next")}
+                {isRTL ? (
+                  <ChevronLeft className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </div>

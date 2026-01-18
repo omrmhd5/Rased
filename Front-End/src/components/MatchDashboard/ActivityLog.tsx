@@ -168,6 +168,9 @@ export function ActivityLog({
   const [isMaximized, setIsMaximized] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [bulkFilter, setBulkFilter] = useState<"all" | "bulk" | "individual">(
+    "all"
+  );
   const itemsPerPage = 10;
 
   // Helper function to format date with Arabic AM/PM (صباحا/مساءا) for RTL, AM/PM for LTR
@@ -261,6 +264,36 @@ export function ActivityLog({
       alert(t("matchDashboard.activityLog.error.failedToDelete"));
     }
   };
+
+  const handleDeleteBulkLogs = async (
+    bulkId: string,
+    logs: ActivityLogItem[]
+  ) => {
+    try {
+      await Promise.all(
+        logs.map(async (log) => {
+          if (log.deletedLogId) {
+            return fetch(
+              `${API_URL}/violations/deleted-logs/${log.deletedLogId}`,
+              { method: "DELETE", credentials: "include" }
+            );
+          } else if (log.violationId && log.logEntryId) {
+            return fetch(
+              `${API_URL}/violations/${log.violationId}/audit-log/${log.logEntryId}`,
+              { method: "DELETE", credentials: "include" }
+            );
+          }
+        })
+      );
+
+      if (onRefetch) {
+        onRefetch();
+      }
+    } catch (error) {
+      console.error("Error deleting bulk logs:", error);
+      alert(t("matchDashboard.activityLog.error.failedToDelete"));
+    }
+  };
   // Convert violation audit logs to ActivityLogItem format
   const auditLogItems: ActivityLogItem[] = [];
 
@@ -282,6 +315,32 @@ export function ActivityLog({
     const status = deletedLog.changes?.status || "";
     const views = deletedLog.changes?.views || "0";
 
+    // Helper function to translate status values
+    const translateStatus = (status: string): string => {
+      const statusLower = status.toLowerCase();
+      if (statusLower === "active") return t("dashboard.active");
+      if (statusLower === "blocked") return t("dashboard.blocked");
+      if (statusLower === "removed") return t("dashboard.removed");
+      if (statusLower === "under review") return t("dashboard.underReview");
+      if (statusLower === "reported") return t("dashboard.reported");
+      return status;
+    };
+
+    // Helper function to get status color classes
+    const getStatusColorClasses = (status: string) => {
+      const statusLower = status.toLowerCase();
+      if (statusLower === "active") {
+        return "bg-destructive/10 text-destructive dark:text-red-400";
+      } else if (statusLower === "blocked") {
+        return "bg-success/10 text-success";
+      } else if (statusLower === "removed") {
+        return "bg-cyan-500/10 text-cyan-500";
+      } else if (statusLower === "under review") {
+        return "bg-yellow-500/10 text-yellow-500";
+      }
+      return "bg-primary/10 text-primary";
+    };
+
     auditLogItems.push({
       type: "deleted",
       time: isRTL
@@ -297,34 +356,24 @@ export function ActivityLog({
         <div className="text-left">
           {isRTL ? (
             <>
-              {views && views !== "0" && status && (
+              {status && (
                 <>
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {status}
-                  </code>{" "}
                   {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
+                  <code
+                    className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
+                      status
+                    )}`}>
+                    {translateStatus(status)}
+                  </code>{" "}
+                </>
+              )}
+              {views && views !== "0" && (
+                <>
+                  {t("matchDashboard.activityLog.descriptions.with")}{" "}
                   <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                     {formatViewsString(views)}{" "}
                     {t("matchDashboard.activityLog.descriptions.views")}
                   </code>{" "}
-                  {t("matchDashboard.activityLog.descriptions.with")}{" "}
-                </>
-              )}
-              {views && views !== "0" && !status && (
-                <>
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {formatViewsString(views)}{" "}
-                    {t("matchDashboard.activityLog.descriptions.views")}
-                  </code>{" "}
-                  {t("matchDashboard.activityLog.descriptions.with")}{" "}
-                </>
-              )}
-              {!views && status && (
-                <>
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {status}
-                  </code>{" "}
-                  {t("matchDashboard.activityLog.descriptions.withStatus")}{" "}
                 </>
               )}
               {accountName && (
@@ -372,8 +421,11 @@ export function ActivityLog({
                     {t("matchDashboard.activityLog.descriptions.views")}
                   </code>{" "}
                   {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {status}
+                  <code
+                    className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
+                      status
+                    )}`}>
+                    {translateStatus(status)}
                   </code>
                 </>
               )}
@@ -391,8 +443,11 @@ export function ActivityLog({
                 <>
                   {" "}
                   {t("matchDashboard.activityLog.descriptions.withStatus")}{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {status}
+                  <code
+                    className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
+                      status
+                    )}`}>
+                    {translateStatus(status)}
                   </code>
                 </>
               )}
@@ -461,6 +516,21 @@ export function ActivityLog({
               return status;
             };
 
+            // Helper function to get status color classes
+            const getStatusColorClasses = (status: string) => {
+              const statusLower = status.toLowerCase();
+              if (statusLower === "active") {
+                return "bg-destructive/10 text-destructive dark:text-red-400";
+              } else if (statusLower === "blocked") {
+                return "bg-success/10 text-success";
+              } else if (statusLower === "removed") {
+                return "bg-cyan-500/10 text-cyan-500";
+              } else if (statusLower === "under review") {
+                return "bg-yellow-500/10 text-yellow-500";
+              }
+              return "bg-primary/10 text-primary";
+            };
+
             description = (
               <div className="text-left">
                 {isRTL ? (
@@ -468,7 +538,10 @@ export function ActivityLog({
                     {status && (
                       <>
                         {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
-                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        <code
+                          className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
+                            status
+                          )}`}>
                           {translateStatus(status)}
                         </code>{" "}
                       </>
@@ -527,7 +600,10 @@ export function ActivityLog({
                           {t("matchDashboard.activityLog.descriptions.views")}
                         </code>{" "}
                         {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
-                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        <code
+                          className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
+                            status
+                          )}`}>
                           {translateStatus(status)}
                         </code>
                       </>
@@ -548,7 +624,10 @@ export function ActivityLog({
                         {t(
                           "matchDashboard.activityLog.descriptions.withStatus"
                         )}{" "}
-                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                        <code
+                          className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
+                            status
+                          )}`}>
                           {translateStatus(status)}
                         </code>
                       </>
@@ -1250,16 +1329,26 @@ export function ActivityLog({
     }
   });
 
-  // Pagination Logic (now based on display items)
-  const totalPages = Math.ceil(displayItems.length / itemsPerPage);
+  // Apply bulk/individual filter
+  const filteredDisplayItems = displayItems.filter((item) => {
+    if (bulkFilter === "bulk") {
+      return item.type === "bulk";
+    } else if (bulkFilter === "individual") {
+      return item.type === "individual";
+    }
+    return true; // "all"
+  });
+
+  // Pagination Logic (now based on filtered display items)
+  const totalPages = Math.ceil(filteredDisplayItems.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedItems = displayItems.slice(startIndex, endIndex);
+  const paginatedItems = filteredDisplayItems.slice(startIndex, endIndex);
 
   // Reset page when filters change
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [filter, platformFilter, userFilter, searchQuery]);
+  }, [filter, platformFilter, userFilter, searchQuery, bulkFilter]);
 
   // Render the log content (used in both normal and maximized views)
   const renderLogContent = (scrollHeight?: string) => (
@@ -1380,6 +1469,35 @@ export function ActivityLog({
             </SelectContent>
           </Select>
         )}
+
+        {/* Bulk/Individual Filter */}
+        <Select
+          value={bulkFilter}
+          onValueChange={(value) =>
+            setBulkFilter(value as "all" | "bulk" | "individual")
+          }>
+          <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
+            <SelectValue
+              placeholder={
+                t("matchDashboard.activityLog.bulkFilter.placeholder") ||
+                "Filter by Type"
+              }
+            />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px] p-1">
+            <SelectItem value="all" className="text-xs py-1.5">
+              {t("matchDashboard.activityLog.bulkFilter.all") || "All"}
+            </SelectItem>
+            <SelectItem value="bulk" className="text-xs py-1.5">
+              {t("matchDashboard.activityLog.bulkFilter.bulkOnly") ||
+                "Bulk Actions Only"}
+            </SelectItem>
+            <SelectItem value="individual" className="text-xs py-1.5">
+              {t("matchDashboard.activityLog.bulkFilter.individualOnly") ||
+                "Individual Actions Only"}
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <ScrollArea className={scrollHeight || "h-[320px]"}>
@@ -1410,6 +1528,9 @@ export function ActivityLog({
                     getPlatformColor={getPlatformColor}
                     getPlatformIcon={getPlatformIcon}
                     onDeleteLog={isSuperAdmin ? handleDeleteLog : undefined}
+                    onDeleteAll={
+                      isSuperAdmin ? handleDeleteBulkLogs : undefined
+                    }
                     isSuperAdmin={isSuperAdmin}
                   />
                 );

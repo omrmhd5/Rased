@@ -15,6 +15,9 @@ interface BulkDeleteConfirmDialogProps {
   onOpenChange: (open: boolean) => void;
   violationCount: number;
   onConfirm: () => void;
+  title?: string;
+  description?: string;
+  confirmText?: string;
 }
 
 export function BulkDeleteConfirmDialog({
@@ -22,6 +25,9 @@ export function BulkDeleteConfirmDialog({
   onOpenChange,
   violationCount,
   onConfirm,
+  title,
+  description,
+  confirmText,
 }: BulkDeleteConfirmDialogProps) {
   const { t } = useLanguage();
 
@@ -35,11 +41,13 @@ export function BulkDeleteConfirmDialog({
             </div>
             <div>
               <DialogTitle>
-                {t("matchDashboard.bulk.deleteConfirm.title") ||
+                {title ||
+                  t("matchDashboard.bulk.deleteConfirm.title") ||
                   "Delete All Violations"}
               </DialogTitle>
               <DialogDescription>
-                {t("matchDashboard.bulk.deleteConfirm.description") ||
+                {description ||
+                  t("matchDashboard.bulk.deleteConfirm.description") ||
                   "This action cannot be undone."}
               </DialogDescription>
             </div>
@@ -48,10 +56,13 @@ export function BulkDeleteConfirmDialog({
 
         <div className="py-4">
           <p className="text-sm text-muted-foreground">
-            {t("matchDashboard.bulk.deleteConfirm.message", {
-              count: violationCount,
-            }) ||
-              `Are you sure you want to delete all ${violationCount} violations? This will permanently remove them from the system.`}
+            {violationCount > 0
+              ? t("matchDashboard.bulk.deleteConfirm.message", {
+                  count: violationCount,
+                }) ||
+                `Are you sure you want to delete all ${violationCount} violations? This will permanently remove them from the system.`
+              : t("matchDashboard.bulk.deleteConfirm.messageGeneric") ||
+                "Are you sure you want to delete these items? This will permanently remove them from the system."}
           </p>
         </div>
 
@@ -72,7 +83,9 @@ export function BulkDeleteConfirmDialog({
               e.preventDefault();
               onConfirm();
             }}>
-            {t("matchDashboard.bulk.deleteConfirm.confirm") || "Delete All"}
+            {confirmText ||
+              t("matchDashboard.bulk.deleteConfirm.confirm") ||
+              "Delete All"}
           </Button>
         </DialogFooter>
       </DialogContent>

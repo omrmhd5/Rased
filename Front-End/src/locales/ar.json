@@ -20,6 +20,11 @@
     },
     "noLeagueSelected": "لم يتم اختيار دوري"
   },
+  "pagination": {
+    "previous": "السابق",
+    "next": "التالي",
+    "showing": "عرض {start}-{end} من {total}"
+  },
   "login": {
     "title": "مرحباً بعودتك",
     "description": "قم بتسجيل الدخول إلى حساب راصد الخاص بك",
@@ -752,6 +757,7 @@
       "violationUrl": "رابط الانتهاك *",
       "violationUrlPlaceholder": "https://x.com/...",
       "multipleUrlsHint": "أدخل رابطاً واحداً في كل سطر لإضافة انتهاكات متعددة",
+      "urlCount": "العدد: {count}",
       "accountChannel": "الحساب / القناة",
       "optional": "اختياري",
       "accountChannelPlaceholder": "@username أو اسم القناة",
@@ -816,6 +822,7 @@
         "title": "حذف جميع الانتهاكات",
         "description": "لا يمكن التراجع عن هذا الإجراء.",
         "message": "هل أنت متأكد أنك تريد حذف جميع {count} انتهاكاً؟ سيتم إزالتهم نهائياً من النظام.",
+        "messageGeneric": "هل أنت متأكد أنك تريد حذف هذه العناصر؟ سيتم إزالتها نهائياً من النظام.",
         "cancel": "إلغاء",
         "confirm": "حذف الكل"
       }
@@ -960,11 +967,15 @@
       "actions": {
         "deleteLogEntry": "حذف إدخال السجل",
         "maximize": "تكبير",
-        "minimize": "تصغير"
+        "minimize": "تصغير",
+        "delete": "حذف الكل"
       },
       "deleteDialog": {
         "title": "حذف إدخال السجل",
         "description": "هل أنت متأكد أنك تريد حذف إدخال السجل هذا؟ لا يمكن التراجع عن هذا الإجراء."
+      },
+      "deleteConfirm": {
+        "description": "لا يمكن التراجع عن هذا الإجراء."
       },
       "error": {
         "failedToDelete": "فشل حذف إدخال السجل. يرجى المحاولة مرة أخرى."
@@ -981,6 +992,12 @@
         "performedBy": "تم بواسطة",
         "totalLogs": "{count} سجل إجمالي",
         "andMore": "و {count} أخرى..."
+      },
+      "bulkFilter": {
+        "placeholder": "تصفية حسب النوع",
+        "all": "الكل",
+        "bulkOnly": "الإجراءات الجماعية فقط",
+        "individualOnly": "الإجراءات الفردية فقط"
       }
     }
   },

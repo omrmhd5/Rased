@@ -6,9 +6,16 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { X, Trash2, Users, UserCircle } from "lucide-react";
+import {
+  X,
+  Trash2,
+  Users,
+  UserCircle,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useState } from "react";
 
 interface ActivityLogItem {
   type: string;
@@ -49,8 +56,16 @@ export function BulkActivityLogDetailsModal({
   isSuperAdmin = false,
 }: BulkActivityLogDetailsModalProps) {
   const { t, isRTL } = useLanguage();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const firstLog = logs[0];
+
+  // Pagination logic
+  const totalPages = Math.ceil(logs.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedLogs = logs.slice(startIndex, endIndex);
 
   const getActionTitle = () => {
     if (firstLog.type === "added") {
@@ -138,15 +153,16 @@ export function BulkActivityLogDetailsModal({
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 px-6">
-          <div className="py-4 space-y-3">
-            {logs.map((log, index) => (
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="px-6 py-4 space-y-3">
+            {paginatedLogs.map((log, index) => (
               <div
-                key={index}
+                key={startIndex + index}
                 className="p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors">
-                <div className="flex flex-row-reverse items-start justify-between gap-4">
+                <div
+                  className={`flex ${isRTL ? "flex-row" : ""} items-start justify-between gap-4`}>
                   <div className="flex-1 min-w-0">
-                    <div className="flex flex-row-reverse items-center gap-2 flex-wrap mb-2">
+                    <div className="flex flex-row items-center gap-2 flex-wrap mb-2">
                       <Badge
                         variant={getBadgeVariant()}
                         className={`text-xs px-2 py-0.5 h-5 font-medium ${getBadgeClassName()} ${
@@ -160,7 +176,9 @@ export function BulkActivityLogDetailsModal({
                         </code>
                       )}
                     </div>
-                    <div className="text-sm">{log.description}</div>
+                    <div className="text-sm" dir={isRTL ? "ltr" : ""}>
+                      {log.description}
+                    </div>
                     {log.violationUrl && (
                       <div className="mt-2 text-xs text-muted-foreground text-left">
                         <a
@@ -189,15 +207,50 @@ export function BulkActivityLogDetailsModal({
               </div>
             ))}
           </div>
-        </ScrollArea>
+        </div>
 
         <div className="px-6 py-4 border-t bg-muted/30">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
+          <div className="flex items-center justify-between gap-4">
+            <div className="text-sm text-muted-foreground">
               {t("matchDashboard.activityLog.bulk.totalLogs", {
                 count: logs.length,
               })}
-            </p>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="h-8 w-8 p-0">
+                  {isRTL ? (
+                    <ChevronRight className="h-4 w-4" />
+                  ) : (
+                    <ChevronLeft className="h-4 w-4" />
+                  )}
+                </Button>
+                <div className="text-sm font-medium">
+                  {currentPage} / {totalPages}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="h-8 w-8 p-0">
+                  {isRTL ? (
+                    <ChevronLeft className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            )}
+
             <Button onClick={onClose}>{t("whitelistedAccounts.closed")}</Button>
           </div>
         </div>

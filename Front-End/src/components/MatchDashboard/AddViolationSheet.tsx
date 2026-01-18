@@ -174,9 +174,20 @@ export function AddViolationSheet({
               onChange={(e) => handleUrlChange(e.target.value)}
               className="min-h-[80px] resize-y"
             />
-            <p className="text-xs text-muted-foreground">
-              {t("matchDashboard.addViolationSheet.multipleUrlsHint")}
-            </p>
+            <div
+              className={`flex items-center justify-between mt-1 ${isRTL ? "flex-row-reverse" : ""}`}>
+              <p className="text-xs text-muted-foreground">
+                {t("matchDashboard.addViolationSheet.multipleUrlsHint")}
+              </p>
+              <p className="text-xs font-medium">
+                {t("matchDashboard.addViolationSheet.urlCount", {
+                  count: formUrl
+                    .split("\n")
+                    .filter((line) => line.trim() !== "")
+                    .length.toString(),
+                })}
+              </p>
+            </div>
           </div>
 
           <div className="space-y-2">

@@ -20,6 +20,11 @@
     },
     "noLeagueSelected": "No League Selected"
   },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "showing": "Showing {start}-{end} of {total}"
+  },
   "login": {
     "title": "Welcome Back",
     "description": "Sign in to your Rased account",
@@ -752,6 +757,7 @@
       "violationUrl": "Violation URL *",
       "violationUrlPlaceholder": "https://x.com/...",
       "multipleUrlsHint": "Enter one URL per line to add multiple violations",
+      "urlCount": "Count: {count}",
       "accountChannel": "Account / Channel",
       "optional": "optional",
       "accountChannelPlaceholder": "@username or channel name",
@@ -816,6 +822,7 @@
         "title": "Delete All Violations",
         "description": "This action cannot be undone.",
         "message": "Are you sure you want to delete all {count} violations? This will permanently remove them from the system.",
+        "messageGeneric": "Are you sure you want to delete these items? This will permanently remove them from the system.",
         "cancel": "Cancel",
         "confirm": "Delete All"
       }
@@ -960,11 +967,15 @@
       "actions": {
         "deleteLogEntry": "Delete log entry",
         "maximize": "Maximize",
-        "minimize": "Minimize"
+        "minimize": "Minimize",
+        "delete": "Delete All"
       },
       "deleteDialog": {
         "title": "Delete Log Entry",
         "description": "Are you sure you want to delete this log entry? This action cannot be undone."
+      },
+      "deleteConfirm": {
+        "description": "This action cannot be undone."
       },
       "error": {
         "failedToDelete": "Failed to delete log entry. Please try again."
@@ -981,6 +992,12 @@
         "performedBy": "Performed by",
         "totalLogs": "{count} total logs",
         "andMore": "and {count} more..."
+      },
+      "bulkFilter": {
+        "placeholder": "Filter by Type",
+        "all": "All",
+        "bulkOnly": "Bulk Actions Only",
+        "individualOnly": "Individual Actions Only"
       }
     }
   },

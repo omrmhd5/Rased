@@ -1487,6 +1487,8 @@ export default function MatchDashboard() {
           }),
         });
 
+        // Scroll logic removed as requested
+        /*
         // Navigate to the newly added violation
         const violationId = frontendViolation._id || frontendViolation.id;
         if (violationId && id) {
@@ -1522,6 +1524,7 @@ export default function MatchDashboard() {
             }, 300);
           }, 500);
         }
+        */
       }
 
       setIsAddViolationOpen(false);
@@ -2006,8 +2009,37 @@ export default function MatchDashboard() {
             violationId = String(violation.id);
           }
 
+          // Attempt to delete creation log if exists (cleanup history)
+          if (violation.auditLog) {
+            const createdLog = violation.auditLog.find(
+              (l) => l.action === "created"
+            );
+            // safe cast to access _id if it exists
+            const logId = (createdLog as any)?._id || (createdLog as any)?.id;
+
+            if (createdLog && logId) {
+              await fetch(
+                `${API_URL}/violations/${violationId}/audit-log/${logId}`,
+                {
+                  method: "DELETE",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  credentials: "include",
+                }
+              ).catch((e) =>
+                console.warn(
+                  `Failed to delete creation log for ${violationId}`,
+                  e
+                )
+              );
+            }
+          }
+
           const response = await fetch(
-            `${API_URL}/violations/${violationId}?bulkId=${encodeURIComponent(bulkId)}`,
+            `${API_URL}/violations/${violationId}?bulkId=${encodeURIComponent(
+              bulkId
+            )}`,
             {
               method: "DELETE",
               headers: {

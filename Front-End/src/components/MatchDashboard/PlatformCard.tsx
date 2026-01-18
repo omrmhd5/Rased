@@ -444,7 +444,7 @@ export function PlatformCard({
             </div>
           ) : (
             <>
-              <div className="space-y-2 flex-1">
+              <div className="space-y-2 flex-1" dir={isRTL ? "ltr" : ""}>
                 {processedViolations.map((item, index) => {
                   if (item.type === "bulk" && item.violations && item.bulkId) {
                     return (
