@@ -1271,6 +1271,16 @@ router.put(
       // Update match content type counts
       await updateMatchContentTypeCounts(violation.matchId);
 
+      // Emit violation updated event
+      try {
+        const emitMatchId = violation.externalMatchId || violation.matchId;
+        emitViolationEvent(emitMatchId, "violation-updated", {
+          violation: populated,
+        });
+      } catch (error) {
+        // Silently fail
+      }
+
       res.json(populated);
     } catch (error) {
       if (error.name === "CastError") {

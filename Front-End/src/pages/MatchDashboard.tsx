@@ -1480,6 +1480,7 @@ export default function MatchDashboard() {
         const violationId =
           (editingViolation as Violation & { _id?: string })._id ||
           editingViolation.id.toString();
+
         const response = await fetch(`${API_URL}/violations/${violationId}`, {
           method: "PUT",
           headers: {
