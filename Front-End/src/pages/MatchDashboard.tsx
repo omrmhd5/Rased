@@ -91,13 +91,13 @@ export default function MatchDashboard() {
   const [match, setMatch] = useState<Match | null>(null);
   const [loading, setLoading] = useState(true);
   const [contentSplitData, setContentSplitData] = useState(
-    getInitialContentSplitData()
+    getInitialContentSplitData(),
   );
   const [activityLog, setActivityLog] = useState(getInitialActivityLog());
 
   // Platform operations state
   const [platformOperations, setPlatformOperations] = useState<PlatformData[]>(
-    getInitialPlatformOperations()
+    getInitialPlatformOperations(),
   );
 
   // Deleted violation logs state
@@ -160,7 +160,7 @@ export default function MatchDashboard() {
 
         // Fetch violations for this match using externalMatchId
         const violationsResponse = await fetch(
-          `${API_URL}/violations?matchId=${matchData.externalMatchId}`
+          `${API_URL}/violations?matchId=${matchData.externalMatchId}`,
         );
         if (violationsResponse.ok) {
           const violations = await violationsResponse.json();
@@ -178,7 +178,7 @@ export default function MatchDashboard() {
 
           // Fetch PlatformByMatch data for all platforms (backend aggregated stats)
           const platformStatsResponse = await fetch(
-            `${API_URL}/platform-by-match?matchId=${matchData.externalMatchId}`
+            `${API_URL}/platform-by-match?matchId=${matchData.externalMatchId}`,
           );
           const platformStatsMap: {
             [key: string]: {
@@ -207,7 +207,7 @@ export default function MatchDashboard() {
                 blockSuccessRate?: number;
               }) => {
                 platformStatsMap[stat.platformId] = stat;
-              }
+              },
             );
           }
 
@@ -219,7 +219,7 @@ export default function MatchDashboard() {
 
               // Convert backend violations to frontend format
               const convertedViolations = platformViolations.map((v) =>
-                convertBackendViolationToFrontend(v)
+                convertBackendViolationToFrontend(v),
               );
 
               // Get backend aggregated stats from PlatformByMatch
@@ -231,7 +231,7 @@ export default function MatchDashboard() {
               const activeViolations =
                 backendStats.activeCount ??
                 convertedViolations.filter(
-                  (v) => v.status === "Active" || v.status === "Under Review"
+                  (v) => v.status === "Active" || v.status === "Under Review",
                 ).length;
               const blockedCount = backendStats.blockedCount ?? 0;
               const blockedRate =
@@ -275,7 +275,7 @@ export default function MatchDashboard() {
                 blockSuccessRate,
                 stillActive,
               };
-            })
+            }),
           );
 
           // Save/update stats to PlatformByMatch for all platforms (calculate and save)
@@ -286,13 +286,13 @@ export default function MatchDashboard() {
               const platformViolations =
                 violationsByPlatform[platform.id] || [];
               const convertedViolations = platformViolations.map((v) =>
-                convertBackendViolationToFrontend(v)
+                convertBackendViolationToFrontend(v),
               );
               // Calculate and save stats for each platform (this updates the DB)
               calculateAndSavePlatformStats(
                 platform.id,
                 matchData.externalMatchId,
-                convertedViolations
+                convertedViolations,
               );
             });
 
@@ -300,7 +300,7 @@ export default function MatchDashboard() {
             if (matchData.externalMatchId) {
               calculateAndSaveTopPlatform(
                 matchData.externalMatchId,
-                platformOperations
+                platformOperations,
               );
             }
           }
@@ -314,7 +314,7 @@ export default function MatchDashboard() {
             `${API_URL}/violations/deleted-logs/${matchData.externalMatchId}`,
             {
               credentials: "include",
-            }
+            },
           );
           if (deletedLogsResponse.ok) {
             const deletedLogs = await deletedLogsResponse.json();
@@ -357,7 +357,7 @@ export default function MatchDashboard() {
         }
       }
     },
-    [id]
+    [id],
   );
 
   // General listener: refetch all data when refetchTrigger changes
@@ -383,14 +383,14 @@ export default function MatchDashboard() {
           // Try to find the violation element by ID
           // The ID could be the _id or id field, so we need to check both formats
           let violationElement = document.getElementById(
-            `violation-${violationIdFromHash}`
+            `violation-${violationIdFromHash}`,
           );
 
           // If not found, try to find by checking all violation elements
           if (!violationElement) {
             // Get all violations from platformOperations and find matching one
             const allViolations = platformOperations.flatMap(
-              (p) => p.violations
+              (p) => p.violations,
             );
             const matchingViolation = allViolations.find((v) => {
               const vId = String(v._id || v.id || "");
@@ -399,10 +399,10 @@ export default function MatchDashboard() {
 
             if (matchingViolation) {
               const actualId = String(
-                matchingViolation._id || matchingViolation.id || ""
+                matchingViolation._id || matchingViolation.id || "",
               );
               violationElement = document.getElementById(
-                `violation-${actualId}`
+                `violation-${actualId}`,
               );
             }
           }
@@ -416,13 +416,13 @@ export default function MatchDashboard() {
             violationElement.classList.add(
               "ring-2",
               "ring-primary",
-              "ring-offset-2"
+              "ring-offset-2",
             );
             setTimeout(() => {
               violationElement?.classList.remove(
                 "ring-2",
                 "ring-primary",
-                "ring-offset-2"
+                "ring-offset-2",
               );
             }, 2000);
           }
@@ -440,8 +440,6 @@ export default function MatchDashboard() {
   // Socket event handlers for real-time updates
   const handleViolationUpdated = useCallback(
     (data: any) => {
-      console.log("📡 Violation updated:", data);
-
       // Update local state optimistically
       setPlatformOperations((prev) =>
         prev.map((platform) => {
@@ -451,12 +449,12 @@ export default function MatchDashboard() {
               violations: platform.violations.map((v) =>
                 v.id === data.violation.id || v._id === data.violation._id
                   ? convertBackendViolationToFrontend(data.violation)
-                  : v
+                  : v,
               ),
             };
           }
           return platform;
-        })
+        }),
       );
 
       // Show toast notification
@@ -468,13 +466,11 @@ export default function MatchDashboard() {
       // Refetch to ensure consistency
       triggerRefetch();
     },
-    [toast, t, triggerRefetch]
+    [toast, t, triggerRefetch],
   );
 
   const handleViolationDeleted = useCallback(
     (data: any) => {
-      console.log("📡 Violation deleted:", data);
-
       // Remove from local state
       setPlatformOperations((prev) =>
         prev.map((platform) => {
@@ -482,12 +478,12 @@ export default function MatchDashboard() {
             return {
               ...platform,
               violations: platform.violations.filter(
-                (v) => v.id !== data.violationId && v._id !== data.violationId
+                (v) => v.id !== data.violationId && v._id !== data.violationId,
               ),
             };
           }
           return platform;
-        })
+        }),
       );
 
       toast({
@@ -497,13 +493,24 @@ export default function MatchDashboard() {
 
       triggerRefetch();
     },
-    [toast, t, triggerRefetch]
+    [toast, t, triggerRefetch],
+  );
+
+  const handleViolationCreated = useCallback(
+    (data: any) => {
+      toast({
+        title: t("matchDashboard.success.violationAdded"),
+        description: "Added by another user",
+      });
+
+      // Refetch to get new violation
+      triggerRefetch();
+    },
+    [toast, t, triggerRefetch],
   );
 
   const handleBulkViolationsAdded = useCallback(
     (data: any) => {
-      console.log("📡 Bulk violations added:", data);
-
       toast({
         title: t("matchDashboard.success.violationAdded"),
         description: t("matchDashboard.success.multipleViolationsAdded", {
@@ -514,13 +521,11 @@ export default function MatchDashboard() {
       // Refetch to get new violations
       triggerRefetch();
     },
-    [toast, t, triggerRefetch]
+    [toast, t, triggerRefetch],
   );
 
   const handleBulkViolationsDeleted = useCallback(
     (data: any) => {
-      console.log("📡 Bulk violations deleted:", data);
-
       toast({
         title: t("matchDashboard.success.violationDeleted"),
         description: t("matchDashboard.success.multipleViolationsRemoved", {
@@ -530,13 +535,11 @@ export default function MatchDashboard() {
 
       triggerRefetch();
     },
-    [toast, t, triggerRefetch]
+    [toast, t, triggerRefetch],
   );
 
   const handleBulkStatusChanged = useCallback(
     (data: any) => {
-      console.log("📡 Bulk status changed:", data);
-
       toast({
         title: t("matchDashboard.success.statusChanged"),
         description: t("matchDashboard.success.multipleViolationsUpdated", {
@@ -546,11 +549,12 @@ export default function MatchDashboard() {
 
       triggerRefetch();
     },
-    [toast, t, triggerRefetch]
+    [toast, t, triggerRefetch],
   );
 
   // Initialize WebSocket connection
   useSocket(id, {
+    "violation-created": handleViolationCreated,
     "violation-updated": handleViolationUpdated,
     "violation-deleted": handleViolationDeleted,
     "bulk-violations-added": handleBulkViolationsAdded,
@@ -629,7 +633,7 @@ export default function MatchDashboard() {
 
         // Fetch violations for this match using externalMatchId
         const violationsResponse = await fetch(
-          `${API_URL}/violations?matchId=${matchData.externalMatchId}`
+          `${API_URL}/violations?matchId=${matchData.externalMatchId}`,
         );
         if (violationsResponse.ok) {
           const violations = await violationsResponse.json();
@@ -647,7 +651,7 @@ export default function MatchDashboard() {
 
           // Fetch PlatformByMatch data for all platforms (backend aggregated stats)
           const platformStatsResponse = await fetch(
-            `${API_URL}/platform-by-match?matchId=${matchData.externalMatchId}`
+            `${API_URL}/platform-by-match?matchId=${matchData.externalMatchId}`,
           );
           const platformStatsMap: {
             [key: string]: {
@@ -676,7 +680,7 @@ export default function MatchDashboard() {
                 blockSuccessRate?: number;
               }) => {
                 platformStatsMap[stat.platformId] = stat;
-              }
+              },
             );
           }
 
@@ -688,7 +692,7 @@ export default function MatchDashboard() {
 
               // Convert backend violations to frontend format
               const convertedViolations = platformViolations.map((v) =>
-                convertBackendViolationToFrontend(v)
+                convertBackendViolationToFrontend(v),
               );
 
               // Get backend aggregated stats from PlatformByMatch
@@ -700,7 +704,7 @@ export default function MatchDashboard() {
               const activeViolations =
                 backendStats.activeCount ??
                 convertedViolations.filter(
-                  (v) => v.status === "Active" || v.status === "Under Review"
+                  (v) => v.status === "Active" || v.status === "Under Review",
                 ).length;
               const blockedCount = backendStats.blockedCount ?? 0;
               const blockedRate =
@@ -744,7 +748,7 @@ export default function MatchDashboard() {
                 blockSuccessRate,
                 stillActive,
               };
-            })
+            }),
           );
 
           // Save stats to PlatformByMatch for all platforms
@@ -753,7 +757,7 @@ export default function MatchDashboard() {
               const platformViolations =
                 violationsByPlatform[platform.id] || [];
               const convertedViolations = platformViolations.map((v) =>
-                convertBackendViolationToFrontend(v)
+                convertBackendViolationToFrontend(v),
               );
               return { platform, violations: convertedViolations };
             });
@@ -763,7 +767,7 @@ export default function MatchDashboard() {
               calculateAndSavePlatformStats(
                 platform.id,
                 matchData.externalMatchId,
-                violations
+                violations,
               );
             });
 
@@ -771,7 +775,7 @@ export default function MatchDashboard() {
             if (matchData.externalMatchId) {
               calculateAndSaveTopPlatform(
                 matchData.externalMatchId,
-                platformOperations
+                platformOperations,
               );
             }
           }
@@ -785,7 +789,7 @@ export default function MatchDashboard() {
             `${API_URL}/violations/deleted-logs/${matchData.externalMatchId}`,
             {
               credentials: "include",
-            }
+            },
           );
           if (deletedLogsResponse.ok) {
             const deletedLogs = await deletedLogsResponse.json();
@@ -902,7 +906,7 @@ export default function MatchDashboard() {
   const [selectedPlatformForAdd, setSelectedPlatformForAdd] =
     useState<string>("");
   const [editingViolation, setEditingViolation] = useState<Violation | null>(
-    null
+    null,
   );
   const [isEditMode, setIsEditMode] = useState(false);
 
@@ -927,7 +931,7 @@ export default function MatchDashboard() {
     violation: Violation;
   } | null>(null);
   const [blockTimeChoice, setBlockTimeChoice] = useState<"current" | "custom">(
-    "current"
+    "current",
   );
   const [customBlockTime, setCustomBlockTime] = useState(getKSATime());
 
@@ -1053,13 +1057,13 @@ export default function MatchDashboard() {
 
   // Available platforms (not in slots)
   const availablePlatforms = platformOperations.filter(
-    (p) => !selectedSlots.includes(p.id)
+    (p) => !selectedSlots.includes(p.id),
   );
 
   // Get filtered violations for a platform card
   const getFilteredViolations = (
     platformId: string,
-    violations: Violation[]
+    violations: Violation[],
   ) => {
     const cardFilter = platformCardFilter[platformId] || "all";
     const searchQuery = platformSearchQuery[platformId] || "";
@@ -1071,7 +1075,7 @@ export default function MatchDashboard() {
       filtered = filtered.filter(
         (v) =>
           v.url.toLowerCase().includes(query) ||
-          (v.accountHandle && v.accountHandle.toLowerCase().includes(query))
+          (v.accountHandle && v.accountHandle.toLowerCase().includes(query)),
       );
     }
 
@@ -1079,7 +1083,7 @@ export default function MatchDashboard() {
     if (cardFilter !== "all") {
       if (cardFilter === "active") {
         filtered = filtered.filter((v) =>
-          ["Reported", "Active", "Pending"].includes(v.statusBadge)
+          ["Reported", "Active", "Pending"].includes(v.statusBadge),
         );
       } else if (cardFilter === "removed") {
         filtered = filtered.filter((v) => v.statusBadge === "Removed");
@@ -1097,7 +1101,7 @@ export default function MatchDashboard() {
     // Apply content type filter
     if (contentTypeFilter !== "all") {
       filtered = filtered.filter(
-        (v) => v.type.toLowerCase() === contentTypeFilter
+        (v) => v.type.toLowerCase() === contentTypeFilter,
       );
     }
 
@@ -1132,7 +1136,7 @@ export default function MatchDashboard() {
   // Open edit violation drawer
   const openEditViolationDrawer = (
     platformId: string,
-    violation: Violation
+    violation: Violation,
   ) => {
     setSelectedPlatformForAdd(platformId);
     setIsEditMode(true);
@@ -1140,10 +1144,10 @@ export default function MatchDashboard() {
     // Pre-fill form
     setFormUrl(violation.violationUrl || violation.url || "");
     setFormAccountHandle(
-      violation.accountChannel || violation.accountHandle || ""
+      violation.accountChannel || violation.accountHandle || "",
     );
     setFormContentType(
-      (violation.contentType || violation.type || "live").toLowerCase()
+      (violation.contentType || violation.type || "live").toLowerCase(),
     );
     // Map old status values to new ones
     const statusMap: Record<
@@ -1169,23 +1173,23 @@ export default function MatchDashboard() {
     setFormTimeAdded(
       violation.timeAdded
         ? convertUTCToKSATime(violation.timeAdded)
-        : getKSATime()
+        : getKSATime(),
     );
     // Convert blockedAt from UTC to KSA time for datetime-local input
     setFormBlockedAt(
-      violation.blockedAt ? convertUTCToKSATime(violation.blockedAt) : ""
+      violation.blockedAt ? convertUTCToKSATime(violation.blockedAt) : "",
     );
     setFormStillActive(
       violation.active !== undefined
         ? violation.active
-        : violation.stillActive || false
+        : violation.stillActive || false,
     );
     setFormNotes(
       Array.isArray(violation.notes)
         ? violation.notes
         : violation.notes
           ? [violation.notes]
-          : []
+          : [],
     );
     setIsAddViolationOpen(true);
   };
@@ -1193,13 +1197,13 @@ export default function MatchDashboard() {
   // Toggle violation status (quick block/unblock)
   const toggleViolationStatus = (
     platformId: string,
-    violationId: number | string
+    violationId: number | string,
   ) => {
     const platform = platformOperations.find((p) => p.id === platformId);
     if (!platform) return;
 
     const violation = platform.violations.find(
-      (v) => v.id === violationId || v._id === violationId
+      (v) => v.id === violationId || v._id === violationId,
     );
     if (!violation) return;
 
@@ -1226,7 +1230,7 @@ export default function MatchDashboard() {
               body: JSON.stringify({
                 status: "Active",
               }),
-            }
+            },
           );
 
           if (!response.ok) {
@@ -1240,7 +1244,7 @@ export default function MatchDashboard() {
 
           // Find current platform and calculate updated violations
           const currentPlatform = platformOperations.find(
-            (p) => p.id === platformId
+            (p) => p.id === platformId,
           );
           if (!currentPlatform) {
             throw new Error("Platform not found");
@@ -1266,7 +1270,7 @@ export default function MatchDashboard() {
                 ...p,
                 violations: updatedViolations,
               };
-            })
+            }),
           );
 
           // Save stats to PlatformByMatch
@@ -1274,12 +1278,12 @@ export default function MatchDashboard() {
             calculateAndSavePlatformStats(
               platformId,
               match.externalMatchId,
-              updatedViolations
+              updatedViolations,
             );
             // Update top platform
             calculateAndSaveTopPlatform(
               match.externalMatchId,
-              platformOperations
+              platformOperations,
             );
           }
 
@@ -1341,7 +1345,7 @@ export default function MatchDashboard() {
             status: "Blocked",
             blockedAt: blockTime,
           }),
-        }
+        },
       );
 
       if (!response.ok) {
@@ -1355,7 +1359,7 @@ export default function MatchDashboard() {
 
       // Find the current platform to calculate updated violations
       const currentPlatform = platformOperations.find(
-        (p) => p.id === platformId
+        (p) => p.id === platformId,
       );
       if (!currentPlatform) {
         throw new Error("Platform not found");
@@ -1382,7 +1386,7 @@ export default function MatchDashboard() {
             ...platform,
             violations: updatedViolations,
           };
-        })
+        }),
       );
 
       // Save stats to PlatformByMatch - use the updatedViolations we just calculated
@@ -1390,7 +1394,7 @@ export default function MatchDashboard() {
         calculateAndSavePlatformStats(
           platformId,
           match.externalMatchId,
-          updatedViolations
+          updatedViolations,
         );
       }
 
@@ -1421,7 +1425,7 @@ export default function MatchDashboard() {
   // Otherwise, check the main account name
   const checkWhitelistedAccount = (
     accountChannel: string,
-    platformId: string
+    platformId: string,
   ): boolean => {
     const normalizedInput = accountChannel.trim().toLowerCase();
 
@@ -1461,12 +1465,12 @@ export default function MatchDashboard() {
       notes: string[];
     },
     isEditMode: boolean,
-    editingViolation: Violation | null
+    editingViolation: Violation | null,
   ) => {
     if (!match) return;
 
     const platform = platformOperations.find(
-      (p) => p.id === violationData.platformId
+      (p) => p.id === violationData.platformId,
     );
     if (!platform) return;
 
@@ -1512,13 +1516,13 @@ export default function MatchDashboard() {
               ...p,
               violations: updatedViolations,
             };
-          })
+          }),
         );
 
         // Save stats to PlatformByMatch
         if (match?.externalMatchId) {
           const updatedPlatform = platformOperations.find(
-            (p) => p.id === selectedPlatformForAdd
+            (p) => p.id === selectedPlatformForAdd,
           );
           if (updatedPlatform) {
             const platformViolations = updatedPlatform.violations.map((v) => {
@@ -1533,7 +1537,7 @@ export default function MatchDashboard() {
             calculateAndSavePlatformStats(
               selectedPlatformForAdd,
               match.externalMatchId,
-              platformViolations
+              platformViolations,
             );
           }
         }
@@ -1578,13 +1582,13 @@ export default function MatchDashboard() {
               ...p,
               violations: updatedViolations,
             };
-          })
+          }),
         );
 
         // Save stats to PlatformByMatch
         if (match?.externalMatchId) {
           const updatedPlatform = platformOperations.find(
-            (p) => p.id === selectedPlatformForAdd
+            (p) => p.id === selectedPlatformForAdd,
           );
           if (updatedPlatform) {
             const platformViolations = [
@@ -1594,7 +1598,7 @@ export default function MatchDashboard() {
             calculateAndSavePlatformStats(
               selectedPlatformForAdd,
               match.externalMatchId,
-              platformViolations
+              platformViolations,
             );
           }
         }
@@ -1686,7 +1690,7 @@ export default function MatchDashboard() {
     }
 
     const platform = platformOperations.find(
-      (p) => p.id === selectedPlatformForAdd
+      (p) => p.id === selectedPlatformForAdd,
     );
     if (!platform) return;
 
@@ -1850,7 +1854,7 @@ export default function MatchDashboard() {
 
         // Convert backend violations to frontend format
         const frontendViolations = newViolations.map((v: BackendViolation) =>
-          convertBackendViolationToFrontend(v)
+          convertBackendViolationToFrontend(v),
         );
 
         // Update local state with all new violations
@@ -1864,13 +1868,13 @@ export default function MatchDashboard() {
               ...p,
               violations: updatedViolations,
             };
-          })
+          }),
         );
 
         // Calculate and save platform stats
         if (match?.externalMatchId) {
           const currentPlatform = platformOperations.find(
-            (p) => p.id === selectedPlatformForAdd
+            (p) => p.id === selectedPlatformForAdd,
           );
           if (currentPlatform) {
             const updatedViolations = [
@@ -1880,7 +1884,7 @@ export default function MatchDashboard() {
             calculateAndSavePlatformStats(
               selectedPlatformForAdd,
               match.externalMatchId,
-              updatedViolations
+              updatedViolations,
             );
           }
         }
@@ -1966,7 +1970,7 @@ export default function MatchDashboard() {
 
         // Convert backend violations to frontend format
         const frontendViolations = newViolations.map((v: BackendViolation) =>
-          convertBackendViolationToFrontend(v)
+          convertBackendViolationToFrontend(v),
         );
 
         // Update local state with all new violations
@@ -1980,7 +1984,7 @@ export default function MatchDashboard() {
               ...p,
               violations: updatedViolations,
             };
-          })
+          }),
         );
 
         // Trigger refetch
@@ -2008,7 +2012,7 @@ export default function MatchDashboard() {
       await actuallySaveViolation(
         pendingViolationData.violationData,
         pendingViolationData.isEditMode,
-        pendingViolationData.editingViolation
+        pendingViolationData.editingViolation,
       );
     }
 
@@ -2018,7 +2022,7 @@ export default function MatchDashboard() {
   // Delete violation - show confirmation dialog
   const deleteViolation = (
     platformId: string,
-    violationId: number | string
+    violationId: number | string,
   ) => {
     setDeleteConfirmViolation({ platformId, violationId });
     setIsDeleteConfirmOpen(true);
@@ -2033,7 +2037,7 @@ export default function MatchDashboard() {
     if (!platform) return;
 
     const violation = platform.violations.find(
-      (v) => v.id === violationId || v._id === violationId
+      (v) => v.id === violationId || v._id === violationId,
     );
     if (!violation) return;
 
@@ -2057,7 +2061,7 @@ export default function MatchDashboard() {
           if (p.id !== platformId) return p;
 
           const updatedViolations = p.violations.filter(
-            (v) => v.id !== violationId && v._id !== violationId
+            (v) => v.id !== violationId && v._id !== violationId,
           );
 
           // Just update violations, keep existing metrics (will be updated by refetch)
@@ -2065,22 +2069,22 @@ export default function MatchDashboard() {
             ...p,
             violations: updatedViolations,
           };
-        })
+        }),
       );
 
       // Save stats to PlatformByMatch
       if (match?.externalMatchId) {
         const updatedPlatform = platformOperations.find(
-          (p) => p.id === platformId
+          (p) => p.id === platformId,
         );
         if (updatedPlatform) {
           const platformViolations = updatedPlatform.violations.filter(
-            (v) => v.id !== violationId && v._id !== violationId
+            (v) => v.id !== violationId && v._id !== violationId,
           );
           calculateAndSavePlatformStats(
             platformId,
             match.externalMatchId,
-            platformViolations
+            platformViolations,
           );
         }
       }
@@ -2108,7 +2112,7 @@ export default function MatchDashboard() {
   // Bulk delete violations
   const handleBulkDelete = async (
     platformId: string,
-    violations: Violation[]
+    violations: Violation[],
   ) => {
     try {
       // Generate a unique bulkId for this bulk operation
@@ -2134,7 +2138,7 @@ export default function MatchDashboard() {
           // Attempt to delete creation log if exists (cleanup history)
           if (violation.auditLog) {
             const createdLog = violation.auditLog.find(
-              (l) => l.action === "created"
+              (l) => l.action === "created",
             );
             // safe cast to access _id if it exists
             const logId = (createdLog as any)?._id || (createdLog as any)?.id;
@@ -2148,19 +2152,19 @@ export default function MatchDashboard() {
                     "Content-Type": "application/json",
                   },
                   credentials: "include",
-                }
+                },
               ).catch((e) =>
                 console.warn(
                   `Failed to delete creation log for ${violationId}`,
-                  e
-                )
+                  e,
+                ),
               );
             }
           }
 
           const response = await fetch(
             `${API_URL}/violations/${violationId}?bulkId=${encodeURIComponent(
-              bulkId
+              bulkId,
             )}`,
             {
               method: "DELETE",
@@ -2168,13 +2172,13 @@ export default function MatchDashboard() {
                 "Content-Type": "application/json",
               },
               credentials: "include",
-            }
+            },
           );
 
           if (!response.ok) {
             throw new Error(`Failed to delete violation ${violationId}`);
           }
-        })
+        }),
       );
 
       // Update local state - remove deleted violations
@@ -2204,13 +2208,13 @@ export default function MatchDashboard() {
             ...p,
             violations: updatedViolations,
           };
-        })
+        }),
       );
 
       // Save stats
       if (match?.externalMatchId) {
         const currentPlatform = platformOperations.find(
-          (p) => p.id === platformId
+          (p) => p.id === platformId,
         );
         if (currentPlatform) {
           const deletedIds = violations.map((v) => {
@@ -2231,7 +2235,7 @@ export default function MatchDashboard() {
           calculateAndSavePlatformStats(
             platformId,
             match.externalMatchId,
-            updatedViolations
+            updatedViolations,
           );
         }
       }
@@ -2259,7 +2263,7 @@ export default function MatchDashboard() {
     platformId: string,
     violations: Violation[],
     status: "Active" | "Blocked" | "Removed" | "Under Review",
-    blockedAt?: string
+    blockedAt?: string,
   ) => {
     try {
       // Generate a unique bulkId for this bulk operation
@@ -2299,13 +2303,13 @@ export default function MatchDashboard() {
               },
               credentials: "include",
               body: JSON.stringify(body),
-            }
+            },
           );
 
           if (!response.ok) {
             throw new Error(`Failed to update violation ${violationId}`);
           }
-        })
+        }),
       );
 
       // Update local state
@@ -2356,13 +2360,13 @@ export default function MatchDashboard() {
             ...p,
             violations: updatedViolations,
           };
-        })
+        }),
       );
 
       // Save stats
       if (match?.externalMatchId) {
         const currentPlatform = platformOperations.find(
-          (p) => p.id === platformId
+          (p) => p.id === platformId,
         );
         if (currentPlatform) {
           const updatedIds = violations.map((v) => {
@@ -2407,7 +2411,7 @@ export default function MatchDashboard() {
           calculateAndSavePlatformStats(
             platformId,
             match.externalMatchId,
-            updatedViolationsList
+            updatedViolationsList,
           );
         }
       }
@@ -2499,7 +2503,7 @@ export default function MatchDashboard() {
             violations: updatedViolations,
             // Metrics will be updated by refetch from backend
           };
-        })
+        }),
       );
 
       // Trigger refetch of all data
@@ -2666,11 +2670,11 @@ export default function MatchDashboard() {
         </h1>
         <div style="font-size: 18px; color: ${secondaryTextColor}; line-height: 1.8;">
           <p style="margin: 0 0 8px 0;"><strong>${t(
-            "matchDashboard.report.league"
+            "matchDashboard.report.league",
           )}</strong> ${competitionName || "N/A"}</p>
           <p style="margin: 0 0 8px 0;"><strong>${weekOrStageLabel}:</strong> ${weekOrStage}</p>
           <p style="margin: 0;"><strong>${t(
-            "matchDashboard.report.dateTime"
+            "matchDashboard.report.dateTime",
           )}</strong> ${matchDateTime || "N/A"}</p>
             </div>
       `;
@@ -2785,7 +2789,7 @@ export default function MatchDashboard() {
         parentStyles.forEach(
           ({ element: parentEl, originalStyle: origStyle }) => {
             parentEl.style.cssText = origStyle;
-          }
+          },
         );
 
         images.push(dataUrl);
@@ -2826,7 +2830,7 @@ export default function MatchDashboard() {
       const maxWidth = Math.max(...loadedImages.map((img) => img.width));
       const totalHeight = loadedImages.reduce(
         (sum, img) => sum + img.height,
-        0
+        0,
       );
 
       // Set canvas dimensions
@@ -2992,7 +2996,7 @@ export default function MatchDashboard() {
               const cardFilter = platformCardFilter[platform.id] || "all";
               const filteredViolations = getFilteredViolations(
                 platform.id,
-                platform.violations
+                platform.violations,
               );
 
               return (
@@ -3046,7 +3050,7 @@ export default function MatchDashboard() {
             targetMins={targetMins}
             title={t("matchDashboard.sections.platformComparison")}
             description={t(
-              "matchDashboard.sections.platformComparisonDescription"
+              "matchDashboard.sections.platformComparisonDescription",
             )}
             showCard={true}
           />
@@ -3065,7 +3069,7 @@ export default function MatchDashboard() {
             targetMins={targetMins}
             title={t("matchDashboard.sections.platformComparison")}
             description={t(
-              "matchDashboard.sections.platformComparisonDescription"
+              "matchDashboard.sections.platformComparisonDescription",
             )}
           />
         </div>
@@ -3175,7 +3179,7 @@ export default function MatchDashboard() {
           competition={getCompetitionName() || "N/A"}
           fileName={`Round-Report-${getCompetitionName().replace(
             /\s+/g,
-            "-"
+            "-",
           )}-${(() => {
             const leagueInfo = leagues?.find((l) => l.league === match.league);
             const isSuperCup = leagueInfo?.competitionType === "cup";
@@ -3188,18 +3192,18 @@ export default function MatchDashboard() {
           liveMetrics={platformOperations
             .filter((platform) => {
               const liveViolations = platform.violations.filter(
-                (v) => (v.contentType || v.type) === "Live"
+                (v) => (v.contentType || v.type) === "Live",
               );
               return liveViolations.length > 0;
             })
             .map((platform) => {
               const IconComponent = platform.icon;
               const liveViolations = platform.violations.filter(
-                (v) => (v.contentType || v.type) === "Live"
+                (v) => (v.contentType || v.type) === "Live",
               );
               const detected = liveViolations.length;
               const blocked = liveViolations.filter(
-                (v) => v.status === "Blocked" || v.statusBadge === "Blocked"
+                (v) => v.status === "Blocked" || v.statusBadge === "Blocked",
               ).length;
               const successRate =
                 detected > 0 ? Math.round((blocked / detected) * 100) : 0;
@@ -3208,7 +3212,7 @@ export default function MatchDashboard() {
               const blockedViolations = liveViolations.filter(
                 (v) =>
                   v.blockedAt &&
-                  (v.status === "Blocked" || v.statusBadge === "Blocked")
+                  (v.status === "Blocked" || v.statusBadge === "Blocked"),
               );
               let avgBlockTime = 0;
               if (blockedViolations.length > 0) {
@@ -3223,7 +3227,7 @@ export default function MatchDashboard() {
                   return sum;
                 }, 0);
                 avgBlockTime = Math.round(
-                  totalBlockTime / blockedViolations.length
+                  totalBlockTime / blockedViolations.length,
                 );
               }
 
@@ -3256,18 +3260,18 @@ export default function MatchDashboard() {
           highlightsMetrics={platformOperations
             .filter((platform) => {
               const highlightsViolations = platform.violations.filter(
-                (v) => (v.contentType || v.type) === "Highlights"
+                (v) => (v.contentType || v.type) === "Highlights",
               );
               return highlightsViolations.length > 0;
             })
             .map((platform) => {
               const IconComponent = platform.icon;
               const highlightsViolations = platform.violations.filter(
-                (v) => (v.contentType || v.type) === "Highlights"
+                (v) => (v.contentType || v.type) === "Highlights",
               );
               const detected = highlightsViolations.length;
               const blocked = highlightsViolations.filter(
-                (v) => v.status === "Blocked" || v.statusBadge === "Blocked"
+                (v) => v.status === "Blocked" || v.statusBadge === "Blocked",
               ).length;
               const successRate =
                 detected > 0 ? Math.round((blocked / detected) * 100) : 0;
@@ -3276,7 +3280,7 @@ export default function MatchDashboard() {
               const blockedViolations = highlightsViolations.filter(
                 (v) =>
                   v.blockedAt &&
-                  (v.status === "Blocked" || v.statusBadge === "Blocked")
+                  (v.status === "Blocked" || v.statusBadge === "Blocked"),
               );
               let avgBlockTime = 0;
               if (blockedViolations.length > 0) {
@@ -3291,7 +3295,7 @@ export default function MatchDashboard() {
                   return sum;
                 }, 0);
                 avgBlockTime = Math.round(
-                  totalBlockTime / blockedViolations.length
+                  totalBlockTime / blockedViolations.length,
                 );
               }
 

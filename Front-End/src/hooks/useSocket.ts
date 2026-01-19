@@ -1,12 +1,13 @@
 import { useEffect, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_ORIGIN_URL || "http://localhost:5000";
 
 // Singleton socket instance
 let socketInstance: Socket | null = null;
 
 export interface SocketEvents {
+  "violation-created": (data: any) => void;
   "violation-updated": (data: any) => void;
   "violation-deleted": (data: any) => void;
   "bulk-violations-added": (data: any) => void;
@@ -19,7 +20,7 @@ export interface SocketEvents {
 
 export const useSocket = (
   matchId: string | undefined,
-  handlers: Partial<SocketEvents>
+  handlers: Partial<SocketEvents>,
 ) => {
   const handlersRef = useRef(handlers);
 

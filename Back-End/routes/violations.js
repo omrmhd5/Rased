@@ -56,13 +56,13 @@ const updateMatchContentTypeCounts = async (matchId) => {
 
     // Count content types
     const liveCount = violations.filter(
-      (v) => (v.contentType || v.type) === "Live"
+      (v) => (v.contentType || v.type) === "Live",
     ).length;
     const highlightsCount = violations.filter(
-      (v) => (v.contentType || v.type) === "Highlights"
+      (v) => (v.contentType || v.type) === "Highlights",
     ).length;
     const othersCount = violations.filter(
-      (v) => (v.contentType || v.type) === "Other"
+      (v) => (v.contentType || v.type) === "Other",
     ).length;
     const totalViolations = violations.length;
 
@@ -139,7 +139,7 @@ router.get("/", async (req, res) => {
         const endWeek = parseInt(weekEnd);
         const weekArray = Array.from(
           { length: endWeek - startWeek + 1 },
-          (_, i) => (startWeek + i).toString()
+          (_, i) => (startWeek + i).toString(),
         );
         matchQuery.week = { $in: weekArray };
       }
@@ -197,7 +197,7 @@ router.get("/", async (req, res) => {
     const violations = await Violation.find(query)
       .populate(
         "matchId",
-        "team1 team2 date time week competition stadium externalMatchId league description"
+        "team1 team2 date time week competition stadium externalMatchId league description",
       )
       .sort({ timeAdded: sortOrder })
       .limit(limitNum)
@@ -272,7 +272,7 @@ router.delete(
       }
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 );
 
 // DELETE /api/violations/:violationId/audit-log/:logEntryId - Delete an audit log entry from a violation (superAdmin only)
@@ -292,7 +292,7 @@ router.delete(
 
       // Remove the audit log entry
       violation.auditLog = violation.auditLog.filter(
-        (entry) => entry._id.toString() !== logEntryId
+        (entry) => entry._id.toString() !== logEntryId,
       );
 
       await violation.save();
@@ -306,7 +306,7 @@ router.delete(
       }
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 );
 
 // GET /api/violations/problematic-accounts - Get most problematic accounts/channels
@@ -491,7 +491,7 @@ router.get("/problematic-accounts", async (req, res) => {
     const problematicAccounts = problematicAccountsRaw.map((account) => {
       const totalViews = account.viewsArray.reduce(
         (sum, viewsStr) => sum + processViews(viewsStr),
-        0
+        0,
       );
       return {
         ...account,
@@ -516,7 +516,7 @@ router.get("/:id", async (req, res) => {
   try {
     const violation = await Violation.findById(req.params.id).populate(
       "matchId",
-      "team1 team2 date time week competition stadium externalMatchId"
+      "team1 team2 date time week competition stadium externalMatchId",
     );
 
     if (!violation) {
@@ -638,7 +638,7 @@ router.post(
       const populated = await Violation.findById(savedViolation._id)
         .populate(
           "matchId",
-          "team1 team2 date time week competition stadium externalMatchId"
+          "team1 team2 date time week competition stadium externalMatchId",
         )
         .lean();
 
@@ -668,7 +668,7 @@ router.post(
       }
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 );
 
 // POST /api/violations/bulk - Create multiple violations at once (superAdmin and employee only)
@@ -791,7 +791,7 @@ router.post(
       })
         .populate(
           "matchId",
-          "team1 team2 date time week competition stadium externalMatchId"
+          "team1 team2 date time week competition stadium externalMatchId",
         )
         .lean();
 
@@ -814,21 +814,27 @@ router.post(
       // Update match content type counts
       await updateMatchContentTypeCounts(internalMatchId);
 
-      // Emit bulk violation created event
+      // Emit violation created event (single or bulk)
       try {
-        emitBulkEvent(
-          externalMatchId || internalMatchId,
-          "bulk-violations-added",
-          {
+        const emitMatchId = externalMatchId || internalMatchId;
+
+        if (populatedViolations.length === 1) {
+          // Single violation - emit as individual violation-created event
+          emitViolationEvent(emitMatchId, "violation-created", {
+            violation: populatedViolations[0],
+          });
+        } else {
+          // Multiple violations - emit as bulk event
+          emitBulkEvent(emitMatchId, "bulk-violations-added", {
             bulkId,
             count: populatedViolations.length,
             violations: populatedViolations,
             platformId,
             platformName,
-          }
-        );
+          });
+        }
       } catch (error) {
-        console.error("Error emitting bulk-violations-added event:", error);
+        // Silently fail
       }
 
       res.status(201).json({
@@ -845,7 +851,7 @@ router.post(
       }
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 );
 
 // PUT /api/violations/:id - Update violation (superAdmin and employee only)
@@ -870,7 +876,7 @@ router.put(
       } = req.body;
 
       const violation = await Violation.findById(req.params.id).populate(
-        "matchId"
+        "matchId",
       );
 
       if (!violation) {
@@ -1150,7 +1156,7 @@ router.put(
         if (notesChanged) {
           const addedNotes = newNotes.filter((n) => !originalNotes.includes(n));
           const removedNotes = originalNotes.filter(
-            (n) => !newNotes.includes(n)
+            (n) => !newNotes.includes(n),
           );
 
           // If notes were edited (same count, different content) - this means a note was changed, not added/removed
@@ -1271,7 +1277,7 @@ router.put(
       }
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 );
 
 // PATCH /api/violations/:id/status - Update violation status only (superAdmin and employee only)
@@ -1393,7 +1399,7 @@ router.patch(
       }
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 );
 
 // DELETE /api/violations/:id - Delete violation (superAdmin and employee only)
@@ -1484,7 +1490,7 @@ router.delete(
       }
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 );
 
 export default router;

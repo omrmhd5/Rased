@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { io, Socket } from "socket.io-client";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_URL = import.meta.env.VITE_ORIGIN_URL || "http://localhost:5000";
 
 // Singleton socket instance for global listeners
 let globalSocketInstance: Socket | null = null;
@@ -41,6 +41,7 @@ export const useGlobalSocket = (onAnyChange: () => void) => {
     };
 
     // Register listeners for all event types
+    socket.on("violation-created", handleAnyEvent);
     socket.on("violation-updated", handleAnyEvent);
     socket.on("violation-deleted", handleAnyEvent);
     socket.on("bulk-violations-added", handleAnyEvent);
@@ -51,6 +52,7 @@ export const useGlobalSocket = (onAnyChange: () => void) => {
     return () => {
       socket.emit("leave-match", "dashboard");
 
+      socket.off("violation-created", handleAnyEvent);
       socket.off("violation-updated", handleAnyEvent);
       socket.off("violation-deleted", handleAnyEvent);
       socket.off("bulk-violations-added", handleAnyEvent);
