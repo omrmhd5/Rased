@@ -658,6 +658,16 @@ router.post(
       // Update match content type counts
       await updateMatchContentTypeCounts(internalMatchId);
 
+      // Emit violation created event
+      try {
+        const emitMatchId = externalMatchId || internalMatchId;
+        emitViolationEvent(emitMatchId, "violation-created", {
+          violation: populated,
+        });
+      } catch (error) {
+        // Silently fail
+      }
+
       res.status(201).json(populated);
     } catch (error) {
       if (error.name === "CastError") {
@@ -814,25 +824,19 @@ router.post(
       // Update match content type counts
       await updateMatchContentTypeCounts(internalMatchId);
 
-      // Emit violation created event (single or bulk)
+      // Emit bulk violation created event
       try {
-        const emitMatchId = externalMatchId || internalMatchId;
-
-        if (populatedViolations.length === 1) {
-          // Single violation - emit as individual violation-created event
-          emitViolationEvent(emitMatchId, "violation-created", {
-            violation: populatedViolations[0],
-          });
-        } else {
-          // Multiple violations - emit as bulk event
-          emitBulkEvent(emitMatchId, "bulk-violations-added", {
+        emitBulkEvent(
+          externalMatchId || internalMatchId,
+          "bulk-violations-added",
+          {
             bulkId,
             count: populatedViolations.length,
             violations: populatedViolations,
             platformId,
             platformName,
-          });
-        }
+          },
+        );
       } catch (error) {
         // Silently fail
       }

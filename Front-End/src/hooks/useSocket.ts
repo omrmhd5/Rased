@@ -58,6 +58,10 @@ export const useSocket = (
     // Register event handlers
     const eventHandlers: [string, (data: any) => void][] = [
       [
+        "violation-created",
+        (data) => handlersRef.current["violation-created"]?.(data),
+      ],
+      [
         "violation-updated",
         (data) => handlersRef.current["violation-updated"]?.(data),
       ],
