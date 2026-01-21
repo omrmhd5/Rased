@@ -53,6 +53,7 @@ import {
 import { API_URL } from "@/components/MatchDashboard/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
+import PlatformManagement from "@/components/PlatformManagement";
 
 export default function Settings() {
   const { user: currentUser } = useAuth();
@@ -63,7 +64,7 @@ export default function Settings() {
   const [minutesInput, setMinutesInput] = useState<string>("15");
   const [hoursInput, setHoursInput] = useState<string>("0.25");
   const [focusedField, setFocusedField] = useState<"minutes" | "hours" | null>(
-    null
+    null,
   );
 
   // Threshold states
@@ -255,7 +256,7 @@ export default function Settings() {
       // Regular league validation
       if (!formSlug.trim() || !formApiUrl.trim() || !formReferer.trim()) {
         setFormError(
-          t("settings.leaguesManagement.error.slugApiUrlRefererRequired")
+          t("settings.leaguesManagement.error.slugApiUrlRefererRequired"),
         );
         return;
       }
@@ -311,7 +312,7 @@ export default function Settings() {
       setFormError(
         error instanceof Error
           ? error.message
-          : t("settings.leaguesManagement.error.failedToCreate")
+          : t("settings.leaguesManagement.error.failedToCreate"),
       );
     } finally {
       setAddingLeague(false);
@@ -324,7 +325,7 @@ export default function Settings() {
 
     if (!formSlug.trim() || !formApiUrl.trim() || !formReferer.trim()) {
       setFormError(
-        t("settings.leaguesManagement.error.slugApiUrlRefererRequired")
+        t("settings.leaguesManagement.error.slugApiUrlRefererRequired"),
       );
       return;
     }
@@ -353,7 +354,7 @@ export default function Settings() {
           method: "PUT",
           credentials: "include",
           body: formData,
-        }
+        },
       );
 
       if (!response.ok) {
@@ -374,7 +375,7 @@ export default function Settings() {
       setFormError(
         error instanceof Error
           ? error.message
-          : t("settings.leaguesManagement.error.failedToUpdate")
+          : t("settings.leaguesManagement.error.failedToUpdate"),
       );
     } finally {
       setUpdatingLeague(false);
@@ -389,7 +390,7 @@ export default function Settings() {
         {
           method: "PATCH",
           credentials: "include",
-        }
+        },
       );
 
       if (!response.ok) {
@@ -591,7 +592,7 @@ export default function Settings() {
       toast({
         title: t("settings.problematicAccountsThresholds.validationError"),
         description: t(
-          "settings.problematicAccountsThresholds.mustBeGreaterThanZero"
+          "settings.problematicAccountsThresholds.mustBeGreaterThanZero",
         ),
         variant: "destructive",
       });
@@ -635,20 +636,20 @@ export default function Settings() {
           {
             views: viewsThresh.toLocaleString("en-US"),
             violations: violationsThresh.toString(),
-          }
+          },
         ),
       });
     } catch (error) {
       console.error("Error saving thresholds:", error);
       toast({
         title: t(
-          "settings.problematicAccountsThresholds.error.failedToSaveThresholds"
+          "settings.problematicAccountsThresholds.error.failedToSaveThresholds",
         ),
         description:
           error instanceof Error
             ? error.message
             : t(
-                "settings.problematicAccountsThresholds.error.failedToSaveThresholds"
+                "settings.problematicAccountsThresholds.error.failedToSaveThresholds",
               ),
         variant: "destructive",
       });
@@ -776,7 +777,7 @@ export default function Settings() {
                       htmlFor="viewsThreshold"
                       className="text-xs sm:text-sm">
                       {t(
-                        "settings.problematicAccountsThresholds.viewsThreshold"
+                        "settings.problematicAccountsThresholds.viewsThreshold",
                       )}
                     </Label>
                     <Input
@@ -793,7 +794,7 @@ export default function Settings() {
                     />
                     <p className="text-[10px] sm:text-xs text-muted-foreground">
                       {t(
-                        "settings.problematicAccountsThresholds.viewsDescription"
+                        "settings.problematicAccountsThresholds.viewsDescription",
                       )}
                     </p>
                   </div>
@@ -802,7 +803,7 @@ export default function Settings() {
                       htmlFor="violationsThreshold"
                       className="text-xs sm:text-sm">
                       {t(
-                        "settings.problematicAccountsThresholds.violationsThreshold"
+                        "settings.problematicAccountsThresholds.violationsThreshold",
                       )}
                     </Label>
                     <Input
@@ -818,7 +819,7 @@ export default function Settings() {
                     />
                     <p className="text-[10px] sm:text-xs text-muted-foreground">
                       {t(
-                        "settings.problematicAccountsThresholds.violationsDescription"
+                        "settings.problematicAccountsThresholds.violationsDescription",
                       )}
                     </p>
                   </div>
@@ -836,7 +837,7 @@ export default function Settings() {
                     <>
                       <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                       {t(
-                        "settings.problematicAccountsThresholds.saveThresholds"
+                        "settings.problematicAccountsThresholds.saveThresholds",
                       )}
                     </>
                   )}
@@ -887,7 +888,7 @@ export default function Settings() {
                     {formIsManual
                       ? t("settings.leaguesManagement.manualLeagueDescription")
                       : t(
-                          "settings.leaguesManagement.regularLeagueDescription"
+                          "settings.leaguesManagement.regularLeagueDescription",
                         )}
                   </DialogDescription>
                 </DialogHeader>
@@ -962,7 +963,7 @@ export default function Settings() {
                           <SelectTrigger className="h-9 sm:h-10 text-sm">
                             <SelectValue
                               placeholder={t(
-                                "settings.leaguesManagement.selectType"
+                                "settings.leaguesManagement.selectType",
                               )}
                             />
                           </SelectTrigger>
@@ -990,8 +991,8 @@ export default function Settings() {
                               if (file.size > 5 * 1024 * 1024) {
                                 setFormError(
                                   t(
-                                    "settings.leaguesManagement.error.fileSizeTooLarge"
-                                  )
+                                    "settings.leaguesManagement.error.fileSizeTooLarge",
+                                  ),
                                 );
                                 return;
                               }
@@ -1063,7 +1064,7 @@ export default function Settings() {
                           <SelectTrigger className="h-9 sm:h-10 text-sm">
                             <SelectValue
                               placeholder={t(
-                                "settings.leaguesManagement.selectType"
+                                "settings.leaguesManagement.selectType",
                               )}
                             />
                           </SelectTrigger>
@@ -1091,8 +1092,8 @@ export default function Settings() {
                               if (file.size > 5 * 1024 * 1024) {
                                 setFormError(
                                   t(
-                                    "settings.leaguesManagement.error.fileSizeTooLarge"
-                                  )
+                                    "settings.leaguesManagement.error.fileSizeTooLarge",
+                                  ),
                                 );
                                 return;
                               }
@@ -1196,7 +1197,7 @@ export default function Settings() {
                               {league.isHidden && (
                                 <span className="text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
                                   {t(
-                                    "settings.leaguesManagement.status.hidden"
+                                    "settings.leaguesManagement.status.hidden",
                                   )}
                                 </span>
                               )}
@@ -1256,7 +1257,7 @@ export default function Settings() {
                       </TableHead>
                       <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">
                         {t(
-                          "settings.leaguesManagement.tableHeaders.arabicName"
+                          "settings.leaguesManagement.tableHeaders.arabicName",
                         )}
                       </TableHead>
                       <TableHead className="p-3 sm:p-4 text-xs sm:text-sm">
@@ -1354,6 +1355,9 @@ export default function Settings() {
           )}
         </CardContent>
       </Card>
+
+      {/* Platform Management */}
+      <PlatformManagement />
 
       {/* Edit League Dialog */}
       <Dialog open={isEditLeagueOpen} onOpenChange={setIsEditLeagueOpen}>
@@ -1454,7 +1458,7 @@ export default function Settings() {
                   if (file) {
                     if (file.size > 5 * 1024 * 1024) {
                       setFormError(
-                        t("settings.leaguesManagement.error.fileSizeTooLarge")
+                        t("settings.leaguesManagement.error.fileSizeTooLarge"),
                       );
                       return;
                     }

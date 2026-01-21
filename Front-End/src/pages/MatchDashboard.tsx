@@ -43,6 +43,7 @@ import {
   getInitialContentSplitData,
   getInitialActivityLog,
   getInitialPlatformOperations,
+  fetchPlatformsFromBackend,
   formatViews,
   formatViewsString,
   getKSATime,
@@ -561,6 +562,15 @@ export default function MatchDashboard() {
     "bulk-violations-deleted": handleBulkViolationsDeleted,
     "bulk-status-changed": handleBulkStatusChanged,
   });
+
+  // Fetch platforms from backend on mount
+  useEffect(() => {
+    const loadPlatforms = async () => {
+      const platforms = await fetchPlatformsFromBackend();
+      setPlatformOperations(platforms);
+    };
+    loadPlatforms();
+  }, []);
 
   // Fetch settings on mount
   useEffect(() => {
