@@ -31,7 +31,10 @@ import {
   Download,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
+import {
+  getInitialPlatformOperations,
+  fetchPlatformsFromBackend,
+} from "@/components/MatchDashboard/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ProblematicAccountsMobile } from "./ProblematicAccountsMobile";
@@ -190,7 +193,7 @@ export default function ProblematicAccounts() {
   const [accounts, setAccounts] = useState<ProblematicAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<"violations" | "views" | "matches">(
-    "violations"
+    "violations",
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -202,8 +205,19 @@ export default function ProblematicAccounts() {
   const [violationsThreshold, setViolationsThreshold] = useState<number>(5);
   const [loadingThresholds, setLoadingThresholds] = useState(true);
 
-  // Get platform operations for icons
-  const platformOperations = getInitialPlatformOperations();
+  // Get platform operations for icons - fetch from backend
+  const [platformOperations, setPlatformOperations] = useState(
+    getInitialPlatformOperations(),
+  );
+
+  // Fetch platforms from backend on mount
+  useEffect(() => {
+    const loadPlatforms = async () => {
+      const platforms = await fetchPlatformsFromBackend();
+      setPlatformOperations(platforms);
+    };
+    loadPlatforms();
+  }, []);
 
   const getPlatformIconComponent = (platformName: string) => {
     const platform = platformOperations.find((p) => p.name === platformName);
@@ -264,7 +278,7 @@ export default function ProblematicAccounts() {
           leaguesToFetch.push(
             ...visibleLeagues
               .map((l) => l.league as League)
-              .filter((l): l is string => Boolean(l))
+              .filter((l): l is string => Boolean(l)),
           );
         }
 
@@ -318,14 +332,14 @@ export default function ProblematicAccounts() {
             `${API_URL}/violations/problematic-accounts?${params.toString()}`,
             {
               credentials: "include",
-            }
+            },
           );
 
           if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(
               errorData.error ||
-                `Failed to fetch problematic accounts: ${response.status}`
+                `Failed to fetch problematic accounts: ${response.status}`,
             );
           }
 
@@ -370,7 +384,7 @@ export default function ProblematicAccounts() {
               account.totalViews >= viewsThreshold ||
               account.totalViolations >= violationsThreshold
             );
-          }
+          },
         );
 
         setAccounts(filteredData);
@@ -547,7 +561,7 @@ export default function ProblematicAccounts() {
             ? Math.round(
                 ((account.blockedCount + account.removedCount) /
                   account.totalViolations) *
-                  100
+                  100,
               )
             : 0;
 
@@ -684,14 +698,14 @@ export default function ProblematicAccounts() {
       XLSX.utils.book_append_sheet(
         workbook,
         worksheet,
-        isRTL ? "الحسابات الإشكالية" : "Problematic Accounts"
+        isRTL ? "الحسابات الإشكالية" : "Problematic Accounts",
       );
 
       // Generate Excel file
       XLSX.writeFile(
         workbook,
         `problematic-accounts-${new Date().toISOString().split("T")[0]}.xlsx`,
-        { cellStyles: true }
+        { cellStyles: true },
       );
 
       toast({
@@ -824,7 +838,7 @@ export default function ProblematicAccounts() {
                 )}
                 {availableLeagues.map((leagueSlug) => {
                   const leagueInfo = leagues?.find(
-                    (l) => l.league === leagueSlug
+                    (l) => l.league === leagueSlug,
                   );
                   if (!leagueInfo) return null;
                   const iconUrl = leagueInfo.iconUrl
@@ -1035,7 +1049,7 @@ export default function ProblematicAccounts() {
                               className="text-xs sm:text-sm">
                               {t("problematicAccounts.week")} {week}
                             </SelectItem>
-                          )
+                          ),
                         )}
                       </SelectContent>
                     </Select>
@@ -1061,7 +1075,7 @@ export default function ProblematicAccounts() {
                                 className="text-xs sm:text-sm">
                                 {t("problematicAccounts.week")} {week}
                               </SelectItem>
-                            )
+                            ),
                           )}
                         </SelectContent>
                       </Select>
@@ -1085,7 +1099,7 @@ export default function ProblematicAccounts() {
                                 className="text-xs sm:text-sm">
                                 {t("problematicAccounts.week")} {week}
                               </SelectItem>
-                            )
+                            ),
                           )}
                         </SelectContent>
                       </Select>
@@ -1319,7 +1333,7 @@ export default function ProblematicAccounts() {
               <tbody>
                 {paginatedAccounts.map((account, index) => {
                   const PlatformIcon = getPlatformIconComponent(
-                    account.platformName
+                    account.platformName,
                   );
                   const platformColor = getPlatformColor(account.platformName);
                   const successRate =
@@ -1327,7 +1341,7 @@ export default function ProblematicAccounts() {
                       ? Math.round(
                           ((account.blockedCount + account.removedCount) /
                             account.totalViolations) *
-                            100
+                            100,
                         )
                       : 0;
 

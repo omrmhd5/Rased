@@ -47,7 +47,10 @@ import {
   UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
+import {
+  getInitialPlatformOperations,
+  fetchPlatformsFromBackend,
+} from "@/components/MatchDashboard/constants";
 import {
   Pagination,
   PaginationContent,
@@ -199,7 +202,7 @@ export default function WhitelistedAccounts() {
   const [accountChannel, setAccountChannel] = useState("");
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
   const [platformNames, setPlatformNames] = useState<{ [key: string]: string }>(
-    {}
+    {},
   );
   const [notes, setNotes] = useState("");
   const [formError, setFormError] = useState("");
@@ -224,8 +227,19 @@ export default function WhitelistedAccounts() {
   const [dialogSearchQuery, setDialogSearchQuery] = useState("");
   const dialogItemsPerPage = 10;
 
-  // Get platform operations for checkboxes
-  const platformOperations = getInitialPlatformOperations();
+  // Get platform operations for checkboxes - fetch from backend
+  const [platformOperations, setPlatformOperations] = useState(
+    getInitialPlatformOperations(),
+  );
+
+  // Fetch platforms from backend on mount
+  useEffect(() => {
+    const loadPlatforms = async () => {
+      const platforms = await fetchPlatformsFromBackend();
+      setPlatformOperations(platforms);
+    };
+    loadPlatforms();
+  }, []);
 
   // Fetch whitelisted accounts
   useEffect(() => {
@@ -252,7 +266,7 @@ export default function WhitelistedAccounts() {
   // Get account name for a platform (main name or platform-specific)
   const getAccountNameForPlatform = (
     account: WhitelistedAccount,
-    platformId: string
+    platformId: string,
   ): string => {
     if (account.platformNames && account.platformNames[platformId]) {
       return account.platformNames[platformId];
@@ -343,7 +357,7 @@ export default function WhitelistedAccounts() {
         // Get the account name for this platform (main name or platform-specific)
         const accountNameForPlatform = getAccountNameForPlatform(
           account,
-          platformId
+          platformId,
         );
 
         // Fetch violations for each allowed league and combine
@@ -353,7 +367,7 @@ export default function WhitelistedAccounts() {
             `${API_URL}/violations?platformId=${platformId}&league=${league}&limit=1000`,
             {
               credentials: "include",
-            }
+            },
           );
 
           if (!response.ok) {
@@ -380,7 +394,7 @@ export default function WhitelistedAccounts() {
         });
 
         const leagueViolationsArrays = await Promise.all(
-          leagueViolationPromises
+          leagueViolationPromises,
         );
         return leagueViolationsArrays.flat();
       });
@@ -390,7 +404,7 @@ export default function WhitelistedAccounts() {
 
       // Deduplicate violations by _id to prevent duplicates from manual leagues or overlapping queries
       const uniqueViolations = Array.from(
-        new Map(allViolations.map((v: Violation) => [v._id, v])).values()
+        new Map(allViolations.map((v: Violation) => [v._id, v])).values(),
       );
 
       setAccountViolations((prev) => ({
@@ -400,7 +414,7 @@ export default function WhitelistedAccounts() {
     } catch (error) {
       console.error(
         `Error fetching violations for account ${account.accountChannel}:`,
-        error
+        error,
       );
       setAccountViolations((prev) => ({
         ...prev,
@@ -500,7 +514,7 @@ export default function WhitelistedAccounts() {
       setFormError(
         error instanceof Error
           ? error.message
-          : t("whitelistedAccounts.error.failedToAddAccount")
+          : t("whitelistedAccounts.error.failedToAddAccount"),
       );
       toast({
         title: t("whitelistedAccounts.error.failedToAdd"),
@@ -547,13 +561,13 @@ export default function WhitelistedAccounts() {
             platformNames: platformNames,
             notes: notes.trim(),
           }),
-        }
+        },
       );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
-          errorData.error || "Failed to update whitelisted account"
+          errorData.error || "Failed to update whitelisted account",
         );
       }
 
@@ -573,7 +587,7 @@ export default function WhitelistedAccounts() {
       setFormError(
         error instanceof Error
           ? error.message
-          : t("whitelistedAccounts.error.failedToUpdateAccount")
+          : t("whitelistedAccounts.error.failedToUpdateAccount"),
       );
       toast({
         title: t("whitelistedAccounts.error.failedToUpdate"),
@@ -599,13 +613,13 @@ export default function WhitelistedAccounts() {
         {
           method: "DELETE",
           credentials: "include",
-        }
+        },
       );
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(
-          errorData.error || "Failed to delete whitelisted account"
+          errorData.error || "Failed to delete whitelisted account",
         );
       }
 
@@ -771,7 +785,7 @@ export default function WhitelistedAccounts() {
                         value={accountChannel}
                         onChange={(e) => setAccountChannel(e.target.value)}
                         placeholder={t(
-                          "whitelistedAccounts.accountChannelPlaceholder"
+                          "whitelistedAccounts.accountChannelPlaceholder",
                         )}
                         className="h-9 sm:h-10 text-sm"
                       />
@@ -784,7 +798,7 @@ export default function WhitelistedAccounts() {
                         {platformOperations.map((platform) => {
                           const PlatformIcon = platform.icon;
                           const isSelected = selectedPlatforms.includes(
-                            platform.id
+                            platform.id,
                           );
                           const platformName = platformNames[platform.id] || "";
                           return (
@@ -814,7 +828,7 @@ export default function WhitelistedAccounts() {
                                     className="text-[10px] sm:text-xs text-muted-foreground">
                                     {t(
                                       "whitelistedAccounts.accountNameForPlatform",
-                                      { platform: platform.name }
+                                      { platform: platform.name },
                                     )}
                                   </Label>
                                   <Input
@@ -823,7 +837,7 @@ export default function WhitelistedAccounts() {
                                     onChange={(e) =>
                                       handlePlatformNameChange(
                                         platform.id,
-                                        e.target.value
+                                        e.target.value,
                                       )
                                     }
                                     placeholder={
@@ -1116,13 +1130,13 @@ export default function WhitelistedAccounts() {
                             <div className="flex flex-wrap gap-2">
                               {account.platforms.map((platformId) => {
                                 const platform = platformOperations.find(
-                                  (p) => p.id === platformId
+                                  (p) => p.id === platformId,
                                 );
                                 const PlatformIcon = platform?.icon;
                                 const accountNameForPlatform =
                                   getAccountNameForPlatform(
                                     account,
-                                    platformId
+                                    platformId,
                                   );
                                 const hasCustomName =
                                   account.platformNames &&
@@ -1135,7 +1149,7 @@ export default function WhitelistedAccounts() {
                                     title={
                                       hasCustomName
                                         ? `${t(
-                                            "whitelistedAccounts.accountName"
+                                            "whitelistedAccounts.accountName",
                                           )} ${accountNameForPlatform}`
                                         : undefined
                                     }>
@@ -1434,12 +1448,12 @@ export default function WhitelistedAccounts() {
                         return (
                           matchName.includes(query) || creator.includes(query)
                         );
-                      }
+                      },
                     );
 
                     const paginatedViolations = filteredViolations.slice(
                       (dialogCurrentPage - 1) * dialogItemsPerPage,
-                      dialogCurrentPage * dialogItemsPerPage
+                      dialogCurrentPage * dialogItemsPerPage,
                     );
 
                     if (filteredViolations.length === 0) {
@@ -1467,7 +1481,7 @@ export default function WhitelistedAccounts() {
 
                       // Get creator
                       const creator = violation.auditLog?.find(
-                        (log) => log.action === "created"
+                        (log) => log.action === "created",
                       )?.userName;
 
                       return (
@@ -1475,12 +1489,12 @@ export default function WhitelistedAccounts() {
                           key={violation._id}
                           className={cn(
                             "flex items-start justify-between p-3 border rounded-lg bg-background cursor-pointer transition-colors",
-                            "hover:bg-accent/50 hover:border-primary/50"
+                            "hover:bg-accent/50 hover:border-primary/50",
                           )}
                           onClick={() => {
                             if (matchId && violationIdStr) {
                               navigate(
-                                `/match/${matchId}#violation-${violationIdStr}`
+                                `/match/${matchId}#violation-${violationIdStr}`,
                               );
                               setIsViolationsDialogOpen(false);
                             } else if (matchId) {
@@ -1522,7 +1536,7 @@ export default function WhitelistedAccounts() {
                                     "Review" ||
                                     getStatusBadgeKey(violation.status) ===
                                       "Under Review") &&
-                                    "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
+                                    "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400",
                                 )}>
                                 {getStatusBadge(violation.status)}
                               </Badge>
@@ -1533,7 +1547,7 @@ export default function WhitelistedAccounts() {
                                 <div
                                   className={cn(
                                     "flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/50",
-                                    isRTL ? "text-left" : ""
+                                    isRTL ? "text-left" : "",
                                   )}>
                                   <UserCircle className="h-3.5 w-3.5 text-muted-foreground" />
                                   <span className="text-xs text-muted-foreground font-medium">
@@ -1577,7 +1591,7 @@ export default function WhitelistedAccounts() {
                   });
 
                   const totalDialogPages = Math.ceil(
-                    filteredViolations.length / dialogItemsPerPage
+                    filteredViolations.length / dialogItemsPerPage,
                   );
 
                   if (totalDialogPages <= 1) return null;
@@ -1616,7 +1630,7 @@ export default function WhitelistedAccounts() {
                                   onClick={() => {
                                     if (dialogCurrentPage < totalDialogPages) {
                                       setDialogCurrentPage(
-                                        dialogCurrentPage + 1
+                                        dialogCurrentPage + 1,
                                       );
                                     }
                                   }}
@@ -1661,7 +1675,7 @@ export default function WhitelistedAccounts() {
                                   onClick={() => {
                                     if (dialogCurrentPage > 1) {
                                       setDialogCurrentPage(
-                                        dialogCurrentPage - 1
+                                        dialogCurrentPage - 1,
                                       );
                                     }
                                   }}
@@ -1683,7 +1697,7 @@ export default function WhitelistedAccounts() {
                                   onClick={() => {
                                     if (dialogCurrentPage > 1) {
                                       setDialogCurrentPage(
-                                        dialogCurrentPage - 1
+                                        dialogCurrentPage - 1,
                                       );
                                     }
                                   }}
@@ -1728,7 +1742,7 @@ export default function WhitelistedAccounts() {
                                   onClick={() => {
                                     if (dialogCurrentPage < totalDialogPages) {
                                       setDialogCurrentPage(
-                                        dialogCurrentPage + 1
+                                        dialogCurrentPage + 1,
                                       );
                                     }
                                   }}
@@ -1803,7 +1817,7 @@ export default function WhitelistedAccounts() {
                 value={accountChannel}
                 onChange={(e) => setAccountChannel(e.target.value)}
                 placeholder={t(
-                  "whitelistedAccounts.accountChannelPlaceholderEdit"
+                  "whitelistedAccounts.accountChannelPlaceholderEdit",
                 )}
                 className="h-9 sm:h-10 text-sm"
               />
@@ -1852,7 +1866,7 @@ export default function WhitelistedAccounts() {
                             onChange={(e) =>
                               handlePlatformNameChange(
                                 platform.id,
-                                e.target.value
+                                e.target.value,
                               )
                             }
                             placeholder={
