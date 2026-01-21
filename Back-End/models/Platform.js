@@ -13,10 +13,14 @@ const platformSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    iconUrl: {
+      type: String,
+      required: false,
+    },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Note: No need for explicit index on 'id' since 'unique: true' already creates an index

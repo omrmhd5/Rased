@@ -27,7 +27,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { API_URL } from "@/components/MatchDashboard/types";
+import { API_URL, BASE_URL } from "@/components/MatchDashboard/types";
 import {
   PLATFORM_ICONS,
   PLATFORM_COLORS,
@@ -38,7 +38,16 @@ interface Platform {
   _id: string;
   id: string;
   name: string;
+  iconUrl?: string;
 }
+
+const KNOWN_PLATFORM_IDS = [
+  "twitter",
+  "youtube",
+  "facebook",
+  "tiktok",
+  "instagram",
+];
 
 export default function PlatformManagement() {
   const { t } = useLanguage();
@@ -52,6 +61,7 @@ export default function PlatformManagement() {
     null,
   );
   const [formName, setFormName] = useState("");
+  const [formIcon, setFormIcon] = useState<File | null>(null);
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -89,6 +99,7 @@ export default function PlatformManagement() {
   // Reset form
   const resetForm = () => {
     setFormName("");
+    setFormIcon(null);
     setFormError("");
     setEditingPlatform(null);
     setDeletingPlatform(null);
@@ -108,6 +119,15 @@ export default function PlatformManagement() {
     setIsDeleteOpen(true);
   };
 
+  // Helper to convert file to Base64
+  const toBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+
   // Add platform
   const handleAdd = async () => {
     setFormError("");
@@ -119,15 +139,32 @@ export default function PlatformManagement() {
 
     setSubmitting(true);
     try {
+      let iconBase64 = null;
+      if (formIcon) {
+        try {
+          iconBase64 = await toBase64(formIcon);
+        } catch (e) {
+          console.error("Error converting file to base64", e);
+        }
+      }
+
+      const body: any = {
+        name: formName.trim(),
+      };
+
+      if (iconBase64) {
+        body.icon = iconBase64;
+        // Also send as iconUrl for flexibility if backend expects that
+        body.iconUrl = iconBase64;
+      }
+
       const response = await fetch(`${API_URL}/platforms`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         credentials: "include",
-        body: JSON.stringify({
-          name: formName.trim(),
-        }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -173,6 +210,24 @@ export default function PlatformManagement() {
 
     setSubmitting(true);
     try {
+      let iconBase64 = null;
+      if (formIcon) {
+        try {
+          iconBase64 = await toBase64(formIcon);
+        } catch (e) {
+          console.error("Error converting file to base64", e);
+        }
+      }
+
+      const body: any = {
+        name: formName.trim(),
+      };
+
+      if (iconBase64) {
+        body.icon = iconBase64;
+        body.iconUrl = iconBase64;
+      }
+
       const response = await fetch(
         `${API_URL}/platforms/${editingPlatform.id}`,
         {
@@ -181,9 +236,7 @@ export default function PlatformManagement() {
             "Content-Type": "application/json",
           },
           credentials: "include",
-          body: JSON.stringify({
-            name: formName.trim(),
-          }),
+          body: JSON.stringify(body),
         },
       );
 
@@ -328,20 +381,41 @@ export default function PlatformManagement() {
                     <TableCell className="font-medium text-xs sm:text-sm">
                       <div className="flex items-center gap-2">
                         {(() => {
-                          const Icon =
-                            PLATFORM_ICONS[platform.id] ||
-                            PLATFORM_ICONS[platform.id.toLowerCase()] ||
-                            Globe;
+                          // 1. Check for hardcoded brand icons first (matches user request)
+                          const normalizedId = platform.id.toLowerCase();
+                          const BrandIcon = PLATFORM_ICONS[normalizedId];
+
+                          if (BrandIcon) {
+                            return (
+                              <BrandIcon
+                                className="h-4 w-4"
+                                style={{
+                                  color:
+                                    PLATFORM_COLORS[normalizedId] ||
+                                    "currentColor",
+                                }}
+                              />
+                            );
+                          }
+
+                          // 2. Check for uploaded custom icon
+                          if (platform.iconUrl) {
+                            return (
+                              <img
+                                src={
+                                  platform.iconUrl.startsWith("http")
+                                    ? platform.iconUrl
+                                    : `${BASE_URL}${platform.iconUrl}`
+                                }
+                                alt={platform.name}
+                                className="h-4 w-4 object-contain"
+                              />
+                            );
+                          }
+
+                          // 3. Fallback to Globe
                           return (
-                            <Icon
-                              className="h-4 w-4"
-                              style={{
-                                color:
-                                  PLATFORM_COLORS[platform.id] ||
-                                  PLATFORM_COLORS[platform.id.toLowerCase()] ||
-                                  "currentColor",
-                              }}
-                            />
+                            <Globe className="h-4 w-4 text-muted-foreground" />
                           );
                         })()}
                         {platform.name}
@@ -398,6 +472,29 @@ export default function PlatformManagement() {
                 disabled={submitting}
               />
             </div>
+            {!KNOWN_PLATFORM_IDS.includes(formName.trim().toLowerCase()) &&
+              formName.trim().length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="add-platform-icon">
+                    {t("platformManagement.form.iconOptional")}
+                  </Label>
+                  <div className="flex flex-col gap-2">
+                    <Input
+                      id="add-platform-icon"
+                      type="file"
+                      accept="image/png, image/jpeg, image/svg+xml"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setFormIcon(file);
+                      }}
+                      disabled={submitting}
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("platformManagement.form.supportedFormats")}
+                    </p>
+                  </div>
+                </div>
+              )}
             {formError && (
               <p className="text-sm text-destructive">{formError}</p>
             )}
@@ -450,6 +547,29 @@ export default function PlatformManagement() {
                 disabled={submitting}
               />
             </div>
+            {!KNOWN_PLATFORM_IDS.includes(formName.trim().toLowerCase()) &&
+              formName.trim().length > 0 && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-platform-icon">
+                    {t("platformManagement.form.iconOptional")}
+                  </Label>
+                  <div className="flex flex-col gap-2">
+                    <Input
+                      id="edit-platform-icon"
+                      type="file"
+                      accept="image/png, image/jpeg, image/svg+xml"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) setFormIcon(file);
+                      }}
+                      disabled={submitting}
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("platformManagement.form.supportedFormats")}
+                    </p>
+                  </div>
+                </div>
+              )}
             {formError && (
               <p className="text-sm text-destructive">{formError}</p>
             )}

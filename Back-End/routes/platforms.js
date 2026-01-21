@@ -1,6 +1,51 @@
 import express from "express";
 import Platform from "../models/Platform.js";
 import Violation from "../models/Violation.js";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const saveBase64Icon = (base64String, platformName) => {
+  if (!base64String) return null;
+
+  try {
+    // Check if it's a valid data URL
+    const matches = base64String.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (!matches || matches.length !== 3) {
+      return null;
+    }
+
+    const type = matches[1];
+    const data = matches[2];
+    const buffer = Buffer.from(data, "base64");
+
+    // Determine extension
+    let ext = "png";
+    if (type === "image/jpeg") ext = "jpg";
+    if (type === "image/svg+xml") ext = "svg";
+
+    // Create directory if not exists
+    const uploadDir = path.join(__dirname, "../uploads/icons");
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+
+    // Generate filename
+    const filename = `${platformName.toLowerCase().replace(/[^a-z0-9]/g, "")}_${Date.now()}.${ext}`;
+    const filepath = path.join(uploadDir, filename);
+
+    // Write file
+    fs.writeFileSync(filepath, buffer);
+
+    return `/uploads/icons/${filename}`;
+  } catch (error) {
+    console.error("Error saving icon:", error);
+    return null;
+  }
+};
 
 const router = express.Router();
 
@@ -32,7 +77,7 @@ router.get("/:id", async (req, res) => {
 // POST /api/platforms - Create new platform
 router.post("/", async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, icon } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({
@@ -62,6 +107,13 @@ router.post("/", async (req, res) => {
       name: name.trim(),
     });
 
+    if (icon) {
+      const iconUrl = saveBase64Icon(icon, name);
+      if (iconUrl) {
+        platform.iconUrl = iconUrl;
+      }
+    }
+
     const savedPlatform = await platform.save();
     res.status(201).json(savedPlatform);
   } catch (error) {
@@ -75,7 +127,7 @@ router.post("/", async (req, res) => {
 // PUT /api/platforms/:id - Update platform
 router.put("/:id", async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, icon } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ error: "Platform name is required" });
@@ -113,6 +165,13 @@ router.put("/:id", async (req, res) => {
     }
 
     platform.name = name.trim();
+
+    if (icon) {
+      const iconUrl = saveBase64Icon(icon, name);
+      if (iconUrl) {
+        platform.iconUrl = iconUrl;
+      }
+    }
 
     const updatedPlatform = await platform.save();
     res.json(updatedPlatform);
@@ -214,7 +273,9 @@ router.get("/:id/stats/:matchId", async (req, res) => {
         id: platform.id,
         name: platform.name,
         color: platform.color,
+
         icon: platform.icon,
+        iconUrl: platform.iconUrl,
       },
       totalViolations,
       activeViolations,

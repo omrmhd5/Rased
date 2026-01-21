@@ -1069,6 +1069,10 @@
       "delete": "Delete",
       "deleting": "Deleting..."
     },
+    "form": {
+      "iconOptional": "Icon (Optional)",
+      "supportedFormats": "Supported formats: PNG, JPEG, SVG"
+    },
     "validation": {
       "nameRequired": "Platform name is required",
       "noPlatformSelected": "No platform selected",

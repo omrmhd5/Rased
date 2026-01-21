@@ -1069,6 +1069,10 @@
       "delete": "حذف",
       "deleting": "جاري الحذف..."
     },
+    "form": {
+      "iconOptional": "الأيقونة (اختياري)",
+      "supportedFormats": "التنسيقات المدعومة: PNG, JPEG, SVG"
+    },
     "validation": {
       "nameRequired": "اسم المنصة مطلوب",
       "noPlatformSelected": "لم يتم اختيار منصة",

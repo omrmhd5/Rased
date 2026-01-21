@@ -76,21 +76,24 @@ export const fetchPlatformsFromBackend = async (): Promise<PlatformData[]> => {
 
     const platforms = await response.json();
 
-    return platforms.map((platform: { id: string; name: string }) => ({
-      id: platform.id,
-      name: platform.name,
-      icon: PLATFORM_ICONS[platform.id] || DEFAULT_ICON,
-      color: PLATFORM_COLORS[platform.id] || DEFAULT_COLOR,
-      totalViolations: 0,
-      activeViolations: 0,
-      blockedRate: 0,
-      blockedCount: 0,
-      totalViews: "0",
-      avgBlockTime: "0 min",
-      blockedSuccess: "0%",
-      stillActive: 0,
-      violations: [],
-    }));
+    return platforms.map(
+      (platform: { id: string; name: string; iconUrl?: string }) => ({
+        id: platform.id,
+        name: platform.name,
+        iconUrl: platform.iconUrl,
+        icon: PLATFORM_ICONS[platform.id] || DEFAULT_ICON,
+        color: PLATFORM_COLORS[platform.id] || DEFAULT_COLOR,
+        totalViolations: 0,
+        activeViolations: 0,
+        blockedRate: 0,
+        blockedCount: 0,
+        totalViews: "0",
+        avgBlockTime: "0 min",
+        blockedSuccess: "0%",
+        stillActive: 0,
+        violations: [],
+      }),
+    );
   } catch (error) {
     console.error("Error fetching platforms:", error);
     return getInitialPlatformOperations();
