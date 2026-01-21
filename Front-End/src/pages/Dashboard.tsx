@@ -50,9 +50,12 @@ import { PlatformsOverview } from "@/components/Dashboard/PlatformsOverview";
 import { PlatformsOverviewMobile } from "@/components/Dashboard/PlatformsOverviewMobile";
 import { PlatformComparison } from "@/components/MatchDashboard/PlatformComparison";
 import { PlatformComparisonMobile } from "@/components/MatchDashboard/PlatformComparisonMobile";
-import { PlatformData } from "@/components/MatchDashboard/types";
+import { PlatformData, BASE_URL } from "@/components/MatchDashboard/types";
 import { formatViews as formatViewsUtil } from "@/components/MatchDashboard/utils";
-import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
+import {
+  getInitialPlatformOperations,
+  fetchPlatformsFromBackend,
+} from "@/components/MatchDashboard/constants";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme } from "next-themes";
@@ -395,7 +398,7 @@ export default function Dashboard() {
           `${API_URL}/matches/dashboard/stats?${params.toString()}`,
           {
             credentials: "include",
-          }
+          },
         );
 
         if (!response.ok) {
@@ -528,7 +531,7 @@ export default function Dashboard() {
           `${API_URL}/violations?${params.toString()}`,
           {
             credentials: "include",
-          }
+          },
         );
 
         if (!response.ok) {
@@ -563,7 +566,17 @@ export default function Dashboard() {
   ]);
 
   // Get platform operations (for icon lookup)
-  const platformOperations = getInitialPlatformOperations();
+  const [platformOperations, setPlatformOperations] = useState(
+    getInitialPlatformOperations(),
+  );
+
+  useEffect(() => {
+    const loadPlatforms = async () => {
+      const platforms = await fetchPlatformsFromBackend();
+      setPlatformOperations(platforms);
+    };
+    loadPlatforms();
+  }, []);
 
   // Get platform icon component class (for use with JSX like <Icon />)
   const getPlatformIconComponent = (platformName: string) => {
@@ -578,15 +591,32 @@ export default function Dashboard() {
   // Get platform icon as JSX (for direct rendering)
   const getPlatformIcon = (
     platformName: string,
-    size: string = "h-3.5 w-3.5"
+    className: string = "h-3.5 w-3.5",
   ) => {
     const platform = platformOperations.find((p) => p.name === platformName);
+
     if (!platform) {
       // Fallback for platforms not in the list (e.g., Telegram)
-      return <Activity className={size} />;
+      return <Activity className={className} />;
     }
+
+    if (platform.iconUrl) {
+      const src = platform.iconUrl.startsWith("http")
+        ? platform.iconUrl
+        : `${BASE_URL}${platform.iconUrl}`;
+      return (
+        <img
+          src={src}
+          alt={platform.name}
+          className={`${className} object-contain`}
+        />
+      );
+    }
+
     const IconComponent = platform.icon;
-    return <IconComponent className={size} style={{ color: platform.color }} />;
+    return (
+      <IconComponent className={className} style={{ color: platform.color }} />
+    );
   };
 
   // Get platform color
@@ -645,6 +675,8 @@ export default function Dashboard() {
         id: platform.id,
         name: platform.name,
         icon: IconComponent,
+        iconUrl: platformOperations.find((p) => p.name === platform.name)
+          ?.iconUrl,
         color: color,
         totalViolations: platform.violations,
         activeViolations: platform.statusBreakdown.active,
@@ -685,7 +717,7 @@ export default function Dashboard() {
   // Calculate current week from real matches data
   const liveMatches = dashboardStats.matches.filter((m) => m.status === "live");
   const upcomingMatches = dashboardStats.matches.filter(
-    (m) => m.status === "upcoming" || m.status === "scheduled"
+    (m) => m.status === "upcoming" || m.status === "scheduled",
   );
   const currentWeek =
     liveMatches.length > 0
@@ -694,20 +726,20 @@ export default function Dashboard() {
         ? upcomingMatches[0].week
         : dashboardStats.matches.length > 0
           ? Math.max(
-              ...dashboardStats.matches.map((m) => parseInt(m.week) || 0)
+              ...dashboardStats.matches.map((m) => parseInt(m.week) || 0),
             ).toString()
           : "1";
 
   // Get all matches for current week (already sorted by violations from API)
   const currentWeekMatches = dashboardStats.matches.filter(
-    (m) => m.week === currentWeek
+    (m) => m.week === currentWeek,
   );
 
   // Process trouble list violations from API
   const violationsWithMinutes = troubleListViolations.map((v) => {
     const timeAdded = v.timeAdded ? new Date(v.timeAdded) : new Date();
     const minutesSinceAdded = Math.floor(
-      (new Date().getTime() - timeAdded.getTime()) / 60000
+      (new Date().getTime() - timeAdded.getTime()) / 60000,
     );
 
     // Helper to process views (handle "K" suffix and comma separators)
@@ -777,7 +809,7 @@ export default function Dashboard() {
   const percentile80Value = currentWeekMinutesSinceAdded[percentile80Idx] || 0;
   const getWarningLevelForViolation = (
     minutes: number,
-    distribution: number[]
+    distribution: number[],
   ): "none" | "warning" | "urgent" => {
     if (distribution.length === 0) return "none";
     const p80 = distribution[Math.floor(distribution.length * 0.8)] || 0;
@@ -804,7 +836,7 @@ export default function Dashboard() {
         violation.matchDescription.toLowerCase().includes(searchLower) ||
         violation.url.toLowerCase().includes(searchLower)
       );
-    }
+    },
   );
 
   // Pagination for Active Trouble List (using filtered results)
@@ -813,7 +845,7 @@ export default function Dashboard() {
   const endIndex = startIndex + itemsPerPage;
   const paginatedViolations = filteredActiveViolations.slice(
     startIndex,
-    endIndex
+    endIndex,
   );
 
   // Create array of pages to display for pagination
@@ -880,10 +912,10 @@ export default function Dashboard() {
         </h1>
         <div style="font-size: 18px; color: ${secondaryTextColor}; line-height: 1.8;">
           <p style="margin: 0 0 8px 0;"><strong>${t(
-            "dashboard.league"
+            "dashboard.league",
           )}</strong> ${leagueName}</p>
           <p style="margin: 0;"><strong>${t(
-            "dashboard.period"
+            "dashboard.period",
           )}</strong> ${weekInfo}</p>
           </div>
       `;
@@ -910,7 +942,7 @@ export default function Dashboard() {
       // Helper function to capture element with width control
       const captureElement = async (
         element: HTMLElement | null,
-        width?: number
+        width?: number,
       ): Promise<string | null> => {
         if (!element) return null;
 
@@ -962,7 +994,7 @@ export default function Dashboard() {
           parentStyles.forEach(
             ({ element: parentEl, originalStyle: origStyle }) => {
               parentEl.style.cssText = origStyle;
-            }
+            },
           );
         }
       };
@@ -970,14 +1002,14 @@ export default function Dashboard() {
       // Capture Violations Overview
       const violationsImg = await captureElement(
         violationsOverviewRef.current,
-        targetWidth
+        targetWidth,
       );
       if (violationsImg) images.push(violationsImg);
 
       // Capture Match Stats Overview
       const matchStatsImg = await captureElement(
         matchStatsOverviewRef.current,
-        targetWidth
+        targetWidth,
       );
       if (matchStatsImg) images.push(matchStatsImg);
 
@@ -1012,7 +1044,7 @@ export default function Dashboard() {
       // Add content split chart if available
       if (contentSplitChartRef.current) {
         const chartClone = contentSplitChartRef.current.cloneNode(
-          true
+          true,
         ) as HTMLElement;
         chartClone.style.margin = "0";
         chartClone.style.width = "100%";
@@ -1035,21 +1067,21 @@ export default function Dashboard() {
       // Capture Platforms Overview with controlled width
       const platformsImg = await captureElement(
         platformsOverviewRef.current,
-        targetWidth
+        targetWidth,
       );
       if (platformsImg) images.push(platformsImg);
 
       // Capture Platform Comparison
       const platformComparisonImg = await captureElement(
         platformComparisonRef.current,
-        targetWidth
+        targetWidth,
       );
       if (platformComparisonImg) images.push(platformComparisonImg);
 
       // Capture Top Match by Violations
       const topMatchImg = await captureElement(
         topMatchByViolationsRef.current,
-        targetWidth
+        targetWidth,
       );
       if (topMatchImg) images.push(topMatchImg);
 
@@ -1078,7 +1110,7 @@ export default function Dashboard() {
       const maxWidth = Math.max(...loadedImages.map((img) => img.width));
       const totalHeight = loadedImages.reduce(
         (sum, img) => sum + img.height,
-        0
+        0,
       );
 
       // Set canvas dimensions
@@ -1150,7 +1182,7 @@ export default function Dashboard() {
           <p className="text-xs sm:text-sm text-muted-foreground">
             {(() => {
               const leagueInfo = leagues?.find(
-                (l) => l.league === selectedLeague
+                (l) => l.league === selectedLeague,
               );
               const leagueKnownName = isRTL
                 ? leagueInfo?.arabicName ||
@@ -1196,7 +1228,7 @@ export default function Dashboard() {
           {selectedLeague &&
             (() => {
               const leagueInfo = leagues?.find(
-                (l) => l.league === selectedLeague
+                (l) => l.league === selectedLeague,
               );
               const iconUrl = leagueInfo?.iconUrl
                 ? leagueInfo.iconUrl.startsWith("/")
@@ -1449,7 +1481,7 @@ export default function Dashboard() {
                               className="text-xs sm:text-sm">
                               {t("dashboard.week", { number: week.toString() })}
                             </SelectItem>
-                          )
+                          ),
                         )}
                       </SelectContent>
                     </Select>
@@ -1475,7 +1507,7 @@ export default function Dashboard() {
                                   number: week.toString(),
                                 })}
                               </SelectItem>
-                            )
+                            ),
                           )}
                         </SelectContent>
                       </Select>
@@ -1499,7 +1531,7 @@ export default function Dashboard() {
                                   number: week.toString(),
                                 })}
                               </SelectItem>
-                            )
+                            ),
                           )}
                         </SelectContent>
                       </Select>
@@ -1617,14 +1649,10 @@ export default function Dashboard() {
                 <p className="text-[10px] sm:text-[11px] font-medium text-muted-foreground text-left">
                   {t("dashboard.topPlatform")}
                 </p>
-                {(() => {
-                  const Icon = getPlatformIconComponent(
-                    dashboardStats.topPlatform.name
-                  );
-                  return (
-                    <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-chart-2 flex-shrink-0" />
-                  );
-                })()}
+                {getPlatformIcon(
+                  dashboardStats.topPlatform.name,
+                  "h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0",
+                )}
               </div>
               <p className="text-sm sm:text-base font-bold text-foreground mb-0.5 truncate">
                 {dashboardStats.topPlatform.name}
@@ -1716,6 +1744,7 @@ export default function Dashboard() {
           <PlatformsOverviewMobile
             platforms={dashboardStats.platforms}
             statsLoading={statsLoading}
+            platformOperations={platformOperations}
           />
         </div>
         {/* Desktop Version */}
@@ -1723,6 +1752,7 @@ export default function Dashboard() {
           <PlatformsOverview
             platforms={dashboardStats.platforms}
             statsLoading={statsLoading}
+            platformOperations={platformOperations}
           />
         </div>
       </div>
@@ -1788,6 +1818,7 @@ export default function Dashboard() {
           <TopMatchByViolations
             topMatch={dashboardStats.topMatch}
             statsLoading={statsLoading}
+            platformOperations={platformOperations}
           />
         </div>
 
@@ -1851,18 +1882,18 @@ export default function Dashboard() {
                 const filteredMatches = dashboardStats.matches.filter((match) =>
                   match.description
                     .toLowerCase()
-                    .includes(leaderboardSearchQuery.toLowerCase())
+                    .includes(leaderboardSearchQuery.toLowerCase()),
                 );
 
                 const totalLeaderboardPages = Math.ceil(
-                  filteredMatches.length / leaderboardItemsPerPage
+                  filteredMatches.length / leaderboardItemsPerPage,
                 );
                 const startIndex =
                   (leaderboardPage - 1) * leaderboardItemsPerPage;
                 const endIndex = startIndex + leaderboardItemsPerPage;
                 const paginatedMatches = filteredMatches.slice(
                   startIndex,
-                  endIndex
+                  endIndex,
                 );
 
                 if (filteredMatches.length === 0) {
@@ -1941,10 +1972,10 @@ export default function Dashboard() {
               const filteredMatches = dashboardStats.matches.filter((match) =>
                 match.description
                   .toLowerCase()
-                  .includes(leaderboardSearchQuery.toLowerCase())
+                  .includes(leaderboardSearchQuery.toLowerCase()),
               );
               const totalLeaderboardPages = Math.ceil(
-                filteredMatches.length / leaderboardItemsPerPage
+                filteredMatches.length / leaderboardItemsPerPage,
               );
 
               if (totalLeaderboardPages <= 1) return null;
@@ -2087,7 +2118,7 @@ export default function Dashboard() {
                 const timeSinceAdded = getTimeSinceAdded(violation.reportedAt);
                 const warningLevel = getWarningLevelForViolation(
                   violation.minutesSinceAdded,
-                  currentWeekMinutesSinceAdded
+                  currentWeekMinutesSinceAdded,
                 );
                 // Convert violation ID to string for consistent hash fragment
                 const violationIdStr = String(violation.id || "");
@@ -2098,7 +2129,7 @@ export default function Dashboard() {
                     onClick={() => {
                       if (violation.matchId && violationIdStr) {
                         navigate(
-                          `/match/${violation.matchId}#violation-${violationIdStr}`
+                          `/match/${violation.matchId}#violation-${violationIdStr}`,
                         );
                       }
                     }}
@@ -2110,7 +2141,7 @@ export default function Dashboard() {
                       <div className="flex-shrink-0">
                         {getPlatformIcon(
                           violation.platform,
-                          "h-3.5 w-3.5 sm:h-4 sm:w-4"
+                          "h-3.5 w-3.5 sm:h-4 sm:w-4",
                         )}
                       </div>
                       <div className="flex flex-col min-w-0 flex-1 text-left">
@@ -2360,18 +2391,18 @@ export default function Dashboard() {
           weekFilterType === "all"
             ? `Round-Report-${getLeagueName(selectedLeague).replace(
                 /\s+/g,
-                "-"
+                "-",
               )}-All-Weeks-${new Date().toISOString().split("T")[0]}.png`
             : weekFilterType === "single"
               ? `Round-Report-${getLeagueName(selectedLeague).replace(
                   /\s+/g,
-                  "-"
+                  "-",
                 )}-Week-${singleWeek}-${
                   new Date().toISOString().split("T")[0]
                 }.png`
               : `Round-Report-${getLeagueName(selectedLeague).replace(
                   /\s+/g,
-                  "-"
+                  "-",
                 )}-Weeks-${weekRangeStart}-${weekRangeEnd}-${
                   new Date().toISOString().split("T")[0]
                 }.png`

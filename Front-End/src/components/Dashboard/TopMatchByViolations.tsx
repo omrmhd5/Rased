@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { PlatformData, BASE_URL } from "@/components/MatchDashboard/types";
 
 interface TopMatchByViolationsProps {
   topMatch: {
@@ -26,49 +27,10 @@ interface TopMatchByViolationsProps {
     }>;
   } | null;
   statsLoading: boolean;
+  platformOperations: PlatformData[];
 }
 
-// Get platform icon
-const getPlatformIcon = (name: string) => {
-  switch (name) {
-    case "X/Twitter":
-    case "Twitter":
-      return Twitter;
-    case "YouTube":
-      return Youtube;
-    case "Facebook":
-      return Facebook;
-    case "Instagram":
-      return Instagram;
-    case "Telegram":
-      return TrendingUp;
-    case "TikTok":
-      return Eye;
-    default:
-      return Eye;
-  }
-};
-
-// Get platform color
-const getPlatformColor = (name: string) => {
-  switch (name) {
-    case "X/Twitter":
-    case "Twitter":
-      return "hsl(203,89%,53%)";
-    case "YouTube":
-      return "hsl(0,100%,50%)";
-    case "Facebook":
-      return "hsl(221,44%,41%)";
-    case "TikTok":
-      return "hsl(0,0%,0%)";
-    case "Instagram":
-      return "hsl(329,100%,50%)";
-    case "Telegram":
-      return "hsl(200,100%,48%)";
-    default:
-      return "hsl(var(--muted-foreground))";
-  }
-};
+// Format views helper (pure numbers with commas, no abbreviations)
 
 // Format views helper (pure numbers with commas, no abbreviations)
 const formatViewsForDisplay = (views: number) => {
@@ -78,9 +40,44 @@ const formatViewsForDisplay = (views: number) => {
 export function TopMatchByViolations({
   topMatch,
   statsLoading,
+  platformOperations,
 }: TopMatchByViolationsProps) {
   const navigate = useNavigate();
   const { t } = useLanguage();
+
+  const renderPlatformIcon = (
+    platformName: string,
+    className: string = "h-4 w-4",
+  ) => {
+    const platform = platformOperations.find((p) => p.name === platformName);
+
+    if (!platform) {
+      return <Eye className={className} />;
+    }
+
+    if (platform.iconUrl) {
+      const src = platform.iconUrl.startsWith("http")
+        ? platform.iconUrl
+        : `${BASE_URL}${platform.iconUrl}`;
+      return (
+        <img
+          src={src}
+          alt={platform.name}
+          className={`${className} object-contain`}
+        />
+      );
+    }
+
+    const IconComponent = platform.icon;
+    return (
+      <IconComponent className={className} style={{ color: platform.color }} />
+    );
+  };
+
+  const getPlatformColor = (platformName: string) => {
+    const platform = platformOperations.find((p) => p.name === platformName);
+    return platform ? platform.color : "hsl(var(--muted-foreground))";
+  };
 
   if (!topMatch) {
     return null;
@@ -90,7 +87,9 @@ export function TopMatchByViolations({
     <div className="grid grid-cols-1 gap-4">
       <Card className="p-4">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-semibold">{t("dashboard.topMatchByViolations")}</h3>
+          <h3 className="text-base font-semibold">
+            {t("dashboard.topMatchByViolations")}
+          </h3>
           <button
             onClick={() => navigate(`/match/${topMatch.externalMatchId}`)}
             className="text-[10px] text-primary hover:underline flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary/5 hover:bg-primary/10 transition-colors">
@@ -117,7 +116,9 @@ export function TopMatchByViolations({
                 <p className="text-2xl font-bold">
                   {formatViewsForDisplay(topMatch.totalViews)}
                 </p>
-                <p className="text-xs text-muted-foreground">{t("dashboard.totalViewsLower")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("dashboard.totalViewsLower")}
+                </p>
               </div>
               <div className="flex items-baseline gap-1.5 mt-2">
                 <p className="text-2xl font-bold">{topMatch.violations}</p>
@@ -134,12 +135,13 @@ export function TopMatchByViolations({
               {topMatch.platforms && topMatch.platforms.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {topMatch.platforms.map((platform) => {
-                    const PlatformIcon = getPlatformIcon(platform.name);
                     const platformColor = getPlatformColor(platform.name);
                     const contentTypeLabel =
-                      platform.violations === 1 ? t("dashboard.violation") : t("dashboard.violations");
+                      platform.violations === 1
+                        ? t("dashboard.violation")
+                        : t("dashboard.violations");
                     const blockedCount = Math.round(
-                      (platform.violations * platform.successRate) / 100
+                      (platform.violations * platform.successRate) / 100,
                     );
 
                     return (
@@ -152,10 +154,7 @@ export function TopMatchByViolations({
                             style={{
                               backgroundColor: `${platformColor}10`,
                             }}>
-                            <PlatformIcon
-                              className="h-3.5 w-3.5"
-                              style={{ color: platformColor }}
-                            />
+                            {renderPlatformIcon(platform.name, "h-3.5 w-3.5")}
                           </div>
                           <p className="font-semibold text-sm">
                             {platform.name}

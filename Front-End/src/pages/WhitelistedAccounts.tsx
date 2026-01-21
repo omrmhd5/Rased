@@ -61,7 +61,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { WhitelistedAccountsMobile } from "./WhitelistedAccountsMobile";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+import { API_URL, BASE_URL } from "@/components/MatchDashboard/types";
 
 interface WhitelistedAccount {
   _id: string;
@@ -683,12 +683,26 @@ export default function WhitelistedAccounts() {
   };
 
   // Get platform icon by ID
-  const getPlatformIcon = (platformId: string) => {
+  const getPlatformIcon = (platformId: string, className = "h-3 w-3") => {
     const platform = platformOperations.find((p) => p.id === platformId);
     if (!platform) return null;
+
+    if (platform.iconUrl) {
+      const src = platform.iconUrl.startsWith("http")
+        ? platform.iconUrl
+        : `${BASE_URL}${platform.iconUrl}`;
+      return (
+        <img
+          src={src}
+          alt={platform.name}
+          className={`${className} object-contain`}
+        />
+      );
+    }
+
     const IconComponent = platform.icon;
     return (
-      <IconComponent className="h-3 w-3" style={{ color: platform.color }} />
+      <IconComponent className={className} style={{ color: platform.color }} />
     );
   };
 
@@ -814,10 +828,10 @@ export default function WhitelistedAccounts() {
                                 <Label
                                   htmlFor={`platform-${platform.id}`}
                                   className="flex items-center gap-2 cursor-pointer flex-1 text-xs sm:text-sm">
-                                  <PlatformIcon
-                                    className="h-3.5 w-3.5 sm:h-4 sm:w-4"
-                                    style={{ color: platform.color }}
-                                  />
+                                  {getPlatformIcon(
+                                    platform.id,
+                                    "h-3.5 w-3.5 sm:h-4 sm:w-4",
+                                  )}
                                   <span>{platform.name}</span>
                                 </Label>
                               </div>
@@ -953,6 +967,7 @@ export default function WhitelistedAccounts() {
                   onEdit={openEditDialog}
                   onDelete={openDeleteDialog}
                   getAccountNameForPlatform={getAccountNameForPlatform}
+                  platformOperations={platformOperations}
                 />
                 {/* Mobile Pagination */}
                 {filteredAccounts.length > 0 && totalPages > 1 && (
@@ -1153,12 +1168,7 @@ export default function WhitelistedAccounts() {
                                           )} ${accountNameForPlatform}`
                                         : undefined
                                     }>
-                                    {PlatformIcon && (
-                                      <PlatformIcon
-                                        className="h-3 w-3"
-                                        style={{ color: platform.color }}
-                                      />
-                                    )}
+                                    {getPlatformIcon(platformId, "h-3 w-3")}
                                     <span>{getPlatformName(platformId)}</span>
                                     {hasCustomName && (
                                       <span className="text-xs opacity-70 ml-1">
@@ -1844,10 +1854,10 @@ export default function WhitelistedAccounts() {
                         <Label
                           htmlFor={`edit-platform-${platform.id}`}
                           className="flex items-center gap-2 cursor-pointer flex-1 text-xs sm:text-sm">
-                          <PlatformIcon
-                            className="h-3.5 w-3.5 sm:h-4 sm:w-4"
-                            style={{ color: platform.color }}
-                          />
+                          {getPlatformIcon(
+                            platform.id,
+                            "h-3.5 w-3.5 sm:h-4 sm:w-4",
+                          )}
                           <span>{platform.name}</span>
                         </Label>
                       </div>

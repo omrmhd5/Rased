@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { PlatformData, BASE_URL } from "@/components/MatchDashboard/types";
 
 interface Platform {
   id: string;
@@ -36,49 +37,10 @@ interface Platform {
 interface PlatformsOverviewMobileProps {
   platforms: Platform[];
   statsLoading: boolean;
+  platformOperations: PlatformData[];
 }
 
-// Get platform icon
-const getPlatformIcon = (name: string) => {
-  switch (name) {
-    case "X/Twitter":
-    case "Twitter":
-      return Twitter;
-    case "YouTube":
-      return Youtube;
-    case "Facebook":
-      return Facebook;
-    case "Instagram":
-      return Instagram;
-    case "Telegram":
-      return TrendingUp;
-    case "TikTok":
-      return Eye;
-    default:
-      return Eye;
-  }
-};
-
-// Get platform color
-const getPlatformColor = (name: string) => {
-  switch (name) {
-    case "X/Twitter":
-    case "Twitter":
-      return "hsl(203,89%,53%)";
-    case "YouTube":
-      return "hsl(0,100%,50%)";
-    case "Facebook":
-      return "hsl(221,44%,41%)";
-    case "TikTok":
-      return "hsl(0,0%,0%)";
-    case "Instagram":
-      return "hsl(329,100%,50%)";
-    case "Telegram":
-      return "hsl(200,100%,48%)";
-    default:
-      return "hsl(var(--muted-foreground))";
-  }
-};
+// Format views helper (pure numbers with commas, no abbreviations)
 
 // Format views helper (pure numbers with commas, no abbreviations)
 const formatViewsForDisplay = (views: number) => {
@@ -90,8 +52,44 @@ type ChartView = "views" | "violations" | "blocked";
 export function PlatformsOverviewMobile({
   platforms,
   statsLoading,
+  platformOperations,
 }: PlatformsOverviewMobileProps) {
   const { t } = useLanguage();
+
+  const renderPlatformIcon = (
+    platformName: string,
+    className: string = "h-4 w-4",
+  ) => {
+    const platform = platformOperations.find((p) => p.name === platformName);
+
+    if (!platform) {
+      return <Eye className={className} />;
+    }
+
+    if (platform.iconUrl) {
+      const src = platform.iconUrl.startsWith("http")
+        ? platform.iconUrl
+        : `${BASE_URL}${platform.iconUrl}`;
+      return (
+        <img
+          src={src}
+          alt={platform.name}
+          className={`${className} object-contain`}
+        />
+      );
+    }
+
+    const IconComponent = platform.icon;
+    return (
+      <IconComponent className={className} style={{ color: platform.color }} />
+    );
+  };
+
+  const getPlatformColor = (platformName: string) => {
+    const platform = platformOperations.find((p) => p.name === platformName);
+    return platform ? platform.color : "hsl(var(--muted-foreground))";
+  };
+
   // Load saved chart view from localStorage, default to "violations"
   const [chartView, setChartView] = useState<ChartView>(() => {
     const saved = localStorage.getItem("platformsOverviewChartView");
@@ -110,7 +108,7 @@ export function PlatformsOverviewMobile({
   const topViewsPlatform =
     platforms.length > 0
       ? platforms.reduce((top, current) =>
-          current.views > top.views ? current : top
+          current.views > top.views ? current : top,
         )
       : null;
 
@@ -119,9 +117,10 @@ export function PlatformsOverviewMobile({
     platforms.length > 0
       ? platforms
           .filter((p) => p.avgBlockTime > 0)
-          .reduce((fastest, current) =>
-            current.avgBlockTime < fastest.avgBlockTime ? current : fastest,
-            platforms.find((p) => p.avgBlockTime > 0) || platforms[0]
+          .reduce(
+            (fastest, current) =>
+              current.avgBlockTime < fastest.avgBlockTime ? current : fastest,
+            platforms.find((p) => p.avgBlockTime > 0) || platforms[0],
           )
       : null;
 
@@ -155,7 +154,9 @@ export function PlatformsOverviewMobile({
       {/* Header with Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-3 sm:mb-4 gap-3">
         <div>
-          <h3 className="text-sm sm:text-base font-semibold">{t("dashboard.platformsOverview.title")}</h3>
+          <h3 className="text-sm sm:text-base font-semibold">
+            {t("dashboard.platformsOverview.title")}
+          </h3>
           <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">
             {t("dashboard.platformsOverview.subtitle")}
           </p>
@@ -200,25 +201,20 @@ export function PlatformsOverviewMobile({
               style={{
                 backgroundColor: `${getPlatformColor(topViewsPlatform.name)}15`,
               }}>
-              {(() => {
-                const Icon = getPlatformIcon(topViewsPlatform.name);
-                return (
-                  <Icon
-                    className="h-3.5 w-3.5 sm:h-4 sm:w-4"
-                    style={{
-                      color: getPlatformColor(topViewsPlatform.name),
-                    }}
-                  />
-                );
-              })()}
+              {renderPlatformIcon(
+                topViewsPlatform.name,
+                "h-3.5 w-3.5 sm:h-4 sm:w-4",
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
                 {t("dashboard.platformsOverview.topPlatformByViews")}
               </p>
               <p className="text-xs sm:text-sm font-semibold truncate">
-                {topViewsPlatform.name} {t("dashboard.platformsOverview.leadsWith")}{" "}
-                {formatViewsForDisplay(topViewsPlatform.views)} {t("dashboard.platformsOverview.views")}
+                {topViewsPlatform.name}{" "}
+                {t("dashboard.platformsOverview.leadsWith")}{" "}
+                {formatViewsForDisplay(topViewsPlatform.views)}{" "}
+                {t("dashboard.platformsOverview.views")}
               </p>
             </div>
           </div>
@@ -234,7 +230,9 @@ export function PlatformsOverviewMobile({
                 {t("dashboard.platformsOverview.fastestResponse")}
               </p>
               <p className="text-xs sm:text-sm font-semibold truncate">
-                {fastestPlatform.name} {t("dashboard.platformsOverview.with")} {fastestPlatform.avgBlockTime} {t("dashboard.platformsOverview.minAvg")}
+                {fastestPlatform.name} {t("dashboard.platformsOverview.with")}{" "}
+                {fastestPlatform.avgBlockTime}{" "}
+                {t("dashboard.platformsOverview.minAvg")}
               </p>
             </div>
           </div>
@@ -244,11 +242,9 @@ export function PlatformsOverviewMobile({
       {/* Platform Cards */}
       <div className="space-y-2 sm:space-y-3">
         {platforms.map((platform) => {
-          const PlatformIcon = getPlatformIcon(platform.name);
           const platformColor = getPlatformColor(platform.name);
           const totalBlocked =
-            platform.statusBreakdown.blocked +
-            platform.statusBreakdown.removed;
+            platform.statusBreakdown.blocked + platform.statusBreakdown.removed;
 
           return (
             <Card
@@ -262,17 +258,18 @@ export function PlatformsOverviewMobile({
                     style={{
                       backgroundColor: `${platformColor}15`,
                     }}>
-                    <PlatformIcon
-                      className="h-4 w-4 sm:h-5 sm:w-5"
-                      style={{ color: platformColor }}
-                    />
+                    {renderPlatformIcon(platform.name, "h-4 w-4 sm:h-5 sm:w-5")}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm sm:text-base font-semibold truncate">
                       {platform.name}
                     </p>
                     <p className="text-[10px] sm:text-xs text-muted-foreground">
-                      {platform.matchesAffected} {platform.matchesAffected !== 1 ? t("dashboard.platformsOverview.matches") : t("dashboard.platformsOverview.match")} {t("dashboard.platformsOverview.affected")}
+                      {platform.matchesAffected}{" "}
+                      {platform.matchesAffected !== 1
+                        ? t("dashboard.platformsOverview.matches")
+                        : t("dashboard.platformsOverview.match")}{" "}
+                      {t("dashboard.platformsOverview.affected")}
                     </p>
                   </div>
                 </div>
@@ -291,19 +288,25 @@ export function PlatformsOverviewMobile({
                   {chartView === "violations" && (
                     <div className="space-y-0.5 mt-1">
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px]">
-                        <span className="text-muted-foreground">{t("dashboard.live")}:</span>
+                        <span className="text-muted-foreground">
+                          {t("dashboard.live")}:
+                        </span>
                         <span className="font-medium">
                           {platform.contentSplit.live.violations}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px]">
-                        <span className="text-muted-foreground">{t("dashboard.highlights")}:</span>
+                        <span className="text-muted-foreground">
+                          {t("dashboard.highlights")}:
+                        </span>
                         <span className="font-medium">
                           {platform.contentSplit.highlights.violations}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px]">
-                        <span className="text-muted-foreground">{t("dashboard.others")}:</span>
+                        <span className="text-muted-foreground">
+                          {t("dashboard.others")}:
+                        </span>
                         <span className="font-medium">
                           {platform.contentSplit.others.violations}
                         </span>
@@ -323,21 +326,33 @@ export function PlatformsOverviewMobile({
                   {chartView === "views" && (
                     <div className="space-y-0.5 mt-1">
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px]">
-                        <span className="text-muted-foreground">{t("dashboard.live")}:</span>
+                        <span className="text-muted-foreground">
+                          {t("dashboard.live")}:
+                        </span>
                         <span className="font-medium">
-                          {formatViewsForDisplay(platform.contentSplit.live.views)}
+                          {formatViewsForDisplay(
+                            platform.contentSplit.live.views,
+                          )}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px]">
-                        <span className="text-muted-foreground">{t("dashboard.highlights")}:</span>
+                        <span className="text-muted-foreground">
+                          {t("dashboard.highlights")}:
+                        </span>
                         <span className="font-medium">
-                          {formatViewsForDisplay(platform.contentSplit.highlights.views)}
+                          {formatViewsForDisplay(
+                            platform.contentSplit.highlights.views,
+                          )}
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[9px] sm:text-[10px]">
-                        <span className="text-muted-foreground">{t("dashboard.others")}:</span>
+                        <span className="text-muted-foreground">
+                          {t("dashboard.others")}:
+                        </span>
                         <span className="font-medium">
-                          {formatViewsForDisplay(platform.contentSplit.others.views)}
+                          {formatViewsForDisplay(
+                            platform.contentSplit.others.views,
+                          )}
                         </span>
                       </div>
                     </div>
@@ -364,7 +379,8 @@ export function PlatformsOverviewMobile({
                       {platform.statusBreakdown.blocked}
                     </p>
                     <p className="text-[9px] sm:text-[10px] text-muted-foreground mt-1">
-                      {t("dashboard.platformsOverview.active")}: {platform.statusBreakdown.active}
+                      {t("dashboard.platformsOverview.active")}:{" "}
+                      {platform.statusBreakdown.active}
                     </p>
                   </div>
                 ) : (
@@ -413,4 +429,3 @@ export function PlatformsOverviewMobile({
     </Card>
   );
 }
-

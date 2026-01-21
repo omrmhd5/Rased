@@ -23,7 +23,7 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
-import { PlatformData, Violation } from "./types";
+import { PlatformData, Violation, BASE_URL } from "./types";
 import { ViolationItem } from "./ViolationItem";
 import { BulkViolationItem } from "./BulkViolationItem";
 import { groupViolationsByBulkId, isPartOfBulkGroup } from "./utils";
@@ -66,7 +66,7 @@ interface PlatformCardProps {
     platformId: string,
     violations: Violation[],
     status: "Active" | "Blocked" | "Removed" | "Under Review",
-    blockedAt?: string
+    blockedAt?: string,
   ) => void;
 }
 
@@ -111,13 +111,13 @@ export function PlatformCard({
 
   // Calculate content type counts (only for display under platform name)
   const highlightsCount = violations.filter(
-    (v) => (v.contentType || v.type) === "Highlights"
+    (v) => (v.contentType || v.type) === "Highlights",
   ).length;
   const liveCount = violations.filter(
-    (v) => (v.contentType || v.type) === "Live"
+    (v) => (v.contentType || v.type) === "Live",
   ).length;
   const othersCount = violations.filter(
-    (v) => (v.contentType || v.type) === "Other"
+    (v) => (v.contentType || v.type) === "Other",
   ).length;
 
   // Group violations by bulkId FIRST, before pagination
@@ -161,7 +161,7 @@ export function PlatformCard({
 
   // Pagination for display items (treating bulk as one item)
   const totalViolationsPages = Math.ceil(
-    allDisplayItems.length / violationsPerPage
+    allDisplayItems.length / violationsPerPage,
   );
   const startViolationsIndex = (violationsPage - 1) * violationsPerPage;
   const endViolationsIndex = startViolationsIndex + violationsPerPage;
@@ -169,7 +169,7 @@ export function PlatformCard({
   // These are the items to actually render
   const processedViolations = allDisplayItems.slice(
     startViolationsIndex,
-    endViolationsIndex
+    endViolationsIndex,
   );
 
   // Create array of pages to display for pagination
@@ -418,7 +418,7 @@ export function PlatformCard({
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input
             placeholder={t(
-              "matchDashboard.expandedPlatformDialog.searchPlaceholder"
+              "matchDashboard.expandedPlatformDialog.searchPlaceholder",
             )}
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -833,10 +833,22 @@ export function PlatformCard({
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1.5">
-              <IconComponent
-                className="h-5 w-5"
-                style={{ color: platform.color }}
-              />
+              {platform.iconUrl ? (
+                <img
+                  src={
+                    platform.iconUrl.startsWith("http")
+                      ? platform.iconUrl
+                      : `${BASE_URL}${platform.iconUrl}`
+                  }
+                  alt={platform.name}
+                  className="h-5 w-5 object-contain"
+                />
+              ) : (
+                <IconComponent
+                  className="h-5 w-5"
+                  style={{ color: platform.color }}
+                />
+              )}
               <h3 className="font-semibold">{platform.name}</h3>
             </div>
             <p className="text-xs text-muted-foreground ml-7">
@@ -869,10 +881,22 @@ export function PlatformCard({
           <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <IconComponent
-                  className="h-5 w-5"
-                  style={{ color: platform.color }}
-                />
+                {platform.iconUrl ? (
+                  <img
+                    src={
+                      platform.iconUrl.startsWith("http")
+                        ? platform.iconUrl
+                        : `${BASE_URL}${platform.iconUrl}`
+                    }
+                    alt={platform.name}
+                    className="h-5 w-5 object-contain"
+                  />
+                ) : (
+                  <IconComponent
+                    className="h-5 w-5"
+                    style={{ color: platform.color }}
+                  />
+                )}
                 <DialogTitle>{platform.name}</DialogTitle>
               </div>
               <div className="flex items-center gap-2">

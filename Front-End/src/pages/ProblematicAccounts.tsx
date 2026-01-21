@@ -35,6 +35,7 @@ import {
   getInitialPlatformOperations,
   fetchPlatformsFromBackend,
 } from "@/components/MatchDashboard/constants";
+import { BASE_URL } from "@/components/MatchDashboard/types";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { ProblematicAccountsMobile } from "./ProblematicAccountsMobile";
@@ -219,17 +220,40 @@ export default function ProblematicAccounts() {
     loadPlatforms();
   }, []);
 
-  const getPlatformIconComponent = (platformName: string) => {
-    const platform = platformOperations.find((p) => p.name === platformName);
+  // Get platform icon helper
+  const getPlatformIcon = (
+    platformId: string,
+    platformName: string,
+    className = "h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0",
+  ) => {
+    // Try finding by ID first
+    let platform = platformOperations.find((p) => p.id === platformId);
+    // Fallback to name match if needed
     if (!platform) {
-      return AlertTriangle;
+      platform = platformOperations.find((p) => p.name === platformName);
     }
-    return platform.icon;
-  };
 
-  const getPlatformColor = (platformName: string): string => {
-    const platform = platformOperations.find((p) => p.name === platformName);
-    return platform ? platform.color : "hsl(var(--muted-foreground))";
+    if (!platform) {
+      return <AlertTriangle className={className} />;
+    }
+
+    if (platform.iconUrl) {
+      const src = platform.iconUrl.startsWith("http")
+        ? platform.iconUrl
+        : `${BASE_URL}${platform.iconUrl}`;
+      return (
+        <img
+          src={src}
+          alt={platform.name}
+          className={`${className} object-contain`}
+        />
+      );
+    }
+
+    const IconComponent = platform.icon;
+    return (
+      <IconComponent className={className} style={{ color: platform.color }} />
+    );
   };
 
   // Fetch thresholds from settings
@@ -380,6 +404,13 @@ export default function ProblematicAccounts() {
         // An account is problematic if it has views >= viewsThreshold OR violations >= violationsThreshold
         const filteredData = combinedAccounts.filter(
           (account: ProblematicAccount) => {
+            // Exclude accounts with N/A name
+            if (
+              account.accountChannel === "N/A" ||
+              account.accountChannel === "n/a"
+            )
+              return false;
+
             return (
               account.totalViews >= viewsThreshold ||
               account.totalViolations >= violationsThreshold
@@ -897,7 +928,14 @@ export default function ProblematicAccounts() {
                   key={platform.id}
                   value={platform.id}
                   className="text-xs sm:text-sm">
-                  {platform.name}
+                  <div className="flex items-center gap-2">
+                    {getPlatformIcon(
+                      platform.id,
+                      platform.name,
+                      "h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0",
+                    )}
+                    <span>{platform.name}</span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1144,6 +1182,7 @@ export default function ProblematicAccounts() {
           accounts={paginatedAccounts}
           loading={loading}
           sortBy={sortBy}
+          platformOperations={platformOperations}
         />
         {/* Mobile Pagination */}
         {!loading && sortedAccounts.length > 0 && totalPages > 1 && (
@@ -1332,10 +1371,6 @@ export default function ProblematicAccounts() {
               </thead>
               <tbody>
                 {paginatedAccounts.map((account, index) => {
-                  const PlatformIcon = getPlatformIconComponent(
-                    account.platformName,
-                  );
-                  const platformColor = getPlatformColor(account.platformName);
                   const successRate =
                     account.totalViolations > 0
                       ? Math.round(
@@ -1366,10 +1401,10 @@ export default function ProblematicAccounts() {
                       </td>
                       <td className="p-3 sm:p-4">
                         <div className="flex items-center gap-2 min-w-0">
-                          <PlatformIcon
-                            className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0"
-                            style={{ color: platformColor }}
-                          />
+                          {getPlatformIcon(
+                            account.platformId,
+                            account.platformName,
+                          )}
                           <span className="text-xs sm:text-sm truncate">
                             {account.platformName}
                           </span>

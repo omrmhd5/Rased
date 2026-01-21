@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { PlatformData, BASE_URL } from "@/components/MatchDashboard/types";
 
 interface Platform {
   id: string;
@@ -46,49 +47,10 @@ interface Platform {
 interface PlatformsOverviewProps {
   platforms: Platform[];
   statsLoading: boolean;
+  platformOperations: PlatformData[];
 }
 
-// Get platform icon
-const getPlatformIcon = (name: string) => {
-  switch (name) {
-    case "X/Twitter":
-    case "Twitter":
-      return Twitter;
-    case "YouTube":
-      return Youtube;
-    case "Facebook":
-      return Facebook;
-    case "Instagram":
-      return Instagram;
-    case "Telegram":
-      return TrendingUp;
-    case "TikTok":
-      return Eye;
-    default:
-      return Eye;
-  }
-};
-
-// Get platform color
-const getPlatformColor = (name: string) => {
-  switch (name) {
-    case "X/Twitter":
-    case "Twitter":
-      return "hsl(203,89%,53%)";
-    case "YouTube":
-      return "hsl(0,100%,50%)";
-    case "Facebook":
-      return "hsl(221,44%,41%)";
-    case "TikTok":
-      return "hsl(0,0%,0%)";
-    case "Instagram":
-      return "hsl(329,100%,50%)";
-    case "Telegram":
-      return "hsl(200,100%,48%)";
-    default:
-      return "hsl(var(--muted-foreground))";
-  }
-};
+// Format views helper (pure numbers with commas, no abbreviations)
 
 // Format views helper (pure numbers with commas, no abbreviations)
 const formatViewsForDisplay = (views: number) => {
@@ -100,9 +62,44 @@ type ChartView = "views" | "violations" | "blocked";
 export function PlatformsOverview({
   platforms,
   statsLoading,
+  platformOperations,
 }: PlatformsOverviewProps) {
   const { t, isRTL } = useLanguage();
-  
+
+  const renderPlatformIcon = (
+    platformName: string,
+    className: string = "h-4 w-4",
+  ) => {
+    const platform = platformOperations.find((p) => p.name === platformName);
+
+    if (!platform) {
+      return <Eye className={className} />;
+    }
+
+    if (platform.iconUrl) {
+      const src = platform.iconUrl.startsWith("http")
+        ? platform.iconUrl
+        : `${BASE_URL}${platform.iconUrl}`;
+      return (
+        <img
+          src={src}
+          alt={platform.name}
+          className={`${className} object-contain`}
+        />
+      );
+    }
+
+    const IconComponent = platform.icon;
+    return (
+      <IconComponent className={className} style={{ color: platform.color }} />
+    );
+  };
+
+  const getPlatformColor = (platformName: string) => {
+    const platform = platformOperations.find((p) => p.name === platformName);
+    return platform ? platform.color : "hsl(var(--muted-foreground))";
+  };
+
   // Load saved chart view from localStorage, default to "violations"
   const [chartView, setChartView] = useState<ChartView>(() => {
     const saved = localStorage.getItem("platformsOverviewChartView");
@@ -142,7 +139,7 @@ export function PlatformsOverview({
   const topViewsPlatform =
     platforms.length > 0
       ? platforms.reduce((top, current) =>
-          current.views > top.views ? current : top
+          current.views > top.views ? current : top,
         )
       : null;
 
@@ -154,7 +151,7 @@ export function PlatformsOverview({
           .reduce(
             (fastest, current) =>
               current.avgBlockTime < fastest.avgBlockTime ? current : fastest,
-            platforms.find((p) => p.avgBlockTime > 0) || platforms[0]
+            platforms.find((p) => p.avgBlockTime > 0) || platforms[0],
           )
       : null;
 
@@ -186,7 +183,8 @@ export function PlatformsOverview({
     return (
       <Card className="p-6">
         <div className="flex items-center justify-center py-12">
-          <p className={`text-sm text-muted-foreground ${isRTL ? "text-right" : "text-left"}`}>
+          <p
+            className={`text-sm text-muted-foreground ${isRTL ? "text-right" : "text-left"}`}>
             {t("dashboard.platformsOverview.noPlatformData")}
           </p>
         </div>
@@ -199,7 +197,9 @@ export function PlatformsOverview({
       {/* Header with Toggle */}
       <div className="flex items-center justify-between mb-4">
         <div className="text-left">
-          <h3 className="font-semibold text-left">{t("dashboard.platformsOverview.title")}</h3>
+          <h3 className="font-semibold text-left">
+            {t("dashboard.platformsOverview.title")}
+          </h3>
           <p className="text-xs text-muted-foreground mt-0.5 text-left">
             {t("dashboard.platformsOverview.subtitle")}
           </p>
@@ -244,25 +244,19 @@ export function PlatformsOverview({
               style={{
                 backgroundColor: `${getPlatformColor(topViewsPlatform.name)}15`,
               }}>
-              {(() => {
-                const Icon = getPlatformIcon(topViewsPlatform.name);
-                return (
-                  <Icon
-                    className="h-4 w-4"
-                    style={{
-                      color: getPlatformColor(topViewsPlatform.name),
-                    }}
-                  />
-                );
-              })()}
+              {renderPlatformIcon(topViewsPlatform.name, "h-4 w-4")}
             </div>
-            <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
-              <p className={`text-xs font-medium text-muted-foreground text-left`}>
+            <div
+              className={`flex-1 min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
+              <p
+                className={`text-xs font-medium text-muted-foreground text-left`}>
                 {t("dashboard.platformsOverview.topPlatformByViews")}
               </p>
               <p className={`text-sm font-semibold truncate text-left`}>
-                {topViewsPlatform.name} {t("dashboard.platformsOverview.leadsWith")}{" "}
-                {formatViewsForDisplay(topViewsPlatform.views)} {t("dashboard.platformsOverview.views")}
+                {topViewsPlatform.name}{" "}
+                {t("dashboard.platformsOverview.leadsWith")}{" "}
+                {formatViewsForDisplay(topViewsPlatform.views)}{" "}
+                {t("dashboard.platformsOverview.views")}
               </p>
             </div>
           </div>
@@ -273,12 +267,16 @@ export function PlatformsOverview({
             <div className="w-8 h-8 rounded-full bg-success/10 flex items-center justify-center flex-shrink-0">
               <Zap className="h-4 w-4 text-success" />
             </div>
-            <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
-              <p className={`text-xs font-medium text-muted-foreground text-left`}>
+            <div
+              className={`flex-1 min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
+              <p
+                className={`text-xs font-medium text-muted-foreground text-left`}>
                 {t("dashboard.platformsOverview.fastestResponse")}
               </p>
               <p className={`text-sm font-semibold truncate text-left`}>
-                {fastestPlatform.name} {t("dashboard.platformsOverview.with")} {fastestPlatform.avgBlockTime} {t("dashboard.platformsOverview.minAvg")}
+                {fastestPlatform.name} {t("dashboard.platformsOverview.with")}{" "}
+                {fastestPlatform.avgBlockTime}{" "}
+                {t("dashboard.platformsOverview.minAvg")}
               </p>
             </div>
           </div>
@@ -335,7 +333,11 @@ export function PlatformsOverview({
               fontSize: "12px",
             }}
             formatter={(value: number | string, name: string) => {
-              if (name.includes("Views") || name === "views" || name.includes(t("dashboard.platformsOverview.views"))) {
+              if (
+                name.includes("Views") ||
+                name === "views" ||
+                name.includes(t("dashboard.platformsOverview.views"))
+              ) {
                 return [formatViewsForDisplay(Number(value)), name];
               }
               return [value, name];
@@ -424,10 +426,11 @@ export function PlatformsOverview({
 
       {/* Platform Details Table */}
       <div className="mt-6 border-t pt-4">
-        <h4 className={`text-sm font-semibold mb-3 text-left`}>{t("dashboard.platformsOverview.platformDetails")}</h4>
+        <h4 className={`text-sm font-semibold mb-3 text-left`}>
+          {t("dashboard.platformsOverview.platformDetails")}
+        </h4>
         <div className="space-y-2">
           {platforms.map((platform) => {
-            const PlatformIcon = getPlatformIcon(platform.name);
             const platformColor = getPlatformColor(platform.name);
             const totalBlocked =
               platform.statusBreakdown.blocked +
@@ -443,34 +446,46 @@ export function PlatformsOverview({
                     style={{
                       backgroundColor: `${platformColor}15`,
                     }}>
-                    <PlatformIcon
-                      className="h-4 w-4"
-                      style={{ color: platformColor }}
-                    />
+                    {renderPlatformIcon(platform.name, "h-4 w-4")}
                   </div>
-                  <div className={`flex-1 min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
-                    <p className={`text-sm font-semibold text-left`}>{platform.name}</p>
+                  <div
+                    className={`flex-1 min-w-0 ${isRTL ? "text-right" : "text-left"}`}>
+                    <p className={`text-sm font-semibold text-left`}>
+                      {platform.name}
+                    </p>
                     <p className={`text-xs text-muted-foreground text-left`}>
-                      {platform.matchesAffected} {platform.matchesAffected !== 1 ? t("dashboard.platformsOverview.matches") : t("dashboard.platformsOverview.match")} {t("dashboard.platformsOverview.affected")}
+                      {platform.matchesAffected}{" "}
+                      {platform.matchesAffected !== 1
+                        ? t("dashboard.platformsOverview.matches")
+                        : t("dashboard.platformsOverview.match")}{" "}
+                      {t("dashboard.platformsOverview.affected")}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-6 text-sm">
                   <div className="text-right">
-                    <p className="font-semibold text-left">{platform.violations}</p>
-                    <p className="text-xs text-muted-foreground text-left">{t("dashboard.violations")}</p>
+                    <p className="font-semibold text-left">
+                      {platform.violations}
+                    </p>
+                    <p className="text-xs text-muted-foreground text-left">
+                      {t("dashboard.violations")}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-left">
                       {formatViewsForDisplay(platform.views)}
                     </p>
-                    <p className="text-xs text-muted-foreground text-left">{t("dashboard.views")}</p>
+                    <p className="text-xs text-muted-foreground text-left">
+                      {t("dashboard.views")}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="font-semibold text-success text-left">
                       {platform.successRate}%
                     </p>
-                    <p className="text-xs text-muted-foreground text-left">{t("dashboard.platformsOverview.success")}</p>
+                    <p className="text-xs text-muted-foreground text-left">
+                      {t("dashboard.platformsOverview.success")}
+                    </p>
                   </div>
                   {platform.avgBlockTime > 0 && (
                     <div className="text-right">

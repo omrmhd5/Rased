@@ -59,6 +59,7 @@ import {
   type BackendViolation,
   type DeletedViolationLog,
   API_URL,
+  BASE_URL,
 } from "@/components/MatchDashboard";
 import { PlatformComparisonMobile } from "@/components/MatchDashboard/PlatformComparisonMobile";
 
@@ -1039,29 +1040,32 @@ export default function MatchDashboard() {
   };
 
   // Helper to get platform color
-  const getPlatformColor = (platform: string | null) => {
-    switch (platform) {
-      case "Twitter":
-        return "hsl(203 89% 53%)";
-      case "YouTube":
-        return "hsl(0 100% 50%)";
-      case "Facebook":
-        return "hsl(221 44% 41%)";
-      case "TikTok":
-        return "hsl(0 0% 0%)";
-      case "Instagram":
-        return "hsl(329 100% 50%)";
-      case "Telegram":
-        return "hsl(200 100% 48%)";
-      default:
-        return "hsl(var(--muted-foreground))";
-    }
+  // Helper to get platform color
+  const getPlatformColor = (platformName: string | null) => {
+    if (!platformName) return "hsl(var(--muted-foreground))";
+    const platform = platformOperations.find((p) => p.name === platformName);
+    return platform ? platform.color : "hsl(var(--muted-foreground))";
   };
 
+  // Helper to get platform icon
   // Helper to get platform icon
   const getPlatformIcon = (platformName: string) => {
     const platform = platformOperations.find((p) => p.name === platformName);
     if (!platform) return <Activity className="h-3.5 w-3.5" />;
+
+    if (platform.iconUrl) {
+      const src = platform.iconUrl.startsWith("http")
+        ? platform.iconUrl
+        : `${BASE_URL}${platform.iconUrl}`;
+      return (
+        <img
+          src={src}
+          alt={platform.name}
+          className="h-3.5 w-3.5 object-contain"
+        />
+      );
+    }
+
     const IconComponent = platform.icon;
     return (
       <IconComponent
@@ -3276,7 +3280,17 @@ export default function MatchDashboard() {
 
               return {
                 platform: platform.name,
-                icon: (
+                icon: platform.iconUrl ? (
+                  <img
+                    src={
+                      platform.iconUrl.startsWith("http")
+                        ? platform.iconUrl
+                        : `${BASE_URL}${platform.iconUrl}`
+                    }
+                    alt={platform.name}
+                    className="h-4 w-4 object-contain"
+                  />
+                ) : (
                   <IconComponent
                     className="h-4 w-4"
                     style={{ color: platform.color }}
@@ -3344,7 +3358,17 @@ export default function MatchDashboard() {
 
               return {
                 platform: platform.name,
-                icon: (
+                icon: platform.iconUrl ? (
+                  <img
+                    src={
+                      platform.iconUrl.startsWith("http")
+                        ? platform.iconUrl
+                        : `${BASE_URL}${platform.iconUrl}`
+                    }
+                    alt={platform.name}
+                    className="h-4 w-4 object-contain"
+                  />
+                ) : (
                   <IconComponent
                     className="h-4 w-4"
                     style={{ color: platform.color }}

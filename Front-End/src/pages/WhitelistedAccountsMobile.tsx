@@ -10,6 +10,7 @@ import {
   UserCircle,
 } from "lucide-react";
 import { getInitialPlatformOperations } from "@/components/MatchDashboard/constants";
+import { PlatformData, BASE_URL } from "@/components/MatchDashboard/types";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface WhitelistedAccount {
@@ -56,27 +57,10 @@ interface WhitelistedAccountsMobileProps {
   onDelete: (account: WhitelistedAccount) => void;
   getAccountNameForPlatform: (
     account: WhitelistedAccount,
-    platformId: string
+    platformId: string,
   ) => string;
+  platformOperations: PlatformData[];
 }
-
-// Get platform name by ID
-const getPlatformName = (platformId: string): string => {
-  const platformOperations = getInitialPlatformOperations();
-  const platform = platformOperations.find((p) => p.id === platformId);
-  return platform ? platform.name : platformId;
-};
-
-// Get platform icon by ID
-const getPlatformIcon = (platformId: string) => {
-  const platformOperations = getInitialPlatformOperations();
-  const platform = platformOperations.find((p) => p.id === platformId);
-  if (!platform) return null;
-  const IconComponent = platform.icon;
-  return (
-    <IconComponent className="h-3 w-3" style={{ color: platform.color }} />
-  );
-};
 
 // Convert backend status to statusBadge format (for comparison - keep English)
 const getStatusBadgeKey = (status: string): string => {
@@ -97,9 +81,39 @@ export function WhitelistedAccountsMobile({
   onEdit,
   onDelete,
   getAccountNameForPlatform,
+  platformOperations,
 }: WhitelistedAccountsMobileProps) {
   const { t } = useLanguage();
-  const platformOperations = getInitialPlatformOperations();
+
+  // Get platform name by ID
+  const getPlatformName = (platformId: string): string => {
+    const platform = platformOperations.find((p) => p.id === platformId);
+    return platform ? platform.name : platformId;
+  };
+
+  // Get platform icon by ID
+  const getPlatformIcon = (platformId: string, className = "h-3 w-3") => {
+    const platform = platformOperations.find((p) => p.id === platformId);
+    if (!platform) return null;
+
+    if (platform.iconUrl) {
+      const src = platform.iconUrl.startsWith("http")
+        ? platform.iconUrl
+        : `${BASE_URL}${platform.iconUrl}`;
+      return (
+        <img
+          src={src}
+          alt={platform.name}
+          className={`${className} object-contain`}
+        />
+      );
+    }
+
+    const IconComponent = platform.icon;
+    return (
+      <IconComponent className={className} style={{ color: platform.color }} />
+    );
+  };
 
   // Convert backend status to translated display text
   const getStatusBadge = (status: string): string => {
@@ -165,12 +179,12 @@ export function WhitelistedAccountsMobile({
               <div className="flex flex-wrap gap-1.5">
                 {account.platforms.map((platformId) => {
                   const platform = platformOperations.find(
-                    (p) => p.id === platformId
+                    (p) => p.id === platformId,
                   );
                   const PlatformIcon = platform?.icon;
                   const accountNameForPlatform = getAccountNameForPlatform(
                     account,
-                    platformId
+                    platformId,
                   );
                   const hasCustomName =
                     account.platformNames && account.platformNames[platformId];
@@ -179,12 +193,7 @@ export function WhitelistedAccountsMobile({
                       key={platformId}
                       variant="secondary"
                       className="flex items-center gap-1 text-[10px] px-2 py-0.5">
-                      {PlatformIcon && (
-                        <PlatformIcon
-                          className="h-3 w-3"
-                          style={{ color: platform.color }}
-                        />
-                      )}
+                      {getPlatformIcon(platformId, "h-3 w-3")}
                       <span className="truncate max-w-[60px]">
                         {getPlatformName(platformId)}
                       </span>

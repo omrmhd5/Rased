@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { PlatformData } from "./types";
+import { PlatformData, BASE_URL } from "./types";
 import { formatViews } from "./utils";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -172,7 +172,7 @@ export function PlatformComparisonMobile({
         onClick={() => {
           if (isActive) {
             onSortDirectionChange(
-              comparisonSortDirection === "desc" ? "asc" : "desc"
+              comparisonSortDirection === "desc" ? "asc" : "desc",
             );
           } else {
             onSortChange(sortKey);
@@ -184,7 +184,7 @@ export function PlatformComparisonMobile({
           isActive
             ? "bg-primary/10 text-primary font-semibold"
             : "text-muted-foreground",
-          className
+          className,
         )}>
         {label}
         {isActive &&
@@ -212,7 +212,10 @@ export function PlatformComparisonMobile({
         <SortButton sortKey="violations" label={t("dashboard.violations")} />
         <SortButton sortKey="active" label={t("dashboard.active")} />
         <SortButton sortKey="blocked" label={t("dashboard.blocked")} />
-        <SortButton sortKey="avgBlockTime" label={t("dashboard.avgBlockTime")} />
+        <SortButton
+          sortKey="avgBlockTime"
+          label={t("dashboard.avgBlockTime")}
+        />
         <SortButton sortKey="removed" label={t("dashboard.removed")} />
         <SortButton sortKey="underReview" label={t("dashboard.underReview")} />
       </div>
@@ -243,10 +246,22 @@ export function PlatformComparisonMobile({
               {/* Platform Header */}
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
-                  <IconComponent
-                    className="h-5 w-5"
-                    style={{ color: platform.color }}
-                  />
+                  {platform.iconUrl ? (
+                    <img
+                      src={
+                        platform.iconUrl.startsWith("http")
+                          ? platform.iconUrl
+                          : `${BASE_URL}${platform.iconUrl}`
+                      }
+                      alt={platform.name}
+                      className="h-5 w-5 object-contain"
+                    />
+                  ) : (
+                    <IconComponent
+                      className="h-5 w-5"
+                      style={{ color: platform.color }}
+                    />
+                  )}
                   <span className="font-semibold text-base">
                     {platform.name}
                   </span>
@@ -264,47 +279,56 @@ export function PlatformComparisonMobile({
               {/* Metrics Grid */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">{t("dashboard.views")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("dashboard.views")}
+                  </p>
                   <p
                     className={cn(
                       "text-sm font-medium",
-                      comparisonSort === "views" && "font-semibold text-primary"
+                      comparisonSort === "views" &&
+                        "font-semibold text-primary",
                     )}>
                     {formatViews(metrics.totalViews)}
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">{t("dashboard.violations")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("dashboard.violations")}
+                  </p>
                   <p
                     className={cn(
                       "text-sm font-medium",
                       comparisonSort === "violations" &&
-                        "font-semibold text-primary"
+                        "font-semibold text-primary",
                     )}>
                     {metrics.totalViolations}
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">{t("dashboard.active")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("dashboard.active")}
+                  </p>
                   <p
                     className={cn(
                       "text-sm font-medium",
                       comparisonSort === "active" &&
-                        "font-semibold text-primary"
+                        "font-semibold text-primary",
                     )}>
                     {metrics.activeCount}
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">{t("dashboard.blocked")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("dashboard.blocked")}
+                  </p>
                   <p
                     className={cn(
                       "text-sm font-medium",
                       comparisonSort === "blocked" &&
-                        "font-semibold text-primary"
+                        "font-semibold text-primary",
                     )}>
                     {metrics.blockedCount}
                   </p>
@@ -321,34 +345,39 @@ export function PlatformComparisonMobile({
                     className={cn(
                       "text-sm font-medium",
                       comparisonSort === "avgBlockTime" &&
-                        "font-semibold text-primary"
+                        "font-semibold text-primary",
                     )}>
                     {minutes} {t("dashboard.min")}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)} {t("dashboard.hrs")})
+                    ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}{" "}
+                    {t("dashboard.hrs")})
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">{t("dashboard.removed")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("dashboard.removed")}
+                  </p>
                   <p
                     className={cn(
                       "text-sm font-medium",
                       comparisonSort === "removed" &&
-                        "font-semibold text-primary"
+                        "font-semibold text-primary",
                     )}>
                     {metrics.removedCount}
                   </p>
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">{t("dashboard.underReview")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("dashboard.underReview")}
+                  </p>
                   <p
                     className={cn(
                       "text-sm font-medium",
                       comparisonSort === "underReview" &&
-                        "font-semibold text-primary"
+                        "font-semibold text-primary",
                     )}>
                     {metrics.underReviewCount}
                   </p>
@@ -371,4 +400,3 @@ export function PlatformComparisonMobile({
 
   return <div className="mt-6">{content}</div>;
 }
-

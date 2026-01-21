@@ -6,11 +6,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  TooltipProvider,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Plus, X, ChevronDown } from "lucide-react";
-import { PlatformData } from "./types";
+import { PlatformData, BASE_URL } from "./types";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface PlatformFiltersProps {
@@ -32,7 +30,7 @@ export function PlatformFilters({
 }: PlatformFiltersProps) {
   const { t } = useLanguage();
   const availablePlatforms = allPlatforms.filter(
-    (p) => !selectedSlots.includes(p.id)
+    (p) => !selectedSlots.includes(p.id),
   );
 
   return (
@@ -40,9 +38,9 @@ export function PlatformFilters({
       <div className="flex gap-2 items-center flex-wrap">
         <TooltipProvider>
           {selectedSlots.map((platformId) => {
-            const platform = allPlatforms.find(
-              (p) => p.id === platformId
-            ) || ({} as PlatformData);
+            const platform =
+              allPlatforms.find((p) => p.id === platformId) ||
+              ({} as PlatformData);
             if (!platform.id) return null;
 
             const IconComponent = platform.icon;
@@ -51,11 +49,25 @@ export function PlatformFilters({
                 key={platformId}
                 variant="default"
                 className="cursor-pointer px-2.5 sm:px-3 py-1 sm:py-1.5 flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm touch-manipulation active:scale-[0.98]">
-                <IconComponent
-                  className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0"
-                  style={{ color: platform.color }}
-                />
-                <span className="truncate max-w-[80px] sm:max-w-none">{platform.name}</span>
+                {platform.iconUrl ? (
+                  <img
+                    src={
+                      platform.iconUrl.startsWith("http")
+                        ? platform.iconUrl
+                        : `${BASE_URL}${platform.iconUrl}`
+                    }
+                    alt={platform.name}
+                    className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0 object-contain"
+                  />
+                ) : (
+                  <IconComponent
+                    className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0"
+                    style={{ color: platform.color }}
+                  />
+                )}
+                <span className="truncate max-w-[80px] sm:max-w-none">
+                  {platform.name}
+                </span>
                 <X
                   className="h-3 w-3 ml-0.5 sm:ml-1 hover:text-destructive flex-shrink-0 touch-manipulation"
                   onClick={(e) => {
@@ -71,9 +83,14 @@ export function PlatformFilters({
         {availablePlatforms.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1 sm:gap-1.5 h-8 sm:h-9 text-xs sm:text-sm touch-manipulation">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 sm:gap-1.5 h-8 sm:h-9 text-xs sm:text-sm touch-manipulation">
                 <Plus className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                <span className="hidden xs:inline">{t("matchDashboard.addPlatform")}</span>
+                <span className="hidden xs:inline">
+                  {t("matchDashboard.addPlatform")}
+                </span>
                 <span className="xs:hidden">{t("matchDashboard.add")}</span>
                 <ChevronDown className="h-3 w-3" />
               </Button>
@@ -86,10 +103,22 @@ export function PlatformFilters({
                     key={platform.id}
                     onClick={() => onAddPlatform(platform.id)}
                     className="gap-2 text-xs sm:text-sm touch-manipulation">
-                    <IconComponent
-                      className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0"
-                      style={{ color: platform.color }}
-                    />
+                    {platform.iconUrl ? (
+                      <img
+                        src={
+                          platform.iconUrl.startsWith("http")
+                            ? platform.iconUrl
+                            : `${BASE_URL}${platform.iconUrl}`
+                        }
+                        alt={platform.name}
+                        className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0 object-contain"
+                      />
+                    ) : (
+                      <IconComponent
+                        className="h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0"
+                        style={{ color: platform.color }}
+                      />
+                    )}
                     {platform.name}
                   </DropdownMenuItem>
                 );
@@ -113,9 +142,7 @@ export function PlatformFilters({
           {t("dashboard.live")}
         </Badge>
         <Badge
-          variant={
-            contentTypeFilter === "highlights" ? "default" : "outline"
-          }
+          variant={contentTypeFilter === "highlights" ? "default" : "outline"}
           className="cursor-pointer text-[10px] sm:text-xs px-2 sm:px-2.5 py-1 touch-manipulation active:scale-[0.98]"
           onClick={() => onContentTypeFilterChange("highlights")}>
           {t("dashboard.highlights")}
@@ -130,4 +157,3 @@ export function PlatformFilters({
     </div>
   );
 }
-

@@ -169,7 +169,7 @@ export function ActivityLog({
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [bulkFilter, setBulkFilter] = useState<"all" | "bulk" | "individual">(
-    "all"
+    "all",
   );
   const itemsPerPage = 10;
 
@@ -229,7 +229,7 @@ export function ActivityLog({
           {
             method: "DELETE",
             credentials: "include",
-          }
+          },
         );
       } else if (
         deleteConfirmItem.violationId &&
@@ -241,7 +241,7 @@ export function ActivityLog({
           {
             method: "DELETE",
             credentials: "include",
-          }
+          },
         );
       } else {
         console.error("Cannot delete: missing required IDs");
@@ -267,7 +267,7 @@ export function ActivityLog({
 
   const handleDeleteBulkLogs = async (
     bulkId: string,
-    logs: ActivityLogItem[]
+    logs: ActivityLogItem[],
   ) => {
     try {
       await Promise.all(
@@ -275,15 +275,15 @@ export function ActivityLog({
           if (log.deletedLogId) {
             return fetch(
               `${API_URL}/violations/deleted-logs/${log.deletedLogId}`,
-              { method: "DELETE", credentials: "include" }
+              { method: "DELETE", credentials: "include" },
             );
           } else if (log.violationId && log.logEntryId) {
             return fetch(
               `${API_URL}/violations/${log.violationId}/audit-log/${log.logEntryId}`,
-              { method: "DELETE", credentials: "include" }
+              { method: "DELETE", credentials: "include" },
             );
           }
-        })
+        }),
       );
 
       if (onRefetch) {
@@ -345,10 +345,10 @@ export function ActivityLog({
       type: "deleted",
       time: isRTL
         ? `${timeAgo} • ${formattedDate} ${t(
-            "matchDashboard.activityLog.dateTime.at"
+            "matchDashboard.activityLog.dateTime.at",
           )} ${formattedTime}`
         : `${formattedDate} ${t(
-            "matchDashboard.activityLog.dateTime.at"
+            "matchDashboard.activityLog.dateTime.at",
           )} ${formattedTime} • ${timeAgo}`,
       badge: t("matchDashboard.activityLog.badges.deleted"),
       badgeVariant: "destructive",
@@ -361,7 +361,7 @@ export function ActivityLog({
                   {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
                   <code
                     className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
-                      status
+                      status,
                     )}`}>
                     {translateStatus(status)}
                   </code>{" "}
@@ -382,7 +382,7 @@ export function ActivityLog({
                     {accountName}
                   </code>{" "}
                   {t(
-                    "matchDashboard.activityLog.descriptions.forChannelUser"
+                    "matchDashboard.activityLog.descriptions.forChannelUser",
                   )}{" "}
                 </>
               )}
@@ -390,13 +390,13 @@ export function ActivityLog({
                 {platformName}
               </code>{" "}
               {t(
-                "matchDashboard.activityLog.descriptions.violationDeletedFrom"
+                "matchDashboard.activityLog.descriptions.violationDeletedFrom",
               )}
             </>
           ) : (
             <>
               {t(
-                "matchDashboard.activityLog.descriptions.violationDeletedFrom"
+                "matchDashboard.activityLog.descriptions.violationDeletedFrom",
               )}{" "}
               <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                 {platformName}
@@ -405,7 +405,7 @@ export function ActivityLog({
                 <>
                   {" "}
                   {t(
-                    "matchDashboard.activityLog.descriptions.forChannelUser"
+                    "matchDashboard.activityLog.descriptions.forChannelUser",
                   )}{" "}
                   <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                     {accountName}
@@ -423,7 +423,7 @@ export function ActivityLog({
                   {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
                   <code
                     className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
-                      status
+                      status,
                     )}`}>
                     {translateStatus(status)}
                   </code>
@@ -445,7 +445,7 @@ export function ActivityLog({
                   {t("matchDashboard.activityLog.descriptions.withStatus")}{" "}
                   <code
                     className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
-                      status
+                      status,
                     )}`}>
                     {translateStatus(status)}
                   </code>
@@ -540,7 +540,7 @@ export function ActivityLog({
                         {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
                         <code
                           className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
-                            status
+                            status,
                           )}`}>
                           {translateStatus(status)}
                         </code>{" "}
@@ -561,7 +561,7 @@ export function ActivityLog({
                           {accountName}
                         </code>{" "}
                         {t(
-                          "matchDashboard.activityLog.descriptions.forChannelUser"
+                          "matchDashboard.activityLog.descriptions.forChannelUser",
                         )}{" "}
                       </>
                     )}
@@ -569,13 +569,13 @@ export function ActivityLog({
                       {platformName}
                     </code>{" "}
                     {t(
-                      "matchDashboard.activityLog.descriptions.violationCreatedOn"
+                      "matchDashboard.activityLog.descriptions.violationCreatedOn",
                     )}
                   </>
                 ) : (
                   <>
                     {t(
-                      "matchDashboard.activityLog.descriptions.violationCreatedOn"
+                      "matchDashboard.activityLog.descriptions.violationCreatedOn",
                     )}{" "}
                     <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                       {platformName}
@@ -584,7 +584,7 @@ export function ActivityLog({
                       <>
                         {" "}
                         {t(
-                          "matchDashboard.activityLog.descriptions.forChannelUser"
+                          "matchDashboard.activityLog.descriptions.forChannelUser",
                         )}{" "}
                         <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                           {accountName}
@@ -602,7 +602,7 @@ export function ActivityLog({
                         {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
                         <code
                           className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
-                            status
+                            status,
                           )}`}>
                           {translateStatus(status)}
                         </code>
@@ -622,11 +622,11 @@ export function ActivityLog({
                       <>
                         {" "}
                         {t(
-                          "matchDashboard.activityLog.descriptions.withStatus"
+                          "matchDashboard.activityLog.descriptions.withStatus",
                         )}{" "}
                         <code
                           className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
-                            status
+                            status,
                           )}`}>
                           {translateStatus(status)}
                         </code>
@@ -682,24 +682,24 @@ export function ActivityLog({
               description = (
                 <div className="text-left">
                   {t(
-                    "matchDashboard.activityLog.descriptions.statusChangedFrom"
+                    "matchDashboard.activityLog.descriptions.statusChangedFrom",
                   )}{" "}
                   <code
                     className={`text-xs ${getStatusColorClasses(
-                      oldStatus
+                      oldStatus,
                     )} px-1.5 py-0.5 rounded font-mono`}>
                     {translateStatus(oldStatus)}
                   </code>{" "}
                   {t("matchDashboard.activityLog.descriptions.to")}{" "}
                   <code
                     className={`text-xs ${getStatusColorClasses(
-                      newStatus
+                      newStatus,
                     )} px-1.5 py-0.5 rounded font-mono`}>
                     {translateStatus(newStatus)}
                   </code>
                   <div className="mt-1 text-xs text-muted-foreground">
                     {t(
-                      "matchDashboard.activityLog.descriptions.blockedAtTimeAdded"
+                      "matchDashboard.activityLog.descriptions.blockedAtTimeAdded",
                     )}{" "}
                     <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                       {blockedAtTime}
@@ -711,24 +711,24 @@ export function ActivityLog({
               description = (
                 <div className="text-left">
                   {t(
-                    "matchDashboard.activityLog.descriptions.statusChangedFrom"
+                    "matchDashboard.activityLog.descriptions.statusChangedFrom",
                   )}{" "}
                   <code
                     className={`text-xs ${getStatusColorClasses(
-                      oldStatus
+                      oldStatus,
                     )} px-1.5 py-0.5 rounded font-mono`}>
                     {translateStatus(oldStatus)}
                   </code>{" "}
                   {t("matchDashboard.activityLog.descriptions.to")}{" "}
                   <code
                     className={`text-xs ${getStatusColorClasses(
-                      newStatus
+                      newStatus,
                     )} px-1.5 py-0.5 rounded font-mono`}>
                     {translateStatus(newStatus)}
                   </code>
                   <div className="mt-1 text-xs text-muted-foreground">
                     {t(
-                      "matchDashboard.activityLog.descriptions.blockedAtTimeRemoved"
+                      "matchDashboard.activityLog.descriptions.blockedAtTimeRemoved",
                     )}
                   </div>
                 </div>
@@ -737,18 +737,18 @@ export function ActivityLog({
               description = (
                 <div className="text-left">
                   {t(
-                    "matchDashboard.activityLog.descriptions.statusChangedFrom"
+                    "matchDashboard.activityLog.descriptions.statusChangedFrom",
                   )}{" "}
                   <code
                     className={`text-xs ${getStatusColorClasses(
-                      oldStatus
+                      oldStatus,
                     )} px-1.5 py-0.5 rounded font-mono`}>
                     {translateStatus(oldStatus)}
                   </code>{" "}
                   {t("matchDashboard.activityLog.descriptions.to")}{" "}
                   <code
                     className={`text-xs ${getStatusColorClasses(
-                      newStatus
+                      newStatus,
                     )} px-1.5 py-0.5 rounded font-mono`}>
                     {translateStatus(newStatus)}
                   </code>
@@ -764,7 +764,7 @@ export function ActivityLog({
               entry.changes?.added ||
               (Array.isArray(entry.newValue) && Array.isArray(entry.oldValue)
                 ? (entry.newValue as string[]).filter(
-                    (n: string) => !(entry.oldValue as string[])?.includes(n)
+                    (n: string) => !(entry.oldValue as string[])?.includes(n),
                   )
                 : []) ||
               [];
@@ -789,13 +789,13 @@ export function ActivityLog({
                         {oldUrl}
                       </code>{" "}
                       {t(
-                        "matchDashboard.activityLog.descriptions.violationUrlChangedFrom"
+                        "matchDashboard.activityLog.descriptions.violationUrlChangedFrom",
                       )}
                     </>
                   ) : (
                     <>
                       {t(
-                        "matchDashboard.activityLog.descriptions.violationUrlChangedFrom"
+                        "matchDashboard.activityLog.descriptions.violationUrlChangedFrom",
                       )}{" "}
                       <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono break-all">
                         {oldUrl}
@@ -825,13 +825,13 @@ export function ActivityLog({
                         {oldChannel}
                       </code>{" "}
                       {t(
-                        "matchDashboard.activityLog.descriptions.accountChannelChangedFrom"
+                        "matchDashboard.activityLog.descriptions.accountChannelChangedFrom",
                       )}
                     </>
                   ) : (
                     <>
                       {t(
-                        "matchDashboard.activityLog.descriptions.accountChannelChangedFrom"
+                        "matchDashboard.activityLog.descriptions.accountChannelChangedFrom",
                       )}{" "}
                       <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                         {oldChannel}
@@ -861,13 +861,13 @@ export function ActivityLog({
                         {oldType}
                       </code>{" "}
                       {t(
-                        "matchDashboard.activityLog.descriptions.contentTypeChangedFrom"
+                        "matchDashboard.activityLog.descriptions.contentTypeChangedFrom",
                       )}
                     </>
                   ) : (
                     <>
                       {t(
-                        "matchDashboard.activityLog.descriptions.contentTypeChangedFrom"
+                        "matchDashboard.activityLog.descriptions.contentTypeChangedFrom",
                       )}{" "}
                       <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                         {oldType}
@@ -888,7 +888,7 @@ export function ActivityLog({
               description = (
                 <div className="text-left">
                   {t(
-                    "matchDashboard.activityLog.descriptions.viewsChangedFrom"
+                    "matchDashboard.activityLog.descriptions.viewsChangedFrom",
                   )}{" "}
                   <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                     {oldViews}
@@ -919,7 +919,7 @@ export function ActivityLog({
                   {isRTL ? (
                     <>
                       {t(
-                        "matchDashboard.activityLog.descriptions.timeAddedChangedFrom"
+                        "matchDashboard.activityLog.descriptions.timeAddedChangedFrom",
                       )}{" "}
                       <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                         {oldTime}
@@ -932,7 +932,7 @@ export function ActivityLog({
                   ) : (
                     <>
                       {t(
-                        "matchDashboard.activityLog.descriptions.timeAddedChangedFrom"
+                        "matchDashboard.activityLog.descriptions.timeAddedChangedFrom",
                       )}{" "}
                       <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                         {oldTime}
@@ -959,7 +959,7 @@ export function ActivityLog({
                 description = (
                   <div className="text-left">
                     {t(
-                      "matchDashboard.activityLog.descriptions.blockedAtTimeAdded"
+                      "matchDashboard.activityLog.descriptions.blockedAtTimeAdded",
                     )}{" "}
                     <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                       {newBlocked}
@@ -970,7 +970,7 @@ export function ActivityLog({
                 type = "blocked_at_removed";
                 badge = t("matchDashboard.activityLog.badges.blockedAtRemoved");
                 description = t(
-                  "matchDashboard.activityLog.descriptions.blockedAtTimeRemoved"
+                  "matchDashboard.activityLog.descriptions.blockedAtTimeRemoved",
                 );
               } else if (action === "changed" || !action) {
                 // action === "changed" or no action (fallback) - this is when time is explicitly changed
@@ -993,7 +993,7 @@ export function ActivityLog({
                     {isRTL ? (
                       <>
                         {t(
-                          "matchDashboard.activityLog.descriptions.blockedAtChangedFrom"
+                          "matchDashboard.activityLog.descriptions.blockedAtChangedFrom",
                         )}{" "}
                         <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                           {oldBlocked}
@@ -1006,7 +1006,7 @@ export function ActivityLog({
                     ) : (
                       <>
                         {t(
-                          "matchDashboard.activityLog.descriptions.blockedAtChangedFrom"
+                          "matchDashboard.activityLog.descriptions.blockedAtChangedFrom",
                         )}{" "}
                         <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                           {oldBlocked}
@@ -1056,13 +1056,13 @@ export function ActivityLog({
                             {firstEdit.old}
                           </code>{" "}
                           {t(
-                            "matchDashboard.activityLog.descriptions.noteChangedFrom"
+                            "matchDashboard.activityLog.descriptions.noteChangedFrom",
                           )}
                         </>
                       ) : (
                         <>
                           {t(
-                            "matchDashboard.activityLog.descriptions.noteChangedFrom"
+                            "matchDashboard.activityLog.descriptions.noteChangedFrom",
                           )}{" "}
                           <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                             {firstEdit.old}
@@ -1077,7 +1077,7 @@ export function ActivityLog({
                   );
                 } else {
                   description = t(
-                    "matchDashboard.activityLog.descriptions.notesChanged"
+                    "matchDashboard.activityLog.descriptions.notesChanged",
                   );
                 }
               } else {
@@ -1085,7 +1085,7 @@ export function ActivityLog({
                 type = "notes_changed";
                 badge = t("matchDashboard.activityLog.badges.noteChanged");
                 description = t(
-                  "matchDashboard.activityLog.descriptions.notesChanged"
+                  "matchDashboard.activityLog.descriptions.notesChanged",
                 );
               }
             } else {
@@ -1140,7 +1140,7 @@ export function ActivityLog({
               (violationId ? violationToPlatformMap.get(violationId) : null) ||
               t("matchDashboard.activityLog.descriptions.platform");
             description = `${t(
-              "matchDashboard.activityLog.descriptions.violationDeletedFrom"
+              "matchDashboard.activityLog.descriptions.violationDeletedFrom",
             )} ${platformName}`;
             break;
           }
@@ -1148,7 +1148,7 @@ export function ActivityLog({
             type = entry.action;
             badge = t("matchDashboard.activityLog.badges.updated");
             description = t(
-              "matchDashboard.activityLog.descriptions.violationUpdated"
+              "matchDashboard.activityLog.descriptions.violationUpdated",
             );
         }
 
@@ -1163,10 +1163,10 @@ export function ActivityLog({
           type,
           time: isRTL
             ? `${timeAgo} • ${formattedDate} ${t(
-                "matchDashboard.activityLog.dateTime.at"
+                "matchDashboard.activityLog.dateTime.at",
               )} ${formattedTime}`
             : `${formattedDate} ${t(
-                "matchDashboard.activityLog.dateTime.at"
+                "matchDashboard.activityLog.dateTime.at",
               )} ${formattedTime} • ${timeAgo}`,
           badge,
           badgeVariant:
@@ -1206,14 +1206,14 @@ export function ActivityLog({
         ? new Date(
             a.time.split(" at ")[0] +
               " " +
-              a.time.split(" at ")[1].split(" •")[0]
+              a.time.split(" at ")[1].split(" •")[0],
           ).getTime()
         : a.timestamp || 0;
       const timeB = b.time.includes(" at ")
         ? new Date(
             b.time.split(" at ")[0] +
               " " +
-              b.time.split(" at ")[1].split(" •")[0]
+              b.time.split(" at ")[1].split(" •")[0],
           ).getTime()
         : b.timestamp || 0;
       return timeB - timeA; // Newest first
@@ -1224,11 +1224,11 @@ export function ActivityLog({
 
   // Extract unique platforms and users from all log items
   const uniquePlatforms = Array.from(
-    new Set(allLogItems.map((item) => item.platform).filter(Boolean))
+    new Set(allLogItems.map((item) => item.platform).filter(Boolean)),
   ).sort();
 
   const uniqueUsers = Array.from(
-    new Set(allLogItems.map((item) => item.userName).filter(Boolean))
+    new Set(allLogItems.map((item) => item.userName).filter(Boolean)),
   ).sort();
 
   const filteredLog = allLogItems.filter((item) => {
@@ -1380,43 +1380,108 @@ export function ActivityLog({
           </SelectTrigger>
           <SelectContent className="max-h-[300px] p-1">
             <SelectItem value="all" className="text-xs py-1.5">
-              {t("matchDashboard.activityLog.filters.allActivity")}
+              <div className="flex items-center gap-2">
+                <Activity className="h-3.5 w-3.5" />
+                <span>
+                  {t("matchDashboard.activityLog.filters.allActivity")}
+                </span>
+              </div>
             </SelectItem>
             <SelectItem value="added" className="text-xs py-1.5">
-              {t("matchDashboard.activityLog.filters.violationAdded")}
+              <div className="flex items-center gap-2">
+                <Plus className="h-3.5 w-3.5" />
+                <span>
+                  {t("matchDashboard.activityLog.filters.violationAdded")}
+                </span>
+              </div>
             </SelectItem>
             <SelectItem value="deleted" className="text-xs py-1.5">
-              {t("matchDashboard.activityLog.filters.violationDeleted")}
+              <div className="flex items-center gap-2">
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>
+                  {t("matchDashboard.activityLog.filters.violationDeleted")}
+                </span>
+              </div>
             </SelectItem>
             <SelectItem value="url_changed" className="text-xs py-1.5">
-              {t("matchDashboard.activityLog.filters.urlChanged")}
+              <div className="flex items-center gap-2">
+                <Link className="h-3.5 w-3.5" />
+                <span>
+                  {t("matchDashboard.activityLog.filters.urlChanged")}
+                </span>
+              </div>
             </SelectItem>
             <SelectItem value="account_changed" className="text-xs py-1.5">
-              {t("matchDashboard.activityLog.filters.accountChanged")}
+              <div className="flex items-center gap-2">
+                <User className="h-3.5 w-3.5" />
+                <span>
+                  {t("matchDashboard.activityLog.filters.accountChanged")}
+                </span>
+              </div>
             </SelectItem>
             <SelectItem value="content_type_changed" className="text-xs py-1.5">
-              {t("matchDashboard.activityLog.filters.contentTypeChanged")}
+              <div className="flex items-center gap-2">
+                <Film className="h-3.5 w-3.5" />
+                <span>
+                  {t("matchDashboard.activityLog.filters.contentTypeChanged")}
+                </span>
+              </div>
             </SelectItem>
             <SelectItem value="status_change" className="text-xs py-1.5">
-              {t("matchDashboard.activityLog.filters.statusChange")}
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>
+                  {t("matchDashboard.activityLog.filters.statusChange")}
+                </span>
+              </div>
             </SelectItem>
             <SelectItem value="views_changed" className="text-xs py-1.5">
-              {t("matchDashboard.activityLog.filters.viewsChanged")}
+              <div className="flex items-center gap-2">
+                <Eye className="h-3.5 w-3.5" />
+                <span>
+                  {t("matchDashboard.activityLog.filters.viewsChanged")}
+                </span>
+              </div>
             </SelectItem>
             <SelectItem value="time_added_changed" className="text-xs py-1.5">
-              {t("matchDashboard.activityLog.filters.timeAddedChanged")}
+              <div className="flex items-center gap-2">
+                <Clock className="h-3.5 w-3.5" />
+                <span>
+                  {t("matchDashboard.activityLog.filters.timeAddedChanged")}
+                </span>
+              </div>
             </SelectItem>
             <SelectItem value="blocked_at_changed" className="text-xs py-1.5">
-              {t("matchDashboard.activityLog.filters.blockedAtChanged")}
+              <div className="flex items-center gap-2">
+                <Shield className="h-3.5 w-3.5" />
+                <span>
+                  {t("matchDashboard.activityLog.filters.blockedAtChanged")}
+                </span>
+              </div>
             </SelectItem>
             <SelectItem value="notes_added" className="text-xs py-1.5">
-              {t("matchDashboard.activityLog.filters.notesAdded")}
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-3.5 w-3.5" />
+                <span>
+                  {t("matchDashboard.activityLog.filters.notesAdded")}
+                </span>
+              </div>
             </SelectItem>
             <SelectItem value="notes_edited" className="text-xs py-1.5">
-              {t("matchDashboard.activityLog.filters.notesEdited")}
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-3.5 w-3.5" />
+                <span>
+                  {t("matchDashboard.activityLog.filters.notesEdited")}
+                </span>
+              </div>
             </SelectItem>
             <SelectItem value="notes_changed" className="text-xs py-1.5">
-              {t("matchDashboard.activityLog.filters.notesChanged")}
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-3.5 w-3.5" />
+                <span>
+                  {t("matchDashboard.activityLog.filters.notesChanged")}
+                </span>
+              </div>
             </SelectItem>
           </SelectContent>
         </Select>
@@ -1427,7 +1492,7 @@ export function ActivityLog({
             <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
               <SelectValue
                 placeholder={t(
-                  "matchDashboard.activityLog.platformFilter.placeholder"
+                  "matchDashboard.activityLog.platformFilter.placeholder",
                 )}
               />
             </SelectTrigger>
@@ -1440,7 +1505,10 @@ export function ActivityLog({
                   key={platform}
                   value={platform}
                   className="text-xs py-1.5">
-                  {platform}
+                  <div className="flex items-center gap-2">
+                    {getPlatformIcon(platform!)}
+                    <span>{platform}</span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1453,7 +1521,7 @@ export function ActivityLog({
             <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs">
               <SelectValue
                 placeholder={t(
-                  "matchDashboard.activityLog.userFilter.placeholder"
+                  "matchDashboard.activityLog.userFilter.placeholder",
                 )}
               />
             </SelectTrigger>
@@ -1463,7 +1531,10 @@ export function ActivityLog({
               </SelectItem>
               {uniqueUsers.map((user) => (
                 <SelectItem key={user} value={user} className="text-xs py-1.5">
-                  {user}
+                  <div className="flex items-center gap-2">
+                    <UserCircle className="h-3.5 w-3.5" />
+                    <span>{user}</span>
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -1512,7 +1583,7 @@ export function ActivityLog({
                 {violations.length === 0
                   ? t("matchDashboard.activityLog.emptyState.noViolationsYet")
                   : t(
-                      "matchDashboard.activityLog.emptyState.tryChangingFilter"
+                      "matchDashboard.activityLog.emptyState.tryChangingFilter",
                     )}
               </p>
             </div>
@@ -1608,7 +1679,7 @@ export function ActivityLog({
                             onClick={() => handleDeleteLog(logItem)}
                             className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                             title={t(
-                              "matchDashboard.activityLog.actions.deleteLogEntry"
+                              "matchDashboard.activityLog.actions.deleteLogEntry",
                             )}>
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -1746,7 +1817,7 @@ export function ActivityLog({
 // So we'll create it as a helper that takes t as parameter
 const formatTimeAgoHelper = (
   date: Date,
-  t: (key: string, params?: Record<string, string | number>) => string
+  t: (key: string, params?: Record<string, string | number>) => string,
 ): string => {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
