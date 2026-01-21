@@ -1032,5 +1032,58 @@
       "error": "خطأ",
       "errorDescription": "حدث خطأ أثناء حفظ التقرير"
     }
+  },
+  "platformManagement": {
+    "title": "إدارة المنصات",
+    "description": "إدارة المنصات لتتبع الانتهاكات",
+    "addPlatform": "إضافة منصة",
+    "loading": "جاري تحميل المنصات...",
+    "noPlatforms": "لم يتم العثور على منصات. أضف أول منصة للبدء.",
+    "list": {
+      "name": "الاسم",
+      "id": "المعرف",
+      "actions": "الإجراءات"
+    },
+    "addDialog": {
+      "title": "إضافة منصة جديدة",
+      "description": "أدخل اسم المنصة لإضافتها إلى النظام.",
+      "nameLabel": "اسم المنصة",
+      "namePlaceholder": "مثال: يوتيوب، فيسبوك",
+      "cancel": "إلغاء",
+      "add": "إضافة منصة",
+      "adding": "جاري الإضافة..."
+    },
+    "editDialog": {
+      "title": "تعديل المنصة",
+      "description": "تحديث اسم المنصة.",
+      "nameLabel": "اسم المنصة",
+      "namePlaceholder": "مثال: يوتيوب، فيسبوك",
+      "cancel": "إلغاء",
+      "update": "تحديث المنصة",
+      "updating": "جاري التحديث..."
+    },
+    "deleteDialog": {
+      "title": "حذف المنصة",
+      "description": "هل أنت متأكد أنك تريد حذف \"{name}\"؟ لا يمكن التراجع عن هذا الإجراء.",
+      "cancel": "إلغاء",
+      "delete": "حذف",
+      "deleting": "جاري الحذف..."
+    },
+    "validation": {
+      "nameRequired": "اسم المنصة مطلوب",
+      "noPlatformSelected": "لم يتم اختيار منصة",
+      "cannotDeleteWithViolations": "لا يمكن حذف المنصة لوجود {count} انتهاكات مرتبطة بها"
+    },
+    "success": {
+      "created": "تم إنشاء المنصة بنجاح",
+      "updated": "تم تحديث المنصة بنجاح",
+      "deleted": "تم حذف المنصة بنجاح"
+    },
+    "error": {
+      "loadFailed": "فشل تحميل المنصات",
+      "createFailed": "فشل إنشاء المنصة",
+      "updateFailed": "فشل تحديث المنصة",
+      "deleteFailed": "فشل حذف المنصة"
+    }
   }
 }

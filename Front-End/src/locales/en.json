@@ -1032,5 +1032,58 @@
       "error": "Error",
       "errorDescription": "An error occurred while saving the report"
     }
+  },
+  "platformManagement": {
+    "title": "Platform Management",
+    "description": "Manage platforms for violation tracking",
+    "addPlatform": "Add Platform",
+    "loading": "Loading platforms...",
+    "noPlatforms": "No platforms found. Add your first platform to get started.",
+    "list": {
+      "name": "Name",
+      "id": "ID",
+      "actions": "Actions"
+    },
+    "addDialog": {
+      "title": "Add New Platform",
+      "description": "Enter the platform name to add it to the system.",
+      "nameLabel": "Platform Name",
+      "namePlaceholder": "e.g., YouTube, Facebook",
+      "cancel": "Cancel",
+      "add": "Add Platform",
+      "adding": "Adding..."
+    },
+    "editDialog": {
+      "title": "Edit Platform",
+      "description": "Update the platform name.",
+      "nameLabel": "Platform Name",
+      "namePlaceholder": "e.g., YouTube, Facebook",
+      "cancel": "Cancel",
+      "update": "Update Platform",
+      "updating": "Updating..."
+    },
+    "deleteDialog": {
+      "title": "Delete Platform",
+      "description": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleting": "Deleting..."
+    },
+    "validation": {
+      "nameRequired": "Platform name is required",
+      "noPlatformSelected": "No platform selected",
+      "cannotDeleteWithViolations": "Cannot delete platform with {count} associated violations"
+    },
+    "success": {
+      "created": "Platform created successfully",
+      "updated": "Platform updated successfully",
+      "deleted": "Platform deleted successfully"
+    },
+    "error": {
+      "loadFailed": "Failed to load platforms",
+      "createFailed": "Failed to create platform",
+      "updateFailed": "Failed to update platform",
+      "deleteFailed": "Failed to delete platform"
+    }
   }
 }

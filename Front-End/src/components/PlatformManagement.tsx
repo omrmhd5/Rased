@@ -28,6 +28,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { API_URL } from "@/components/MatchDashboard/types";
+import {
+  PLATFORM_ICONS,
+  PLATFORM_COLORS,
+} from "@/components/MatchDashboard/constants";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface Platform {
@@ -68,8 +72,8 @@ export default function PlatformManagement() {
     } catch (error) {
       console.error("Error fetching platforms:", error);
       toast({
-        title: "Error",
-        description: "Failed to load platforms",
+        title: t("dashboard.error"),
+        description: t("platformManagement.error.loadFailed"),
         variant: "destructive",
       });
     } finally {
@@ -79,6 +83,7 @@ export default function PlatformManagement() {
 
   useEffect(() => {
     fetchPlatforms();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Reset form
@@ -108,7 +113,7 @@ export default function PlatformManagement() {
     setFormError("");
 
     if (!formName.trim()) {
-      setFormError("Platform name is required");
+      setFormError(t("platformManagement.validation.nameRequired"));
       return;
     }
 
@@ -127,12 +132,14 @@ export default function PlatformManagement() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to create platform");
+        throw new Error(
+          errorData.error || t("platformManagement.error.createFailed"),
+        );
       }
 
       toast({
-        title: "Success",
-        description: "Platform created successfully",
+        title: t("platformManagement.success.created"),
+        description: t("platformManagement.success.created"),
       });
 
       setIsAddOpen(false);
@@ -141,7 +148,9 @@ export default function PlatformManagement() {
     } catch (error) {
       console.error("Error adding platform:", error);
       setFormError(
-        error instanceof Error ? error.message : "Failed to create platform",
+        error instanceof Error
+          ? error.message
+          : t("platformManagement.error.createFailed"),
       );
     } finally {
       setSubmitting(false);
@@ -153,12 +162,12 @@ export default function PlatformManagement() {
     setFormError("");
 
     if (!formName.trim()) {
-      setFormError("Platform name is required");
+      setFormError(t("platformManagement.validation.nameRequired"));
       return;
     }
 
     if (!editingPlatform) {
-      setFormError("No platform selected");
+      setFormError(t("platformManagement.validation.noPlatformSelected"));
       return;
     }
 
@@ -180,12 +189,14 @@ export default function PlatformManagement() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to update platform");
+        throw new Error(
+          errorData.error || t("platformManagement.error.updateFailed"),
+        );
       }
 
       toast({
-        title: "Success",
-        description: "Platform updated successfully",
+        title: t("platformManagement.success.updated"),
+        description: t("platformManagement.success.updated"),
       });
 
       setIsEditOpen(false);
@@ -194,7 +205,9 @@ export default function PlatformManagement() {
     } catch (error) {
       console.error("Error updating platform:", error);
       setFormError(
-        error instanceof Error ? error.message : "Failed to update platform",
+        error instanceof Error
+          ? error.message
+          : t("platformManagement.error.updateFailed"),
       );
     } finally {
       setSubmitting(false);
@@ -217,12 +230,14 @@ export default function PlatformManagement() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to delete platform");
+        throw new Error(
+          errorData.error || t("platformManagement.error.deleteFailed"),
+        );
       }
 
       toast({
-        title: "Success",
-        description: "Platform deleted successfully",
+        title: t("platformManagement.success.deleted"),
+        description: t("platformManagement.success.deleted"),
       });
 
       setIsDeleteOpen(false);
@@ -230,10 +245,26 @@ export default function PlatformManagement() {
       fetchPlatforms();
     } catch (error) {
       console.error("Error deleting platform:", error);
+
+      let errorMessage = t("platformManagement.error.deleteFailed");
+      if (error instanceof Error) {
+        // Check for specific backend error: "Cannot delete platform with X associated violations"
+        const match = error.message.match(
+          /Cannot delete platform with (\d+) associated violations/,
+        );
+        if (match) {
+          errorMessage = t(
+            "platformManagement.validation.cannotDeleteWithViolations",
+            { count: match[1] },
+          );
+        } else {
+          errorMessage = error.message;
+        }
+      }
+
       toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "Failed to delete platform",
+        title: t("dashboard.error"),
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -248,7 +279,7 @@ export default function PlatformManagement() {
           <div className="flex items-center gap-2">
             <Globe className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             <CardTitle className="text-lg sm:text-xl">
-              Platform Management
+              {t("platformManagement.title")}
             </CardTitle>
           </div>
           <Button
@@ -259,11 +290,11 @@ export default function PlatformManagement() {
             size="sm"
             className="h-8 sm:h-9 text-xs sm:text-sm">
             <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5" />
-            Add Platform
+            {t("platformManagement.addPlatform")}
           </Button>
         </div>
         <CardDescription className="text-xs sm:text-sm">
-          Manage platforms for violation tracking
+          {t("platformManagement.description")}
         </CardDescription>
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
@@ -273,17 +304,21 @@ export default function PlatformManagement() {
           </div>
         ) : platforms.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground text-sm">
-            No platforms found. Add your first platform to get started.
+            {t("platformManagement.noPlatforms")}
           </div>
         ) : (
           <div className="rounded-md border">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs sm:text-sm">Name</TableHead>
-                  <TableHead className="text-xs sm:text-sm">ID</TableHead>
+                  <TableHead className="text-xs sm:text-sm">
+                    {t("platformManagement.list.name")}
+                  </TableHead>
+                  <TableHead className="text-xs sm:text-sm">
+                    {t("platformManagement.list.id")}
+                  </TableHead>
                   <TableHead className="text-right text-xs sm:text-sm">
-                    Actions
+                    {t("platformManagement.list.actions")}
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -291,7 +326,26 @@ export default function PlatformManagement() {
                 {platforms.map((platform) => (
                   <TableRow key={platform._id}>
                     <TableCell className="font-medium text-xs sm:text-sm">
-                      {platform.name}
+                      <div className="flex items-center gap-2">
+                        {(() => {
+                          const Icon =
+                            PLATFORM_ICONS[platform.id] ||
+                            PLATFORM_ICONS[platform.id.toLowerCase()] ||
+                            Globe;
+                          return (
+                            <Icon
+                              className="h-4 w-4"
+                              style={{
+                                color:
+                                  PLATFORM_COLORS[platform.id] ||
+                                  PLATFORM_COLORS[platform.id.toLowerCase()] ||
+                                  "currentColor",
+                              }}
+                            />
+                          );
+                        })()}
+                        {platform.name}
+                      </div>
                     </TableCell>
                     <TableCell className="text-xs sm:text-sm text-muted-foreground">
                       {platform.id}
@@ -326,19 +380,21 @@ export default function PlatformManagement() {
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Add New Platform</DialogTitle>
+            <DialogTitle>{t("platformManagement.addDialog.title")}</DialogTitle>
             <DialogDescription>
-              Enter the platform name to add it to the system.
+              {t("platformManagement.addDialog.description")}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="platform-name">Platform Name</Label>
+              <Label htmlFor="platform-name">
+                {t("platformManagement.addDialog.nameLabel")}
+              </Label>
               <Input
                 id="platform-name"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
-                placeholder="e.g., YouTube, Facebook"
+                placeholder={t("platformManagement.addDialog.namePlaceholder")}
                 disabled={submitting}
               />
             </div>
@@ -354,16 +410,16 @@ export default function PlatformManagement() {
                 resetForm();
               }}
               disabled={submitting}>
-              Cancel
+              {t("platformManagement.addDialog.cancel")}
             </Button>
             <Button onClick={handleAdd} disabled={submitting}>
               {submitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Adding...
+                  {t("platformManagement.addDialog.adding")}
                 </>
               ) : (
-                "Add Platform"
+                t("platformManagement.addDialog.add")
               )}
             </Button>
           </DialogFooter>
@@ -374,17 +430,23 @@ export default function PlatformManagement() {
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Platform</DialogTitle>
-            <DialogDescription>Update the platform name.</DialogDescription>
+            <DialogTitle>
+              {t("platformManagement.editDialog.title")}
+            </DialogTitle>
+            <DialogDescription>
+              {t("platformManagement.editDialog.description")}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-platform-name">Platform Name</Label>
+              <Label htmlFor="edit-platform-name">
+                {t("platformManagement.editDialog.nameLabel")}
+              </Label>
               <Input
                 id="edit-platform-name"
                 value={formName}
                 onChange={(e) => setFormName(e.target.value)}
-                placeholder="e.g., YouTube, Facebook"
+                placeholder={t("platformManagement.editDialog.namePlaceholder")}
                 disabled={submitting}
               />
             </div>
@@ -400,16 +462,16 @@ export default function PlatformManagement() {
                 resetForm();
               }}
               disabled={submitting}>
-              Cancel
+              {t("platformManagement.editDialog.cancel")}
             </Button>
             <Button onClick={handleUpdate} disabled={submitting}>
               {submitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Updating...
+                  {t("platformManagement.editDialog.updating")}
                 </>
               ) : (
-                "Update Platform"
+                t("platformManagement.editDialog.update")
               )}
             </Button>
           </DialogFooter>
@@ -420,10 +482,13 @@ export default function PlatformManagement() {
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Delete Platform</DialogTitle>
+            <DialogTitle>
+              {t("platformManagement.deleteDialog.title")}
+            </DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete "{deletingPlatform?.name}"? This
-              action cannot be undone.
+              {t("platformManagement.deleteDialog.description", {
+                name: deletingPlatform?.name || "",
+              })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -434,7 +499,7 @@ export default function PlatformManagement() {
                 resetForm();
               }}
               disabled={submitting}>
-              Cancel
+              {t("platformManagement.deleteDialog.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -443,10 +508,10 @@ export default function PlatformManagement() {
               {submitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Deleting...
+                  {t("platformManagement.deleteDialog.deleting")}
                 </>
               ) : (
-                "Delete"
+                t("platformManagement.deleteDialog.delete")
               )}
             </Button>
           </DialogFooter>

@@ -37,7 +37,7 @@ export const getInitialContentSplitData = () => [
 export const getInitialActivityLog = () => [];
 
 // Icon mapping for known platforms
-const PLATFORM_ICONS: Record<
+export const PLATFORM_ICONS: Record<
   string,
   React.ComponentType<{ className?: string; style?: React.CSSProperties }>
 > = {
@@ -49,7 +49,7 @@ const PLATFORM_ICONS: Record<
 };
 
 // Color mapping for known platforms
-const PLATFORM_COLORS: Record<string, string> = {
+export const PLATFORM_COLORS: Record<string, string> = {
   twitter: "hsl(203 89% 53%)",
   youtube: "hsl(0 100% 50%)",
   facebook: "hsl(221 44% 41%)",

@@ -899,10 +899,31 @@ export default function MatchDashboard() {
   }, [match, platformOperations]);
 
   // Platform slot system (max 2 platforms visible)
-  const [selectedSlots, setSelectedSlots] = useState<string[]>([
-    "twitter",
-    "youtube",
-  ]);
+  const [selectedSlots, setSelectedSlots] = useState<string[]>(() => {
+    // Try to get saved slots from localStorage
+    const savedSlots = localStorage.getItem("matchDashboard_selectedSlots");
+    if (savedSlots) {
+      try {
+        const parsed = JSON.parse(savedSlots);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error("Failed to parse saved platform slots", e);
+      }
+    }
+    // Default to twitter and youtube if no saved slots
+    return ["twitter", "youtube"];
+  });
+
+  // Save selected platforms to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem(
+      "matchDashboard_selectedSlots",
+      JSON.stringify(selectedSlots),
+    );
+  }, [selectedSlots]);
+
   const [contentTypeFilter, setContentTypeFilter] = useState<string>("all");
   const [platformCardFilter, setPlatformCardFilter] = useState<{
     [key: string]: string;
