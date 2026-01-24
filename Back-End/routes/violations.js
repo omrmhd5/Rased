@@ -4,9 +4,15 @@ import Match from "../models/Match.js";
 import Competition from "../models/Competition.js";
 import DeletedViolationLog from "../models/DeletedViolationLog.js";
 import User from "../models/User.js";
+import BulkViolation from "../models/BulkViolation.js";
 import { optionalAuth, authenticateToken } from "../middleware/auth.js";
 import { logViolationChange } from "../utils/violationLogger.js";
 import { emitViolationEvent, emitBulkEvent } from "../utils/socket.js";
+import {
+  createBulkViolation,
+  updateBulkViolationStats,
+  deleteBulkViolation,
+} from "../utils/bulkViolationHelper.js";
 
 // Middleware to check if user is superAdmin or employee (not viewer)
 const requireSuperAdminOrEmployee = async (req, res, next) => {
@@ -80,6 +86,81 @@ const updateMatchContentTypeCounts = async (matchId) => {
     console.error("Error updating match content type counts:", error);
   }
 };
+
+// GET /api/violations/bulk - Get all bulk violations with filters
+router.get("/bulk", async (req, res) => {
+  try {
+    const { matchId, platformId, bulkId, limit, sort } = req.query;
+
+    const query = {};
+
+    if (bulkId) {
+      query.bulkId = bulkId;
+    }
+
+    if (matchId) {
+      // Check if matchId is an externalMatchId or internal _id
+      const match = await Match.findOne({ externalMatchId: matchId });
+      if (match) {
+        query.matchId = match._id;
+      } else {
+        query.matchId = matchId;
+      }
+    }
+
+    if (platformId) {
+      query.platformId = platformId;
+    }
+
+    const limitNum = limit ? parseInt(limit) : 100;
+    const sortOrder = sort === "asc" ? 1 : -1;
+
+    const bulkViolations = await BulkViolation.find(query)
+      .populate(
+        "matchId",
+        "team1 team2 date time week competition stadium externalMatchId league description",
+      )
+      .populate("createdBy", "username email")
+      .sort({ timeAdded: sortOrder })
+      .limit(limitNum)
+      .lean();
+
+    res.json(bulkViolations);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/violations/bulk/:bulkId - Get single bulk violation with detailed stats
+router.get("/bulk/:bulkId", async (req, res) => {
+  try {
+    const { bulkId } = req.params;
+
+    const bulkViolation = await BulkViolation.findOne({ bulkId })
+      .populate(
+        "matchId",
+        "team1 team2 date time week competition stadium externalMatchId league description",
+      )
+      .populate("createdBy", "username email")
+      .populate({
+        path: "violationIds",
+        select:
+          "violationUrl status contentType views timeAdded blockedAt notes auditLog",
+      })
+      .lean();
+
+    if (!bulkViolation) {
+      return res.status(404).json({ error: "Bulk violation not found" });
+    }
+
+    res.json(bulkViolation);
+  } catch (error) {
+    if (error.name === "CastError") {
+      return res.status(400).json({ error: "Invalid bulk ID" });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // GET /api/violations - Get all violations with filters
 router.get("/", async (req, res) => {
@@ -824,6 +905,27 @@ router.post(
       // Update match content type counts
       await updateMatchContentTypeCounts(internalMatchId);
 
+      // Create BulkViolation entry to track this bulk submission
+      try {
+        await createBulkViolation({
+          bulkId,
+          matchId: internalMatchId,
+          matchName,
+          externalMatchId,
+          platformId,
+          platformName,
+          accountChannel,
+          contentType,
+          violationIds: savedViolations.map((v) => v._id),
+          createdBy: req.user?.userId,
+          createdByName: req.user?.username,
+          timeAdded: timeAdded ? new Date(timeAdded) : new Date(),
+        });
+      } catch (bulkError) {
+        console.error("Error creating BulkViolation entry:", bulkError);
+        // Don't fail the request if bulk tracking fails
+      }
+
       // Emit bulk violation created event
       try {
         emitBulkEvent(
@@ -1271,6 +1373,16 @@ router.put(
       // Update match content type counts
       await updateMatchContentTypeCounts(violation.matchId);
 
+      // Update bulk violation stats if this violation is part of a bulk
+      if (violation.bulkId) {
+        try {
+          await updateBulkViolationStats(violation.bulkId);
+        } catch (bulkError) {
+          console.error("Error updating bulk violation stats:", bulkError);
+          // Don't fail the request if bulk update fails
+        }
+      }
+
       // Emit violation updated event
       try {
         const emitMatchId = violation.externalMatchId || violation.matchId;
@@ -1396,6 +1508,16 @@ router.patch(
       // Update match content type counts
       await updateMatchContentTypeCounts(violation.matchId);
 
+      // Update bulk violation stats if this violation is part of a bulk
+      if (violation.bulkId) {
+        try {
+          await updateBulkViolationStats(violation.bulkId);
+        } catch (bulkError) {
+          console.error("Error updating bulk violation stats:", bulkError);
+          // Don't fail the request if bulk update fails
+        }
+      }
+
       // Emit violation updated event
       try {
         const emitMatchId = violation.externalMatchId || violation.matchId;
@@ -1485,6 +1607,30 @@ router.delete(
 
       // Update match content type counts
       await updateMatchContentTypeCounts(matchId);
+
+      // Handle bulk violation stats if this violation was part of a bulk
+      if (violation.bulkId) {
+        try {
+          // Check if there are any remaining violations with this bulkId
+          const remainingCount = await Violation.countDocuments({
+            bulkId: violation.bulkId,
+          });
+
+          if (remainingCount === 0) {
+            // If no violations remain, delete the bulk violation entry
+            await deleteBulkViolation(violation.bulkId);
+          } else {
+            // Otherwise, update the stats
+            await updateBulkViolationStats(violation.bulkId);
+          }
+        } catch (bulkError) {
+          console.error(
+            "Error handling bulk violation after delete:",
+            bulkError,
+          );
+          // Don't fail the request if bulk update fails
+        }
+      }
 
       // Emit violation deleted event
       try {
