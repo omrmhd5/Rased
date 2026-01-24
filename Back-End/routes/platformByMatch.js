@@ -123,7 +123,7 @@ router.post("/", async (req, res) => {
       {
         new: true,
         upsert: true,
-      }
+      },
     );
 
     // Update aggregated stats on Match

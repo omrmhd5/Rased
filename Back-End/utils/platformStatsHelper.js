@@ -6,18 +6,8 @@ import PlatformByMatch from "../models/PlatformByMatch.js";
 // Helper function to aggregate PlatformByMatch stats and update Match
 async function updateMatchAggregatedStats(externalMatchId) {
   try {
-    console.log(`\n🚀 updateMatchAggregatedStats called with: "${externalMatchId}"`);
-    
     const match = await Match.findOne({ externalMatchId });
-    console.log(`🔎 Match found:`, { 
-      exists: !!match,
-      _id: match?._id,
-      externalMatchId: match?.externalMatchId,
-      currentTopPlatformId: match?.topPlatformId,
-    });
-    
     if (!match) {
-      console.warn(`⚠️ Match not found for externalMatchId: "${externalMatchId}"`);
       return;
     }
 
@@ -126,16 +116,6 @@ async function updateMatchAggregatedStats(externalMatchId) {
       mostViews = topPlatform.totalViews || 0;
     }
 
-    console.log(`🔝 TopPlatform for match ${externalMatchId}:`, {
-      topPlatformId,
-      mostViews,
-      platformCount: platformStats.length,
-      allPlatforms: platformStats.map(p => ({ 
-        id: p.platformId, 
-        views: p.totalViews 
-      }))
-    });
-
     // Update Match document directly by externalMatchId
     const updatePayload = {
       liveCount: aggregated.liveCount,
@@ -153,11 +133,6 @@ async function updateMatchAggregatedStats(externalMatchId) {
       mostViews,
     };
 
-    console.log(`🔧 About to update Match ${externalMatchId} (_id: ${match._id}) with payload:`, {
-      topPlatformId,
-      mostViews,
-    });
-
     const updatedMatch = await Match.findOneAndUpdate(
       { externalMatchId },
       updatePayload,
@@ -165,31 +140,16 @@ async function updateMatchAggregatedStats(externalMatchId) {
     );
 
     if (!updatedMatch) {
-      console.error(`❌ findOneAndUpdate returned null/undefined for externalMatchId: "${externalMatchId}"`);
       return;
     }
 
-    console.log(`✅ findOneAndUpdate returned a document:`, {
-      _id: updatedMatch._id,
-      externalMatchId: updatedMatch.externalMatchId,
-      topPlatformId_in_response: updatedMatch.topPlatformId,
-      mostViews_in_response: updatedMatch.mostViews,
-    });
-
     // Verify the update was successful by refetching
     const verifiedMatch = await Match.findOne({ externalMatchId });
-    
-    console.log(`📍 Verification refetch for ${externalMatchId}:`, {
-      topPlatformId: verifiedMatch?.topPlatformId,
-      mostViews: verifiedMatch?.mostViews,
-      matchesCalculated: verifiedMatch?.topPlatformId === topPlatformId,
-    });
-
-    if (verifiedMatch?.topPlatformId !== topPlatformId) {
-      console.error(`⚠️ MISMATCH DETECTED: Calculated ${topPlatformId} but verified fetch shows ${verifiedMatch?.topPlatformId}`);
-    }
   } catch (error) {
-    console.error(`❌ Error in updateMatchAggregatedStats for ${externalMatchId}:`, error.message);
+    console.error(
+      `❌ Error in updateMatchAggregatedStats for ${externalMatchId}:`,
+      error.message,
+    );
   }
 }
 
@@ -309,12 +269,8 @@ const updatePlatformStats = async (matchId, platformId) => {
       { upsert: true, new: true },
     );
 
-    console.log(`🔄 Updated PlatformByMatch for ${platformId}, now calling updateMatchAggregatedStats...`);
-
     // After updating PlatformByMatch, recalculate Match aggregated stats
     await updateMatchAggregatedStats(match.externalMatchId);
-    
-    console.log(`✨ Completed updateMatchAggregatedStats cascade for ${platformId}`);
   } catch (error) {
     // Handle error silently
   }

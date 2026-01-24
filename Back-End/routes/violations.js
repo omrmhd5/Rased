@@ -924,20 +924,13 @@ router.post(
       });
 
       // Update platform and match stats (cascade handles both)
-      console.log(`🟢 Violation saved, now calling updatePlatformStats(${internalMatchId}, ${platformId})...`);
       await updatePlatformStats(internalMatchId, platformId);
-      console.log(`🟢 updatePlatformStats completed for match ${internalMatchId}`);
 
       // Emit violation created event
       try {
         const emitMatchId = externalMatchId || internalMatchId;
-        // Refetch the match to get the latest topPlatformId before emitting
-        const matchForEmit = await Match.findById(internalMatchId);
-        console.log(`📤 About to emit violation-created for match ${emitMatchId}, current topPlatformId: ${matchForEmit?.topPlatformId}`);
         emitViolationEvent(emitMatchId, "violation-created", {
           violation: populated,
-          matchTopPlatformId: matchForEmit?.topPlatformId,
-          matchMostViews: matchForEmit?.mostViews,
         });
       } catch (error) {
         // Silently fail

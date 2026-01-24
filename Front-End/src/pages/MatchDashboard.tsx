@@ -267,7 +267,8 @@ export default function MatchDashboard() {
               const underReviewCount = backendStats.underReviewCount ?? 0;
               // Get content type counts from backend
               const liveCount = (backendStats as any).liveCount ?? 0;
-              const highlightsCount = (backendStats as any).highlightsCount ?? 0;
+              const highlightsCount =
+                (backendStats as any).highlightsCount ?? 0;
               const othersCount = (backendStats as any).othersCount ?? 0;
 
               return {
@@ -760,7 +761,8 @@ export default function MatchDashboard() {
               const underReviewCount = backendStats.underReviewCount ?? 0;
               // Get content type counts from backend
               const liveCount = (backendStats as any).liveCount ?? 0;
-              const highlightsCount = (backendStats as any).highlightsCount ?? 0;
+              const highlightsCount =
+                (backendStats as any).highlightsCount ?? 0;
               const othersCount = (backendStats as any).othersCount ?? 0;
 
               return {
