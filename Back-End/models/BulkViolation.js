@@ -82,7 +82,7 @@ const bulkViolationSchema = new mongoose.Schema(
     },
     // Block statistics
     avgBlockTime: {
-      type: Number, // Average time in milliseconds from timeAdded to blockedAt
+      type: Number, // Average time in minutes from timeAdded to blockedAt
       default: null,
     },
     blockSuccessRate: {

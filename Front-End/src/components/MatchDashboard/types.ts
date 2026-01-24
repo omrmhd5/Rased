@@ -102,6 +102,9 @@ export type PlatformData = {
   avgBlockTime: string;
   blockedSuccess: string;
   blockSuccessRate?: number; // From backend (0-100)
+  liveCount?: number; // From backend
+  highlightsCount?: number; // From backend
+  othersCount?: number; // From backend
   stillActive: number;
   violations: Violation[];
 };
@@ -173,6 +176,39 @@ export interface BackendViolation {
   blockedAt?: string | Date;
   auditLog?: AuditLogEntry[];
   __v?: number;
+}
+
+export interface BulkViolation {
+  _id?: string;
+  bulkId: string;
+  matchId: string;
+  matchName: string;
+  externalMatchId?: string;
+  platformId: string;
+  platformName: string;
+  accountChannel: string;
+  contentType: "Live" | "Highlights" | "Other";
+  // Total counts
+  totalCount: number;
+  // Status counts
+  activeCount: number;
+  blockedCount: number;
+  removedCount: number;
+  underReviewCount: number;
+  // Content type counts
+  liveCount: number;
+  highlightsCount: number;
+  othersCount: number;
+  // Block statistics
+  avgBlockTime: number | null; // Average time in minutes
+  blockSuccessRate: number; // Percentage (0-100)
+  // Array of violation IDs
+  violationIds: string[];
+  // Metadata
+  createdBy?: string;
+  createdByName?: string;
+  timeAdded: string;
+  lastUpdated: string;
 }
 
 export const API_URL =

@@ -5,6 +5,7 @@ import Competition from "../models/Competition.js";
 import DeletedViolationLog from "../models/DeletedViolationLog.js";
 import User from "../models/User.js";
 import BulkViolation from "../models/BulkViolation.js";
+import PlatformByMatch from "../models/PlatformByMatch.js";
 import { optionalAuth, authenticateToken } from "../middleware/auth.js";
 import { logViolationChange } from "../utils/violationLogger.js";
 import { emitViolationEvent, emitBulkEvent } from "../utils/socket.js";
@@ -13,6 +14,7 @@ import {
   updateBulkViolationStats,
   deleteBulkViolation,
 } from "../utils/bulkViolationHelper.js";
+import { updatePlatformStats } from "../utils/platformStatsHelper.js";
 
 // Middleware to check if user is superAdmin or employee (not viewer)
 const requireSuperAdminOrEmployee = async (req, res, next) => {
@@ -44,44 +46,185 @@ const router = express.Router();
 // Apply optional auth to all routes (logs user if authenticated, otherwise uses "System")
 router.use(optionalAuth);
 
-// Helper function to update match content type counts
+// Helper function to update match content type counts and statistics
+// Now includes both single violations and bulk violations
 const updateMatchContentTypeCounts = async (matchId) => {
   try {
+    console.log(`[updateMatchContentTypeCounts] Starting for matchId: ${matchId}`);
+    
     // Find match by _id or externalMatchId
     let match = await Match.findById(matchId);
     if (!match) {
+      console.log(`[updateMatchContentTypeCounts] Match not found by _id, trying externalMatchId`);
       match = await Match.findOne({ externalMatchId: matchId });
     }
     if (!match) {
-      console.error("Match not found for updating content type counts");
+      console.error(`[updateMatchContentTypeCounts] Match not found for updating content type counts: ${matchId}`);
       return;
     }
+    console.log(`[updateMatchContentTypeCounts] Found match: ${match._id}, externalMatchId: ${match.externalMatchId}`);
 
-    // Get all violations for this match
-    const violations = await Violation.find({ matchId: match._id }).lean();
+    // Get all single violations for this match (no bulkId)
+    const singleViolations = await Violation.find({
+      matchId: match._id,
+      bulkId: { $exists: false },
+    }).lean();
 
-    // Count content types
-    const liveCount = violations.filter(
+    console.log(`[updateMatchContentTypeCounts] Found ${singleViolations.length} single violations (no bulkId)`);
+
+    // Get all bulk violations for this match
+    const bulkViolations = await BulkViolation.find({
+      matchId: match._id,
+    }).lean();
+
+    console.log(`[updateMatchContentTypeCounts] Found ${bulkViolations.length} bulk violation records`);
+    if (bulkViolations.length > 0) {
+      console.log(`[updateMatchContentTypeCounts] Bulk violations:`, JSON.stringify(bulkViolations, null, 2));
+    }
+
+    // Count content types from singles
+    const singleLiveCount = singleViolations.filter(
       (v) => (v.contentType || v.type) === "Live",
     ).length;
-    const highlightsCount = violations.filter(
+    const singleHighlightsCount = singleViolations.filter(
       (v) => (v.contentType || v.type) === "Highlights",
     ).length;
-    const othersCount = violations.filter(
+    const singleOthersCount = singleViolations.filter(
       (v) => (v.contentType || v.type) === "Other",
     ).length;
-    const totalViolations = violations.length;
 
-    // Update match with new counts (only content type counts)
-    // This is an automated update from violations, not a manual edit
-    await Match.findByIdAndUpdate(match._id, {
-      $set: {
-        liveCount,
-        highlightsCount,
-        othersCount,
-        totalViolations,
-      },
-    });
+    console.log(`[updateMatchContentTypeCounts] Single violations - live=${singleLiveCount}, highlights=${singleHighlightsCount}, other=${singleOthersCount}`);
+
+    // Aggregate content types from bulks
+    const bulkLiveCount = bulkViolations.reduce(
+      (sum, bulk) => sum + bulk.liveCount,
+      0,
+    );
+    const bulkHighlightsCount = bulkViolations.reduce(
+      (sum, bulk) => sum + bulk.highlightsCount,
+      0,
+    );
+    const bulkOthersCount = bulkViolations.reduce(
+      (sum, bulk) => sum + bulk.othersCount,
+      0,
+    );
+    const bulkTotalCount = bulkViolations.reduce(
+      (sum, bulk) => sum + bulk.totalCount,
+      0,
+    );
+
+    // Total counts
+    const liveCount = singleLiveCount + bulkLiveCount;
+    const highlightsCount = singleHighlightsCount + bulkHighlightsCount;
+    const othersCount = singleOthersCount + bulkOthersCount;
+    const totalViolations = singleViolations.length + bulkTotalCount;
+
+    // Aggregate status counts from singles
+    const singleActiveCount = singleViolations.filter(
+      (v) => v.status === "Active",
+    ).length;
+    const singleBlockedCount = singleViolations.filter(
+      (v) => v.status === "Blocked",
+    ).length;
+    const singleRemovedCount = singleViolations.filter(
+      (v) => v.status === "Removed",
+    ).length;
+    const singleUnderReviewCount = singleViolations.filter(
+      (v) => v.status === "Under Review",
+    ).length;
+
+    // Aggregate status counts from bulks
+    const bulkActiveCount = bulkViolations.reduce(
+      (sum, bulk) => sum + bulk.activeCount,
+      0,
+    );
+    const bulkBlockedCount = bulkViolations.reduce(
+      (sum, bulk) => sum + bulk.blockedCount,
+      0,
+    );
+    const bulkRemovedCount = bulkViolations.reduce(
+      (sum, bulk) => sum + bulk.removedCount,
+      0,
+    );
+    const bulkUnderReviewCount = bulkViolations.reduce(
+      (sum, bulk) => sum + bulk.underReviewCount,
+      0,
+    );
+
+    // Total status counts
+    const activeCount = singleActiveCount + bulkActiveCount;
+    const blockedCount = singleBlockedCount + bulkBlockedCount;
+    const removedCount = singleRemovedCount + bulkRemovedCount;
+    const underReviewCount = singleUnderReviewCount + bulkUnderReviewCount;
+
+    // Calculate block success rate
+    const blockedOrRemovedCount = blockedCount + removedCount;
+    const blockSuccessRate =
+      totalViolations > 0
+        ? Math.round((blockedOrRemovedCount / totalViolations) * 100)
+        : 0;
+
+    // Calculate weighted average block time for the match
+    let avgBlockTime = 0;
+    if (blockedCount > 0) {
+      // Get block times from single violations
+      const singleBlockedViols = singleViolations.filter(
+        (v) => v.status === "Blocked" && v.blockedAt && v.timeAdded,
+      );
+      const singleBlockTimeMs = singleBlockedViols.reduce((sum, v) => {
+        const diff = Math.floor(
+          (new Date(v.blockedAt) - new Date(v.timeAdded)) / 60000,
+        );
+        return sum + Math.max(0, diff);
+      }, 0);
+
+      // Get weighted block time from bulk violations
+      const bulkBlockTime = bulkViolations.reduce(
+        (sum, b) =>
+          b.blockedCount > 0 && b.avgBlockTime
+            ? sum + b.avgBlockTime * b.blockedCount
+            : sum,
+        0,
+      );
+
+      avgBlockTime = Math.round((singleBlockTimeMs + bulkBlockTime) / blockedCount);
+      console.log(`[updateMatchContentTypeCounts] avgBlockTime: ${avgBlockTime} (single: ${singleBlockTimeMs}, bulk: ${bulkBlockTime}, blocked: ${blockedCount})`);
+    }
+
+    const updatePayload = {
+      liveCount,
+      highlightsCount,
+      othersCount,
+      totalViolations,
+      activeCount,
+      blockedCount,
+      removedCount,
+      underReviewCount,
+      blockSuccessRate,
+      avgBlockTime,
+    };
+
+    console.log(`[updateMatchContentTypeCounts] Updating Match with:`, JSON.stringify(updatePayload, null, 2));
+
+    // Update match with aggregated counts
+    const updatedMatch = await Match.findByIdAndUpdate(match._id, {
+      $set: updatePayload,
+    }, { new: true });
+
+    console.log(`[updateMatchContentTypeCounts] Match updated successfully:`, JSON.stringify({
+      _id: updatedMatch._id,
+      externalMatchId: updatedMatch.externalMatchId,
+      liveCount: updatedMatch.liveCount,
+      highlightsCount: updatedMatch.highlightsCount,
+      othersCount: updatedMatch.othersCount,
+      totalViolations: updatedMatch.totalViolations,
+      activeCount: updatedMatch.activeCount,
+      blockedCount: updatedMatch.blockedCount,
+      removedCount: updatedMatch.removedCount,
+      underReviewCount: updatedMatch.underReviewCount,
+      blockSuccessRate: updatedMatch.blockSuccessRate,
+      avgBlockTime: updatedMatch.avgBlockTime,
+    }, null, 2));
   } catch (error) {
     console.error("Error updating match content type counts:", error);
   }
@@ -161,6 +304,201 @@ router.get("/bulk/:bulkId", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+// PATCH /api/violations/bulk/:bulkId/status - Update status for all violations in a bulk
+router.patch(
+  "/bulk/:bulkId/status",
+  authenticateToken,
+  requireSuperAdminOrEmployee,
+  async (req, res) => {
+    try {
+      const { bulkId } = req.params;
+      const { status, blockedAt } = req.body;
+
+      if (!status) {
+        return res.status(400).json({ error: "Status is required" });
+      }
+
+      // Find the bulk violation to get matchId
+      const bulkViolation = await BulkViolation.findOne({ bulkId });
+      if (!bulkViolation) {
+        return res.status(404).json({ error: "Bulk violation not found" });
+      }
+
+      // Normalize status
+      const normalizedStatus =
+        status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+      const finalNormalizedStatus =
+        normalizedStatus === "Under review" ? "Under Review" : normalizedStatus;
+      const validStatuses = ["Active", "Blocked", "Removed", "Under Review"];
+
+      if (!validStatuses.includes(finalNormalizedStatus)) {
+        return res.status(400).json({ error: "Invalid status value" });
+      }
+
+      // Find all violations with this bulkId
+      const violations = await Violation.find({ bulkId });
+
+      // Update each violation
+      const updatePromises = violations.map(async (violation) => {
+        violation.status = finalNormalizedStatus;
+
+        // Handle blockedAt based on status
+        const statusLower = finalNormalizedStatus.toLowerCase();
+        if (statusLower === "blocked") {
+          violation.blockedAt = blockedAt ? new Date(blockedAt) : new Date();
+        } else if (
+          statusLower === "active" ||
+          statusLower === "under review" ||
+          statusLower === "removed"
+        ) {
+          violation.blockedAt = undefined;
+        }
+
+        // Save the violation
+        const updatedViolation = await violation.save();
+
+        // Log the change
+        await logViolationChange(violation._id, "status_changed", {
+          user: req.user,
+          field: "status",
+          oldValue: violations.find((v) => v._id === violation._id).status,
+          newValue: finalNormalizedStatus,
+          changes: { bulkId },
+        });
+
+        return updatedViolation;
+      });
+
+      const updatedViolations = await Promise.all(updatePromises);
+
+      // Update bulk violation stats
+      await updateBulkViolationStats(bulkId);
+
+      // Update match and platform stats
+      await updateMatchContentTypeCounts(bulkViolation.matchId);
+      await updatePlatformStats(bulkViolation.matchId, bulkViolation.platformId);
+
+      // Emit bulk status changed event
+      try {
+        const emitMatchId = bulkViolation.externalMatchId || bulkViolation.matchId;
+        emitBulkEvent(emitMatchId, "bulk-status-changed", {
+          bulkId,
+          newStatus: finalNormalizedStatus,
+          count: updatedViolations.length,
+          platformId: bulkViolation.platformId,
+        });
+      } catch (error) {
+        console.error("Error emitting bulk-status-changed event:", error);
+      }
+
+      res.json({
+        bulkId,
+        count: updatedViolations.length,
+        status: finalNormalizedStatus,
+      });
+    } catch (error) {
+      if (error.name === "CastError") {
+        return res.status(400).json({ error: "Invalid bulk ID" });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
+
+// DELETE /api/violations/bulk/:bulkId - Delete all violations in a bulk
+router.delete(
+  "/bulk/:bulkId",
+  authenticateToken,
+  requireSuperAdminOrEmployee,
+  async (req, res) => {
+    try {
+      const { bulkId } = req.params;
+
+      // Find the bulk violation to get metadata
+      const bulkViolation = await BulkViolation.findOne({ bulkId });
+      if (!bulkViolation) {
+        return res.status(404).json({ error: "Bulk violation not found" });
+      }
+
+      // Find all violations with this bulkId
+      const violations = await Violation.find({ bulkId });
+
+      // Delete each violation and log it
+      for (const violation of violations) {
+        // Save deleted violation log
+        let externalMatchId = violation.externalMatchId;
+        if (!externalMatchId && violation.matchId) {
+          const match = await Match.findById(violation.matchId);
+          if (match) {
+            externalMatchId = match.externalMatchId;
+          }
+        }
+
+        await DeletedViolationLog.create({
+          externalMatchId: externalMatchId || null,
+          action: "deleted",
+          userId: req.user ? req.user.userId : null,
+          userName: req.user ? req.user.username : "System",
+          timestamp: new Date(),
+          changes: {
+            platformId: violation.platformId,
+            platformName: violation.platformName,
+            accountChannel: violation.accountChannel,
+            status: violation.status,
+            views: violation.views || "0",
+            violationUrl: violation.violationUrl,
+            bulkId: bulkId,
+          },
+        });
+
+        // Log deletion
+        await logViolationChange(violation._id, "deleted", {
+          user: req.user,
+          initialData: {
+            violationUrl: violation.violationUrl,
+            accountChannel: violation.accountChannel,
+            status: violation.status,
+          },
+          changes: { bulkId },
+        });
+
+        // Delete the violation
+        await Violation.findByIdAndDelete(violation._id);
+      }
+
+      // Delete the bulk violation entry
+      await deleteBulkViolation(bulkId);
+
+      // Update match and platform stats
+      await updateMatchContentTypeCounts(bulkViolation.matchId);
+      await updatePlatformStats(bulkViolation.matchId, bulkViolation.platformId);
+
+      // Emit bulk deleted event
+      try {
+        const emitMatchId = bulkViolation.externalMatchId || bulkViolation.matchId;
+        emitBulkEvent(emitMatchId, "bulk-deleted", {
+          bulkId,
+          count: violations.length,
+          platformId: bulkViolation.platformId,
+        });
+      } catch (error) {
+        console.error("Error emitting bulk-deleted event:", error);
+      }
+
+      res.json({
+        message: "Bulk violations deleted successfully",
+        bulkId,
+        count: violations.length,
+      });
+    } catch (error) {
+      if (error.name === "CastError") {
+        return res.status(400).json({ error: "Invalid bulk ID" });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
 
 // GET /api/violations - Get all violations with filters
 router.get("/", async (req, res) => {
@@ -272,17 +610,26 @@ router.get("/", async (req, res) => {
       ];
     }
 
-    const limitNum = limit ? parseInt(limit) : 100;
+    // IMPORTANT: Only return violations WITHOUT bulkId (single violations)
+    // Bulk violations should be fetched via /api/violations/bulk endpoint
+    query.bulkId = { $exists: false };
+
     const sortOrder = sort === "asc" ? 1 : -1;
 
-    const violations = await Violation.find(query)
+    // Apply limit only if explicitly provided, otherwise fetch all
+    let violationsQuery = Violation.find(query)
       .populate(
         "matchId",
         "team1 team2 date time week competition stadium externalMatchId league description",
       )
-      .sort({ timeAdded: sortOrder })
-      .limit(limitNum)
-      .lean();
+      .sort({ timeAdded: sortOrder });
+
+    if (limit) {
+      const limitNum = parseInt(limit);
+      violationsQuery = violationsQuery.limit(limitNum);
+    }
+
+    const violations = await violationsQuery.lean();
 
     res.json(violations);
   } catch (error) {
@@ -739,6 +1086,9 @@ router.post(
       // Update match content type counts
       await updateMatchContentTypeCounts(internalMatchId);
 
+      // Update platform by match stats
+      await updatePlatformStats(internalMatchId, platformId);
+
       // Emit violation created event
       try {
         const emitMatchId = externalMatchId || internalMatchId;
@@ -902,10 +1252,7 @@ router.post(
         });
       }
 
-      // Update match content type counts
-      await updateMatchContentTypeCounts(internalMatchId);
-
-      // Create BulkViolation entry to track this bulk submission
+      // Create BulkViolation entry FIRST so stats updates can find it
       try {
         await createBulkViolation({
           bulkId,
@@ -925,6 +1272,12 @@ router.post(
         console.error("Error creating BulkViolation entry:", bulkError);
         // Don't fail the request if bulk tracking fails
       }
+
+      // Update match content type counts (now can find BulkViolation)
+      await updateMatchContentTypeCounts(internalMatchId);
+
+      // Update platform by match stats (now can find BulkViolation)
+      await updatePlatformStats(internalMatchId, platformId);
 
       // Emit bulk violation created event
       try {
@@ -1373,6 +1726,9 @@ router.put(
       // Update match content type counts
       await updateMatchContentTypeCounts(violation.matchId);
 
+      // Update platform by match stats
+      await updatePlatformStats(violation.matchId, violation.platformId);
+
       // Update bulk violation stats if this violation is part of a bulk
       if (violation.bulkId) {
         try {
@@ -1508,6 +1864,9 @@ router.patch(
       // Update match content type counts
       await updateMatchContentTypeCounts(violation.matchId);
 
+      // Update platform by match stats
+      await updatePlatformStats(violation.matchId, violation.platformId);
+
       // Update bulk violation stats if this violation is part of a bulk
       if (violation.bulkId) {
         try {
@@ -1607,6 +1966,9 @@ router.delete(
 
       // Update match content type counts
       await updateMatchContentTypeCounts(matchId);
+
+      // Update platform by match stats
+      await updatePlatformStats(matchId, violation.platformId);
 
       // Handle bulk violation stats if this violation was part of a bulk
       if (violation.bulkId) {

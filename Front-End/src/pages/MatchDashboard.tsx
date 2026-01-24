@@ -57,6 +57,7 @@ import {
   type PlatformData,
   type Match,
   type BackendViolation,
+  type BulkViolation,
   type DeletedViolationLog,
   API_URL,
   BASE_URL,
@@ -106,6 +107,9 @@ export default function MatchDashboard() {
   const [deletedViolationLogs, setDeletedViolationLogs] = useState<
     DeletedViolationLog[]
   >([]);
+
+  // Bulk violations state
+  const [bulkViolations, setBulkViolations] = useState<BulkViolation[]>([]);
 
   // Settings state
   const [targetMins, setTargetMins] = useState<number>(15);
@@ -290,12 +294,7 @@ export default function MatchDashboard() {
               const convertedViolations = platformViolations.map((v) =>
                 convertBackendViolationToFrontend(v),
               );
-              // Calculate and save stats for each platform (this updates the DB)
-              calculateAndSavePlatformStats(
-                platform.id,
-                matchData.externalMatchId,
-                convertedViolations,
-              );
+              // Stats are now updated by the backend - no frontend calculation needed
             });
 
             // Calculate and save top platform (platform with most views)
@@ -308,6 +307,19 @@ export default function MatchDashboard() {
           }
 
           // Chart will update automatically via useEffect when match/platformOperations change
+        }
+
+        // Fetch bulk violations for this match
+        try {
+          const bulkViolationsResponse = await fetch(
+            `${API_URL}/violations/bulk?matchId=${matchData.externalMatchId}`,
+          );
+          if (bulkViolationsResponse.ok) {
+            const bulkViolationsData = await bulkViolationsResponse.json();
+            setBulkViolations(bulkViolationsData || []);
+          }
+        } catch (error) {
+          console.error("Error fetching bulk violations:", error);
         }
 
         // Fetch deleted violation logs for this match
@@ -775,11 +787,7 @@ export default function MatchDashboard() {
 
             // Save stats for each platform
             updatedPlatforms.forEach(({ platform, violations }) => {
-              calculateAndSavePlatformStats(
-                platform.id,
-                matchData.externalMatchId,
-                violations,
-              );
+              // Stats are now updated by the backend - no frontend calculation needed
             });
 
             // Calculate and save top platform
@@ -792,6 +800,19 @@ export default function MatchDashboard() {
           }
 
           // Chart will update automatically via useEffect when match/platformOperations change
+        }
+
+        // Fetch bulk violations for this match
+        try {
+          const bulkViolationsResponse = await fetch(
+            `${API_URL}/violations/bulk?matchId=${matchData.externalMatchId}`,
+          );
+          if (bulkViolationsResponse.ok) {
+            const bulkViolationsData = await bulkViolationsResponse.json();
+            setBulkViolations(bulkViolationsData || []);
+          }
+        } catch (error) {
+          console.error("Error fetching bulk violations:", error);
         }
 
         // Fetch deleted violation logs for this match
@@ -1308,13 +1329,8 @@ export default function MatchDashboard() {
             }),
           );
 
-          // Save stats to PlatformByMatch
+          // Stats are now updated by the backend - no frontend calculation needed
           if (match?.externalMatchId) {
-            calculateAndSavePlatformStats(
-              platformId,
-              match.externalMatchId,
-              updatedViolations,
-            );
             // Update top platform
             calculateAndSaveTopPlatform(
               match.externalMatchId,
@@ -1426,11 +1442,7 @@ export default function MatchDashboard() {
 
       // Save stats to PlatformByMatch - use the updatedViolations we just calculated
       if (match?.externalMatchId) {
-        calculateAndSavePlatformStats(
-          platformId,
-          match.externalMatchId,
-          updatedViolations,
-        );
+        // Stats are now updated by the backend - no frontend calculation needed
       }
 
       // Trigger refetch of all data
@@ -1561,20 +1573,7 @@ export default function MatchDashboard() {
             (p) => p.id === selectedPlatformForAdd,
           );
           if (updatedPlatform) {
-            const platformViolations = updatedPlatform.violations.map((v) => {
-              if (
-                v.id === editingViolation.id ||
-                v._id === editingViolation._id
-              ) {
-                return convertBackendViolationToFrontend(updatedViolation);
-              }
-              return v;
-            });
-            calculateAndSavePlatformStats(
-              selectedPlatformForAdd,
-              match.externalMatchId,
-              platformViolations,
-            );
+            // Stats are now updated by the backend - no frontend calculation needed
           }
         }
 
@@ -1631,11 +1630,7 @@ export default function MatchDashboard() {
               frontendViolation,
               ...updatedPlatform.violations,
             ];
-            calculateAndSavePlatformStats(
-              selectedPlatformForAdd,
-              match.externalMatchId,
-              platformViolations,
-            );
+            // Stats are now updated by the backend - no frontend calculation needed
           }
         }
 
@@ -1907,22 +1902,9 @@ export default function MatchDashboard() {
           }),
         );
 
-        // Calculate and save platform stats
+        // Stats are now updated by the backend - no frontend calculation needed
         if (match?.externalMatchId) {
-          const currentPlatform = platformOperations.find(
-            (p) => p.id === selectedPlatformForAdd,
-          );
-          if (currentPlatform) {
-            const updatedViolations = [
-              ...frontendViolations,
-              ...currentPlatform.violations,
-            ];
-            calculateAndSavePlatformStats(
-              selectedPlatformForAdd,
-              match.externalMatchId,
-              updatedViolations,
-            );
-          }
+          // No need to calculate stats anymore
         }
 
         // Trigger refetch
@@ -2117,11 +2099,7 @@ export default function MatchDashboard() {
           const platformViolations = updatedPlatform.violations.filter(
             (v) => v.id !== violationId && v._id !== violationId,
           );
-          calculateAndSavePlatformStats(
-            platformId,
-            match.externalMatchId,
-            platformViolations,
-          );
+          // Stats are now updated by the backend endpoint - no need for frontend calculation
         }
       }
 
@@ -2268,11 +2246,7 @@ export default function MatchDashboard() {
                   : String(v.id);
             return !deletedIds.includes(vId);
           });
-          calculateAndSavePlatformStats(
-            platformId,
-            match.externalMatchId,
-            updatedViolations,
-          );
+          // Stats are now updated by the backend - no frontend calculation needed
         }
       }
 
@@ -2444,11 +2418,7 @@ export default function MatchDashboard() {
             return v;
           });
 
-          calculateAndSavePlatformStats(
-            platformId,
-            match.externalMatchId,
-            updatedViolationsList,
-          );
+          // Stats are now updated by the backend - no frontend calculation needed
         }
       }
 
@@ -3035,11 +3005,17 @@ export default function MatchDashboard() {
                 platform.violations,
               );
 
+              // Filter bulk violations for this platform
+              const platformBulkViolations = bulkViolations.filter(
+                (bulk) => bulk.platformId === platform.id,
+              );
+
               return (
                 <PlatformCard
                   key={platform.id}
                   platform={platform}
                   filteredViolations={filteredViolations}
+                  bulkViolations={platformBulkViolations}
                   cardFilter={cardFilter}
                   searchQuery={platformSearchQuery[platform.id] || ""}
                   onFilterChange={(filter) =>

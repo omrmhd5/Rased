@@ -8,11 +8,14 @@ import Violation from "../models/Violation.js";
  */
 export async function calculateBulkStats(bulkId) {
   try {
+    console.log(`[calculateBulkStats] Starting for bulkId: ${bulkId}`);
+    
     // Get all violations with this bulkId
     const violations = await Violation.find({ bulkId }).lean();
 
-    if (violations.length === 0) {
-      return null;
+    console.log(`[calculateBulkStats] Found ${violations.length} violations with bulkId: ${bulkId}`);
+    if (violations.length > 0) {
+      console.log(`[calculateBulkStats] Violations:`, JSON.stringify(violations.slice(0, 2), null, 2)); // Log first 2
     }
 
     // Initialize counts
@@ -76,7 +79,10 @@ export async function calculateBulkStats(bulkId) {
     // Calculate average block time
     if (blockTimes.length > 0) {
       const totalBlockTime = blockTimes.reduce((sum, time) => sum + time, 0);
-      stats.avgBlockTime = Math.round(totalBlockTime / blockTimes.length);
+      // Convert from milliseconds to minutes
+      stats.avgBlockTime = Math.round(
+        totalBlockTime / blockTimes.length / 60000,
+      );
     }
 
     // Calculate block success rate (percentage of blocked + removed out of total)
@@ -157,8 +163,12 @@ export async function createBulkViolation(data) {
       timeAdded,
     } = data;
 
+    console.log(`[createBulkViolation] Starting for bulkId: ${bulkId}, matchId: ${matchId}, platformId: ${platformId}`);
+
     // Calculate initial stats
     const stats = await calculateBulkStats(bulkId);
+
+    console.log(`[createBulkViolation] Calculated stats:`, JSON.stringify(stats, null, 2));
 
     if (!stats) {
       throw new Error("No violations found for bulk creation");
@@ -181,6 +191,7 @@ export async function createBulkViolation(data) {
     });
 
     const saved = await bulkViolation.save();
+    console.log(`[createBulkViolation] BulkViolation saved with _id: ${saved._id}`);
     return saved;
   } catch (error) {
     console.error("Error creating bulk violation:", error);

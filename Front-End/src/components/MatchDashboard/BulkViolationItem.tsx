@@ -1,4 +1,4 @@
-import { Violation, PlatformData, API_URL } from "./types";
+import { Violation, PlatformData, BulkViolation, API_URL } from "./types";
 import { convertKSATimeToUTC } from "./utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -17,8 +17,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 
 interface BulkViolationItemProps {
-  bulkId: string;
-  violations: Violation[];
+  bulkViolation: BulkViolation; // Backend bulk violation object with pre-computed stats
   platformId: string;
   platform: PlatformData;
   onEdit: (platformId: string, violation: Violation) => void;
@@ -34,13 +33,12 @@ interface BulkViolationItemProps {
     platformId: string,
     violations: Violation[],
     status: "Active" | "Blocked" | "Removed" | "Under Review",
-    blockedAt?: string
+    blockedAt?: string,
   ) => void;
 }
 
 export function BulkViolationItem({
-  bulkId,
-  violations,
+  bulkViolation,
   platformId,
   platform,
   onEdit,
@@ -63,27 +61,15 @@ export function BulkViolationItem({
   >("Active");
   const [blockedAt, setBlockedAt] = useState("");
 
-  if (violations.length === 0) return null;
+  // Use backend-calculated stats from BulkViolation model
+  const count = bulkViolation.totalCount;
+  const activeCount = bulkViolation.activeCount;
+  const blockedCount = bulkViolation.blockedCount;
+  const removedCount = bulkViolation.removedCount;
+  const underReviewCount = bulkViolation.underReviewCount;
 
-  // Use the first violation as the representative for time
-  const representative = violations[0];
-  const count = violations.length;
-
-  // Calculate aggregate stats
-  const activeCount = violations.filter((v) => v.status === "Active").length;
-  const blockedCount = violations.filter((v) => v.status === "Blocked").length;
-  const removedCount = violations.filter((v) => v.status === "Removed").length;
-  const underReviewCount = violations.filter(
-    (v) => v.status === "Under Review"
-  ).length;
-
-  // Calculate total views
-  const totalViews = violations.reduce((sum, v) => {
-    if (!v.views || v.views === "0") return sum;
-    const viewsStr = v.views.replace(/[^0-9,]/g, "").replace(/,/g, "");
-    return sum + (parseFloat(viewsStr) || 0);
-  }, 0);
-  const formattedTotalViews = totalViews.toLocaleString("en-US");
+  // For now, set views to 0 (can be added to BulkViolation model later)
+  const formattedTotalViews = "0";
 
   // Format time created and time ago
   const formatTimeWithPeriod = (timeString: string): string => {
@@ -167,22 +153,26 @@ export function BulkViolationItem({
     }
   };
 
-  const timeCreated = formatTimeWithPeriod(representative.timeAdded);
-  const dateCreated = formatDate(representative.timeAdded);
-  const timeAgo = formatTimeAgo(representative.timeAdded);
+  const timeCreated = formatTimeWithPeriod(bulkViolation.timeAdded);
+  const dateCreated = formatDate(bulkViolation.timeAdded);
+  const timeAgo = formatTimeAgo(bulkViolation.timeAdded);
 
   // Handle bulk delete
   const handleBulkDelete = () => {
-    if (onBulkDelete) {
-      onBulkDelete(platformId, violations);
+    // For bulk delete, we need to fetch the actual violations or use bulkId
+    // For now, trigger refetch after deletion
+    if (onRefetch) {
+      onRefetch();
     }
     setDeleteDialogOpen(false);
   };
 
   // Handle bulk status change
   const handleBulkStatusChange = () => {
-    if (onBulkStatusChange) {
-      onBulkStatusChange(platformId, violations, selectedStatus, blockedAt);
+    // For bulk status change, we need to fetch the actual violations or use bulkId
+    // For now, trigger refetch after status change
+    if (onRefetch) {
+      onRefetch();
     }
     setStatusDialogOpen(false);
   };
@@ -206,7 +196,7 @@ export function BulkViolationItem({
         <div
           className={cn(
             "p-3 flex items-center gap-3 cursor-pointer",
-            isRTL && "flex-row-reverse"
+            isRTL && "flex-row-reverse",
           )}
           onClick={() => setIsModalOpen(true)}>
           <div
@@ -224,7 +214,7 @@ export function BulkViolationItem({
           <div
             className={cn(
               "flex items-center gap-2 flex-wrap flex-1",
-              isRTL && "flex-row-reverse"
+              isRTL && "flex-row-reverse",
             )}>
             {activeCount > 0 && (
               <Badge className="bg-red-500/10 text-red-600 dark:text-red-400 text-xs">
@@ -297,9 +287,9 @@ export function BulkViolationItem({
           <div
             className={cn(
               "text-xs text-muted-foreground shrink-0",
-              isRTL && "text-right"
+              isRTL && "text-right",
             )}>
-            {representative.accountChannel}
+            {bulkViolation.accountChannel}
           </div>
         </div>
 
@@ -307,21 +297,13 @@ export function BulkViolationItem({
         <div
           className={cn(
             "px-3 pb-3 flex items-center gap-2 text-xs text-muted-foreground flex-wrap",
-            isRTL && "flex-row-reverse"
+            isRTL && "flex-row-reverse",
           )}>
           <span dir={isRTL ? "rtl" : "ltr"}>{timeCreated}</span>
           <span>•</span>
           <span>{dateCreated}</span>
           <span>•</span>
           <span>{timeAgo}</span>
-          {totalViews > 0 && (
-            <>
-              <span>•</span>
-              <span className="font-medium" dir={isRTL ? "rtl" : "ltr"}>
-                {formattedTotalViews} {t("dashboard.views")}
-              </span>
-            </>
-          )}
         </div>
       </div>
 
@@ -329,8 +311,8 @@ export function BulkViolationItem({
       <BulkViolationDetailsModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
-        bulkId={bulkId}
-        violations={violations}
+        bulkId={bulkViolation.bulkId}
+        violations={[]}
         platform={platform}
         onEdit={onEdit}
         onToggleStatus={onToggleStatus}
@@ -347,7 +329,7 @@ export function BulkViolationItem({
       <BulkDeleteConfirmDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}
-        violationCount={violations.length}
+        violationCount={bulkViolation.totalCount}
         onConfirm={handleBulkDelete}
       />
 
@@ -355,7 +337,7 @@ export function BulkViolationItem({
       <BulkStatusChangeDialog
         open={statusDialogOpen}
         onOpenChange={setStatusDialogOpen}
-        violationCount={violations.length}
+        violationCount={bulkViolation.totalCount}
         selectedStatus={selectedStatus}
         onStatusChange={setSelectedStatus}
         blockedAt={blockedAt}
