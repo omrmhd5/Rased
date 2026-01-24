@@ -8,15 +8,8 @@ import Violation from "../models/Violation.js";
  */
 export async function calculateBulkStats(bulkId) {
   try {
-    console.log(`[calculateBulkStats] Starting for bulkId: ${bulkId}`);
-    
     // Get all violations with this bulkId
     const violations = await Violation.find({ bulkId }).lean();
-
-    console.log(`[calculateBulkStats] Found ${violations.length} violations with bulkId: ${bulkId}`);
-    if (violations.length > 0) {
-      console.log(`[calculateBulkStats] Violations:`, JSON.stringify(violations.slice(0, 2), null, 2)); // Log first 2
-    }
 
     // Initialize counts
     const stats = {
@@ -30,6 +23,7 @@ export async function calculateBulkStats(bulkId) {
       othersCount: 0,
       avgBlockTime: null,
       blockSuccessRate: 0,
+      totalViews: 0,
       violationIds: violations.map((v) => v._id),
     };
 
@@ -74,6 +68,25 @@ export async function calculateBulkStats(bulkId) {
           stats.othersCount++;
           break;
       }
+
+      // Add views count (parse views which may be strings like "1.5K" or "100")
+      if (violation.views && violation.views !== "0") {
+        let viewsValue = 0;
+        if (typeof violation.views === "string") {
+          // Handle "K" suffix (e.g., "1.5K" = 1500)
+          if (violation.views.includes("K") || violation.views.includes("k")) {
+            viewsValue =
+              (parseFloat(violation.views.replace(/[Kk,]/g, "")) || 0) * 1000;
+          } else {
+            // Remove commas and parse as number
+            viewsValue =
+              parseFloat(violation.views.replace(/[^0-9.]/g, "")) || 0;
+          }
+        } else {
+          viewsValue = violation.views;
+        }
+        stats.totalViews += viewsValue;
+      }
     });
 
     // Calculate average block time
@@ -94,7 +107,6 @@ export async function calculateBulkStats(bulkId) {
 
     return stats;
   } catch (error) {
-    console.error("Error calculating bulk stats:", error);
     throw error;
   }
 }
@@ -113,7 +125,6 @@ export async function updateBulkViolationStats(bulkId) {
     const stats = await calculateBulkStats(bulkId);
 
     if (!stats) {
-      console.warn(`No violations found for bulkId: ${bulkId}`);
       return null;
     }
 
@@ -130,13 +141,11 @@ export async function updateBulkViolationStats(bulkId) {
     );
 
     if (!updatedBulk) {
-      console.warn(`BulkViolation not found for bulkId: ${bulkId}`);
       return null;
     }
 
     return updatedBulk;
   } catch (error) {
-    console.error("Error updating bulk violation stats:", error);
     throw error;
   }
 }
@@ -163,12 +172,8 @@ export async function createBulkViolation(data) {
       timeAdded,
     } = data;
 
-    console.log(`[createBulkViolation] Starting for bulkId: ${bulkId}, matchId: ${matchId}, platformId: ${platformId}`);
-
     // Calculate initial stats
     const stats = await calculateBulkStats(bulkId);
-
-    console.log(`[createBulkViolation] Calculated stats:`, JSON.stringify(stats, null, 2));
 
     if (!stats) {
       throw new Error("No violations found for bulk creation");
@@ -191,10 +196,8 @@ export async function createBulkViolation(data) {
     });
 
     const saved = await bulkViolation.save();
-    console.log(`[createBulkViolation] BulkViolation saved with _id: ${saved._id}`);
     return saved;
   } catch (error) {
-    console.error("Error creating bulk violation:", error);
     throw error;
   }
 }
@@ -209,7 +212,6 @@ export async function deleteBulkViolation(bulkId) {
     const deleted = await BulkViolation.findOneAndDelete({ bulkId });
     return deleted;
   } catch (error) {
-    console.error("Error deleting bulk violation:", error);
     throw error;
   }
 }

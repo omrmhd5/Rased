@@ -158,23 +158,115 @@ export function BulkViolationItem({
   const timeAgo = formatTimeAgo(bulkViolation.timeAdded);
 
   // Handle bulk delete
-  const handleBulkDelete = () => {
-    // For bulk delete, we need to fetch the actual violations or use bulkId
-    // For now, trigger refetch after deletion
-    if (onRefetch) {
-      onRefetch();
+  const handleBulkDelete = async () => {
+    try {
+      const response = await fetch(
+        `${API_URL}/violations/bulk/${bulkViolation.bulkId}`,
+        {
+          method: "DELETE",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast({
+          title: t("common.error") || "Error",
+          description:
+            error.error ||
+            t("matchDashboard.bulk.deleteError") ||
+            "Failed to delete bulk violations",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: t("common.success") || "Success",
+        description:
+          t("matchDashboard.bulk.deleteSuccess") ||
+          `${bulkViolation.totalCount} violations deleted successfully`,
+      });
+
+      setDeleteDialogOpen(false);
+
+      // Refetch data after successful deletion
+      if (onRefetch) {
+        onRefetch();
+      }
+    } catch (error) {
+      toast({
+        title: t("common.error") || "Error",
+        description:
+          t("matchDashboard.bulk.deleteError") ||
+          "Failed to delete bulk violations",
+        variant: "destructive",
+      });
     }
-    setDeleteDialogOpen(false);
   };
 
   // Handle bulk status change
-  const handleBulkStatusChange = () => {
-    // For bulk status change, we need to fetch the actual violations or use bulkId
-    // For now, trigger refetch after status change
-    if (onRefetch) {
-      onRefetch();
+  const handleBulkStatusChange = async () => {
+    try {
+      const payload: Record<string, unknown> = {
+        status: selectedStatus,
+      };
+
+      // Add blockedAt if status is "Blocked" and blockedAt is provided
+      if (selectedStatus === "Blocked" && blockedAt) {
+        payload.blockedAt = blockedAt;
+      }
+
+      const response = await fetch(
+        `${API_URL}/violations/bulk/${bulkViolation.bulkId}/status`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        toast({
+          title: t("common.error") || "Error",
+          description:
+            error.error ||
+            t("matchDashboard.bulk.statusError") ||
+            "Failed to update bulk violation status",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      toast({
+        title: t("common.success") || "Success",
+        description:
+          t("matchDashboard.bulk.statusSuccess") ||
+          `${bulkViolation.totalCount} violations updated to ${selectedStatus}`,
+      });
+
+      setStatusDialogOpen(false);
+
+      // Refetch data after successful status change
+      if (onRefetch) {
+        onRefetch();
+      }
+    } catch (error) {
+      toast({
+        title: t("common.error") || "Error",
+        description:
+          t("matchDashboard.bulk.statusError") ||
+          "Failed to update bulk violation status",
+        variant: "destructive",
+      });
     }
-    setStatusDialogOpen(false);
   };
 
   // Open status dialog

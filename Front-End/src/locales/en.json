@@ -814,6 +814,10 @@
       "deleteAll": "Delete All",
       "expandAll": "Expand All",
       "collapseAll": "Collapse All",
+      "deleteSuccess": "Bulk violations deleted successfully",
+      "deleteError": "Failed to delete bulk violations",
+      "statusSuccess": "Bulk violations status updated successfully",
+      "statusError": "Failed to update bulk violation status",
       "statusChange": {
         "title": "Change Status for All",
         "description": "Change the status for all {count} violations.",
@@ -1089,5 +1093,15 @@
       "updateFailed": "Failed to update platform",
       "deleteFailed": "Failed to delete platform"
     }
+  },
+  "common": {
+    "error": "Error",
+    "success": "Success",
+    "loading": "Loading...",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "save": "Save"
   }
 }

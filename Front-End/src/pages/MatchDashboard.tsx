@@ -265,6 +265,10 @@ export default function MatchDashboard() {
               // Get removed and under review counts from backend
               const removedCount = backendStats.removedCount ?? 0;
               const underReviewCount = backendStats.underReviewCount ?? 0;
+              // Get content type counts from backend
+              const liveCount = (backendStats as any).liveCount ?? 0;
+              const highlightsCount = (backendStats as any).highlightsCount ?? 0;
+              const othersCount = (backendStats as any).othersCount ?? 0;
 
               return {
                 ...platform,
@@ -280,6 +284,9 @@ export default function MatchDashboard() {
                 blockedSuccess,
                 blockSuccessRate,
                 stillActive,
+                liveCount,
+                highlightsCount,
+                othersCount,
               };
             }),
           );
@@ -297,13 +304,9 @@ export default function MatchDashboard() {
               // Stats are now updated by the backend - no frontend calculation needed
             });
 
-            // Calculate and save top platform (platform with most views)
-            if (matchData.externalMatchId) {
-              calculateAndSaveTopPlatform(
-                matchData.externalMatchId,
-                platformOperations,
-              );
-            }
+            // NOTE: topPlatformId and mostViews are now calculated by the backend in platformStatsHelper.js
+            // DO NOT call calculateAndSaveTopPlatform here as it would overwrite the correct backend value!
+            // The backend calculates this whenever violations are added/deleted/updated.
           }
 
           // Chart will update automatically via useEffect when match/platformOperations change
@@ -755,6 +758,10 @@ export default function MatchDashboard() {
               // Get removed and under review counts from backend
               const removedCount = backendStats.removedCount ?? 0;
               const underReviewCount = backendStats.underReviewCount ?? 0;
+              // Get content type counts from backend
+              const liveCount = (backendStats as any).liveCount ?? 0;
+              const highlightsCount = (backendStats as any).highlightsCount ?? 0;
+              const othersCount = (backendStats as any).othersCount ?? 0;
 
               return {
                 ...platform,
@@ -770,6 +777,9 @@ export default function MatchDashboard() {
                 blockedSuccess,
                 blockSuccessRate,
                 stillActive,
+                liveCount,
+                highlightsCount,
+                othersCount,
               };
             }),
           );
@@ -790,13 +800,7 @@ export default function MatchDashboard() {
               // Stats are now updated by the backend - no frontend calculation needed
             });
 
-            // Calculate and save top platform
-            if (matchData.externalMatchId) {
-              calculateAndSaveTopPlatform(
-                matchData.externalMatchId,
-                platformOperations,
-              );
-            }
+            // NOTE: topPlatformId calculation now happens on backend only!
           }
 
           // Chart will update automatically via useEffect when match/platformOperations change
@@ -854,71 +858,94 @@ export default function MatchDashboard() {
       const highlightsCount = match.highlightsCount || 0;
       const othersCount = match.othersCount || 0;
 
-      // Calculate views from violations (backend doesn't store views per content type)
-      // This is the only frontend calculation needed for the chart
-      const allViolations = platformOperations.flatMap((p) => p.violations);
-      const liveViews = allViolations
+      // Calculate views from SINGLE violations only
+      // Bulk violations don't have individual view counts, but have aggregated totalViews
+      const singleViolations = platformOperations.flatMap((p) => p.violations);
+      const singleLiveViews = singleViolations
         .filter((v) => (v.contentType || v.type) === "Live")
         .reduce((sum, v) => {
           if (!v.views || v.views === "0") return sum;
           const viewsStr = v.views || "0";
-          // Remove all non-numeric characters except commas, then parse
           const numStr = viewsStr.replace(/[^0-9,]/g, "").replace(/,/g, "");
           return sum + (parseFloat(numStr) || 0);
         }, 0);
 
-      const highlightsViews = allViolations
+      const singleHighlightsViews = singleViolations
         .filter((v) => (v.contentType || v.type) === "Highlights")
         .reduce((sum, v) => {
           if (!v.views || v.views === "0") return sum;
           const viewsStr = v.views || "0";
-          // Remove all non-numeric characters except commas, then parse
           const numStr = viewsStr.replace(/[^0-9,]/g, "").replace(/,/g, "");
           return sum + (parseFloat(numStr) || 0);
         }, 0);
 
-      const othersViews = allViolations
+      const singleOthersViews = singleViolations
         .filter((v) => (v.contentType || v.type) === "Other")
         .reduce((sum, v) => {
           if (!v.views || v.views === "0") return sum;
           const viewsStr = v.views || "0";
-          // Remove all non-numeric characters except commas, then parse
           const numStr = viewsStr.replace(/[^0-9,]/g, "").replace(/,/g, "");
           return sum + (parseFloat(numStr) || 0);
         }, 0);
 
+      // Add bulk violation views (they have totalViews aggregated)
+      const bulkLiveViews = bulkViolations
+        .filter((b) => b.contentType === "Live")
+        .reduce((sum, b) => sum + (b.totalViews || 0), 0);
+
+      const bulkHighlightsViews = bulkViolations
+        .filter((b) => b.contentType === "Highlights")
+        .reduce((sum, b) => sum + (b.totalViews || 0), 0);
+
+      const bulkOthersViews = bulkViolations
+        .filter((b) => b.contentType === "Other")
+        .reduce((sum, b) => sum + (b.totalViews || 0), 0);
+
+      // Combine single and bulk views
+      const liveViews = singleLiveViews + bulkLiveViews;
+      const highlightsViews = singleHighlightsViews + bulkHighlightsViews;
+      const othersViews = singleOthersViews + bulkOthersViews;
+
       const totalViews = liveViews + highlightsViews + othersViews;
+
+      // Use violation counts for bar heights (not views, since views might not be filled)
+      // If views are available, use them; otherwise use violation counts
+      const hasViews = totalViews > 0;
+      const totalValue = hasViews ? totalViews : totalViolations;
+      const liveValue = hasViews ? liveViews : liveCount;
+      const highlightsValue = hasViews ? highlightsViews : highlightsCount;
+      const othersValue = hasViews ? othersViews : othersCount;
 
       setContentSplitData([
         {
           name: "Total Violations",
-          value: totalViews,
+          value: totalValue,
           violations: totalViolations, // From backend
           color: "hsl(var(--chart-4))",
         },
         {
           name: "Live",
-          value: liveViews,
+          value: liveValue,
           violations: liveCount, // From backend
           color: "hsl(var(--chart-1))",
         },
         {
           name: "Highlights",
-          value: highlightsViews,
+          value: highlightsValue,
           violations: highlightsCount, // From backend
           color: "hsl(var(--chart-2))",
         },
         {
           name: "Others",
-          value: othersViews,
+          value: othersValue,
           violations: othersCount, // From backend
           color: "hsl(var(--chart-3))",
         },
       ]);
     }
-    // Depend on match and platformOperations to recalculate when violations change
+    // Depend on match, platformOperations, and bulkViolations to recalculate when any change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [match, platformOperations]);
+  }, [match, platformOperations, bulkViolations]);
 
   // Platform slot system (max 2 platforms visible)
   const [selectedSlots, setSelectedSlots] = useState<string[]>(() => {
@@ -1331,11 +1358,8 @@ export default function MatchDashboard() {
 
           // Stats are now updated by the backend - no frontend calculation needed
           if (match?.externalMatchId) {
-            // Update top platform
-            calculateAndSaveTopPlatform(
-              match.externalMatchId,
-              platformOperations,
-            );
+            // The backend will automatically update topPlatformId via the cascade update
+            // Just trigger a refetch to get the latest values
           }
 
           // Trigger refetch of all data

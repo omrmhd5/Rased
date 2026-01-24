@@ -14,7 +14,10 @@ import {
   updateBulkViolationStats,
   deleteBulkViolation,
 } from "../utils/bulkViolationHelper.js";
-import { updatePlatformStats } from "../utils/platformStatsHelper.js";
+import {
+  updatePlatformStats,
+  updateMatchAggregatedStats,
+} from "../utils/platformStatsHelper.js";
 
 // Middleware to check if user is superAdmin or employee (not viewer)
 const requireSuperAdminOrEmployee = async (req, res, next) => {
@@ -45,190 +48,6 @@ const router = express.Router();
 
 // Apply optional auth to all routes (logs user if authenticated, otherwise uses "System")
 router.use(optionalAuth);
-
-// Helper function to update match content type counts and statistics
-// Now includes both single violations and bulk violations
-const updateMatchContentTypeCounts = async (matchId) => {
-  try {
-    console.log(`[updateMatchContentTypeCounts] Starting for matchId: ${matchId}`);
-    
-    // Find match by _id or externalMatchId
-    let match = await Match.findById(matchId);
-    if (!match) {
-      console.log(`[updateMatchContentTypeCounts] Match not found by _id, trying externalMatchId`);
-      match = await Match.findOne({ externalMatchId: matchId });
-    }
-    if (!match) {
-      console.error(`[updateMatchContentTypeCounts] Match not found for updating content type counts: ${matchId}`);
-      return;
-    }
-    console.log(`[updateMatchContentTypeCounts] Found match: ${match._id}, externalMatchId: ${match.externalMatchId}`);
-
-    // Get all single violations for this match (no bulkId)
-    const singleViolations = await Violation.find({
-      matchId: match._id,
-      bulkId: { $exists: false },
-    }).lean();
-
-    console.log(`[updateMatchContentTypeCounts] Found ${singleViolations.length} single violations (no bulkId)`);
-
-    // Get all bulk violations for this match
-    const bulkViolations = await BulkViolation.find({
-      matchId: match._id,
-    }).lean();
-
-    console.log(`[updateMatchContentTypeCounts] Found ${bulkViolations.length} bulk violation records`);
-    if (bulkViolations.length > 0) {
-      console.log(`[updateMatchContentTypeCounts] Bulk violations:`, JSON.stringify(bulkViolations, null, 2));
-    }
-
-    // Count content types from singles
-    const singleLiveCount = singleViolations.filter(
-      (v) => (v.contentType || v.type) === "Live",
-    ).length;
-    const singleHighlightsCount = singleViolations.filter(
-      (v) => (v.contentType || v.type) === "Highlights",
-    ).length;
-    const singleOthersCount = singleViolations.filter(
-      (v) => (v.contentType || v.type) === "Other",
-    ).length;
-
-    console.log(`[updateMatchContentTypeCounts] Single violations - live=${singleLiveCount}, highlights=${singleHighlightsCount}, other=${singleOthersCount}`);
-
-    // Aggregate content types from bulks
-    const bulkLiveCount = bulkViolations.reduce(
-      (sum, bulk) => sum + bulk.liveCount,
-      0,
-    );
-    const bulkHighlightsCount = bulkViolations.reduce(
-      (sum, bulk) => sum + bulk.highlightsCount,
-      0,
-    );
-    const bulkOthersCount = bulkViolations.reduce(
-      (sum, bulk) => sum + bulk.othersCount,
-      0,
-    );
-    const bulkTotalCount = bulkViolations.reduce(
-      (sum, bulk) => sum + bulk.totalCount,
-      0,
-    );
-
-    // Total counts
-    const liveCount = singleLiveCount + bulkLiveCount;
-    const highlightsCount = singleHighlightsCount + bulkHighlightsCount;
-    const othersCount = singleOthersCount + bulkOthersCount;
-    const totalViolations = singleViolations.length + bulkTotalCount;
-
-    // Aggregate status counts from singles
-    const singleActiveCount = singleViolations.filter(
-      (v) => v.status === "Active",
-    ).length;
-    const singleBlockedCount = singleViolations.filter(
-      (v) => v.status === "Blocked",
-    ).length;
-    const singleRemovedCount = singleViolations.filter(
-      (v) => v.status === "Removed",
-    ).length;
-    const singleUnderReviewCount = singleViolations.filter(
-      (v) => v.status === "Under Review",
-    ).length;
-
-    // Aggregate status counts from bulks
-    const bulkActiveCount = bulkViolations.reduce(
-      (sum, bulk) => sum + bulk.activeCount,
-      0,
-    );
-    const bulkBlockedCount = bulkViolations.reduce(
-      (sum, bulk) => sum + bulk.blockedCount,
-      0,
-    );
-    const bulkRemovedCount = bulkViolations.reduce(
-      (sum, bulk) => sum + bulk.removedCount,
-      0,
-    );
-    const bulkUnderReviewCount = bulkViolations.reduce(
-      (sum, bulk) => sum + bulk.underReviewCount,
-      0,
-    );
-
-    // Total status counts
-    const activeCount = singleActiveCount + bulkActiveCount;
-    const blockedCount = singleBlockedCount + bulkBlockedCount;
-    const removedCount = singleRemovedCount + bulkRemovedCount;
-    const underReviewCount = singleUnderReviewCount + bulkUnderReviewCount;
-
-    // Calculate block success rate
-    const blockedOrRemovedCount = blockedCount + removedCount;
-    const blockSuccessRate =
-      totalViolations > 0
-        ? Math.round((blockedOrRemovedCount / totalViolations) * 100)
-        : 0;
-
-    // Calculate weighted average block time for the match
-    let avgBlockTime = 0;
-    if (blockedCount > 0) {
-      // Get block times from single violations
-      const singleBlockedViols = singleViolations.filter(
-        (v) => v.status === "Blocked" && v.blockedAt && v.timeAdded,
-      );
-      const singleBlockTimeMs = singleBlockedViols.reduce((sum, v) => {
-        const diff = Math.floor(
-          (new Date(v.blockedAt) - new Date(v.timeAdded)) / 60000,
-        );
-        return sum + Math.max(0, diff);
-      }, 0);
-
-      // Get weighted block time from bulk violations
-      const bulkBlockTime = bulkViolations.reduce(
-        (sum, b) =>
-          b.blockedCount > 0 && b.avgBlockTime
-            ? sum + b.avgBlockTime * b.blockedCount
-            : sum,
-        0,
-      );
-
-      avgBlockTime = Math.round((singleBlockTimeMs + bulkBlockTime) / blockedCount);
-      console.log(`[updateMatchContentTypeCounts] avgBlockTime: ${avgBlockTime} (single: ${singleBlockTimeMs}, bulk: ${bulkBlockTime}, blocked: ${blockedCount})`);
-    }
-
-    const updatePayload = {
-      liveCount,
-      highlightsCount,
-      othersCount,
-      totalViolations,
-      activeCount,
-      blockedCount,
-      removedCount,
-      underReviewCount,
-      blockSuccessRate,
-      avgBlockTime,
-    };
-
-    console.log(`[updateMatchContentTypeCounts] Updating Match with:`, JSON.stringify(updatePayload, null, 2));
-
-    // Update match with aggregated counts
-    const updatedMatch = await Match.findByIdAndUpdate(match._id, {
-      $set: updatePayload,
-    }, { new: true });
-
-    console.log(`[updateMatchContentTypeCounts] Match updated successfully:`, JSON.stringify({
-      _id: updatedMatch._id,
-      externalMatchId: updatedMatch.externalMatchId,
-      liveCount: updatedMatch.liveCount,
-      highlightsCount: updatedMatch.highlightsCount,
-      othersCount: updatedMatch.othersCount,
-      totalViolations: updatedMatch.totalViolations,
-      activeCount: updatedMatch.activeCount,
-      blockedCount: updatedMatch.blockedCount,
-      removedCount: updatedMatch.removedCount,
-      underReviewCount: updatedMatch.underReviewCount,
-      blockSuccessRate: updatedMatch.blockSuccessRate,
-      avgBlockTime: updatedMatch.avgBlockTime,
-    }, null, 2));
-  } catch (error) {
-    console.error("Error updating match content type counts:", error);
-  }
-};
 
 // GET /api/violations/bulk - Get all bulk violations with filters
 router.get("/bulk", async (req, res) => {
@@ -341,6 +160,8 @@ router.patch(
 
       // Update each violation
       const updatePromises = violations.map(async (violation) => {
+        const oldStatus = violation.status; // Store the old status BEFORE updating
+
         violation.status = finalNormalizedStatus;
 
         // Handle blockedAt based on status
@@ -362,7 +183,7 @@ router.patch(
         await logViolationChange(violation._id, "status_changed", {
           user: req.user,
           field: "status",
-          oldValue: violations.find((v) => v._id === violation._id).status,
+          oldValue: oldStatus,
           newValue: finalNormalizedStatus,
           changes: { bulkId },
         });
@@ -375,21 +196,32 @@ router.patch(
       // Update bulk violation stats
       await updateBulkViolationStats(bulkId);
 
-      // Update match and platform stats
-      await updateMatchContentTypeCounts(bulkViolation.matchId);
-      await updatePlatformStats(bulkViolation.matchId, bulkViolation.platformId);
+      // Update platform and match stats (cascade handles both)
+      await updatePlatformStats(
+        bulkViolation.matchId,
+        bulkViolation.platformId,
+      );
 
       // Emit bulk status changed event
       try {
-        const emitMatchId = bulkViolation.externalMatchId || bulkViolation.matchId;
+        const emitMatchId =
+          bulkViolation.externalMatchId || bulkViolation.matchId;
         emitBulkEvent(emitMatchId, "bulk-status-changed", {
           bulkId,
           newStatus: finalNormalizedStatus,
           count: updatedViolations.length,
           platformId: bulkViolation.platformId,
         });
+        // Also emit as violation-updated with bulk flag
+        emitViolationEvent(emitMatchId, "violation-updated", {
+          isBulk: true,
+          bulkId,
+          status: finalNormalizedStatus,
+          count: updatedViolations.length,
+          platformId: bulkViolation.platformId,
+        });
       } catch (error) {
-        console.error("Error emitting bulk-status-changed event:", error);
+        // Silently fail on event emission
       }
 
       res.json({
@@ -470,20 +302,30 @@ router.delete(
       // Delete the bulk violation entry
       await deleteBulkViolation(bulkId);
 
-      // Update match and platform stats
-      await updateMatchContentTypeCounts(bulkViolation.matchId);
-      await updatePlatformStats(bulkViolation.matchId, bulkViolation.platformId);
+      // Update platform and match stats (cascade handles both)
+      await updatePlatformStats(
+        bulkViolation.matchId,
+        bulkViolation.platformId,
+      );
 
       // Emit bulk deleted event
       try {
-        const emitMatchId = bulkViolation.externalMatchId || bulkViolation.matchId;
+        const emitMatchId =
+          bulkViolation.externalMatchId || bulkViolation.matchId;
         emitBulkEvent(emitMatchId, "bulk-deleted", {
           bulkId,
           count: violations.length,
           platformId: bulkViolation.platformId,
         });
+        // Also emit as violation-deleted with bulk flag
+        emitViolationEvent(emitMatchId, "violation-deleted", {
+          isBulk: true,
+          bulkId,
+          count: violations.length,
+          platformId: bulkViolation.platformId,
+        });
       } catch (error) {
-        console.error("Error emitting bulk-deleted event:", error);
+        // Silently fail on event emission
       }
 
       res.json({
@@ -930,8 +772,6 @@ router.get("/problematic-accounts", async (req, res) => {
 
     res.json(problematicAccounts);
   } catch (error) {
-    console.error("Error fetching problematic accounts:", error);
-    console.error("Error stack:", error.stack);
     res.status(500).json({
       error: error.message || "Internal server error",
       details: process.env.NODE_ENV === "development" ? error.stack : undefined,
@@ -1083,17 +923,21 @@ router.post(
         },
       });
 
-      // Update match content type counts
-      await updateMatchContentTypeCounts(internalMatchId);
-
-      // Update platform by match stats
+      // Update platform and match stats (cascade handles both)
+      console.log(`🟢 Violation saved, now calling updatePlatformStats(${internalMatchId}, ${platformId})...`);
       await updatePlatformStats(internalMatchId, platformId);
+      console.log(`🟢 updatePlatformStats completed for match ${internalMatchId}`);
 
       // Emit violation created event
       try {
         const emitMatchId = externalMatchId || internalMatchId;
+        // Refetch the match to get the latest topPlatformId before emitting
+        const matchForEmit = await Match.findById(internalMatchId);
+        console.log(`📤 About to emit violation-created for match ${emitMatchId}, current topPlatformId: ${matchForEmit?.topPlatformId}`);
         emitViolationEvent(emitMatchId, "violation-created", {
           violation: populated,
+          matchTopPlatformId: matchForEmit?.topPlatformId,
+          matchMostViews: matchForEmit?.mostViews,
         });
       } catch (error) {
         // Silently fail
@@ -1269,17 +1113,24 @@ router.post(
           timeAdded: timeAdded ? new Date(timeAdded) : new Date(),
         });
       } catch (bulkError) {
-        console.error("Error creating BulkViolation entry:", bulkError);
         // Don't fail the request if bulk tracking fails
       }
-
-      // Update match content type counts (now can find BulkViolation)
-      await updateMatchContentTypeCounts(internalMatchId);
-
-      // Update platform by match stats (now can find BulkViolation)
+      // Update platform and match stats (cascade handles both)
       await updatePlatformStats(internalMatchId, platformId);
 
-      // Emit bulk violation created event
+      // Emit bulk violation created event (same as violation-created but for bulk)
+      try {
+        const emitMatchId = externalMatchId || internalMatchId;
+        emitViolationEvent(emitMatchId, "violation-created", {
+          violations: populatedViolations,
+          bulkId: bulkId,
+          isBulk: true,
+        });
+      } catch (error) {
+        // Silently fail
+      }
+
+      // Also emit the bulk event
       try {
         emitBulkEvent(
           externalMatchId || internalMatchId,
@@ -1723,10 +1574,7 @@ router.put(
         }
       }
 
-      // Update match content type counts
-      await updateMatchContentTypeCounts(violation.matchId);
-
-      // Update platform by match stats
+      // Update platform and match stats (cascade handles both)
       await updatePlatformStats(violation.matchId, violation.platformId);
 
       // Update bulk violation stats if this violation is part of a bulk
@@ -1734,7 +1582,6 @@ router.put(
         try {
           await updateBulkViolationStats(violation.bulkId);
         } catch (bulkError) {
-          console.error("Error updating bulk violation stats:", bulkError);
           // Don't fail the request if bulk update fails
         }
       }
@@ -1861,10 +1708,7 @@ router.patch(
         });
       }
 
-      // Update match content type counts
-      await updateMatchContentTypeCounts(violation.matchId);
-
-      // Update platform by match stats
+      // Update platform and match stats (cascade handles both)
       await updatePlatformStats(violation.matchId, violation.platformId);
 
       // Update bulk violation stats if this violation is part of a bulk
@@ -1872,7 +1716,6 @@ router.patch(
         try {
           await updateBulkViolationStats(violation.bulkId);
         } catch (bulkError) {
-          console.error("Error updating bulk violation stats:", bulkError);
           // Don't fail the request if bulk update fails
         }
       }
@@ -1884,7 +1727,7 @@ router.patch(
           violation: populated,
         });
       } catch (error) {
-        console.error("Error emitting violation-updated event:", error);
+        // Silently fail on event emission
       }
 
       res.json(populated);
@@ -1964,10 +1807,7 @@ router.delete(
 
       await Violation.findByIdAndDelete(req.params.id);
 
-      // Update match content type counts
-      await updateMatchContentTypeCounts(matchId);
-
-      // Update platform by match stats
+      // Update platform and match stats (cascade handles both)
       await updatePlatformStats(matchId, violation.platformId);
 
       // Handle bulk violation stats if this violation was part of a bulk
@@ -1986,10 +1826,6 @@ router.delete(
             await updateBulkViolationStats(violation.bulkId);
           }
         } catch (bulkError) {
-          console.error(
-            "Error handling bulk violation after delete:",
-            bulkError,
-          );
           // Don't fail the request if bulk update fails
         }
       }
@@ -2002,7 +1838,7 @@ router.delete(
           bulkId: bulkId || undefined,
         });
       } catch (error) {
-        console.error("Error emitting violation-deleted event:", error);
+        // Silently fail on event emission
       }
 
       res.json({ message: "Violation deleted" });

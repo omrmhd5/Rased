@@ -89,6 +89,10 @@ const bulkViolationSchema = new mongoose.Schema(
       type: Number, // Percentage of violations that got blocked
       default: 0,
     },
+    totalViews: {
+      type: Number, // Sum of views from all child violations
+      default: 0,
+    },
     // Array of violation IDs
     violationIds: [
       {

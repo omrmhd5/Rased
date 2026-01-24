@@ -814,6 +814,10 @@
       "deleteAll": "حذف الكل",
       "expandAll": "توسيع الكل",
       "collapseAll": "طي الكل",
+      "deleteSuccess": "تم حذف الانتهاكات الجماعية بنجاح",
+      "deleteError": "فشل حذف الانتهاكات الجماعية",
+      "statusSuccess": "تم تحديث حالة الانتهاكات الجماعية بنجاح",
+      "statusError": "فشل تحديث حالة الانتهاك الجماعي",
       "statusChange": {
         "title": "تغيير الحالة للكل",
         "description": "تغيير الحالة لجميع {count} انتهاكاً.",
@@ -1089,5 +1093,15 @@
       "updateFailed": "فشل تحديث المنصة",
       "deleteFailed": "فشل حذف المنصة"
     }
+  },
+  "common": {
+    "error": "خطأ",
+    "success": "نجاح",
+    "loading": "جاري التحميل...",
+    "cancel": "إلغاء",
+    "confirm": "تأكيد",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "save": "حفظ"
   }
 }
