@@ -44,10 +44,12 @@ import {
   Violation,
   AuditLogEntry,
   DeletedViolationLog,
+  BulkViolation,
   API_URL,
 } from "./types";
 import { formatViewsString } from "./utils";
 import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
+import { BulkActivityLogItem } from "./BulkActivityLogItem";
 import {
   Dialog,
   DialogContent,
@@ -56,7 +58,6 @@ import {
 } from "@/components/ui/dialog";
 import React, { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { BulkActivityLogItem } from "./BulkActivityLogItem";
 
 interface ActivityLogItem {
   type: string;
@@ -73,6 +74,9 @@ interface ActivityLogItem {
   accountChannel?: string; // Account channel name (target of action)
   violationUrl?: string; // Violation URL (target of action)
   bulkId?: string; // Bulk ID for grouping logs created together
+  count?: number; // Count for bulk operations
+  status?: string; // Status for bulk operations
+  accountChannel?: string; // Account channel for bulk operations
 }
 
 type ActivityFilter =
@@ -96,13 +100,14 @@ interface ActivityLogProps {
   onFilterChange: (filter: ActivityFilter) => void;
   getPlatformColor: (platform: string | null) => string;
   getPlatformIcon: (platformName: string) => React.ReactNode;
-  violations?: Violation[]; // All violations with audit logs
+  violations?: Violation[]; // Single violations only (no bulkId)
   platformOperations?: Array<{
     id: string;
     name: string;
     violations: Violation[];
   }>; // Platform operations to get platform names
   deletedViolationLogs?: DeletedViolationLog[]; // Deleted violation logs from separate collection
+  bulkViolations?: BulkViolation[]; // Bulk violations with audit logs
   onRefetch?: () => void; // Callback to refetch data after deletion
   platformFilter?: string; // Platform filter value
   onPlatformFilterChange?: (platform: string) => void; // Platform filter change handler
@@ -154,6 +159,7 @@ export function ActivityLog({
   violations = [],
   platformOperations = [],
   deletedViolationLogs = [],
+  bulkViolations = [],
   onRefetch,
   platformFilter = "all",
   onPlatformFilterChange,
@@ -172,6 +178,15 @@ export function ActivityLog({
     "all",
   );
   const itemsPerPage = 10;
+
+  // Debug: Log bulk violations to see if they exist
+  console.log("bulkViolations:", bulkViolations);
+  console.log("bulkViolations length:", bulkViolations?.length);
+  bulkViolations?.forEach((bv, i) => {
+    console.log(`Bulk violation ${i}:`, bv);
+    console.log(`  - auditLog:`, bv.auditLog);
+    console.log(`  - auditLog length:`, bv.auditLog?.length);
+  });
 
   // Helper function to format date with Arabic AM/PM (صباحا/مساءا) for RTL, AM/PM for LTR
   const formatDateWithArabicTime = (dateValue: string | number): string => {
@@ -477,6 +492,7 @@ export function ActivityLog({
   });
 
   violations.forEach((violation) => {
+    // Process single violations only (violations with bulkId are already filtered out)
     if (violation.auditLog && violation.auditLog.length > 0) {
       violation.auditLog.forEach((entry: AuditLogEntry) => {
         const timestamp = new Date(entry.timestamp);
@@ -1194,33 +1210,63 @@ export function ActivityLog({
     }
   });
 
-  // Combine existing log items with audit log items, sort by timestamp (newest first)
-  const allLogItems = [...log, ...auditLogItems].sort((a, b) => {
-    // Use stored timestamp if available (from audit log), otherwise parse time string
-    if (a.timestamp && b.timestamp) {
-      return b.timestamp - a.timestamp; // Newest first
-    }
-    // Fallback to parsing time string for existing log items
-    try {
-      const timeA = a.time.includes(" at ")
-        ? new Date(
-            a.time.split(" at ")[0] +
-              " " +
-              a.time.split(" at ")[1].split(" •")[0],
-          ).getTime()
-        : a.timestamp || 0;
-      const timeB = b.time.includes(" at ")
-        ? new Date(
-            b.time.split(" at ")[0] +
-              " " +
-              b.time.split(" at ")[1].split(" •")[0],
-          ).getTime()
-        : b.timestamp || 0;
-      return timeB - timeA; // Newest first
-    } catch {
-      return 0;
-    }
+  // Process bulk violations - convert audit logs to ActivityLogItems
+  const bulkAuditLogItems: ActivityLogItem[] = [];
+  bulkViolations.forEach((bulkViolation) => {
+    bulkViolation.auditLog?.forEach((entry) => {
+      const timestamp = new Date(entry.timestamp);
+      bulkAuditLogItems.push({
+        type: entry.action === "created" ? "added" : "status_change",
+        badge:
+          entry.action === "created"
+            ? t("matchDashboard.activityLog.badges.added")
+            : t("matchDashboard.activityLog.badges.statusChange"),
+        badgeVariant: entry.action === "created" ? "default" : "secondary",
+        description: "", // Description will be rendered in BulkActivityLogItem
+        time: formatTimeAgoHelper(timestamp, t),
+        userName: entry.userName,
+        platform: bulkViolation.platformName,
+        bulkId: bulkViolation.bulkId,
+        logEntryId: entry._id,
+        timestamp: timestamp.getTime(),
+        count: entry.newValue, // Count of violations
+        status: entry.oldValue, // Status from oldValue in audit log
+        accountChannel: bulkViolation.accountChannel, // Account channel
+      });
+    });
   });
+
+  console.log("bulkAuditLogItems:", bulkAuditLogItems);
+
+  // Combine existing log items with audit log items, sort by timestamp (newest first)
+  const allLogItems = [...log, ...auditLogItems, ...bulkAuditLogItems].sort(
+    (a, b) => {
+      // Use stored timestamp if available (from audit log), otherwise parse time string
+      if (a.timestamp && b.timestamp) {
+        return b.timestamp - a.timestamp; // Newest first
+      }
+      // Fallback to parsing time string for existing log items
+      try {
+        const timeA = a.time.includes(" at ")
+          ? new Date(
+              a.time.split(" at ")[0] +
+                " " +
+                a.time.split(" at ")[1].split(" •")[0],
+            ).getTime()
+          : a.timestamp || 0;
+        const timeB = b.time.includes(" at ")
+          ? new Date(
+              b.time.split(" at ")[0] +
+                " " +
+                b.time.split(" at ")[1].split(" •")[0],
+            ).getTime()
+          : b.timestamp || 0;
+        return timeB - timeA; // Newest first
+      } catch {
+        return 0;
+      }
+    },
+  );
 
   // Extract unique platforms and users from all log items
   const uniquePlatforms = Array.from(
@@ -1339,11 +1385,16 @@ export function ActivityLog({
     return true; // "all"
   });
 
+  console.log("displayItems:", displayItems);
+  console.log("filteredDisplayItems:", filteredDisplayItems);
+
   // Pagination Logic (now based on filtered display items)
   const totalPages = Math.ceil(filteredDisplayItems.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const paginatedItems = filteredDisplayItems.slice(startIndex, endIndex);
+
+  console.log("paginatedItems:", paginatedItems);
 
   // Reset page when filters change
   React.useEffect(() => {
@@ -1588,118 +1639,139 @@ export function ActivityLog({
               </p>
             </div>
           ) : (
-            paginatedItems.map((item, i) => {
-              // Render bulk log group
-              if (item.type === "bulk" && item.logs) {
-                return (
-                  <BulkActivityLogItem
-                    key={`bulk-${item.bulkId}`}
-                    bulkId={item.bulkId}
-                    logs={item.logs}
-                    getPlatformColor={getPlatformColor}
-                    getPlatformIcon={getPlatformIcon}
-                    onDeleteLog={isSuperAdmin ? handleDeleteLog : undefined}
-                    onDeleteAll={
-                      isSuperAdmin ? handleDeleteBulkLogs : undefined
-                    }
-                    isSuperAdmin={isSuperAdmin}
-                  />
-                );
-              }
+            <>
+              {paginatedItems.map((item, i) => {
+                // Render bulk group (multiple logs with same bulkId)
+                if (item.type === "bulk" && item.logs) {
+                  return item.logs.map((log, logIndex) => (
+                    <BulkActivityLogItem
+                      key={`bulk-${item.bulkId}-${logIndex}`}
+                      bulkId={item.bulkId}
+                      log={log}
+                      getPlatformColor={getPlatformColor}
+                      getPlatformIcon={getPlatformIcon}
+                      onDeleteLog={isSuperAdmin ? handleDeleteLog : undefined}
+                      isSuperAdmin={isSuperAdmin}
+                    />
+                  ));
+                }
 
-              // Render individual log (type guard ensures item.type === "individual")
-              if (item.type !== "individual") return null;
-              const logItem = item.log;
-              const EventIcon = getEventIcon(logItem.type);
-              return (
-                <div
-                  key={i}
-                  className={`flex ${isRTL ? "flex-row-reverse" : "flex-row"} items-start gap-3 p-3 rounded-lg border border-border/50 hover:border-border hover:bg-muted/30 transition-all group relative`}>
-                  <div className="shrink-0 mt-0.5">
-                    <div className="w-8 h-8 rounded-lg bg-muted/60 flex items-center justify-center group-hover:bg-muted/80 transition-colors">
-                      <EventIcon className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </div>
+                // Render individual log
+                if (item.type === "individual") {
+                  const logItem = item.log;
 
-                  <div className="flex-1 min-w-0">
+                  // Check if this is a bulk violation log - render with BulkActivityLogItem
+                  if (logItem.bulkId && !logItem.violationId) {
+                    return (
+                      <BulkActivityLogItem
+                        key={`bulk-${logItem.bulkId}-${i}`}
+                        bulkId={logItem.bulkId}
+                        log={logItem}
+                        getPlatformColor={getPlatformColor}
+                        getPlatformIcon={getPlatformIcon}
+                        onDeleteLog={isSuperAdmin ? handleDeleteLog : undefined}
+                        isSuperAdmin={isSuperAdmin}
+                      />
+                    );
+                  }
+
+                  // Regular individual log
+                  const EventIcon = getEventIcon(logItem.type);
+                  return (
                     <div
-                      className={`flex items-center gap-2 mb-2 flex-wrap ${
-                        isRTL ? "flex-row-reverse justify-start" : ""
-                      }`}>
-                      <p
-                        className={`text-xs text-muted-foreground ${
-                          isRTL ? "text-left" : ""
-                        }`}>
-                        {logItem.time}
-                      </p>
-                      <Badge
-                        variant={logItem.badgeVariant}
-                        className={`text-xs px-2 py-0.5 h-5 font-medium ${
-                          logItem.type === "added"
-                            ? "bg-success text-white border-success/20"
-                            : logItem.type === "notes_added"
-                              ? "bg-success text-white border-success/20"
-                              : logItem.type === "notes_changed"
-                                ? "bg-yellow-500 text-white border-yellow-500/20"
-                                : logItem.type === "notes_edited"
-                                  ? "bg-destructive text-white border-destructive/20"
-                                  : logItem.type === "status_change" ||
-                                      logItem.type === "content_type_changed"
-                                    ? "bg-cyan-500 text-white border-cyan-500/20"
-                                    : logItem.type === "views_changed" ||
-                                        logItem.type === "time_added_changed" ||
-                                        logItem.type === "blocked_at_changed"
-                                      ? "bg-purple-500 text-white border-purple-500/20"
-                                      : logItem.type === "url_changed" ||
-                                          logItem.type === "account_changed"
-                                        ? "bg-yellow-500 text-white border-yellow-500/20"
-                                        : ""
-                        } ${isRTL ? "text-left" : ""}`}>
-                        {logItem.badge}
-                      </Badge>
-                      {logItem.userName && (
+                      key={i}
+                      className={`flex ${isRTL ? "flex-row-reverse" : "flex-row"} items-start gap-3 p-3 rounded-lg border border-border/50 hover:border-border hover:bg-muted/30 transition-all group relative`}>
+                      <div className="shrink-0 mt-0.5">
+                        <div className="w-8 h-8 rounded-lg bg-muted/60 flex items-center justify-center group-hover:bg-muted/80 transition-colors">
+                          <EventIcon className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </div>
+
+                      <div className="flex-1 min-w-0">
                         <div
-                          className={`flex ${isRTL ? "flex-row-reverse" : "flex-row"} items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/50 ${
-                            isRTL ? "text-left" : ""
+                          className={`flex items-center gap-2 mb-2 flex-wrap ${
+                            isRTL ? "flex-row-reverse justify-start" : ""
                           }`}>
-                          <UserCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span
-                            className={`text-xs text-muted-foreground font-medium ${
+                          <p
+                            className={`text-xs text-muted-foreground ${
                               isRTL ? "text-left" : ""
                             }`}>
-                            {logItem.userName}
-                          </span>
+                            {logItem.time}
+                          </p>
+                          <Badge
+                            variant={logItem.badgeVariant}
+                            className={`text-xs px-2 py-0.5 h-5 font-medium ${
+                              logItem.type === "added"
+                                ? "bg-success text-white border-success/20"
+                                : logItem.type === "notes_added"
+                                  ? "bg-success text-white border-success/20"
+                                  : logItem.type === "notes_changed"
+                                    ? "bg-yellow-500 text-white border-yellow-500/20"
+                                    : logItem.type === "notes_edited"
+                                      ? "bg-destructive text-white border-destructive/20"
+                                      : logItem.type === "status_change" ||
+                                          logItem.type ===
+                                            "content_type_changed"
+                                        ? "bg-cyan-500 text-white border-cyan-500/20"
+                                        : logItem.type === "views_changed" ||
+                                            logItem.type ===
+                                              "time_added_changed" ||
+                                            logItem.type ===
+                                              "blocked_at_changed"
+                                          ? "bg-purple-500 text-white border-purple-500/20"
+                                          : logItem.type === "url_changed" ||
+                                              logItem.type === "account_changed"
+                                            ? "bg-yellow-500 text-white border-yellow-500/20"
+                                            : ""
+                            } ${isRTL ? "text-left" : ""}`}>
+                            {logItem.badge}
+                          </Badge>
+                          {logItem.userName && (
+                            <div
+                              className={`flex ${isRTL ? "flex-row-reverse" : "flex-row"} items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/50 ${
+                                isRTL ? "text-left" : ""
+                              }`}>
+                              <UserCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span
+                                className={`text-xs text-muted-foreground font-medium ${
+                                  isRTL ? "text-left" : ""
+                                }`}>
+                                {logItem.userName}
+                              </span>
+                            </div>
+                          )}
+                          {/* Delete button - appears on hover, after userName - only for superAdmin */}
+                          {isSuperAdmin &&
+                            (logItem.deletedLogId ||
+                              (logItem.violationId && logItem.logEntryId)) && (
+                              <button
+                                onClick={() => handleDeleteLog(logItem)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                                title={t(
+                                  "matchDashboard.activityLog.actions.deleteLogEntry",
+                                )}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                        </div>
+                        <div className="text-sm leading-relaxed text-foreground break-words">
+                          {logItem.description}
+                        </div>
+                      </div>
+
+                      {logItem.platform && (
+                        <div className="shrink-0 mt-0.5">
+                          <div className="w-8 h-8 rounded-lg bg-muted/40 flex items-center justify-center border border-border/50 group-hover:bg-muted/60 transition-colors">
+                            {getPlatformIcon(logItem.platform)}
+                          </div>
                         </div>
                       )}
-                      {/* Delete button - appears on hover, after userName - only for superAdmin */}
-                      {isSuperAdmin &&
-                        (logItem.deletedLogId ||
-                          (logItem.violationId && logItem.logEntryId)) && (
-                          <button
-                            onClick={() => handleDeleteLog(logItem)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                            title={t(
-                              "matchDashboard.activityLog.actions.deleteLogEntry",
-                            )}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        )}
                     </div>
-                    <div className="text-sm leading-relaxed text-foreground break-words">
-                      {logItem.description}
-                    </div>
-                  </div>
-
-                  {logItem.platform && (
-                    <div className="shrink-0 mt-0.5">
-                      <div className="w-8 h-8 rounded-lg bg-muted/40 flex items-center justify-center border border-border/50 group-hover:bg-muted/60 transition-colors">
-                        {getPlatformIcon(logItem.platform)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })
+                  );
+                }
+                return null;
+              })}
+            </>
           )}
         </div>
       </ScrollArea>

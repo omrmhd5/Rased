@@ -609,6 +609,7 @@
     }
   },
   "matchDashboard": {
+    "violations": "violations",
     "loading": "Loading match data...",
     "matchNotFound": "Match not found",
     "error": {
@@ -939,6 +940,8 @@
       "descriptions": {
         "violationCreatedOn": "Violation created on",
         "violationDeletedFrom": "Violation deleted from",
+        "bulkViolationCreated": "Bulk violation created",
+        "bulkStatusChanged": "Bulk status changed from",
         "forChannelUser": "for channel/user",
         "with": "with",
         "views": "views",

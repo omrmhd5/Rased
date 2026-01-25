@@ -609,6 +609,7 @@
     }
   },
   "matchDashboard": {
+    "violations": "انتهاكات",
     "loading": "جاري تحميل بيانات المباراة...",
     "matchNotFound": "لم يتم العثور على المباراة",
     "error": {
@@ -937,6 +938,8 @@
         "updated": "تم التحديث"
       },
       "descriptions": {
+        "bulkViolationCreated": "تم إنشاء انتهاكات جماعية",
+        "bulkStatusChanged": "تم تغيير الحالة الجماعية من",
         "violationCreatedOn": "تم إنشاء انتهاك على",
         "violationDeletedFrom": "تم حذف انتهاك من",
         "forChannelUser": "لقناة/مستخدم",

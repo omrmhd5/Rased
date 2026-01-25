@@ -117,6 +117,33 @@ const bulkViolationSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    // Audit log for tracking changes
+    auditLog: [
+      {
+        action: {
+          type: String,
+          enum: ["created", "status_changed"],
+          required: true,
+        },
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+        },
+        userName: {
+          type: String,
+        },
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+        oldValue: {
+          type: mongoose.Schema.Types.Mixed,
+        },
+        newValue: {
+          type: mongoose.Schema.Types.Mixed,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

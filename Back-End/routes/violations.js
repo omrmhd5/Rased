@@ -193,8 +193,25 @@ router.patch(
 
       const updatedViolations = await Promise.all(updatePromises);
 
+      // Get the old status from the bulk violation for audit log
+      const oldBulkStatus = violations.length > 0 ? violations[0].status : null;
+
       // Update bulk violation stats
       await updateBulkViolationStats(bulkId);
+
+      // Add audit log entry for bulk status change
+      const updatedBulkViolation = await BulkViolation.findOne({ bulkId });
+      if (updatedBulkViolation) {
+        updatedBulkViolation.auditLog.push({
+          action: "status_changed",
+          userId: req.user?.userId,
+          userName: req.user?.username || "System",
+          timestamp: new Date(),
+          oldValue: oldBulkStatus, // Old status before change
+          newValue: finalNormalizedStatus, // New status after change
+        });
+        await updatedBulkViolation.save();
+      }
 
       // Update platform and match stats (cascade handles both)
       await updatePlatformStats(
@@ -1127,7 +1144,7 @@ router.post(
 
       // Create BulkViolation entry FIRST so stats updates can find it
       try {
-        await createBulkViolation({
+        const bulkViolation = await createBulkViolation({
           bulkId,
           matchId: internalMatchId,
           matchName,
@@ -1141,8 +1158,20 @@ router.post(
           createdByName: req.user?.username,
           timeAdded: timeAdded ? new Date(timeAdded) : new Date(),
         });
+
+        // Add audit log entry for bulk creation
+        bulkViolation.auditLog.push({
+          action: "created",
+          userId: req.user?.userId,
+          userName: req.user?.username || "System",
+          timestamp: new Date(),
+          oldValue: finalStatus, // Initial status of violations
+          newValue: savedViolations.length, // Count of violations created
+        });
+        await bulkViolation.save();
       } catch (bulkError) {
         // Don't fail the request if bulk tracking fails
+        console.error("Error creating bulk violation:", bulkError);
       }
       // Update platform and match stats (cascade handles both)
       await updatePlatformStats(internalMatchId, platformId);

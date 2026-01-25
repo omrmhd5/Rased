@@ -3013,9 +3013,12 @@ export default function MatchDashboard() {
             onFilterChange={setLogFilter}
             getPlatformColor={getPlatformColor}
             getPlatformIcon={getPlatformIcon}
-            violations={platformOperations.flatMap((p) => p.violations)}
+            violations={platformOperations
+              .flatMap((p) => p.violations)
+              .filter((v) => !v.bulkId)}
             platformOperations={platformOperations}
             deletedViolationLogs={deletedViolationLogs}
+            bulkViolations={bulkViolations}
             onRefetch={() => refetchAllData(true)}
             platformFilter={platformFilter}
             onPlatformFilterChange={setPlatformFilter}
