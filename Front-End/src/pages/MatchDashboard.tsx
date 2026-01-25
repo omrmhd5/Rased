@@ -1288,15 +1288,18 @@ export default function MatchDashboard() {
     // Try to find in local state first, otherwise use passed violation
     const platform = platformOperations.find((p) => p.id === platformId);
     let violation = passedViolation;
-    
+
     if (!violation && platform) {
       violation = platform.violations.find(
         (v) => v.id === violationId || v._id === violationId,
       );
     }
-    
+
     if (!violation) {
-      console.error("❌ [MatchDashboard] Violation not found locally or passed:", violationId);
+      console.error(
+        "❌ [MatchDashboard] Violation not found locally or passed:",
+        violationId,
+      );
       toast({
         title: t("common.error") || "Error",
         description: "Violation not found",
@@ -2137,7 +2140,9 @@ export default function MatchDashboard() {
 
         // Save stats to PlatformByMatch
         if (match?.externalMatchId) {
-          const updatedPlatform = platformOperations.find((p) => p.id === platformId);
+          const updatedPlatform = platformOperations.find(
+            (p) => p.id === platformId,
+          );
           if (updatedPlatform) {
             const platformViolations = updatedPlatform.violations.filter(
               (v) => v.id !== violationId && v._id !== violationId,

@@ -49,7 +49,11 @@ interface ViolationItemProps {
   violation: Violation;
   platform: PlatformData;
   onEdit: (platformId: string, violation: Violation) => void;
-  onToggleStatus: (platformId: string, violationId: number | string, violation: Violation) => void;
+  onToggleStatus: (
+    platformId: string,
+    violationId: number | string,
+    violation: Violation,
+  ) => void;
   onDelete: (platformId: string, violationId: number | string) => void;
   onCopyUrl: (url: string) => void;
   onAddNote: (platformId: string, violation: Violation) => void;
@@ -136,7 +140,7 @@ export function ViolationItem({
           now.getMonth(),
           now.getDate(),
           hour24,
-          minutes
+          minutes,
         );
       } else if (timeString.match(/^\d{1,2}:\d{2}/)) {
         // Time-only format (e.g., "14:30" or "2:30 PM" or "2:30 AM")
@@ -160,7 +164,7 @@ export function ViolationItem({
             now.getMonth(),
             now.getDate(),
             hour24,
-            minutes
+            minutes,
           );
         } else {
           // 24-hour format
@@ -169,7 +173,7 @@ export function ViolationItem({
             now.getMonth(),
             now.getDate(),
             hours,
-            minutes
+            minutes,
           );
         }
       } else if (timeString.includes("T") || timeString.includes(" ")) {
@@ -361,7 +365,7 @@ export function ViolationItem({
                 violation.statusBadge === "Removed" &&
                   "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
                 violation.statusBadge === "Review" &&
-                  "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
+                  "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400",
               )}>
               {translateStatus(violation.statusBadge || "Active")}
             </Badge>
@@ -390,7 +394,7 @@ export function ViolationItem({
                 violation.statusBadge === "Removed" &&
                   "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
                 violation.statusBadge === "Review" &&
-                  "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400"
+                  "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400",
               )}>
               {translateStatus(violation.statusBadge || "Active")}
             </Badge>
@@ -502,7 +506,7 @@ export function ViolationItem({
                 onClick={() =>
                   window.open(
                     violation.violationUrl || violation.url || "",
-                    "_blank"
+                    "_blank",
                   )
                 }
                 className="flex items-center gap-1 sm:gap-1.5 min-w-0 hover:text-foreground transition-colors rounded px-1 sm:px-1.5 py-0.5 hover:bg-accent touch-manipulation overflow-hidden text-left">
@@ -548,7 +552,7 @@ export function ViolationItem({
                   onClick={() =>
                     window.open(
                       violation.violationUrl || violation.url || "",
-                      "_blank"
+                      "_blank",
                     )
                   }
                   className="flex items-center gap-1 sm:gap-1.5 min-w-0 flex-1 hover:text-foreground transition-colors rounded px-1 sm:px-1.5 py-0.5 hover:bg-accent touch-manipulation overflow-hidden max-w-full">
@@ -668,7 +672,7 @@ export function ViolationItem({
                                 {accountName}
                               </code>{" "}
                               {t(
-                                "matchDashboard.violationItem.forChannelUser"
+                                "matchDashboard.violationItem.forChannelUser",
                               )}{" "}
                             </>
                           )}
@@ -687,7 +691,7 @@ export function ViolationItem({
                             <>
                               {" "}
                               {t(
-                                "matchDashboard.violationItem.forChannelUser"
+                                "matchDashboard.violationItem.forChannelUser",
                               )}{" "}
                               <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                                 {accountName}
@@ -722,7 +726,7 @@ export function ViolationItem({
                             <>
                               {" "}
                               {t(
-                                "matchDashboard.violationItem.withStatus"
+                                "matchDashboard.violationItem.withStatus",
                               )}{" "}
                               <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                                 {translateStatus(status)}
@@ -767,14 +771,14 @@ export function ViolationItem({
                         {t("matchDashboard.violationItem.statusChangedFrom")}{" "}
                         <code
                           className={`text-[9px] sm:text-xs ${getStatusColorClasses(
-                            oldStatus
+                            oldStatus,
                           )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {translateStatus(oldStatus)}
                         </code>{" "}
                         {t("matchDashboard.violationItem.to")}{" "}
                         <code
                           className={`text-[9px] sm:text-xs ${getStatusColorClasses(
-                            newStatus
+                            newStatus,
                           )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {translateStatus(newStatus)}
                         </code>
@@ -794,20 +798,20 @@ export function ViolationItem({
                         {t("matchDashboard.violationItem.statusChangedFrom")}{" "}
                         <code
                           className={`text-[9px] sm:text-xs ${getStatusColorClasses(
-                            oldStatus
+                            oldStatus,
                           )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {translateStatus(oldStatus)}
                         </code>{" "}
                         {t("matchDashboard.violationItem.to")}{" "}
                         <code
                           className={`text-[9px] sm:text-xs ${getStatusColorClasses(
-                            newStatus
+                            newStatus,
                           )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {translateStatus(newStatus)}
                         </code>
                         <div className="mt-1 text-[10px] sm:text-xs text-muted-foreground">
                           {t(
-                            "matchDashboard.violationItem.blockedAtTimeRemoved"
+                            "matchDashboard.violationItem.blockedAtTimeRemoved",
                           )}
                         </div>
                       </div>
@@ -818,14 +822,14 @@ export function ViolationItem({
                         {t("matchDashboard.violationItem.statusChangedFrom")}{" "}
                         <code
                           className={`text-[9px] sm:text-xs ${getStatusColorClasses(
-                            oldStatus
+                            oldStatus,
                           )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {translateStatus(oldStatus)}
                         </code>{" "}
                         {t("matchDashboard.violationItem.to")}{" "}
                         <code
                           className={`text-[9px] sm:text-xs ${getStatusColorClasses(
-                            newStatus
+                            newStatus,
                           )} px-1 sm:px-1.5 py-0.5 rounded font-mono`}>
                           {translateStatus(newStatus)}
                         </code>
@@ -841,7 +845,7 @@ export function ViolationItem({
                     Array.isArray(entry.oldValue)
                       ? (entry.newValue as string[]).filter(
                           (n: string) =>
-                            !(entry.oldValue as string[])?.includes(n)
+                            !(entry.oldValue as string[])?.includes(n),
                         )
                       : []) ||
                     [];
@@ -865,7 +869,7 @@ export function ViolationItem({
                       .map(
                         (word) =>
                           word.charAt(0).toUpperCase() +
-                          word.slice(1).toLowerCase()
+                          word.slice(1).toLowerCase(),
                       )
                       .join(" ");
 
@@ -875,7 +879,7 @@ export function ViolationItem({
                       description = (
                         <div className="text-left">
                           {t(
-                            "matchDashboard.violationItem.violationUrlChangedFrom"
+                            "matchDashboard.violationItem.violationUrlChangedFrom",
                           )}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono break-all">
                             {oldUrl}
@@ -892,7 +896,7 @@ export function ViolationItem({
                       description = (
                         <div className="text-left">
                           {t(
-                            "matchDashboard.violationItem.accountChannelChangedFrom"
+                            "matchDashboard.violationItem.accountChannelChangedFrom",
                           )}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {oldChannel}
@@ -909,7 +913,7 @@ export function ViolationItem({
                       description = (
                         <div className="text-left">
                           {t(
-                            "matchDashboard.violationItem.contentTypeChangedFrom"
+                            "matchDashboard.violationItem.contentTypeChangedFrom",
                           )}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {oldType}
@@ -950,7 +954,7 @@ export function ViolationItem({
                           typeof entry.oldValue === "number")
                           ? new Date(entry.oldValue).toLocaleString(
                               "en-US",
-                              timeOptions
+                              timeOptions,
                             )
                           : "";
                       const newTime =
@@ -959,13 +963,13 @@ export function ViolationItem({
                           typeof entry.newValue === "number")
                           ? new Date(entry.newValue).toLocaleString(
                               "en-US",
-                              timeOptions
+                              timeOptions,
                             )
                           : "";
                       description = (
                         <div className="text-left">
                           {t(
-                            "matchDashboard.violationItem.timeAddedChangedFrom"
+                            "matchDashboard.violationItem.timeAddedChangedFrom",
                           )}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {oldTime}
@@ -988,7 +992,7 @@ export function ViolationItem({
                         description = (
                           <div className="text-left">
                             {t(
-                              "matchDashboard.violationItem.blockedAtTimeAddedLabel"
+                              "matchDashboard.violationItem.blockedAtTimeAddedLabel",
                             )}{" "}
                             <code
                               className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono"
@@ -1019,7 +1023,7 @@ export function ViolationItem({
                             typeof entry.oldValue === "number")
                             ? new Date(entry.oldValue).toLocaleString(
                                 "en-US",
-                                timeOptions
+                                timeOptions,
                               )
                             : "undefined";
                         const newBlocked =
@@ -1028,13 +1032,13 @@ export function ViolationItem({
                             typeof entry.newValue === "number")
                             ? new Date(entry.newValue).toLocaleString(
                                 "en-US",
-                                timeOptions
+                                timeOptions,
                               )
                             : "undefined";
                         description = (
                           <div className="text-left">
                             {t(
-                              "matchDashboard.violationItem.blockedAtChangedFrom"
+                              "matchDashboard.violationItem.blockedAtChangedFrom",
                             )}{" "}
                             <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                               {oldBlocked}
@@ -1059,7 +1063,7 @@ export function ViolationItem({
                             {removedNotes.length > 1
                               ? t("matchDashboard.violationItem.notesDeleted")
                               : t(
-                                  "matchDashboard.violationItem.noteDeleted"
+                                  "matchDashboard.violationItem.noteDeleted",
                                 )}{" "}
                             {t("matchDashboard.violationItem.deleted")}{" "}
                             {removedNotes.join(", ")}
@@ -1085,13 +1089,13 @@ export function ViolationItem({
                                     {firstEdit.old}
                                   </code>{" "}
                                   {t(
-                                    "matchDashboard.violationItem.noteChangedFrom"
+                                    "matchDashboard.violationItem.noteChangedFrom",
                                   )}
                                 </>
                               ) : (
                                 <>
                                   {t(
-                                    "matchDashboard.violationItem.noteChangedFrom"
+                                    "matchDashboard.violationItem.noteChangedFrom",
                                   )}{" "}
                                   <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                                     {firstEdit.old}
@@ -1134,14 +1138,14 @@ export function ViolationItem({
                               </code>{" "}
                               {fieldName}{" "}
                               {t(
-                                "matchDashboard.activityLog.descriptions.changedFrom"
+                                "matchDashboard.activityLog.descriptions.changedFrom",
                               )}
                             </>
                           ) : (
                             <>
                               {fieldName}{" "}
                               {t(
-                                "matchDashboard.activityLog.descriptions.changedFrom"
+                                "matchDashboard.activityLog.descriptions.changedFrom",
                               )}{" "}
                               <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                                 {oldVal}
@@ -1203,7 +1207,7 @@ export function ViolationItem({
                                 {translateStatus(status)}
                               </code>{" "}
                               {t(
-                                "matchDashboard.violationItem.withStatus"
+                                "matchDashboard.violationItem.withStatus",
                               )}{" "}
                             </>
                           )}
@@ -1213,7 +1217,7 @@ export function ViolationItem({
                                 {accountName}
                               </code>{" "}
                               {t(
-                                "matchDashboard.violationItem.forChannelUser"
+                                "matchDashboard.violationItem.forChannelUser",
                               )}{" "}
                             </>
                           )}
@@ -1221,13 +1225,13 @@ export function ViolationItem({
                             {platformName}
                           </code>{" "}
                           {t(
-                            "matchDashboard.activityLog.descriptions.violationDeletedFrom"
+                            "matchDashboard.activityLog.descriptions.violationDeletedFrom",
                           )}
                         </>
                       ) : (
                         <>
                           {t(
-                            "matchDashboard.activityLog.descriptions.violationDeletedFrom"
+                            "matchDashboard.activityLog.descriptions.violationDeletedFrom",
                           )}{" "}
                           <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                             {platformName}
@@ -1236,7 +1240,7 @@ export function ViolationItem({
                             <>
                               {" "}
                               {t(
-                                "matchDashboard.violationItem.forChannelUser"
+                                "matchDashboard.violationItem.forChannelUser",
                               )}{" "}
                               <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                                 {accountName}
@@ -1271,7 +1275,7 @@ export function ViolationItem({
                             <>
                               {" "}
                               {t(
-                                "matchDashboard.violationItem.withStatus"
+                                "matchDashboard.violationItem.withStatus",
                               )}{" "}
                               <code className="text-[9px] sm:text-xs bg-primary/10 text-primary px-1 sm:px-1.5 py-0.5 rounded font-mono">
                                 {translateStatus(status)}
@@ -1324,7 +1328,7 @@ export function ViolationItem({
 
 function formatTimeAgo(
   date: Date,
-  t: (key: string, params?: Record<string, string | number>) => string
+  t: (key: string, params?: Record<string, string | number>) => string,
 ): string {
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();

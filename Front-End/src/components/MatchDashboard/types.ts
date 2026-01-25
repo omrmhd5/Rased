@@ -203,6 +203,8 @@ export interface BulkViolation {
   // Block statistics
   avgBlockTime: number | null; // Average time in minutes
   blockSuccessRate: number; // Percentage (0-100)
+  // Views count
+  totalViews: number;
   // Array of violation IDs
   violationIds: string[];
   // Metadata

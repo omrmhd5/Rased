@@ -23,7 +23,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Violation, PlatformData } from "./types";
+import { Violation, PlatformData, BulkViolation } from "./types";
 import { ViolationItem } from "./ViolationItem";
 import { convertBackendViolationToFrontend } from "./utils";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -34,10 +34,15 @@ interface BulkViolationDetailsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bulkId: string;
+  bulkViolation: BulkViolation; // Pre-computed stats from backend
   violations: Violation[]; // Now unused - will fetch from backend
   platform: PlatformData;
   onEdit: (platformId: string, violation: Violation) => void;
-  onToggleStatus: (platformId: string, violationId: number | string, violation?: Violation) => void;
+  onToggleStatus: (
+    platformId: string,
+    violationId: number | string,
+    violation?: Violation,
+  ) => void;
   onDelete: (platformId: string, violationId: number | string) => void;
   onCopyUrl: (url: string) => void;
   onAddNote: (platformId: string, violation: Violation) => void;
@@ -51,6 +56,7 @@ export function BulkViolationDetailsModal({
   open,
   onOpenChange,
   bulkId,
+  bulkViolation,
   violations: _violations, // Not used anymore
   platform,
   onEdit,
@@ -103,12 +109,12 @@ export function BulkViolationDetailsModal({
         }
 
         const data = await response.json();
-        
+
         // Transform backend data using the conversion function
         const transformedViolations = data.violations.map((v: any) =>
-          convertBackendViolationToFrontend(v)
+          convertBackendViolationToFrontend(v),
         );
-        
+
         setViolations(transformedViolations);
         setTotalCount(data.pagination.totalCount);
         setTotalPages(data.pagination.totalPages);
@@ -158,37 +164,19 @@ export function BulkViolationDetailsModal({
   });
 
   // Calculate stats from current page violations
-  const activeCount = filteredViolations.filter(
-    (v) => v.status === "Active",
-  ).length;
-  const blockedCount = filteredViolations.filter(
-    (v) => v.status === "Blocked",
-  ).length;
-  const removedCount = filteredViolations.filter(
-    (v) => v.status === "Removed",
-  ).length;
-  const underReviewCount = filteredViolations.filter(
-    (v) => v.status === "Under Review",
-  ).length;
+  const activeCount = bulkViolation.activeCount;
+  const blockedCount = bulkViolation.blockedCount;
+  const removedCount = bulkViolation.removedCount;
+  const underReviewCount = bulkViolation.underReviewCount;
 
-  // Calculate total views from current page
-  const totalViews = filteredViolations.reduce((sum, v) => {
-    if (!v.views || v.views === "0") return sum;
-    const viewsStr = v.views.replace(/[^0-9,]/g, "").replace(/,/g, "");
-    return sum + (parseFloat(viewsStr) || 0);
-  }, 0);
+  // Calculate total views from bulkViolation
+  const totalViews = bulkViolation.totalViews;
   const formattedTotalViews = totalViews.toLocaleString("en-US");
 
-  // Calculate content type counts from current page
-  const liveCount = filteredViolations.filter(
-    (v) => v.contentType === "Live",
-  ).length;
-  const highlightsCount = filteredViolations.filter(
-    (v) => v.contentType === "Highlights",
-  ).length;
-  const otherCount = filteredViolations.filter(
-    (v) => v.contentType === "Other",
-  ).length;
+  // Calculate content type counts from bulkViolation
+  const liveCount = bulkViolation.liveCount;
+  const highlightsCount = bulkViolation.highlightsCount;
+  const otherCount = bulkViolation.othersCount;
 
   // Reset to page 1 when search or filter changes
   const handleSearchChange = (value: string) => {
@@ -211,10 +199,10 @@ export function BulkViolationDetailsModal({
             </div>
             <div className="flex-1">
               <DialogTitle className="text-xl text-left">
-                {totalCount} {t("matchDashboard.bulk.violations")}
+                {bulkViolation.totalCount} {t("matchDashboard.bulk.violations")}
               </DialogTitle>
               <DialogDescription className="mt-1 text-left">
-                {platform.name} • {violations[0]?.accountChannel || "N/A"}
+                {platform.name} • {bulkViolation.accountChannel || "N/A"}
               </DialogDescription>
             </div>
           </div>
@@ -400,7 +388,11 @@ export function BulkViolationDetailsModal({
                           onEdit={(pId: string, v: Violation) => {
                             onEdit(pId, v);
                           }}
-                          onToggleStatus={(pId: string, vId: string | number, v: Violation) => {
+                          onToggleStatus={(
+                            pId: string,
+                            vId: string | number,
+                            v: Violation,
+                          ) => {
                             onToggleStatus(pId, vId, v);
                           }}
                           onDelete={(pId: string, vId: string | number) => {

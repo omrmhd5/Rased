@@ -21,7 +21,11 @@ interface BulkViolationItemProps {
   platformId: string;
   platform: PlatformData;
   onEdit: (platformId: string, violation: Violation) => void;
-  onToggleStatus: (platformId: string, violationId: number | string, violation?: Violation) => void;
+  onToggleStatus: (
+    platformId: string,
+    violationId: number | string,
+    violation?: Violation,
+  ) => void;
   onDelete: (platformId: string, violationId: number | string) => void;
   onCopyUrl: (url: string) => void;
   onAddNote: (platformId: string, violation: Violation) => void;
@@ -404,6 +408,7 @@ export function BulkViolationItem({
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         bulkId={bulkViolation.bulkId}
+        bulkViolation={bulkViolation}
         violations={[]}
         platform={platform}
         onEdit={onEdit}

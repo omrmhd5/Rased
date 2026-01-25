@@ -55,7 +55,11 @@ interface PlatformCardProps {
   onSearchChange: (query: string) => void;
   onAddViolation: () => void;
   onEdit: (platformId: string, violation: Violation) => void;
-  onToggleStatus: (platformId: string, violationId: number | string, violation?: Violation) => void;
+  onToggleStatus: (
+    platformId: string,
+    violationId: number | string,
+    violation?: Violation,
+  ) => void;
   onDelete: (platformId: string, violationId: number | string) => void;
   onCopyUrl: (url: string) => void;
   onAddNote: (platformId: string, violation: Violation) => void;

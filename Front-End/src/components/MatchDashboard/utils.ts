@@ -104,7 +104,7 @@ export const calculateTotalViews = (violations: Violation[]): string => {
 export const calculateAvgBlockTime = (violations: Violation[]): string => {
   // Only calculate for "Blocked" status (Removed doesn't have blockedAt)
   const blockedViolations = violations.filter(
-    (v) => v.status === "Blocked" && v.blockedAt
+    (v) => v.status === "Blocked" && v.blockedAt,
   );
 
   if (blockedViolations.length === 0) return "0 min";
@@ -132,11 +132,11 @@ export const calculateAvgBlockTime = (violations: Violation[]): string => {
 
 // Calculate avg block time as number (in minutes) for database storage
 export const calculateAvgBlockTimeNumber = (
-  violations: Violation[]
+  violations: Violation[],
 ): number => {
   // Only calculate for "Blocked" status (Removed doesn't have blockedAt)
   const blockedViolations = violations.filter(
-    (v) => v.status === "Blocked" && v.blockedAt
+    (v) => v.status === "Blocked" && v.blockedAt,
   );
 
   if (blockedViolations.length === 0) return 0;
@@ -158,11 +158,11 @@ export const calculateBlockedSuccess = (violations: Violation[]): string => {
   if (blockedViolations.length === 0) return "0%";
 
   const successfullyBlocked = blockedViolations.filter(
-    (v) => !v.active && !v.stillActive
+    (v) => !v.active && !v.stillActive,
   ).length;
 
   const successRate = Math.round(
-    (successfullyBlocked / blockedViolations.length) * 100
+    (successfullyBlocked / blockedViolations.length) * 100,
   );
 
   return `${successRate}%`;
@@ -171,12 +171,12 @@ export const calculateBlockedSuccess = (violations: Violation[]): string => {
 export const calculateStillActive = (violations: Violation[]): number => {
   // Only count "Blocked" status (Removed is separate)
   return violations.filter(
-    (v) => v.status === "Blocked" && (v.active || v.stillActive)
+    (v) => v.status === "Blocked" && (v.active || v.stillActive),
   ).length;
 };
 
 export const convertBackendViolationToFrontend = (
-  backendViolation: BackendViolation
+  backendViolation: BackendViolation,
 ): Violation => {
   const timeAdded = backendViolation.timeAdded;
   const now = new Date();
@@ -336,7 +336,7 @@ export const extractAccountHandleFromUrl = (url: string): string => {
 };
 
 export const calculateBlockDuration = (
-  violation: Violation
+  violation: Violation,
 ): { duration: number; lastOpenTime: string } | null => {
   return null;
 };
@@ -344,7 +344,7 @@ export const calculateBlockDuration = (
 export const formatBlockedViolationText = (
   violation: Violation,
   t?: (key: string) => string,
-  isRTL?: boolean
+  isRTL?: boolean,
 ): string => {
   // Translate content type
   const contentTypeRaw = violation.contentType || violation.type || "Other";
@@ -484,18 +484,18 @@ export const formatBlockedViolationText = (
 export const calculateAndSavePlatformStats = async (
   platformId: string,
   externalMatchId: string,
-  violations: Violation[]
+  violations: Violation[],
 ): Promise<void> => {
   try {
     // Calculate content type counts
     const liveCount = violations.filter(
-      (v) => (v.contentType || v.type) === "Live"
+      (v) => (v.contentType || v.type) === "Live",
     ).length;
     const highlightsCount = violations.filter(
-      (v) => (v.contentType || v.type) === "Highlights"
+      (v) => (v.contentType || v.type) === "Highlights",
     ).length;
     const othersCount = violations.filter(
-      (v) => (v.contentType || v.type) === "Other"
+      (v) => (v.contentType || v.type) === "Other",
     ).length;
 
     // Calculate total views (as number)
@@ -511,13 +511,13 @@ export const calculateAndSavePlatformStats = async (
     const totalViolations = violations.length;
     const activeCount = violations.filter((v) => v.status === "Active").length;
     const blockedCount = violations.filter(
-      (v) => v.status === "Blocked"
+      (v) => v.status === "Blocked",
     ).length;
     const removedCount = violations.filter(
-      (v) => v.status === "Removed"
+      (v) => v.status === "Removed",
     ).length;
     const underReviewCount = violations.filter(
-      (v) => v.status === "Under Review"
+      (v) => v.status === "Under Review",
     ).length;
 
     // Calculate avg block time (in minutes)
@@ -566,7 +566,7 @@ export const calculateAndSavePlatformStats = async (
  */
 export const calculateAndSaveTopPlatform = async (
   externalMatchId: string,
-  platformOperations: Array<{ id: string; totalViews: string }>
+  platformOperations: Array<{ id: string; totalViews: string }>,
 ): Promise<void> => {
   try {
     if (!externalMatchId || platformOperations.length === 0) return;
@@ -610,7 +610,7 @@ export const calculateAndSaveTopPlatform = async (
  * Returns an object with bulkId as key and array of violations as value
  */
 export const groupViolationsByBulkId = (
-  violations: Violation[]
+  violations: Violation[],
 ): Record<string, Violation[]> => {
   const grouped: Record<string, Violation[]> = {};
 
@@ -631,12 +631,12 @@ export const groupViolationsByBulkId = (
  */
 export const isPartOfBulkGroup = (
   violation: Violation,
-  allViolations: Violation[]
+  allViolations: Violation[],
 ): boolean => {
   if (!violation.bulkId) return false;
 
   const violationsWithSameBulkId = allViolations.filter(
-    (v) => v.bulkId === violation.bulkId
+    (v) => v.bulkId === violation.bulkId,
   );
 
   return violationsWithSameBulkId.length > 1;
@@ -647,7 +647,7 @@ export const isPartOfBulkGroup = (
  */
 export const getBulkGroupViolations = (
   violation: Violation,
-  allViolations: Violation[]
+  allViolations: Violation[],
 ): Violation[] => {
   if (!violation.bulkId) return [violation];
 
