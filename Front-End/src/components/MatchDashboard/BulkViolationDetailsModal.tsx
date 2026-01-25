@@ -16,6 +16,7 @@ import {
   Search,
   Edit,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import {
   Tooltip,
@@ -24,17 +25,19 @@ import {
 } from "@/components/ui/tooltip";
 import { Violation, PlatformData } from "./types";
 import { ViolationItem } from "./ViolationItem";
+import { convertBackendViolationToFrontend } from "./utils";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { API_URL } from "./types";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 interface BulkViolationDetailsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   bulkId: string;
-  violations: Violation[];
+  violations: Violation[]; // Now unused - will fetch from backend
   platform: PlatformData;
   onEdit: (platformId: string, violation: Violation) => void;
-  onToggleStatus: (platformId: string, violationId: number | string) => void;
+  onToggleStatus: (platformId: string, violationId: number | string, violation?: Violation) => void;
   onDelete: (platformId: string, violationId: number | string) => void;
   onCopyUrl: (url: string) => void;
   onAddNote: (platformId: string, violation: Violation) => void;
@@ -48,7 +51,7 @@ export function BulkViolationDetailsModal({
   open,
   onOpenChange,
   bulkId,
-  violations,
+  violations: _violations, // Not used anymore
   platform,
   onEdit,
   onToggleStatus,
@@ -61,37 +64,79 @@ export function BulkViolationDetailsModal({
   onOpenBulkDeleteDialog,
 }: BulkViolationDetailsModalProps) {
   const { t, isRTL } = useLanguage();
+
+  // Backend pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [filter, setFilter] = useState("all");
+  const [violations, setViolations] = useState<Violation[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const itemsPerPage = 10;
 
-  if (violations.length === 0) return null;
+  // Fetch violations from backend when page or filters change
+  useEffect(() => {
+    if (!open || !bulkId) return;
 
-  // Calculate aggregate stats
-  const activeCount = violations.filter((v) => v.status === "Active").length;
-  const blockedCount = violations.filter((v) => v.status === "Blocked").length;
-  const removedCount = violations.filter((v) => v.status === "Removed").length;
-  const underReviewCount = violations.filter(
-    (v) => v.status === "Under Review"
-  ).length;
+    const fetchViolations = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-  // Calculate total views
-  const totalViews = violations.reduce((sum, v) => {
-    if (!v.views || v.views === "0") return sum;
-    const viewsStr = v.views.replace(/[^0-9,]/g, "").replace(/,/g, "");
-    return sum + (parseFloat(viewsStr) || 0);
-  }, 0);
-  const formattedTotalViews = totalViews.toLocaleString("en-US");
+        const params = new URLSearchParams({
+          page: currentPage.toString(),
+          limit: itemsPerPage.toString(),
+        });
 
-  // Calculate content type counts
-  const liveCount = violations.filter((v) => v.contentType === "Live").length;
-  const highlightsCount = violations.filter(
-    (v) => v.contentType === "Highlights"
-  ).length;
-  const otherCount = violations.filter((v) => v.contentType === "Other").length;
+        const response = await fetch(
+          `${API_URL}/violations/bulk/${bulkId}/violations?${params}`,
+          {
+            credentials: "include",
+          },
+        );
 
-  // Filter violations based on search and filter
+        if (!response.ok) {
+          throw new Error("Failed to fetch bulk violations");
+        }
+
+        const data = await response.json();
+        
+        // Transform backend data using the conversion function
+        const transformedViolations = data.violations.map((v: any) =>
+          convertBackendViolationToFrontend(v)
+        );
+        
+        setViolations(transformedViolations);
+        setTotalCount(data.pagination.totalCount);
+        setTotalPages(data.pagination.totalPages);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "An error occurred");
+        setViolations([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchViolations();
+  }, [open, bulkId, currentPage]);
+
+  // Reset to page 1 when modal opens
+  const handleOpenChange = (newOpen: boolean) => {
+    if (newOpen) {
+      setCurrentPage(1);
+      setSearchQuery("");
+      setFilter("all");
+    } else {
+      setViolations([]);
+      setError(null);
+    }
+    onOpenChange(newOpen);
+  };
+
+  // Client-side filtering of fetched violations
   const filteredViolations = violations.filter((violation) => {
     // Filter by status
     const statusMatch =
@@ -112,31 +157,47 @@ export function BulkViolationDetailsModal({
     return statusMatch && searchMatch;
   });
 
-  // Pagination
-  const totalPages = Math.ceil(filteredViolations.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedViolations = filteredViolations.slice(startIndex, endIndex);
+  // Calculate stats from current page violations
+  const activeCount = filteredViolations.filter(
+    (v) => v.status === "Active",
+  ).length;
+  const blockedCount = filteredViolations.filter(
+    (v) => v.status === "Blocked",
+  ).length;
+  const removedCount = filteredViolations.filter(
+    (v) => v.status === "Removed",
+  ).length;
+  const underReviewCount = filteredViolations.filter(
+    (v) => v.status === "Under Review",
+  ).length;
 
-  // Reset to page 1 when modal opens, search changes, or filter changes
-  const handleOpenChange = (newOpen: boolean) => {
-    if (newOpen) {
-      setCurrentPage(1);
-      setSearchQuery("");
-      setFilter("all");
-    }
-    onOpenChange(newOpen);
-  };
+  // Calculate total views from current page
+  const totalViews = filteredViolations.reduce((sum, v) => {
+    if (!v.views || v.views === "0") return sum;
+    const viewsStr = v.views.replace(/[^0-9,]/g, "").replace(/,/g, "");
+    return sum + (parseFloat(viewsStr) || 0);
+  }, 0);
+  const formattedTotalViews = totalViews.toLocaleString("en-US");
+
+  // Calculate content type counts from current page
+  const liveCount = filteredViolations.filter(
+    (v) => v.contentType === "Live",
+  ).length;
+  const highlightsCount = filteredViolations.filter(
+    (v) => v.contentType === "Highlights",
+  ).length;
+  const otherCount = filteredViolations.filter(
+    (v) => v.contentType === "Other",
+  ).length;
 
   // Reset to page 1 when search or filter changes
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    setCurrentPage(1);
+    // Note: Client-side search doesn't reset page since we have all data for this page
   };
 
   const handleFilterChange = (newFilter: string) => {
     setFilter(newFilter);
-    setCurrentPage(1);
   };
 
   return (
@@ -150,7 +211,7 @@ export function BulkViolationDetailsModal({
             </div>
             <div className="flex-1">
               <DialogTitle className="text-xl text-left">
-                {violations.length} {t("matchDashboard.bulk.violations")}
+                {totalCount} {t("matchDashboard.bulk.violations")}
               </DialogTitle>
               <DialogDescription className="mt-1 text-left">
                 {platform.name} • {violations[0]?.accountChannel || "N/A"}
@@ -262,7 +323,7 @@ export function BulkViolationDetailsModal({
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               placeholder={t(
-                "matchDashboard.expandedPlatformDialog.searchPlaceholder"
+                "matchDashboard.expandedPlatformDialog.searchPlaceholder",
               )}
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
@@ -307,14 +368,26 @@ export function BulkViolationDetailsModal({
 
         <div className="flex-1 overflow-y-auto min-h-0">
           <div className="px-6 pb-6 pt-4">
-            <div className="space-y-3">
-              {paginatedViolations.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  {t("matchDashboard.violationItem.noViolationsFound")}
-                </div>
-              ) : (
-                paginatedViolations.map((violation, index) => {
-                  const globalIndex = startIndex + index + 1;
+            {isLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 text-primary animate-spin mr-2" />
+                <span className="text-muted-foreground">
+                  {t("common.loading") || "Loading..."}
+                </span>
+              </div>
+            ) : error ? (
+              <div className="text-center py-12 text-destructive">
+                <p className="text-sm">{error}</p>
+              </div>
+            ) : filteredViolations.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                {t("matchDashboard.violationItem.noViolationsFound")}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {filteredViolations.map((violation, index) => {
+                  const globalIndex =
+                    (currentPage - 1) * itemsPerPage + index + 1;
                   return (
                     <div key={violation.id} className="relative">
                       {/* Violation Item */}
@@ -324,11 +397,21 @@ export function BulkViolationDetailsModal({
                         <ViolationItem
                           violation={violation}
                           platform={platform}
-                          onEdit={onEdit}
-                          onToggleStatus={onToggleStatus}
-                          onDelete={onDelete}
-                          onCopyUrl={onCopyUrl}
-                          onAddNote={onAddNote}
+                          onEdit={(pId: string, v: Violation) => {
+                            onEdit(pId, v);
+                          }}
+                          onToggleStatus={(pId: string, vId: string | number, v: Violation) => {
+                            onToggleStatus(pId, vId, v);
+                          }}
+                          onDelete={(pId: string, vId: string | number) => {
+                            onDelete(pId, vId);
+                          }}
+                          onCopyUrl={(url: string) => {
+                            onCopyUrl(url);
+                          }}
+                          onAddNote={(pId: string, v: Violation) => {
+                            onAddNote(pId, v);
+                          }}
                           getPlatformIcon={getPlatformIcon}
                           canModifyViolations={canModifyViolations}
                         />
@@ -347,9 +430,9 @@ export function BulkViolationDetailsModal({
                       </div>
                     </div>
                   );
-                })
-              )}
-            </div>
+                })}
+              </div>
+            )}
           </div>
         </div>
 
@@ -358,9 +441,9 @@ export function BulkViolationDetailsModal({
           <div className="px-6 pb-4 pt-2 border-t flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
               {t("pagination.showing", {
-                start: startIndex + 1,
-                end: Math.min(endIndex, filteredViolations.length),
-                total: filteredViolations.length,
+                start: (currentPage - 1) * itemsPerPage + 1,
+                end: Math.min(currentPage * itemsPerPage, totalCount),
+                total: totalCount,
               })}
             </div>
             <div className="flex items-center gap-2">
@@ -368,7 +451,7 @@ export function BulkViolationDetailsModal({
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
+                disabled={currentPage === 1 || isLoading}
                 className="gap-1">
                 {isRTL ? (
                   <ChevronRight className="h-4 w-4" />
@@ -392,6 +475,7 @@ export function BulkViolationDetailsModal({
                           variant={page === currentPage ? "default" : "outline"}
                           size="sm"
                           onClick={() => setCurrentPage(page)}
+                          disabled={isLoading}
                           className="min-w-[36px]">
                           {page}
                         </Button>
@@ -407,7 +491,7 @@ export function BulkViolationDetailsModal({
                       );
                     }
                     return null;
-                  }
+                  },
                 )}
               </div>
               <Button
@@ -416,7 +500,7 @@ export function BulkViolationDetailsModal({
                 onClick={() =>
                   setCurrentPage((p) => Math.min(totalPages, p + 1))
                 }
-                disabled={currentPage === totalPages}
+                disabled={currentPage === totalPages || isLoading}
                 className="gap-1">
                 {t("pagination.next")}
                 {isRTL ? (

@@ -241,6 +241,7 @@ export const convertBackendViolationToFrontend = (
     views: backendViolation.views || "0",
     violationUrl: backendViolation.violationUrl,
     accountChannel: backendViolation.accountChannel,
+    platformId: backendViolation.platformId, // Preserve platformId from backend
     bulkId: backendViolation.bulkId, // Include bulkId for grouping
     auditLog: backendViolation.auditLog || [],
     platformName: backendViolation.platformName,

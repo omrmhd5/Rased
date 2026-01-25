@@ -238,6 +238,42 @@ router.patch(
   },
 );
 
+// GET /api/violations/bulk/:bulkId/violations - Get violations for a specific bulk with pagination
+router.get("/bulk/:bulkId/violations", async (req, res) => {
+  try {
+    const { bulkId } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+
+    // Convert to numbers
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Get total count
+    const totalCount = await Violation.countDocuments({ bulkId });
+
+    // Get paginated violations
+    const violations = await Violation.find({ bulkId })
+      .sort({ timeAdded: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
+    res.json({
+      violations,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limitNum),
+        hasMore: skip + violations.length < totalCount,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // DELETE /api/violations/bulk/:bulkId - Delete all violations in a bulk
 router.delete(
   "/bulk/:bulkId",

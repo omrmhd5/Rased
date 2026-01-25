@@ -49,7 +49,7 @@ interface ViolationItemProps {
   violation: Violation;
   platform: PlatformData;
   onEdit: (platformId: string, violation: Violation) => void;
-  onToggleStatus: (platformId: string, violationId: number | string) => void;
+  onToggleStatus: (platformId: string, violationId: number | string, violation: Violation) => void;
   onDelete: (platformId: string, violationId: number | string) => void;
   onCopyUrl: (url: string) => void;
   onAddNote: (platformId: string, violation: Violation) => void;
@@ -270,7 +270,9 @@ export function ViolationItem({
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-destructive text-xs sm:text-sm touch-manipulation"
-                    onClick={() => onDelete(platform.id, violation.id)}>
+                    onClick={() => {
+                      onDelete(platform.id, violation.id);
+                    }}>
                     <Trash2 className="mr-2 h-4 w-4" />
                     {t("matchDashboard.violationItem.delete")}
                   </DropdownMenuItem>
@@ -286,7 +288,9 @@ export function ViolationItem({
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0"
-                    onClick={() => onToggleStatus(platform.id, violation.id)}>
+                    onClick={() => {
+                      onToggleStatus(platform.id, violation.id, violation);
+                    }}>
                     <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </Button>
                 </TooltipTrigger>
@@ -432,7 +436,9 @@ export function ViolationItem({
                       variant="ghost"
                       size="icon"
                       className="h-6 w-6 sm:h-7 sm:w-7 touch-manipulation p-0"
-                      onClick={() => onToggleStatus(platform.id, violation.id)}>
+                      onClick={() => {
+                        onToggleStatus(platform.id, violation.id, violation);
+                      }}>
                       <Lock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     </Button>
                   </TooltipTrigger>
@@ -463,7 +469,9 @@ export function ViolationItem({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-destructive text-xs sm:text-sm touch-manipulation"
-                      onClick={() => onDelete(platform.id, violation.id)}>
+                      onClick={() => {
+                        onDelete(platform.id, violation.id);
+                      }}>
                       <Trash2 className="mr-2 h-4 w-4" />
                       {t("matchDashboard.violationItem.delete")}
                     </DropdownMenuItem>

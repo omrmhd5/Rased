@@ -58,6 +58,7 @@ export type Violation = {
   views?: string;
   violationUrl: string;
   accountChannel: string;
+  platformId: string; // Platform ID for operations
   timeAdded: string;
   blockedAt?: string;
   active: boolean;

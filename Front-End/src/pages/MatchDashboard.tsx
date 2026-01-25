@@ -1283,14 +1283,27 @@ export default function MatchDashboard() {
   const toggleViolationStatus = (
     platformId: string,
     violationId: number | string,
+    passedViolation?: Violation,
   ) => {
+    // Try to find in local state first, otherwise use passed violation
     const platform = platformOperations.find((p) => p.id === platformId);
-    if (!platform) return;
-
-    const violation = platform.violations.find(
-      (v) => v.id === violationId || v._id === violationId,
-    );
-    if (!violation) return;
+    let violation = passedViolation;
+    
+    if (!violation && platform) {
+      violation = platform.violations.find(
+        (v) => v.id === violationId || v._id === violationId,
+      );
+    }
+    
+    if (!violation) {
+      console.error("❌ [MatchDashboard] Violation not found locally or passed:", violationId);
+      toast({
+        title: t("common.error") || "Error",
+        description: "Violation not found",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const isCurrentlyBlocked = violation.status === "Blocked";
     const isCurrentlyRemoved = violation.status === "Removed";
@@ -1301,7 +1314,7 @@ export default function MatchDashboard() {
         try {
           const violationDbId =
             (violation as Violation & { _id?: string })._id ||
-            violation.id.toString();
+            String(violationId);
 
           // Update status in backend
           const response = await fetch(
@@ -2077,18 +2090,23 @@ export default function MatchDashboard() {
     if (!deleteConfirmViolation) return;
 
     const { platformId, violationId } = deleteConfirmViolation;
-    const platform = platformOperations.find((p) => p.id === platformId);
-    if (!platform) return;
 
-    const violation = platform.violations.find(
-      (v) => v.id === violationId || v._id === violationId,
-    );
-    if (!violation) return;
+    // Try to find the violation in platformOperations, but proceed even if not found
+    // (violation might be loaded in BulkViolationDetailsModal from backend pagination)
+    const platform = platformOperations.find((p) => p.id === platformId);
+    let violation = null;
+
+    if (platform) {
+      violation = platform.violations.find(
+        (v) => v.id === violationId || v._id === violationId,
+      );
+    }
+
+    // violationId is all we need for the API call - proceed regardless
 
     try {
-      const violationDbId =
-        (violation as Violation & { _id?: string })._id ||
-        violation.id.toString();
+      // Use violationId directly since it's what the backend expects
+      const violationDbId = String(violationId);
 
       const response = await fetch(`${API_URL}/violations/${violationDbId}`, {
         method: "DELETE",
@@ -2099,33 +2117,33 @@ export default function MatchDashboard() {
         throw new Error(t("matchDashboard.error.failedToDelete"));
       }
 
-      // Update local state
-      setPlatformOperations((prev) =>
-        prev.map((p) => {
-          if (p.id !== platformId) return p;
+      // Update local state only if platform exists
+      if (platform) {
+        setPlatformOperations((prev) =>
+          prev.map((p) => {
+            if (p.id !== platformId) return p;
 
-          const updatedViolations = p.violations.filter(
-            (v) => v.id !== violationId && v._id !== violationId,
-          );
+            const updatedViolations = p.violations.filter(
+              (v) => v.id !== violationId && v._id !== violationId,
+            );
 
-          // Just update violations, keep existing metrics (will be updated by refetch)
-          return {
-            ...p,
-            violations: updatedViolations,
-          };
-        }),
-      );
-
-      // Save stats to PlatformByMatch
-      if (match?.externalMatchId) {
-        const updatedPlatform = platformOperations.find(
-          (p) => p.id === platformId,
+            // Just update violations, keep existing metrics (will be updated by refetch)
+            return {
+              ...p,
+              violations: updatedViolations,
+            };
+          }),
         );
-        if (updatedPlatform) {
-          const platformViolations = updatedPlatform.violations.filter(
-            (v) => v.id !== violationId && v._id !== violationId,
-          );
-          // Stats are now updated by the backend endpoint - no need for frontend calculation
+
+        // Save stats to PlatformByMatch
+        if (match?.externalMatchId) {
+          const updatedPlatform = platformOperations.find((p) => p.id === platformId);
+          if (updatedPlatform) {
+            const platformViolations = updatedPlatform.violations.filter(
+              (v) => v.id !== violationId && v._id !== violationId,
+            );
+            // Stats are now updated by the backend endpoint - no need for frontend calculation
+          }
         }
       }
 
