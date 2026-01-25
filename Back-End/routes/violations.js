@@ -158,6 +158,9 @@ router.patch(
       // Find all violations with this bulkId
       const violations = await Violation.find({ bulkId });
 
+      // Get the old status from the FIRST violation BEFORE updating
+      const oldBulkStatus = violations.length > 0 ? violations[0].status : null;
+
       // Update each violation
       const updatePromises = violations.map(async (violation) => {
         const oldStatus = violation.status; // Store the old status BEFORE updating
@@ -192,9 +195,6 @@ router.patch(
       });
 
       const updatedViolations = await Promise.all(updatePromises);
-
-      // Get the old status from the bulk violation for audit log
-      const oldBulkStatus = violations.length > 0 ? violations[0].status : null;
 
       // Update bulk violation stats
       await updateBulkViolationStats(bulkId);
@@ -626,6 +626,40 @@ router.delete(
         return res
           .status(400)
           .json({ error: "Invalid violation or log entry ID" });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  },
+);
+
+// DELETE /api/violations/bulk/:bulkId/audit-log/:logEntryId - Delete an audit log entry from a bulk violation (superAdmin only)
+router.delete(
+  "/bulk/:bulkId/audit-log/:logEntryId",
+  authenticateToken,
+  requireSuperAdmin,
+  async (req, res) => {
+    try {
+      const { bulkId, logEntryId } = req.params;
+
+      const bulkViolation = await BulkViolation.findOne({ bulkId });
+
+      if (!bulkViolation) {
+        return res.status(404).json({ error: "Bulk violation not found" });
+      }
+
+      // Remove the audit log entry
+      bulkViolation.auditLog = bulkViolation.auditLog.filter(
+        (entry) => entry._id.toString() !== logEntryId,
+      );
+
+      await bulkViolation.save();
+
+      res.json({ message: "Audit log entry removed successfully" });
+    } catch (error) {
+      if (error.name === "CastError") {
+        return res
+          .status(400)
+          .json({ error: "Invalid bulk ID or log entry ID" });
       }
       res.status(500).json({ error: error.message });
     }

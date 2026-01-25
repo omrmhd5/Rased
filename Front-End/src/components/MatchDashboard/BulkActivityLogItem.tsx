@@ -22,6 +22,9 @@ interface ActivityLogItem {
   count?: number;
   status?: string;
   accountChannel?: string;
+  totalCount?: number;
+  oldStatus?: string;
+  newStatus?: string;
 }
 
 interface BulkActivityLogItemProps {
@@ -140,11 +143,12 @@ export function BulkActivityLogItem({
               {log.badge}
             </Badge>
             {/* Count Badge */}
-            {log.count && (
+            {(log.count || log.totalCount) && (
               <Badge
                 variant="outline"
-                className="text-xs px-2.5 py-0.5 h-6 font-semibold bg-primary/10 text-primary border-primary/20">
-                {log.count} {t("matchDashboard.violations")}
+                className="text-xs px-2.5 py-0.5 h-6 font-semibold bg-primary/10 text-primary border-primary/20"
+                dir={isRTL ? "rtl" : "ltr"}>
+                {log.count || log.totalCount} {t("matchDashboard.violations")}
               </Badge>
             )}
             {log.userName && (
@@ -222,8 +226,50 @@ export function BulkActivityLogItem({
             )}
             {log.type === "status_change" && (
               <div>
-                {log.count}{" "}
-                {t("matchDashboard.activityLog.bulk.violationsStatusChanged")}
+                {t("matchDashboard.activityLog.bulk.statusChangedFor")}{" "}
+                {log.totalCount} {t("matchDashboard.violations")}{" "}
+                {log.accountChannel && (
+                  <>
+                    {t("matchDashboard.violationItem.forChannelUser")}{" "}
+                    <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                      {log.accountChannel}
+                    </code>{" "}
+                  </>
+                )}
+                {t("matchDashboard.violationItem.statusChangedFrom")}{" "}
+                <code
+                  className={`text-xs px-1.5 py-0.5 rounded font-mono ${
+                    log.oldStatus?.toLowerCase() === "active" ||
+                    log.oldStatus?.toLowerCase() === "reported"
+                      ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      : log.oldStatus?.toLowerCase() === "blocked"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        : log.oldStatus?.toLowerCase() === "removed"
+                          ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400"
+                          : log.oldStatus?.toLowerCase() === "under review" ||
+                              log.oldStatus?.toLowerCase() === "review"
+                            ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            : "bg-primary/10 text-primary"
+                  }`}>
+                  {log.oldStatus && translateStatus(log.oldStatus)}
+                </code>{" "}
+                {t("matchDashboard.violationItem.to")}{" "}
+                <code
+                  className={`text-xs px-1.5 py-0.5 rounded font-mono ${
+                    log.newStatus?.toLowerCase() === "active" ||
+                    log.newStatus?.toLowerCase() === "reported"
+                      ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                      : log.newStatus?.toLowerCase() === "blocked"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        : log.newStatus?.toLowerCase() === "removed"
+                          ? "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400"
+                          : log.newStatus?.toLowerCase() === "under review" ||
+                              log.newStatus?.toLowerCase() === "review"
+                            ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400"
+                            : "bg-primary/10 text-primary"
+                  }`}>
+                  {log.newStatus && translateStatus(log.newStatus)}
+                </code>
               </div>
             )}
           </div>

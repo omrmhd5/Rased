@@ -990,6 +990,7 @@
         "failedToDelete": "فشل حذف إدخال السجل. يرجى المحاولة مرة أخرى."
       },
       "bulk": {
+        "statusChangedFor": "تم تغيير الحالة لـ",
         "violationsCreated": "انتهاكات تم إنشاؤها دفعة واحدة",
         "violationsDeleted": "انتهاكات تم حذفها دفعة واحدة",
         "violationsStatusChanged": "انتهاكات تم تغيير حالتها دفعة واحدة",

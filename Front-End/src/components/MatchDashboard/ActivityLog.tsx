@@ -76,7 +76,9 @@ interface ActivityLogItem {
   bulkId?: string; // Bulk ID for grouping logs created together
   count?: number; // Count for bulk operations
   status?: string; // Status for bulk operations
-  accountChannel?: string; // Account channel for bulk operations
+  totalCount?: number; // Total count for status changes
+  oldStatus?: string; // Old status for status changes
+  newStatus?: string; // New status for status changes
 }
 
 type ActivityFilter =
@@ -241,6 +243,15 @@ export function ActivityLog({
         // Delete from DeletedViolationLog collection
         response = await fetch(
           `${API_URL}/violations/deleted-logs/${deleteConfirmItem.deletedLogId}`,
+          {
+            method: "DELETE",
+            credentials: "include",
+          },
+        );
+      } else if (deleteConfirmItem.bulkId && deleteConfirmItem.logEntryId) {
+        // Delete audit log entry from bulk violation
+        response = await fetch(
+          `${API_URL}/violations/bulk/${deleteConfirmItem.bulkId}/audit-log/${deleteConfirmItem.logEntryId}`,
           {
             method: "DELETE",
             credentials: "include",
@@ -1229,9 +1240,12 @@ export function ActivityLog({
         bulkId: bulkViolation.bulkId,
         logEntryId: entry._id,
         timestamp: timestamp.getTime(),
-        count: entry.newValue, // Count of violations
-        status: entry.oldValue, // Status from oldValue in audit log
+        count: entry.action === "created" ? entry.newValue : undefined, // Count for created violations
+        status: entry.action === "created" ? entry.oldValue : undefined, // Status for created violations
         accountChannel: bulkViolation.accountChannel, // Account channel
+        totalCount: entry.action === "status_changed" ? bulkViolation.totalCount : undefined, // Total count for status changes
+        oldStatus: entry.action === "status_changed" ? entry.oldValue : undefined, // Old status for status changes
+        newStatus: entry.action === "status_changed" ? entry.newValue : undefined, // New status for status changes
       });
     });
   });
@@ -1388,11 +1402,31 @@ export function ActivityLog({
   console.log("displayItems:", displayItems);
   console.log("filteredDisplayItems:", filteredDisplayItems);
 
-  // Pagination Logic (now based on filtered display items)
-  const totalPages = Math.ceil(filteredDisplayItems.length / itemsPerPage);
+  // Calculate total items for pagination (count individual logs within bulk groups)
+  const totalItems = filteredDisplayItems.reduce((count, item) => {
+    if (item.type === "bulk") {
+      return count + item.logs.length; // Count all logs in bulk group
+    } else {
+      return count + 1; // Count individual log
+    }
+  }, 0);
+
+  // Pagination Logic (now based on total individual items)
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedItems = filteredDisplayItems.slice(startIndex, endIndex);
+
+  // Flatten display items to paginate properly
+  const flattenedItems: ActivityLogItem[] = [];
+  filteredDisplayItems.forEach((item) => {
+    if (item.type === "bulk") {
+      flattenedItems.push(...item.logs);
+    } else {
+      flattenedItems.push(item.log);
+    }
+  });
+
+  const paginatedItems = flattenedItems.slice(startIndex, endIndex);
 
   console.log("paginatedItems:", paginatedItems);
 
@@ -1640,47 +1674,28 @@ export function ActivityLog({
             </div>
           ) : (
             <>
-              {paginatedItems.map((item, i) => {
-                // Render bulk group (multiple logs with same bulkId)
-                if (item.type === "bulk" && item.logs) {
-                  return item.logs.map((log, logIndex) => (
+              {paginatedItems.map((logItem, i) => {
+                // Check if this is a bulk violation log - render with BulkActivityLogItem
+                if (logItem.bulkId && !logItem.violationId) {
+                  return (
                     <BulkActivityLogItem
-                      key={`bulk-${item.bulkId}-${logIndex}`}
-                      bulkId={item.bulkId}
-                      log={log}
+                      key={`bulk-${logItem.bulkId}-${logItem.logEntryId}-${i}`}
+                      bulkId={logItem.bulkId}
+                      log={logItem}
                       getPlatformColor={getPlatformColor}
                       getPlatformIcon={getPlatformIcon}
                       onDeleteLog={isSuperAdmin ? handleDeleteLog : undefined}
                       isSuperAdmin={isSuperAdmin}
                     />
-                  ));
+                  );
                 }
 
-                // Render individual log
-                if (item.type === "individual") {
-                  const logItem = item.log;
-
-                  // Check if this is a bulk violation log - render with BulkActivityLogItem
-                  if (logItem.bulkId && !logItem.violationId) {
-                    return (
-                      <BulkActivityLogItem
-                        key={`bulk-${logItem.bulkId}-${i}`}
-                        bulkId={logItem.bulkId}
-                        log={logItem}
-                        getPlatformColor={getPlatformColor}
-                        getPlatformIcon={getPlatformIcon}
-                        onDeleteLog={isSuperAdmin ? handleDeleteLog : undefined}
-                        isSuperAdmin={isSuperAdmin}
-                      />
-                    );
-                  }
-
-                  // Regular individual log
-                  const EventIcon = getEventIcon(logItem.type);
-                  return (
-                    <div
-                      key={i}
-                      className={`flex ${isRTL ? "flex-row-reverse" : "flex-row"} items-start gap-3 p-3 rounded-lg border border-border/50 hover:border-border hover:bg-muted/30 transition-all group relative`}>
+                // Regular individual log
+                const EventIcon = getEventIcon(logItem.type);
+                return (
+                  <div
+                    key={i}
+                    className={`flex ${isRTL ? "flex-row-reverse" : "flex-row"} items-start gap-3 p-3 rounded-lg border border-border/50 hover:border-border hover:bg-muted/30 transition-all group relative`}>
                       <div className="shrink-0 mt-0.5">
                         <div className="w-8 h-8 rounded-lg bg-muted/60 flex items-center justify-center group-hover:bg-muted/80 transition-colors">
                           <EventIcon className="h-4 w-4 text-muted-foreground" />
@@ -1768,8 +1783,6 @@ export function ActivityLog({
                       )}
                     </div>
                   );
-                }
-                return null;
               })}
             </>
           )}

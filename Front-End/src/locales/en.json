@@ -990,6 +990,7 @@
         "failedToDelete": "Failed to delete log entry. Please try again."
       },
       "bulk": {
+        "statusChangedFor": "Status changed for",
         "violationsCreated": "violations created in bulk",
         "violationsDeleted": "violations deleted in bulk",
         "violationsStatusChanged": "violations status changed in bulk",
