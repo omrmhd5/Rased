@@ -60,6 +60,7 @@ export function BulkViolationItem({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false); // Loading state for delete
   const [selectedStatus, setSelectedStatus] = useState<
     "Active" | "Blocked" | "Removed" | "Under Review"
   >("Active");
@@ -166,6 +167,7 @@ export function BulkViolationItem({
   // Handle bulk delete
   const handleBulkDelete = async () => {
     try {
+      setIsDeleting(true);
       const response = await fetch(
         `${API_URL}/violations/bulk/${bulkViolation.bulkId}`,
         {
@@ -211,6 +213,8 @@ export function BulkViolationItem({
           "Failed to delete bulk violations",
         variant: "destructive",
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -403,7 +407,11 @@ export function BulkViolationItem({
           <span>•</span>
           <span>{timeAgo}</span>
           <span>•</span>
-          <div className={cn("flex items-center gap-1", isRTL && "flex-row-reverse")}>
+          <div
+            className={cn(
+              "flex items-center gap-1",
+              isRTL && "flex-row-reverse",
+            )}>
             <Eye className="h-3 w-3" />
             <span className="font-medium">{formattedTotalViews}</span>
           </div>
@@ -436,6 +444,7 @@ export function BulkViolationItem({
         onOpenChange={setDeleteDialogOpen}
         violationCount={bulkViolation.totalCount}
         onConfirm={handleBulkDelete}
+        isLoading={isDeleting}
       />
 
       {/* Bulk Status Change Dialog */}

@@ -375,9 +375,7 @@ export function BulkViolationDetailsModal({
                     onClick={handleManualRefetch}
                     disabled={isLoading}>
                     <RotateCw
-                      className={`h-4 w-4 ${
-                        isLoading ? "animate-spin" : ""
-                      }`}
+                      className={`h-4 w-4 ${isLoading ? "animate-spin" : ""}`}
                     />
                   </Button>
                 </TooltipTrigger>

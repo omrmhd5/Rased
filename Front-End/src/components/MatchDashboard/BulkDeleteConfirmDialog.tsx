@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 
 interface BulkDeleteConfirmDialogProps {
   open: boolean;
@@ -18,6 +18,7 @@ interface BulkDeleteConfirmDialogProps {
   title?: string;
   description?: string;
   confirmText?: string;
+  isLoading?: boolean; // Loading state while deleting
 }
 
 export function BulkDeleteConfirmDialog({
@@ -28,6 +29,7 @@ export function BulkDeleteConfirmDialog({
   title,
   description,
   confirmText,
+  isLoading = false,
 }: BulkDeleteConfirmDialogProps) {
   const { t } = useLanguage();
 
@@ -73,7 +75,8 @@ export function BulkDeleteConfirmDialog({
             onClick={(e) => {
               e.preventDefault();
               onOpenChange(false);
-            }}>
+            }}
+            disabled={isLoading}>
             {t("matchDashboard.bulk.deleteConfirm.cancel") || "Cancel"}
           </Button>
           <Button
@@ -82,7 +85,9 @@ export function BulkDeleteConfirmDialog({
             onClick={(e) => {
               e.preventDefault();
               onConfirm();
-            }}>
+            }}
+            disabled={isLoading}>
+            {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {confirmText ||
               t("matchDashboard.bulk.deleteConfirm.confirm") ||
               "Delete All"}

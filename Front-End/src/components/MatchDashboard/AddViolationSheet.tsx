@@ -20,7 +20,7 @@ import {
 import React from "react";
 import { Match, PlatformData } from "./types";
 import { getKSATime, extractAccountHandleFromUrl } from "./utils";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Loader2 } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface AddViolationSheetProps {
@@ -38,7 +38,7 @@ interface AddViolationSheetProps {
   onFormContentTypeChange: (type: string) => void;
   formStatus: "Active" | "Blocked" | "Removed" | "Under Review";
   onFormStatusChange: (
-    status: "Active" | "Blocked" | "Removed" | "Under Review"
+    status: "Active" | "Blocked" | "Removed" | "Under Review",
   ) => void;
   formViews: string;
   onFormViewsChange: (views: string) => void;
@@ -52,6 +52,7 @@ interface AddViolationSheetProps {
   onAddNote: () => void;
   onDeleteNote: (index: number) => void;
   onSave: () => void;
+  isLoading?: boolean; // Loading state while saving
 }
 
 export function AddViolationSheet({
@@ -81,6 +82,7 @@ export function AddViolationSheet({
   onAddNote,
   onDeleteNote,
   onSave,
+  isLoading = false,
 }: AddViolationSheetProps) {
   const { t, isRTL } = useLanguage();
 
@@ -168,7 +170,7 @@ export function AddViolationSheet({
             <Textarea
               id="violation-url"
               placeholder={t(
-                "matchDashboard.addViolationSheet.violationUrlPlaceholder"
+                "matchDashboard.addViolationSheet.violationUrlPlaceholder",
               )}
               value={formUrl}
               onChange={(e) => handleUrlChange(e.target.value)}
@@ -200,7 +202,7 @@ export function AddViolationSheet({
             <Input
               id="account-handle"
               placeholder={t(
-                "matchDashboard.addViolationSheet.accountChannelPlaceholder"
+                "matchDashboard.addViolationSheet.accountChannelPlaceholder",
               )}
               value={formAccountHandle}
               onChange={(e) => onFormAccountHandleChange(e.target.value)}
@@ -217,7 +219,7 @@ export function AddViolationSheet({
               <SelectTrigger id="content-type">
                 <SelectValue
                   placeholder={t(
-                    "matchDashboard.addViolationSheet.contentTypePlaceholder"
+                    "matchDashboard.addViolationSheet.contentTypePlaceholder",
                   )}
                 />
               </SelectTrigger>
@@ -239,7 +241,7 @@ export function AddViolationSheet({
               <SelectTrigger id="status">
                 <SelectValue
                   placeholder={t(
-                    "matchDashboard.addViolationSheet.statusPlaceholder"
+                    "matchDashboard.addViolationSheet.statusPlaceholder",
                   )}
                 />
               </SelectTrigger>
@@ -266,7 +268,7 @@ export function AddViolationSheet({
               id="views"
               type="text"
               placeholder={t(
-                "matchDashboard.addViolationSheet.viewsPlaceholder"
+                "matchDashboard.addViolationSheet.viewsPlaceholder",
               )}
               value={formViews}
               onChange={(e) => handleViewsChange(e.target.value)}
@@ -327,7 +329,7 @@ export function AddViolationSheet({
                     value={note}
                     onChange={(e) => onNoteChange(index, e.target.value)}
                     placeholder={t(
-                      "matchDashboard.addViolationSheet.notePlaceholder"
+                      "matchDashboard.addViolationSheet.notePlaceholder",
                     )}
                     className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
@@ -351,10 +353,14 @@ export function AddViolationSheet({
         </div>
 
         <SheetFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}>
             {t("matchDashboard.addViolationSheet.cancel")}
           </Button>
-          <Button onClick={onSave}>
+          <Button onClick={onSave} disabled={isLoading}>
+            {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {isEditMode
               ? t("matchDashboard.addViolationSheet.save.edit")
               : t("matchDashboard.addViolationSheet.save.add")}

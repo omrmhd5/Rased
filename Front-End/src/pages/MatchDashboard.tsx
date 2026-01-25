@@ -985,6 +985,7 @@ export default function MatchDashboard() {
 
   // Add/Edit violation state
   const [isAddViolationOpen, setIsAddViolationOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false); // Loading state for save
   const [selectedPlatformForAdd, setSelectedPlatformForAdd] =
     useState<string>("");
   const [editingViolation, setEditingViolation] = useState<Violation | null>(
@@ -1019,6 +1020,7 @@ export default function MatchDashboard() {
 
   // Delete confirmation dialog state
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false); // Loading state for delete
   const [deleteConfirmViolation, setDeleteConfirmViolation] = useState<{
     platformId: string;
     violationId: number | string;
@@ -1742,6 +1744,7 @@ export default function MatchDashboard() {
 
   // Save violation (add or edit) - with whitelist check
   const saveViolation = async () => {
+    // Validation first (before setting loading state)
     if (!formUrl) {
       toast({
         title: t("matchDashboard.error.validationError"),
@@ -1762,104 +1765,109 @@ export default function MatchDashboard() {
       return;
     }
 
-    const platform = platformOperations.find(
-      (p) => p.id === selectedPlatformForAdd,
-    );
-    if (!platform) return;
+    try {
+      setIsSaving(true);
+      const platform = platformOperations.find(
+        (p) => p.id === selectedPlatformForAdd,
+      );
+      if (!platform) return;
 
-    // Parse URLs - split by newlines and filter out empty lines
-    const urls = formUrl
-      .split("\n")
-      .map((url) => url.trim())
-      .filter((url) => url.length > 0);
+      // Parse URLs - split by newlines and filter out empty lines
+      const urls = formUrl
+        .split("\n")
+        .map((url) => url.trim())
+        .filter((url) => url.length > 0);
 
-    if (urls.length === 0) {
-      toast({
-        title: t("matchDashboard.error.validationError"),
-        description: t("matchDashboard.error.violationUrlRequired"),
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Map contentType to match backend schema exactly: "Live", "Highlights", or "Other"
-    let contentType: "Live" | "Highlights" | "Other" = "Other";
-    if (formContentType.toLowerCase() === "live") {
-      contentType = "Live";
-    } else if (formContentType.toLowerCase() === "highlights") {
-      contentType = "Highlights";
-    }
-
-    // Map status to match backend schema exactly: "Active", "Blocked", "Removed", "Under Review"
-    const status: "Active" | "Blocked" | "Removed" | "Under Review" =
-      formStatus;
-
-    // Handle blockedAt:
-    let blockedAtValue: string | null | undefined = undefined;
-    if (formStatus === "Blocked") {
-      blockedAtValue = formBlockedAt
-        ? convertKSATimeToUTC(formBlockedAt)
-        : undefined;
-    } else if (
-      formStatus === "Active" ||
-      formStatus === "Removed" ||
-      formStatus === "Under Review"
-    ) {
-      blockedAtValue = null;
-    }
-
-    // If editing, only allow single URL
-    if (isEditMode && urls.length > 1) {
-      toast({
-        title: t("matchDashboard.error.validationError"),
-        description:
-          "Cannot edit multiple violations at once. Please provide a single URL.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // For edit mode, use the single URL
-    if (isEditMode) {
-      const violationData = {
-        matchId: match.externalMatchId,
-        matchName: `${match.team1} vs ${match.team2}`,
-        platformId: platform.id,
-        platformName: platform.name,
-        violationUrl: urls[0],
-        accountChannel: formAccountHandle || "N/A", // Use N/A if empty
-        contentType,
-        status,
-        views: formViews
-          ? parseInt(formViews.replace(/,/g, "")).toLocaleString("en-US")
-          : undefined,
-        timeAdded: convertKSATimeToUTC(formTimeAdded),
-        blockedAt: blockedAtValue,
-        notes: formNotes.filter((note) => note.trim() !== ""),
-      };
-
-      // Check if account is whitelisted (only if account is provided)
-      if (
-        formAccountHandle &&
-        checkWhitelistedAccount(formAccountHandle, platform.id)
-      ) {
-        // Show confirmation dialog
-        setPendingViolationData({
-          violationData,
-          isEditMode,
-          editingViolation,
+      if (urls.length === 0) {
+        toast({
+          title: t("matchDashboard.error.validationError"),
+          description: t("matchDashboard.error.violationUrlRequired"),
+          variant: "destructive",
         });
-        setIsWhitelistConfirmOpen(true);
         return;
       }
 
-      // Not whitelisted or editing, proceed with save
-      await actuallySaveViolation(violationData, isEditMode, editingViolation);
-      return;
-    }
+      // Map contentType to match backend schema exactly: "Live", "Highlights", or "Other"
+      let contentType: "Live" | "Highlights" | "Other" = "Other";
+      if (formContentType.toLowerCase() === "live") {
+        contentType = "Live";
+      } else if (formContentType.toLowerCase() === "highlights") {
+        contentType = "Highlights";
+      }
 
-    // For add mode, create multiple violations if multiple URLs
-    try {
+      // Map status to match backend schema exactly: "Active", "Blocked", "Removed", "Under Review"
+      const status: "Active" | "Blocked" | "Removed" | "Under Review" =
+        formStatus;
+
+      // Handle blockedAt:
+      let blockedAtValue: string | null | undefined = undefined;
+      if (formStatus === "Blocked") {
+        blockedAtValue = formBlockedAt
+          ? convertKSATimeToUTC(formBlockedAt)
+          : undefined;
+      } else if (
+        formStatus === "Active" ||
+        formStatus === "Removed" ||
+        formStatus === "Under Review"
+      ) {
+        blockedAtValue = null;
+      }
+
+      // If editing, only allow single URL
+      if (isEditMode && urls.length > 1) {
+        toast({
+          title: t("matchDashboard.error.validationError"),
+          description:
+            "Cannot edit multiple violations at once. Please provide a single URL.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // For edit mode, use the single URL
+      if (isEditMode) {
+        const violationData = {
+          matchId: match.externalMatchId,
+          matchName: `${match.team1} vs ${match.team2}`,
+          platformId: platform.id,
+          platformName: platform.name,
+          violationUrl: urls[0],
+          accountChannel: formAccountHandle || "N/A", // Use N/A if empty
+          contentType,
+          status,
+          views: formViews
+            ? parseInt(formViews.replace(/,/g, "")).toLocaleString("en-US")
+            : undefined,
+          timeAdded: convertKSATimeToUTC(formTimeAdded),
+          blockedAt: blockedAtValue,
+          notes: formNotes.filter((note) => note.trim() !== ""),
+        };
+
+        // Check if account is whitelisted (only if account is provided)
+        if (
+          formAccountHandle &&
+          checkWhitelistedAccount(formAccountHandle, platform.id)
+        ) {
+          // Show confirmation dialog
+          setPendingViolationData({
+            violationData,
+            isEditMode,
+            editingViolation,
+          });
+          setIsWhitelistConfirmOpen(true);
+          return;
+        }
+
+        // Not whitelisted or editing, proceed with save
+        await actuallySaveViolation(
+          violationData,
+          isEditMode,
+          editingViolation,
+        );
+        return;
+      }
+
+      // For add mode, create multiple violations if multiple URLs
       // Check if account is whitelisted (only if account is provided)
       if (
         formAccountHandle &&
@@ -1887,6 +1895,7 @@ export default function MatchDashboard() {
           editingViolation: null,
         });
         setIsWhitelistConfirmOpen(true);
+        setIsSaving(false);
         return;
       }
 
@@ -1989,6 +1998,8 @@ export default function MatchDashboard() {
         description: t("matchDashboard.error.unexpectedErrorSaving"),
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1996,17 +2007,17 @@ export default function MatchDashboard() {
   const confirmWhitelistSave = async () => {
     if (!pendingViolationData) return;
 
-    setIsWhitelistConfirmOpen(false);
+    try {
+      setIsWhitelistConfirmOpen(false);
 
-    // Check if there are multiple URLs (separated by newlines)
-    const urls = pendingViolationData.violationData.violationUrl
-      .split("\n")
-      .map((url) => url.trim())
-      .filter((url) => url.length > 0);
+      // Check if there are multiple URLs (separated by newlines)
+      const urls = pendingViolationData.violationData.violationUrl
+        .split("\n")
+        .map((url) => url.trim())
+        .filter((url) => url.length > 0);
 
-    if (urls.length > 1) {
-      // Multiple URLs - use bulk endpoint
-      try {
+      if (urls.length > 1) {
+        // Multiple URLs - use bulk endpoint
         const response = await fetch(`${API_URL}/violations/bulk`, {
           method: "POST",
           headers: {
@@ -2059,24 +2070,25 @@ export default function MatchDashboard() {
 
         // Close the sheet
         setIsAddViolationOpen(false);
-      } catch (error) {
-        console.error("Error saving violations:", error);
-        toast({
-          title: t("matchDashboard.error.title"),
-          description: t("matchDashboard.error.unexpectedErrorSaving"),
-          variant: "destructive",
-        });
+      } else {
+        // Single URL - save normally
+        await actuallySaveViolation(
+          pendingViolationData.violationData,
+          pendingViolationData.isEditMode,
+          pendingViolationData.editingViolation,
+        );
       }
-    } else {
-      // Single URL - save normally
-      await actuallySaveViolation(
-        pendingViolationData.violationData,
-        pendingViolationData.isEditMode,
-        pendingViolationData.editingViolation,
-      );
+    } catch (error) {
+      console.error("Error saving violations:", error);
+      toast({
+        title: t("matchDashboard.error.title"),
+        description: t("matchDashboard.error.unexpectedErrorSaving"),
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+      setPendingViolationData(null);
     }
-
-    setPendingViolationData(null);
   };
 
   // Delete violation - show confirmation dialog
@@ -2094,20 +2106,22 @@ export default function MatchDashboard() {
 
     const { platformId, violationId } = deleteConfirmViolation;
 
-    // Try to find the violation in platformOperations, but proceed even if not found
-    // (violation might be loaded in BulkViolationDetailsModal from backend pagination)
-    const platform = platformOperations.find((p) => p.id === platformId);
-    let violation = null;
-
-    if (platform) {
-      violation = platform.violations.find(
-        (v) => v.id === violationId || v._id === violationId,
-      );
-    }
-
-    // violationId is all we need for the API call - proceed regardless
-
     try {
+      setIsDeleting(true);
+
+      // Try to find the violation in platformOperations, but proceed even if not found
+      // (violation might be loaded in BulkViolationDetailsModal from backend pagination)
+      const platform = platformOperations.find((p) => p.id === platformId);
+      let violation = null;
+
+      if (platform) {
+        violation = platform.violations.find(
+          (v) => v.id === violationId || v._id === violationId,
+        );
+      }
+
+      // violationId is all we need for the API call - proceed regardless
+
       // Use violationId directly since it's what the backend expects
       const violationDbId = String(violationId);
 
@@ -2169,6 +2183,8 @@ export default function MatchDashboard() {
         description: t("matchDashboard.error.failedToDelete"),
         variant: "destructive",
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -3171,6 +3187,7 @@ export default function MatchDashboard() {
           setFormNotes(formNotes.filter((_, i) => i !== index));
         }}
         onSave={saveViolation}
+        isLoading={isSaving}
       />
 
       <DeleteConfirmDialog
@@ -3180,6 +3197,7 @@ export default function MatchDashboard() {
           if (!open) setDeleteConfirmViolation(null);
         }}
         onConfirm={confirmDeleteViolation}
+        isLoading={isDeleting}
       />
 
       <AddNoteDialog

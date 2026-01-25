@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { useLanguage } from "@/contexts/LanguageContext";
+import { Loader2 } from "lucide-react";
 
 interface DeleteConfirmDialogProps {
   open: boolean;
@@ -15,6 +16,7 @@ interface DeleteConfirmDialogProps {
   onConfirm: () => void;
   title?: string;
   description?: string;
+  isLoading?: boolean; // Loading state while deleting
 }
 
 export function DeleteConfirmDialog({
@@ -23,6 +25,7 @@ export function DeleteConfirmDialog({
   onConfirm,
   title,
   description,
+  isLoading = false,
 }: DeleteConfirmDialogProps) {
   const { t } = useLanguage();
 
@@ -38,10 +41,17 @@ export function DeleteConfirmDialog({
           </DialogDescription>
         </DialogHeader>
         <div className="flex justify-end gap-3 mt-4">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isLoading}>
             {t("matchDashboard.deleteConfirmDialog.cancel")}
           </Button>
-          <Button variant="destructive" onClick={onConfirm}>
+          <Button
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={isLoading}>
+            {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {t("matchDashboard.deleteConfirmDialog.confirm")}
           </Button>
         </div>
