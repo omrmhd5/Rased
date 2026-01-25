@@ -1102,6 +1102,7 @@
     "confirm": "Confirm",
     "delete": "Delete",
     "edit": "Edit",
-    "save": "Save"
+    "save": "Save",
+    "refresh": "Refresh"
   }
 }

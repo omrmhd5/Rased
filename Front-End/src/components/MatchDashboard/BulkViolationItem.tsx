@@ -2,7 +2,7 @@ import { Violation, PlatformData, BulkViolation, API_URL } from "./types";
 import { convertKSATimeToUTC } from "./utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Layers, Edit, Trash2 } from "lucide-react";
+import { Layers, Edit, Trash2, Eye } from "lucide-react";
 import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -72,8 +72,10 @@ export function BulkViolationItem({
   const removedCount = bulkViolation.removedCount;
   const underReviewCount = bulkViolation.underReviewCount;
 
-  // For now, set views to 0 (can be added to BulkViolation model later)
-  const formattedTotalViews = "0";
+  // Format total views from BulkViolation
+  const formattedTotalViews = bulkViolation.totalViews
+    ? bulkViolation.totalViews.toLocaleString("en-US")
+    : "0";
 
   // Format time created and time ago
   const formatTimeWithPeriod = (timeString: string): string => {
@@ -400,6 +402,11 @@ export function BulkViolationItem({
           <span>{dateCreated}</span>
           <span>•</span>
           <span>{timeAgo}</span>
+          <span>•</span>
+          <div className={cn("flex items-center gap-1", isRTL && "flex-row-reverse")}>
+            <Eye className="h-3 w-3" />
+            <span className="font-medium">{formattedTotalViews}</span>
+          </div>
         </div>
       </div>
 
@@ -420,6 +427,7 @@ export function BulkViolationItem({
         canModifyViolations={canModifyViolations}
         onOpenBulkStatusDialog={openStatusDialog}
         onOpenBulkDeleteDialog={openDeleteDialog}
+        onRefetch={onRefetch}
       />
 
       {/* Bulk Delete Confirmation Dialog */}

@@ -17,6 +17,7 @@ import {
   Edit,
   Trash2,
   Loader2,
+  RotateCw,
 } from "lucide-react";
 import {
   Tooltip,
@@ -29,7 +30,7 @@ import { convertBackendViolationToFrontend } from "./utils";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { API_URL } from "./types";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 interface BulkViolationDetailsModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -50,6 +51,7 @@ interface BulkViolationDetailsModalProps {
   canModifyViolations: boolean;
   onOpenBulkStatusDialog: (e: React.MouseEvent) => void;
   onOpenBulkDeleteDialog: (e: React.MouseEvent) => void;
+  onRefetch?: () => void; // Callback to refetch parent data after modifications
 }
 
 export function BulkViolationDetailsModal({
@@ -68,6 +70,7 @@ export function BulkViolationDetailsModal({
   canModifyViolations,
   onOpenBulkStatusDialog,
   onOpenBulkDeleteDialog,
+  onRefetch,
 }: BulkViolationDetailsModalProps) {
   const { t, isRTL } = useLanguage();
 
@@ -129,6 +132,64 @@ export function BulkViolationDetailsModal({
     fetchViolations();
   }, [open, bulkId, currentPage]);
 
+  // Refetch violations when bulkViolation stats change (meaning parent refetched)
+  const prevBulkViolationRef = useRef(bulkViolation);
+  useEffect(() => {
+    const prev = prevBulkViolationRef.current;
+    const curr = bulkViolation;
+
+    // Check if any stats changed (meaning parent refetched)
+    if (
+      open &&
+      prev &&
+      (prev.activeCount !== curr.activeCount ||
+        prev.blockedCount !== curr.blockedCount ||
+        prev.removedCount !== curr.removedCount ||
+        prev.underReviewCount !== curr.underReviewCount ||
+        prev.totalCount !== curr.totalCount ||
+        prev.totalViews !== curr.totalViews ||
+        prev.liveCount !== curr.liveCount ||
+        prev.highlightsCount !== curr.highlightsCount ||
+        prev.othersCount !== curr.othersCount)
+    ) {
+      // Parent data changed, refetch modal's violations to stay in sync
+      const refetch = async () => {
+        if (!bulkId) return;
+
+        try {
+          const params = new URLSearchParams({
+            page: currentPage.toString(),
+            limit: itemsPerPage.toString(),
+          });
+
+          const response = await fetch(
+            `${API_URL}/violations/bulk/${bulkId}/violations?${params}`,
+            {
+              credentials: "include",
+            },
+          );
+
+          if (!response.ok) return;
+
+          const data = await response.json();
+          const transformedViolations = data.violations.map((v: any) =>
+            convertBackendViolationToFrontend(v),
+          );
+
+          setViolations(transformedViolations);
+          setTotalCount(data.pagination.totalCount);
+          setTotalPages(data.pagination.totalPages);
+        } catch (err) {
+          // Silently fail - parent data is still updated
+        }
+      };
+
+      refetch();
+    }
+
+    prevBulkViolationRef.current = curr;
+  }, [open, bulkId, bulkViolation, currentPage]);
+
   // Reset to page 1 when modal opens
   const handleOpenChange = (newOpen: boolean) => {
     if (newOpen) {
@@ -141,6 +202,97 @@ export function BulkViolationDetailsModal({
     }
     onOpenChange(newOpen);
   };
+
+  // Wrapper functions - call parent callbacks and trigger delayed refetch
+  // Delay ensures backend finishes updating violation + bulkViolation + platformByMatch
+  const handleEdit = useCallback(
+    (platformId: string, violation: Violation) => {
+      onEdit(platformId, violation);
+      // Wait for backend to update all documents (violation + bulk + platform)
+      setTimeout(() => {
+        onRefetch?.();
+      }, 200);
+    },
+    [onEdit, onRefetch],
+  );
+
+  const handleToggleStatus = useCallback(
+    (
+      platformId: string,
+      violationId: number | string,
+      violation?: Violation,
+    ) => {
+      onToggleStatus(platformId, violationId, violation);
+      // Wait for backend to update all documents (violation + bulk + platform)
+      setTimeout(() => {
+        onRefetch?.();
+      }, 200);
+    },
+    [onToggleStatus, onRefetch],
+  );
+
+  const handleDelete = useCallback(
+    (platformId: string, violationId: number | string) => {
+      onDelete(platformId, violationId);
+      // Wait for backend to update all documents (violation + bulk + platform)
+      setTimeout(() => {
+        onRefetch?.();
+      }, 200);
+    },
+    [onDelete, onRefetch],
+  );
+
+  const handleAddNote = useCallback(
+    (platformId: string, violation: Violation) => {
+      onAddNote(platformId, violation);
+      // Wait for backend to update all documents (violation + bulk + platform)
+      setTimeout(() => {
+        onRefetch?.();
+      }, 200);
+    },
+    [onAddNote, onRefetch],
+  );
+
+  // Manual refetch function
+  const handleManualRefetch = useCallback(async () => {
+    if (!bulkId) return;
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: itemsPerPage.toString(),
+      });
+
+      const response = await fetch(
+        `${API_URL}/violations/bulk/${bulkId}/violations?${params}`,
+        {
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch bulk violations");
+      }
+
+      const data = await response.json();
+
+      // Transform backend data using the conversion function
+      const transformedViolations = data.violations.map((v: any) =>
+        convertBackendViolationToFrontend(v),
+      );
+
+      setViolations(transformedViolations);
+      setTotalCount(data.pagination.totalCount);
+      setTotalPages(data.pagination.totalPages);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [bulkId, currentPage]);
 
   // Client-side filtering of fetched violations
   const filteredViolations = violations.filter((violation) => {
@@ -213,6 +365,27 @@ export function BulkViolationDetailsModal({
               className={`flex items-center gap-1 absolute top-6 ${
                 isRTL ? "left-6" : "right-6"
               }`}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={handleManualRefetch}
+                    disabled={isLoading}>
+                    <RotateCw
+                      className={`h-4 w-4 ${
+                        isLoading ? "animate-spin" : ""
+                      }`}
+                    />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t("common.refresh") || "Refresh"}
+                </TooltipContent>
+              </Tooltip>
+
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
@@ -385,25 +558,11 @@ export function BulkViolationDetailsModal({
                         <ViolationItem
                           violation={violation}
                           platform={platform}
-                          onEdit={(pId: string, v: Violation) => {
-                            onEdit(pId, v);
-                          }}
-                          onToggleStatus={(
-                            pId: string,
-                            vId: string | number,
-                            v: Violation,
-                          ) => {
-                            onToggleStatus(pId, vId, v);
-                          }}
-                          onDelete={(pId: string, vId: string | number) => {
-                            onDelete(pId, vId);
-                          }}
-                          onCopyUrl={(url: string) => {
-                            onCopyUrl(url);
-                          }}
-                          onAddNote={(pId: string, v: Violation) => {
-                            onAddNote(pId, v);
-                          }}
+                          onEdit={handleEdit}
+                          onToggleStatus={handleToggleStatus}
+                          onDelete={handleDelete}
+                          onCopyUrl={onCopyUrl}
+                          onAddNote={handleAddNote}
                           getPlatformIcon={getPlatformIcon}
                           canModifyViolations={canModifyViolations}
                         />

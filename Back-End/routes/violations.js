@@ -1603,10 +1603,8 @@ router.put(
         }
       }
 
-      // Update platform and match stats (cascade handles both)
-      await updatePlatformStats(violation.matchId, violation.platformId);
-
-      // Update bulk violation stats if this violation is part of a bulk
+      // Update bulk violation stats FIRST if this violation is part of a bulk
+      // This ensures platform stats calculation uses fresh bulk data
       if (violation.bulkId) {
         try {
           await updateBulkViolationStats(violation.bulkId);
@@ -1614,6 +1612,10 @@ router.put(
           // Don't fail the request if bulk update fails
         }
       }
+
+      // Then update platform and match stats (cascade handles both)
+      // This will now include the updated bulk stats
+      await updatePlatformStats(violation.matchId, violation.platformId);
 
       // Emit violation updated event
       try {
@@ -1737,10 +1739,8 @@ router.patch(
         });
       }
 
-      // Update platform and match stats (cascade handles both)
-      await updatePlatformStats(violation.matchId, violation.platformId);
-
-      // Update bulk violation stats if this violation is part of a bulk
+      // Update bulk violation stats FIRST if this violation is part of a bulk
+      // This ensures platform stats calculation uses fresh bulk data
       if (violation.bulkId) {
         try {
           await updateBulkViolationStats(violation.bulkId);
@@ -1748,6 +1748,10 @@ router.patch(
           // Don't fail the request if bulk update fails
         }
       }
+
+      // Then update platform and match stats (cascade handles both)
+      // This will now include the updated bulk stats
+      await updatePlatformStats(violation.matchId, violation.platformId);
 
       // Emit violation updated event
       try {
@@ -1836,10 +1840,8 @@ router.delete(
 
       await Violation.findByIdAndDelete(req.params.id);
 
-      // Update platform and match stats (cascade handles both)
-      await updatePlatformStats(matchId, violation.platformId);
-
-      // Handle bulk violation stats if this violation was part of a bulk
+      // Update bulk violation stats FIRST if this violation was part of a bulk
+      // This ensures platform stats calculation uses fresh bulk data
       if (violation.bulkId) {
         try {
           // Check if there are any remaining violations with this bulkId
@@ -1858,6 +1860,10 @@ router.delete(
           // Don't fail the request if bulk update fails
         }
       }
+
+      // Then update platform and match stats (cascade handles both)
+      // This will now include the updated bulk stats
+      await updatePlatformStats(matchId, violation.platformId);
 
       // Emit violation deleted event
       try {
