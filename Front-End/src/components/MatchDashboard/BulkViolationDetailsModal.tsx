@@ -83,29 +83,33 @@ export function BulkViolationDetailsModal({
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const itemsPerPage = 10;
 
-  // Fetch violations from backend when page or filters change
-  useEffect(() => {
-    if (!open || !bulkId) return;
+  // Fetch violations from backend - main fetch function
+  const fetchViolations = useCallback(
+    async (page: number, search: string = "") => {
+      if (!open || !bulkId) return;
 
-    const fetchViolations = async () => {
       try {
         setIsLoading(true);
         setError(null);
 
         const params = new URLSearchParams({
-          page: currentPage.toString(),
+          page: page.toString(),
           limit: itemsPerPage.toString(),
+          ...(search && { query: search }),
         });
 
-        const response = await fetch(
-          `${API_URL}/violations/bulk/${bulkId}/violations?${params}`,
-          {
-            credentials: "include",
-          },
-        );
+        // Use search endpoint if search query exists, otherwise use regular endpoint
+        const endpoint = search
+          ? `/violations/bulk/${bulkId}/search?${params}`
+          : `/violations/bulk/${bulkId}/violations?${params}`;
+
+        const response = await fetch(`${API_URL}${endpoint}`, {
+          credentials: "include",
+        });
 
         if (!response.ok) {
           throw new Error("Failed to fetch bulk violations");
@@ -127,10 +131,43 @@ export function BulkViolationDetailsModal({
       } finally {
         setIsLoading(false);
       }
-    };
+    },
+    [open, bulkId],
+  );
 
-    fetchViolations();
-  }, [open, bulkId, currentPage]);
+  // Fetch violations when page changes
+  useEffect(() => {
+    if (!open || !bulkId) return;
+    fetchViolations(currentPage, searchQuery);
+  }, [open, bulkId, currentPage, fetchViolations]);
+
+  // Handle search with debouncing
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value);
+
+      // Clear existing timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+
+      // Set new timeout for debounced search
+      searchTimeoutRef.current = setTimeout(() => {
+        setCurrentPage(1); // Reset to page 1 when searching
+        fetchViolations(1, value);
+      }, 300); // 300ms debounce
+    },
+    [fetchViolations],
+  );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Refetch violations when bulkViolation stats change (meaning parent refetched)
   const prevBulkViolationRef = useRef(bulkViolation);
@@ -153,42 +190,11 @@ export function BulkViolationDetailsModal({
         prev.othersCount !== curr.othersCount)
     ) {
       // Parent data changed, refetch modal's violations to stay in sync
-      const refetch = async () => {
-        if (!bulkId) return;
-
-        try {
-          const params = new URLSearchParams({
-            page: currentPage.toString(),
-            limit: itemsPerPage.toString(),
-          });
-
-          const response = await fetch(
-            `${API_URL}/violations/bulk/${bulkId}/violations?${params}`,
-            {
-              credentials: "include",
-            },
-          );
-
-          if (!response.ok) return;
-
-          const data = await response.json();
-          const transformedViolations = data.violations.map((v: any) =>
-            convertBackendViolationToFrontend(v),
-          );
-
-          setViolations(transformedViolations);
-          setTotalCount(data.pagination.totalCount);
-          setTotalPages(data.pagination.totalPages);
-        } catch (err) {
-          // Silently fail - parent data is still updated
-        }
-      };
-
-      refetch();
+      fetchViolations(currentPage, searchQuery);
     }
 
     prevBulkViolationRef.current = curr;
-  }, [open, bulkId, bulkViolation, currentPage]);
+  }, [open, bulkId, bulkViolation, currentPage, searchQuery, fetchViolations]);
 
   // Reset to page 1 when modal opens
   const handleOpenChange = (newOpen: boolean) => {
@@ -210,10 +216,10 @@ export function BulkViolationDetailsModal({
       onEdit(platformId, violation);
       // Wait for backend to update all documents (violation + bulk + platform)
       setTimeout(() => {
-        onRefetch?.();
+        fetchViolations(currentPage, searchQuery);
       }, 200);
     },
-    [onEdit, onRefetch],
+    [onEdit, currentPage, searchQuery, fetchViolations],
   );
 
   const handleToggleStatus = useCallback(
@@ -225,10 +231,10 @@ export function BulkViolationDetailsModal({
       onToggleStatus(platformId, violationId, violation);
       // Wait for backend to update all documents (violation + bulk + platform)
       setTimeout(() => {
-        onRefetch?.();
+        fetchViolations(currentPage, searchQuery);
       }, 200);
     },
-    [onToggleStatus, onRefetch],
+    [onToggleStatus, currentPage, searchQuery, fetchViolations],
   );
 
   const handleDelete = useCallback(
@@ -236,10 +242,10 @@ export function BulkViolationDetailsModal({
       onDelete(platformId, violationId);
       // Wait for backend to update all documents (violation + bulk + platform)
       setTimeout(() => {
-        onRefetch?.();
+        fetchViolations(currentPage, searchQuery);
       }, 200);
     },
-    [onDelete, onRefetch],
+    [onDelete, currentPage, searchQuery, fetchViolations],
   );
 
   const handleAddNote = useCallback(
@@ -247,54 +253,18 @@ export function BulkViolationDetailsModal({
       onAddNote(platformId, violation);
       // Wait for backend to update all documents (violation + bulk + platform)
       setTimeout(() => {
-        onRefetch?.();
+        fetchViolations(currentPage, searchQuery);
       }, 200);
     },
-    [onAddNote, onRefetch],
+    [onAddNote, currentPage, searchQuery, fetchViolations],
   );
 
   // Manual refetch function
   const handleManualRefetch = useCallback(async () => {
-    if (!bulkId) return;
+    fetchViolations(currentPage, searchQuery);
+  }, [currentPage, searchQuery, fetchViolations]);
 
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: itemsPerPage.toString(),
-      });
-
-      const response = await fetch(
-        `${API_URL}/violations/bulk/${bulkId}/violations?${params}`,
-        {
-          credentials: "include",
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch bulk violations");
-      }
-
-      const data = await response.json();
-
-      // Transform backend data using the conversion function
-      const transformedViolations = data.violations.map((v: any) =>
-        convertBackendViolationToFrontend(v),
-      );
-
-      setViolations(transformedViolations);
-      setTotalCount(data.pagination.totalCount);
-      setTotalPages(data.pagination.totalPages);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [bulkId, currentPage]);
-
-  // Client-side filtering of fetched violations
+  // Client-side filtering of fetched violations (by status only now, search is done on backend)
   const filteredViolations = violations.filter((violation) => {
     // Filter by status
     const statusMatch =
@@ -304,15 +274,7 @@ export function BulkViolationDetailsModal({
       (filter === "removed" && violation.status === "Removed") ||
       (filter === "review" && violation.status === "Under Review");
 
-    // Filter by search query
-    const searchLower = searchQuery.toLowerCase();
-    const searchMatch =
-      !searchQuery ||
-      violation.violationUrl?.toLowerCase().includes(searchLower) ||
-      violation.accountChannel?.toLowerCase().includes(searchLower) ||
-      violation.views?.toLowerCase().includes(searchLower);
-
-    return statusMatch && searchMatch;
+    return statusMatch;
   });
 
   // Calculate stats from current page violations
@@ -329,12 +291,6 @@ export function BulkViolationDetailsModal({
   const liveCount = bulkViolation.liveCount;
   const highlightsCount = bulkViolation.highlightsCount;
   const otherCount = bulkViolation.othersCount;
-
-  // Reset to page 1 when search or filter changes
-  const handleSearchChange = (value: string) => {
-    setSearchQuery(value);
-    // Note: Client-side search doesn't reset page since we have all data for this page
-  };
 
   const handleFilterChange = (newFilter: string) => {
     setFilter(newFilter);

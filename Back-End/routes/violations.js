@@ -49,6 +49,55 @@ const router = express.Router();
 // Apply optional auth to all routes (logs user if authenticated, otherwise uses "System")
 router.use(optionalAuth);
 
+// GET /api/violations/bulk/search - Search for bulk violations by violation link
+router.get("/bulk/search", async (req, res) => {
+  try {
+    const { query = "", matchId } = req.query;
+
+    if (!query || query.trim().length < 2) {
+      return res.json([]); // Return empty array if query too short
+    }
+
+    // Find all violations with matching URL
+    const matchingViolations = await Violation.find({
+      violationUrl: { $regex: query, $options: "i" },
+    }).select("bulkId");
+
+    // Extract unique bulkIds
+    const bulkIds = [
+      ...new Set(
+        matchingViolations.map((v) => v.bulkId).filter((id) => id !== null),
+      ),
+    ];
+
+    if (bulkIds.length === 0) {
+      return res.json([]); // Return empty array if no matching bulks
+    }
+
+    // Find the bulk violations
+    const bulkQuery = { bulkId: { $in: bulkIds } };
+    if (matchId) {
+      const match = await Match.findOne({ externalMatchId: matchId });
+      if (match) {
+        bulkQuery.matchId = match._id;
+      }
+    }
+
+    const bulkViolations = await BulkViolation.find(bulkQuery)
+      .populate(
+        "matchId",
+        "team1 team2 date time week competition stadium externalMatchId league description",
+      )
+      .populate("createdBy", "username email")
+      .sort({ timeAdded: -1 })
+      .lean();
+
+    res.json(bulkViolations);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/violations/bulk - Get all bulk violations with filters
 router.get("/bulk", async (req, res) => {
   try {
@@ -271,6 +320,53 @@ router.get("/bulk/:bulkId/violations", async (req, res) => {
 
     // Get paginated violations
     const violations = await Violation.find({ bulkId })
+      .sort({ timeAdded: -1 })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
+    res.json({
+      violations,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limitNum),
+        hasMore: skip + violations.length < totalCount,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/violations/bulk/:bulkId/search - Search violations within a bulk with pagination
+router.get("/bulk/:bulkId/search", async (req, res) => {
+  try {
+    const { bulkId } = req.params;
+    const { query = "", page = 1, limit = 10 } = req.query;
+
+    // Convert to numbers
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Build search query - search across multiple fields
+    const searchQuery = {
+      bulkId,
+      $or: [
+        { violationUrl: { $regex: query, $options: "i" } },
+        { accountChannel: { $regex: query, $options: "i" } },
+        { views: { $regex: query, $options: "i" } },
+        { contentType: { $regex: query, $options: "i" } },
+      ],
+    };
+
+    // Get total count matching search
+    const totalCount = await Violation.countDocuments(searchQuery);
+
+    // Get paginated search results
+    const violations = await Violation.find(searchQuery)
       .sort({ timeAdded: -1 })
       .skip(skip)
       .limit(limitNum)

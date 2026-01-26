@@ -56,7 +56,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import React, { useState } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface ActivityLogItem {
@@ -179,7 +179,80 @@ export function ActivityLog({
   const [bulkFilter, setBulkFilter] = useState<"all" | "bulk" | "individual">(
     "all",
   );
+  const [searchedBulkIds, setSearchedBulkIds] = useState<Set<string>>(
+    new Set(),
+  ); // Track which bulks match search
+  const [isSearching, setIsSearching] = useState(false);
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const itemsPerPage = 10;
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+  // Debounced backend search for bulk violations by link
+  const performBulkSearch = useCallback(
+    async (query: string) => {
+      if (!query || query.trim().length < 2) {
+        setSearchedBulkIds(new Set());
+        setIsSearching(false);
+        return;
+      }
+
+      setIsSearching(true);
+
+      try {
+        const response = await fetch(
+          `${API_URL}/violations/bulk/search?query=${encodeURIComponent(
+            query.trim(),
+          )}`,
+          {
+            credentials: "include",
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error("Search failed");
+        }
+
+        const matchingBulks = await response.json();
+        const matchingBulkIds: Set<string> = new Set(
+          matchingBulks.map((b: any) => b.bulkId as string),
+        );
+        setSearchedBulkIds(matchingBulkIds);
+      } catch (error) {
+        console.error("Error searching bulk violations:", error);
+        setSearchedBulkIds(new Set());
+      } finally {
+        setIsSearching(false);
+      }
+    },
+    [API_URL],
+  );
+
+  // Handle search input with debouncing
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setSearchQuery(value);
+
+      // Clear existing timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+
+      // Set new timeout for debounced search
+      searchTimeoutRef.current = setTimeout(() => {
+        performBulkSearch(value);
+      }, 300); // 300ms debounce
+    },
+    [performBulkSearch],
+  );
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Debug: Log bulk violations to see if they exist
   console.log("bulkViolations:", bulkViolations);
@@ -402,10 +475,19 @@ export function ActivityLog({
                   </code>{" "}
                 </>
               )}
-              {accountName && (
+              {accountName ? (
                 <>
                   <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                     {accountName}
+                  </code>{" "}
+                  {t(
+                    "matchDashboard.activityLog.descriptions.forChannelUser",
+                  )}{" "}
+                </>
+              ) : (
+                <>
+                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                    N/A
                   </code>{" "}
                   {t(
                     "matchDashboard.activityLog.descriptions.forChannelUser",
@@ -427,7 +509,7 @@ export function ActivityLog({
               <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                 {platformName}
               </code>
-              {accountName && (
+              {accountName ? (
                 <>
                   {" "}
                   {t(
@@ -435,6 +517,16 @@ export function ActivityLog({
                   )}{" "}
                   <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                     {accountName}
+                  </code>
+                </>
+              ) : (
+                <>
+                  {" "}
+                  {t(
+                    "matchDashboard.activityLog.descriptions.forChannelUser",
+                  )}{" "}
+                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                    N/A
                   </code>
                 </>
               )}
@@ -465,7 +557,7 @@ export function ActivityLog({
                   </code>
                 </>
               )}
-              {!views && status && (
+              {views === "0" && status && (
                 <>
                   {" "}
                   {t("matchDashboard.activityLog.descriptions.withStatus")}{" "}
@@ -582,10 +674,19 @@ export function ActivityLog({
                         </code>{" "}
                       </>
                     )}
-                    {accountName && (
+                    {accountName ? (
                       <>
                         <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                           {accountName}
+                        </code>{" "}
+                        {t(
+                          "matchDashboard.activityLog.descriptions.forChannelUser",
+                        )}{" "}
+                      </>
+                    ) : (
+                      <>
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          N/A
                         </code>{" "}
                         {t(
                           "matchDashboard.activityLog.descriptions.forChannelUser",
@@ -607,7 +708,7 @@ export function ActivityLog({
                     <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                       {platformName}
                     </code>
-                    {accountName && (
+                    {accountName ? (
                       <>
                         {" "}
                         {t(
@@ -615,6 +716,16 @@ export function ActivityLog({
                         )}{" "}
                         <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
                           {accountName}
+                        </code>
+                      </>
+                    ) : (
+                      <>
+                        {" "}
+                        {t(
+                          "matchDashboard.activityLog.descriptions.forChannelUser",
+                        )}{" "}
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          N/A
                         </code>
                       </>
                     )}
@@ -645,7 +756,7 @@ export function ActivityLog({
                         </code>
                       </>
                     )}
-                    {!views && status && (
+                    {views === "0" && status && (
                       <>
                         {" "}
                         {t(
@@ -656,6 +767,16 @@ export function ActivityLog({
                             status,
                           )}`}>
                           {translateStatus(status)}
+                        </code>
+                      </>
+                    )}
+                    {views && views !== "0" && !status && (
+                      <>
+                        {" "}
+                        {t("matchDashboard.activityLog.descriptions.with")}{" "}
+                        <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                          {formatViewsString(views)}{" "}
+                          {t("matchDashboard.activityLog.descriptions.views")}
                         </code>
                       </>
                     )}
@@ -1243,9 +1364,14 @@ export function ActivityLog({
         count: entry.action === "created" ? entry.newValue : undefined, // Count for created violations
         status: entry.action === "created" ? entry.oldValue : undefined, // Status for created violations
         accountChannel: bulkViolation.accountChannel, // Account channel
-        totalCount: entry.action === "status_changed" ? bulkViolation.totalCount : undefined, // Total count for status changes
-        oldStatus: entry.action === "status_changed" ? entry.oldValue : undefined, // Old status for status changes
-        newStatus: entry.action === "status_changed" ? entry.newValue : undefined, // New status for status changes
+        totalCount:
+          entry.action === "status_changed"
+            ? bulkViolation.totalCount
+            : undefined, // Total count for status changes
+        oldStatus:
+          entry.action === "status_changed" ? entry.oldValue : undefined, // Old status for status changes
+        newStatus:
+          entry.action === "status_changed" ? entry.newValue : undefined, // New status for status changes
       });
     });
   });
@@ -1324,18 +1450,19 @@ export function ActivityLog({
       return false;
     }
 
-    // Filter by user
-    if (userFilter !== "all" && item.userName !== userFilter) {
-      return false;
-    }
-
-    // Filter by search query (account channel or link)
+    // Filter by search query - search is now backend-driven for bulk logs
     if (searchQuery.trim()) {
+      // For bulk logs, only show if in search results
+      if (item.bulkId && !item.violationId) {
+        if (searchedBulkIds.size === 0) {
+          return false; // No search results yet, hide bulk logs
+        }
+        return searchedBulkIds.has(item.bulkId);
+      }
+      // For individual logs, keep original client-side search
       const query = searchQuery.toLowerCase();
       const accountMatch = item.accountChannel?.toLowerCase().includes(query);
       const urlMatch = item.violationUrl?.toLowerCase().includes(query);
-      // Also check inside description for good measure if it's a string, though specifically requested account/link
-      // But user asked strictly for account channel and link.
       if (!accountMatch && !urlMatch) {
         return false;
       }
@@ -1445,12 +1572,22 @@ export function ActivityLog({
             isRTL ? "right-3" : "left-3"
           }`}
         />
+        {isSearching && (
+          <div
+            className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin ${
+              isRTL ? "left-3" : "right-3"
+            }`}>
+            <RefreshCw className="h-4 w-4" />
+          </div>
+        )}
         <Input
           type="text"
           placeholder={t("matchDashboard.activityLog.searchPlaceholder")}
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className={`h-9 text-xs ${isRTL ? "pr-9" : "pl-9"}`}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className={`h-9 text-xs ${isRTL ? "pr-9" : "pl-9"} ${
+            isSearching ? (isRTL ? "pl-9" : "pr-9") : ""
+          }`}
         />
       </div>
 
@@ -1675,8 +1812,21 @@ export function ActivityLog({
           ) : (
             <>
               {paginatedItems.map((logItem, i) => {
+                // Skip bulk logs when filtering for individual only
+                if (
+                  bulkFilter === "individual" &&
+                  logItem.bulkId &&
+                  !logItem.violationId
+                ) {
+                  return null;
+                }
+
                 // Check if this is a bulk violation log - render with BulkActivityLogItem
-                if (logItem.bulkId && !logItem.violationId) {
+                if (
+                  logItem.bulkId &&
+                  !logItem.violationId &&
+                  bulkFilter !== "individual"
+                ) {
                   return (
                     <BulkActivityLogItem
                       key={`bulk-${logItem.bulkId}-${logItem.logEntryId}-${i}`}
@@ -1696,93 +1846,91 @@ export function ActivityLog({
                   <div
                     key={i}
                     className={`flex ${isRTL ? "flex-row-reverse" : "flex-row"} items-start gap-3 p-3 rounded-lg border border-border/50 hover:border-border hover:bg-muted/30 transition-all group relative`}>
-                      <div className="shrink-0 mt-0.5">
-                        <div className="w-8 h-8 rounded-lg bg-muted/60 flex items-center justify-center group-hover:bg-muted/80 transition-colors">
-                          <EventIcon className="h-4 w-4 text-muted-foreground" />
-                        </div>
+                    <div className="shrink-0 mt-0.5">
+                      <div className="w-8 h-8 rounded-lg bg-muted/60 flex items-center justify-center group-hover:bg-muted/80 transition-colors">
+                        <EventIcon className="h-4 w-4 text-muted-foreground" />
                       </div>
+                    </div>
 
-                      <div className="flex-1 min-w-0">
-                        <div
-                          className={`flex items-center gap-2 mb-2 flex-wrap ${
-                            isRTL ? "flex-row-reverse justify-start" : ""
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className={`flex items-center gap-2 mb-2 flex-wrap ${
+                          isRTL ? "flex-row-reverse justify-start" : ""
+                        }`}>
+                        <p
+                          className={`text-xs text-muted-foreground ${
+                            isRTL ? "text-left" : ""
                           }`}>
-                          <p
-                            className={`text-xs text-muted-foreground ${
+                          {logItem.time}
+                        </p>
+                        <Badge
+                          variant={logItem.badgeVariant}
+                          className={`text-xs px-2 py-0.5 h-5 font-medium ${
+                            logItem.type === "added"
+                              ? "bg-success text-white border-success/20"
+                              : logItem.type === "notes_added"
+                                ? "bg-success text-white border-success/20"
+                                : logItem.type === "notes_changed"
+                                  ? "bg-yellow-500 text-white border-yellow-500/20"
+                                  : logItem.type === "notes_edited"
+                                    ? "bg-destructive text-white border-destructive/20"
+                                    : logItem.type === "status_change" ||
+                                        logItem.type === "content_type_changed"
+                                      ? "bg-cyan-500 text-white border-cyan-500/20"
+                                      : logItem.type === "views_changed" ||
+                                          logItem.type ===
+                                            "time_added_changed" ||
+                                          logItem.type === "blocked_at_changed"
+                                        ? "bg-purple-500 text-white border-purple-500/20"
+                                        : logItem.type === "url_changed" ||
+                                            logItem.type === "account_changed"
+                                          ? "bg-yellow-500 text-white border-yellow-500/20"
+                                          : ""
+                          } ${isRTL ? "text-left" : ""}`}>
+                          {logItem.badge}
+                        </Badge>
+                        {logItem.userName && (
+                          <div
+                            className={`flex ${isRTL ? "flex-row-reverse" : "flex-row"} items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/50 ${
                               isRTL ? "text-left" : ""
                             }`}>
-                            {logItem.time}
-                          </p>
-                          <Badge
-                            variant={logItem.badgeVariant}
-                            className={`text-xs px-2 py-0.5 h-5 font-medium ${
-                              logItem.type === "added"
-                                ? "bg-success text-white border-success/20"
-                                : logItem.type === "notes_added"
-                                  ? "bg-success text-white border-success/20"
-                                  : logItem.type === "notes_changed"
-                                    ? "bg-yellow-500 text-white border-yellow-500/20"
-                                    : logItem.type === "notes_edited"
-                                      ? "bg-destructive text-white border-destructive/20"
-                                      : logItem.type === "status_change" ||
-                                          logItem.type ===
-                                            "content_type_changed"
-                                        ? "bg-cyan-500 text-white border-cyan-500/20"
-                                        : logItem.type === "views_changed" ||
-                                            logItem.type ===
-                                              "time_added_changed" ||
-                                            logItem.type ===
-                                              "blocked_at_changed"
-                                          ? "bg-purple-500 text-white border-purple-500/20"
-                                          : logItem.type === "url_changed" ||
-                                              logItem.type === "account_changed"
-                                            ? "bg-yellow-500 text-white border-yellow-500/20"
-                                            : ""
-                            } ${isRTL ? "text-left" : ""}`}>
-                            {logItem.badge}
-                          </Badge>
-                          {logItem.userName && (
-                            <div
-                              className={`flex ${isRTL ? "flex-row-reverse" : "flex-row"} items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/50 ${
+                            <UserCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span
+                              className={`text-xs text-muted-foreground font-medium ${
                                 isRTL ? "text-left" : ""
                               }`}>
-                              <UserCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span
-                                className={`text-xs text-muted-foreground font-medium ${
-                                  isRTL ? "text-left" : ""
-                                }`}>
-                                {logItem.userName}
-                              </span>
-                            </div>
+                              {logItem.userName}
+                            </span>
+                          </div>
+                        )}
+                        {/* Delete button - appears on hover, after userName - only for superAdmin */}
+                        {isSuperAdmin &&
+                          (logItem.deletedLogId ||
+                            (logItem.violationId && logItem.logEntryId)) && (
+                            <button
+                              onClick={() => handleDeleteLog(logItem)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                              title={t(
+                                "matchDashboard.activityLog.actions.deleteLogEntry",
+                              )}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           )}
-                          {/* Delete button - appears on hover, after userName - only for superAdmin */}
-                          {isSuperAdmin &&
-                            (logItem.deletedLogId ||
-                              (logItem.violationId && logItem.logEntryId)) && (
-                              <button
-                                onClick={() => handleDeleteLog(logItem)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
-                                title={t(
-                                  "matchDashboard.activityLog.actions.deleteLogEntry",
-                                )}>
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            )}
-                        </div>
-                        <div className="text-sm leading-relaxed text-foreground break-words">
-                          {logItem.description}
+                      </div>
+                      <div className="text-sm leading-relaxed text-foreground break-words">
+                        {logItem.description}
+                      </div>
+                    </div>
+
+                    {logItem.platform && (
+                      <div className="shrink-0 mt-0.5">
+                        <div className="w-8 h-8 rounded-lg bg-muted/40 flex items-center justify-center border border-border/50 group-hover:bg-muted/60 transition-colors">
+                          {getPlatformIcon(logItem.platform)}
                         </div>
                       </div>
-
-                      {logItem.platform && (
-                        <div className="shrink-0 mt-0.5">
-                          <div className="w-8 h-8 rounded-lg bg-muted/40 flex items-center justify-center border border-border/50 group-hover:bg-muted/60 transition-colors">
-                            {getPlatformIcon(logItem.platform)}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
+                    )}
+                  </div>
+                );
               })}
             </>
           )}
