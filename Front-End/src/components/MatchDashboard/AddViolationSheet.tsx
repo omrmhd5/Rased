@@ -89,29 +89,32 @@ export function AddViolationSheet({
 }: AddViolationSheetProps) {
   const { t, isRTL } = useLanguage();
 
-  // Check for duplicate URLs
+  // Check for duplicate URLs with count
   const getDuplicateUrls = () => {
     const urls = formUrl
       .split("\n")
       .map((url) => url.trim())
       .filter((url) => url !== "");
 
-    const seen = new Set<string>();
-    const duplicates = new Set<string>();
+    const urlCount: Record<string, number> = {};
+    const duplicates: Record<string, number> = {};
 
     urls.forEach((url) => {
-      if (seen.has(url)) {
-        duplicates.add(url);
-      } else {
-        seen.add(url);
+      urlCount[url] = (urlCount[url] || 0) + 1;
+    });
+
+    // Find URLs that appear more than once
+    Object.entries(urlCount).forEach(([url, count]) => {
+      if (count > 1) {
+        duplicates[url] = count;
       }
     });
 
-    return Array.from(duplicates);
+    return duplicates;
   };
 
   const duplicateUrls = getDuplicateUrls();
-  const hasDuplicates = duplicateUrls.length > 0;
+  const hasDuplicates = Object.keys(duplicateUrls).length > 0;
   const isDuplicateBlocked = hasDuplicates && !allowDuplicates;
 
   const handleUrlChange = (url: string) => {
@@ -224,28 +227,30 @@ export function AddViolationSheet({
               <Alert
                 className={
                   isDuplicateBlocked
-                    ? "border-destructive bg-destructive/5"
+                    ? "border-2 border-destructive bg-destructive/15 shadow-md"
                     : "border-yellow-600 bg-yellow-50 dark:bg-yellow-950/20"
                 }>
                 <AlertTriangle
-                  className={`h-4 w-4 ${isDuplicateBlocked ? "text-destructive" : "text-yellow-600 dark:text-yellow-400"}`}
+                  className={`h-5 w-5 ${isDuplicateBlocked ? "text-destructive" : "text-yellow-600 dark:text-yellow-400"}`}
                 />
                 <AlertDescription
                   className={
                     isDuplicateBlocked
-                      ? "text-destructive"
+                      ? "text-destructive font-semibold"
                       : "text-yellow-800 dark:text-yellow-200"
                   }>
-                  {isDuplicateBlocked
-                    ? t(
-                        "matchDashboard.addViolationSheet.duplicatesNotAllowed",
-                        {
-                          count: duplicateUrls.length.toString(),
-                        },
-                      )
-                    : t("matchDashboard.addViolationSheet.duplicatesAllowed", {
-                        count: duplicateUrls.length.toString(),
-                      })}
+                  {(() => {
+                    const duplicateCount = Object.keys(duplicateUrls).length;
+                    const duplicateDetails = Object.entries(duplicateUrls)
+                      .map(([url, count]) => `${url} (${count}x)`)
+                      .join(", ");
+
+                    if (isDuplicateBlocked) {
+                      return `${duplicateCount} duplicate URL(s) detected (${duplicateDetails}). ${t("matchDashboard.addViolationSheet.duplicatesNotAllowedSuffix")}`;
+                    } else {
+                      return `${duplicateCount} duplicate URL(s) detected (${duplicateDetails}). ${t("matchDashboard.addViolationSheet.duplicatesAllowedSuffix")}`;
+                    }
+                  })()}
                 </AlertDescription>
               </Alert>
             )}

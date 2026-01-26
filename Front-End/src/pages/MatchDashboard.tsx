@@ -1821,6 +1821,51 @@ export default function MatchDashboard() {
         return;
       }
 
+      // Check for backend duplicates if allowDuplicates is false
+      if (!allowDuplicates) {
+        try {
+          const checkResponse = await fetch(
+            `${API_URL}/violations/check-duplicates`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              credentials: "include",
+              body: JSON.stringify({
+                matchId: match.externalMatchId,
+                platformId: platform.id,
+                urls: urls,
+              }),
+            },
+          );
+
+          if (checkResponse.ok) {
+            const checkResult = await checkResponse.json();
+            if (
+              checkResult.hasDuplicates &&
+              checkResult.duplicates.length > 0
+            ) {
+              const firstUrl = checkResult.duplicates[0];
+              const count = checkResult.duplicates.length;
+              const moreCount = count > 1 ? count - 1 : 0;
+
+              toast({
+                title: t("matchDashboard.error.duplicateUrlsFound"),
+                description:
+                  moreCount > 0 ? `${firstUrl} + ${moreCount} more` : firstUrl,
+                variant: "destructive",
+              });
+              setIsSaving(false);
+              return;
+            }
+          }
+        } catch (error) {
+          console.warn("Duplicate check failed, continuing with save:", error);
+          // If duplicate check fails, continue with save (don't block)
+        }
+      }
+
       // Map contentType to match backend schema exactly: "Live", "Highlights", or "Other"
       let contentType: "Live" | "Highlights" | "Other" = "Other";
       if (formContentType.toLowerCase() === "live") {

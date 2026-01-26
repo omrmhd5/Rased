@@ -679,7 +679,9 @@
       "validationError": "Validation Error",
       "violationUrlRequired": "Violation URL is required",
       "accountChannelRequired": "Account / Channel is required",
-      "unexpectedErrorSaving": "An unexpected error occurred while saving violations"
+      "unexpectedErrorSaving": "An unexpected error occurred while saving violations",
+      "duplicateUrlsFound": "Duplicate URLs Found",
+      "duplicateUrlsFoundDesc": "The following URLs already exist for this match and platform:"
     },
     "success": {
       "statusChanged": "Status Changed",
@@ -811,6 +813,8 @@
       "urlCount": "Count: {count}",
       "duplicatesNotAllowed": "⚠️ {count} duplicate URL(s) detected. Duplicates are not allowed in settings.",
       "duplicatesAllowed": "✓ {count} duplicate URL(s) detected. Duplicates are allowed.",
+      "duplicatesNotAllowedSuffix": "Duplicates are not allowed in settings.",
+      "duplicatesAllowedSuffix": "Duplicates are allowed.",
       "accountChannel": "Account / Channel",
       "optional": "optional",
       "accountChannelPlaceholder": "@username or channel name",

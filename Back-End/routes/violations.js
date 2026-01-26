@@ -98,6 +98,70 @@ router.get("/bulk/search", async (req, res) => {
   }
 });
 
+// POST /api/violations/check-duplicates - Check for duplicate URLs in backend
+router.post("/check-duplicates", async (req, res) => {
+  try {
+    const { matchId, platformId, urls } = req.body;
+
+    // Validate input
+    if (
+      !matchId ||
+      !platformId ||
+      !urls ||
+      !Array.isArray(urls) ||
+      urls.length === 0
+    ) {
+      return res.status(400).json({
+        error: "Missing required fields: matchId, platformId, urls (array)",
+      });
+    }
+
+    // Find the match by externalMatchId
+    const match = await Match.findOne({ externalMatchId: matchId });
+    if (!match) {
+      return res.status(404).json({ error: "Match not found" });
+    }
+
+    // Query violations for this match and platform with the provided URLs
+    const duplicates = await Violation.find({
+      matchId: match._id,
+      platformId: platformId,
+      violationUrl: { $in: urls },
+    }).select("violationUrl bulkId");
+
+    // Extract duplicate URLs
+    const duplicateUrls = duplicates.map((v) => v.violationUrl);
+
+    // If bulk, also check if any violations in those bulk IDs have duplicate URLs
+    const bulkIds = [
+      ...new Set(duplicates.map((v) => v.bulkId).filter((id) => id)),
+    ];
+
+    if (bulkIds.length > 0) {
+      const bulkChildren = await Violation.find({
+        matchId: match._id,
+        platformId: platformId,
+        bulkId: { $in: bulkIds },
+        violationUrl: { $in: urls },
+      }).select("violationUrl");
+
+      bulkChildren.forEach((v) => {
+        if (!duplicateUrls.includes(v.violationUrl)) {
+          duplicateUrls.push(v.violationUrl);
+        }
+      });
+    }
+
+    // Return result
+    res.json({
+      hasDuplicates: duplicateUrls.length > 0,
+      duplicates: duplicateUrls,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/violations/bulk - Get all bulk violations with filters
 router.get("/bulk", async (req, res) => {
   try {

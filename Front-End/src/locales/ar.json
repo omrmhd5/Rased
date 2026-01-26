@@ -685,7 +685,9 @@
       "validationError": "خطأ في التحقق",
       "violationUrlRequired": "رابط الانتهاك مطلوب",
       "accountChannelRequired": "الحساب / القناة مطلوب",
-      "unexpectedErrorSaving": "حدث خطأ غير متوقع أثناء حفظ الانتهاكات"
+      "unexpectedErrorSaving": "حدث خطأ غير متوقع أثناء حفظ الانتهاكات",
+      "duplicateUrlsFound": "تم العثور على روابط مكررة",
+      "duplicateUrlsFoundDesc": "الروابط التالية موجودة بالفعل لهذه المباراة والمنصة:"
     },
     "success": {
       "statusChanged": "تم تغيير الحالة",
@@ -817,6 +819,8 @@
       "urlCount": "العدد: {count}",
       "duplicatesNotAllowed": "⚠️ تم الكشف عن {count} رابط(روابط) مكررة. الروابط المكررة غير مسموحة في الإعدادات.",
       "duplicatesAllowed": "✓ تم الكشف عن {count} رابط(روابط) مكررة. الروابط المكررة مسموحة.",
+      "duplicatesNotAllowedSuffix": "الروابط المكررة غير مسموحة في الإعدادات.",
+      "duplicatesAllowedSuffix": "الروابط المكررة مسموحة.",
       "accountChannel": "الحساب / القناة",
       "optional": "اختياري",
       "accountChannelPlaceholder": "@username أو اسم القناة",
