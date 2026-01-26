@@ -1729,7 +1729,9 @@ export default function WhitelistedAccounts() {
                               "p-3 border rounded-lg bg-background/50 cursor-pointer transition-colors hover:bg-accent/50 hover:border-primary/50",
                             )}
                             onClick={() => {
-                              navigate(`/match/${bulk.matchId}`);
+                              navigate(
+                                `/match/${bulk.matchId}#bulk-${bulk.bulkId}`,
+                              );
                               setIsViolationsDialogOpen(false);
                             }}
                             title={t("whitelistedAccounts.clickToViewMatch")}>
@@ -1741,13 +1743,14 @@ export default function WhitelistedAccounts() {
                                     {t("whitelistedAccounts.bulkViolations")}
                                   </span>
                                   <span className="text-xs text-muted-foreground">
-                                    {bulk.totalCount} total
+                                    {bulk.totalCount}{" "}
+                                    {t("whitelistedAccounts.totalLabel")}
                                   </span>
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                                   <div className="p-2 bg-muted rounded text-center">
                                     <p className="text-muted-foreground text-[10px]">
-                                      Active
+                                      {t("whitelistedAccounts.active")}
                                     </p>
                                     <p className="font-semibold text-destructive">
                                       {bulk.activeCount}
@@ -1755,7 +1758,7 @@ export default function WhitelistedAccounts() {
                                   </div>
                                   <div className="p-2 bg-muted rounded text-center">
                                     <p className="text-muted-foreground text-[10px]">
-                                      Blocked
+                                      {t("whitelistedAccounts.blocked")}
                                     </p>
                                     <p className="font-semibold text-success">
                                       {bulk.blockedCount}
@@ -1763,7 +1766,7 @@ export default function WhitelistedAccounts() {
                                   </div>
                                   <div className="p-2 bg-muted rounded text-center">
                                     <p className="text-muted-foreground text-[10px]">
-                                      Removed
+                                      {t("whitelistedAccounts.removed")}
                                     </p>
                                     <p className="font-semibold text-cyan-500">
                                       {bulk.removedCount}
@@ -1771,7 +1774,7 @@ export default function WhitelistedAccounts() {
                                   </div>
                                   <div className="p-2 bg-muted rounded text-center">
                                     <p className="text-muted-foreground text-[10px]">
-                                      Review
+                                      {t("whitelistedAccounts.review")}
                                     </p>
                                     <p className="font-semibold text-yellow-600 dark:text-yellow-400">
                                       {bulk.underReviewCount}
@@ -1805,6 +1808,7 @@ export default function WhitelistedAccounts() {
                             : null);
 
                         const violationIdStr = String(violation._id || "");
+                        const bulkId = (violation as any).bulkId;
 
                         const creator = violation.auditLog?.find(
                           (log) => log.action === "created",
@@ -1818,13 +1822,17 @@ export default function WhitelistedAccounts() {
                               "hover:bg-accent/50 hover:border-primary/50",
                             )}
                             onClick={() => {
-                              if (matchId && violationIdStr) {
-                                navigate(
-                                  `/match/${matchId}#violation-${violationIdStr}`,
-                                );
-                                setIsViolationsDialogOpen(false);
-                              } else if (matchId) {
-                                navigate(`/match/${matchId}`);
+                              if (matchId) {
+                                // If violation has a bulkId, navigate to bulk instead
+                                if (bulkId) {
+                                  navigate(`/match/${matchId}#bulk-${bulkId}`);
+                                } else if (violationIdStr) {
+                                  navigate(
+                                    `/match/${matchId}#violation-${violationIdStr}`,
+                                  );
+                                } else {
+                                  navigate(`/match/${matchId}`);
+                                }
                                 setIsViolationsDialogOpen(false);
                               } else {
                                 window.open(violation.violationUrl, "_blank");

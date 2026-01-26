@@ -490,6 +490,148 @@ router.delete(
   },
 );
 
+// GET /api/violations/active - Get active violations (singles + bulk members) with pagination
+router.get("/active", async (req, res) => {
+  try {
+    const {
+      page = 1,
+      limit = 10,
+      league,
+      status = "Active",
+      weekFilter,
+      week,
+      weekStart,
+      weekEnd,
+      stageFilter,
+      stage,
+      stageStart,
+      stageEnd,
+      sort = "desc",
+      query: searchQuery,
+    } = req.query;
+
+    // Convert to numbers
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Build match query for league/week/stage filtering
+    const matchQuery = {};
+    let leagueInfo = null;
+    if (league) {
+      leagueInfo = await Competition.findOne({ league: league }).lean();
+      if (leagueInfo) {
+        matchQuery.league = league;
+        matchQuery.isDeleted = { $ne: true };
+      }
+    }
+
+    // For Cups, use stage filtering; for regular leagues, use week filtering
+    const isSuperCup = leagueInfo?.competitionType === "cup";
+
+    if (isSuperCup) {
+      if (stageFilter === "single" && stage) {
+        matchQuery.stage = stage;
+      } else if (stageFilter === "range" && stageStart && stageEnd) {
+        const startNum = parseInt(stageStart);
+        const endNum = parseInt(stageEnd);
+        if (!isNaN(startNum) && !isNaN(endNum)) {
+          const stageValues = [];
+          for (let i = startNum; i <= endNum; i++) {
+            stageValues.push(i.toString());
+          }
+          matchQuery.stage = { $in: stageValues };
+        }
+      }
+    } else {
+      if (weekFilter === "single" && week) {
+        matchQuery.week = week.toString();
+      } else if (weekFilter === "range" && weekStart && weekEnd) {
+        const startNum = parseInt(weekStart);
+        const endNum = parseInt(weekEnd);
+        if (!isNaN(startNum) && !isNaN(endNum)) {
+          const weekValues = [];
+          for (let i = startNum; i <= endNum; i++) {
+            weekValues.push(i.toString());
+          }
+          matchQuery.week = { $in: weekValues };
+        }
+      }
+    }
+
+    // Find matching matches if filters are provided
+    let matchIds = null;
+    if (Object.keys(matchQuery).length > 0) {
+      const matches = await Match.find(matchQuery).select("_id").lean();
+      matchIds = matches.map((m) => m._id);
+      if (matchIds.length === 0) {
+        return res.json({
+          violations: [],
+          pagination: {
+            page: pageNum,
+            limit: limitNum,
+            totalCount: 0,
+            totalPages: 0,
+            hasMore: false,
+          },
+        });
+      }
+    }
+
+    // Build violations query
+    const violationQuery = {};
+
+    if (matchIds !== null) {
+      violationQuery.matchId = { $in: matchIds };
+    }
+
+    if (status) {
+      violationQuery.status = status;
+    }
+
+    // Add search functionality
+    if (searchQuery) {
+      violationQuery.$or = [
+        { violationUrl: { $regex: searchQuery, $options: "i" } },
+        { accountChannel: { $regex: searchQuery, $options: "i" } },
+        { platformName: { $regex: searchQuery, $options: "i" } },
+        { views: { $regex: searchQuery, $options: "i" } },
+      ];
+    }
+
+    // IMPORTANT: Include both singles AND violations with bulkId
+    // Do NOT filter by bulkId
+
+    // Get total count
+    const totalCount = await Violation.countDocuments(violationQuery);
+
+    // Get paginated violations
+    const sortOrder = sort === "asc" ? 1 : -1;
+    const violations = await Violation.find(violationQuery)
+      .populate(
+        "matchId",
+        "team1 team2 date time week competition stadium externalMatchId league description",
+      )
+      .sort({ timeAdded: sortOrder })
+      .skip(skip)
+      .limit(limitNum)
+      .lean();
+
+    res.json({
+      violations,
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        totalCount,
+        totalPages: Math.ceil(totalCount / limitNum),
+        hasMore: skip + violations.length < totalCount,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/violations - Get all violations with filters
 router.get("/", async (req, res) => {
   try {

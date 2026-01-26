@@ -230,6 +230,11 @@ export default function Dashboard() {
   const [troubleListPage, setTroubleListPage] = useState(1);
   const itemsPerPage = 10; // Number of violations per page
   const [troubleListSearch, setTroubleListSearch] = useState("");
+  const [troubleListTotalCount, setTroubleListTotalCount] = useState(0);
+  const [troubleListTotalPages, setTroubleListTotalPages] = useState(1);
+  const searchTroubleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const [troubleListViolations, setTroubleListViolations] = useState<
     Array<{
       _id?: string;
@@ -576,14 +581,14 @@ export default function Dashboard() {
     refetchTrigger, // Add refetch trigger for real-time updates - invalidates cache
   ]);
 
-  // Fetch trouble list violations when filters change
-  useEffect(() => {
-    if (!selectedLeague) {
-      setTroubleListViolations([]);
-      return;
-    }
+  // Fetch trouble list violations with backend pagination
+  const fetchTroubleListViolations = useCallback(
+    async (page: number, search: string = "") => {
+      if (!selectedLeague) {
+        setTroubleListViolations([]);
+        return;
+      }
 
-    const fetchTroubleListViolations = async () => {
       setTroubleListLoading(true);
       try {
         const isSuperCup = isSuperCupLeague(selectedLeague);
@@ -591,7 +596,9 @@ export default function Dashboard() {
           league: selectedLeague,
           status: troubleListFilter,
           sort: "desc",
-          limit: "500", // Get enough violations to display
+          page: page.toString(),
+          limit: itemsPerPage.toString(),
+          ...(search && { query: search }),
         });
 
         if (isSuperCup) {
@@ -622,8 +629,9 @@ export default function Dashboard() {
           }
         }
 
+        // Use the new /violations/active endpoint (includes both singles and bulk members)
         const response = await fetch(
-          `${API_URL}/violations?${params.toString()}`,
+          `${API_URL}/violations/active?${params.toString()}`,
           {
             credentials: "include",
           },
@@ -634,18 +642,49 @@ export default function Dashboard() {
         }
 
         const data = await response.json();
-        setTroubleListViolations(data || []);
+
+        // Handle both paginated and non-paginated responses
+        if (data.violations && data.pagination) {
+          setTroubleListViolations(data.violations || []);
+          setTroubleListTotalCount(data.pagination.totalCount || 0);
+          setTroubleListTotalPages(data.pagination.totalPages || 1);
+        } else {
+          setTroubleListViolations(data || []);
+          setTroubleListTotalCount(data?.length || 0);
+          setTroubleListTotalPages(1);
+        }
       } catch (error) {
         console.error("Error fetching trouble list violations:", error);
         setTroubleListViolations([]);
+        setTroubleListTotalCount(0);
+        setTroubleListTotalPages(1);
       } finally {
         setTroubleListLoading(false);
       }
-    };
+    },
+    [
+      selectedLeague,
+      troubleListFilter,
+      weekFilterType,
+      singleWeek,
+      weekRangeStart,
+      weekRangeEnd,
+      stageFilterType,
+      singleStage,
+      stageRangeStart,
+      stageRangeEnd,
+      API_URL,
+      leagues,
+    ],
+  );
 
-    fetchTroubleListViolations();
+  // Fetch violations when page or filters change
+  useEffect(() => {
+    if (!selectedLeague) return;
+    fetchTroubleListViolations(troubleListPage, troubleListSearch);
   }, [
     selectedLeague,
+    troubleListPage,
     weekFilterType,
     singleWeek,
     weekRangeStart,
@@ -655,10 +694,37 @@ export default function Dashboard() {
     stageRangeStart,
     stageRangeEnd,
     troubleListFilter,
-    API_URL,
-    leagues,
-    refetchTrigger, // Add refetch trigger for real-time updates
+    refetchTrigger,
+    fetchTroubleListViolations,
   ]);
+
+  // Handle search with debouncing
+  const handleTroubleListSearch = useCallback(
+    (value: string) => {
+      setTroubleListSearch(value);
+
+      // Clear existing timeout
+      if (searchTroubleTimeoutRef.current) {
+        clearTimeout(searchTroubleTimeoutRef.current);
+      }
+
+      // Set new timeout for debounced search
+      searchTroubleTimeoutRef.current = setTimeout(() => {
+        setTroubleListPage(1); // Reset to page 1 when searching
+        fetchTroubleListViolations(1, value);
+      }, 300); // 300ms debounce
+    },
+    [fetchTroubleListViolations],
+  );
+
+  // Cleanup search timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTroubleTimeoutRef.current) {
+        clearTimeout(searchTroubleTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Get platform operations (for icon lookup)
   const [platformOperations, setPlatformOperations] = useState(
@@ -894,6 +960,7 @@ export default function Dashboard() {
       minutesSinceAdded,
       matchDescription,
       matchId, // Add matchId for navigation
+      bulkId: (v as any).bulkId || undefined, // Add bulkId for bulk navigation
     };
   });
 
@@ -913,6 +980,8 @@ export default function Dashboard() {
     if (minutes >= p80) return "warning";
     return "none";
   };
+
+  // Backend already sorted by time, but we can re-sort by views if needed
   const sortedActiveViolations = [...violationsWithMinutes].sort((a, b) => {
     // Sort by views (descending), then by time since added (descending - older first)
     const viewsScore = b.views - a.views;
@@ -920,28 +989,11 @@ export default function Dashboard() {
     return b.minutesSinceAdded - a.minutesSinceAdded;
   });
 
-  // Filter violations based on search query
-  const filteredActiveViolations = sortedActiveViolations.filter(
-    (violation) => {
-      if (!troubleListSearch.trim()) return true;
-      const searchLower = troubleListSearch.toLowerCase();
-      return (
-        violation.platform.toLowerCase().includes(searchLower) ||
-        violation.account.toLowerCase().includes(searchLower) ||
-        violation.matchDescription.toLowerCase().includes(searchLower) ||
-        violation.url.toLowerCase().includes(searchLower)
-      );
-    },
-  );
+  // No client-side filtering needed - backend handles search
+  const paginatedViolations = sortedActiveViolations;
 
-  // Pagination for Active Trouble List (using filtered results)
-  const totalPages = Math.ceil(filteredActiveViolations.length / itemsPerPage);
-  const startIndex = (troubleListPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedViolations = filteredActiveViolations.slice(
-    startIndex,
-    endIndex,
-  );
+  // Use backend pagination data
+  const totalPages = troubleListTotalPages;
 
   // Create array of pages to display for pagination
   const pagesToShow: (number | string)[] = [];
@@ -2145,7 +2197,7 @@ export default function Dashboard() {
                 variant="secondary"
                 className="h-5 px-2 bg-chart-1/10 text-chart-1 border-0 text-[9px] sm:text-[10px] w-fit flex items-center text-left">
                 <div className="w-1.5 h-1.5 rounded-full bg-chart-1 animate-pulse mr-1.5" />
-                {filteredActiveViolations.length}{" "}
+                {troubleListTotalCount}{" "}
                 {troubleListFilter === "Active"
                   ? t("dashboard.active").toLowerCase()
                   : t("dashboard.underReview").toLowerCase()}
@@ -2163,7 +2215,7 @@ export default function Dashboard() {
                   type="text"
                   placeholder={t("dashboard.searchViolations")}
                   value={troubleListSearch}
-                  onChange={(e) => setTroubleListSearch(e.target.value)}
+                  onChange={(e) => handleTroubleListSearch(e.target.value)}
                   className={`h-8 sm:h-9 text-xs sm:text-sm text-left placeholder:text-left ${
                     isRTL
                       ? "pr-8 sm:pr-9 pl-2.5 sm:pl-3"
@@ -2196,7 +2248,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-center h-full">
                 <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin text-muted-foreground" />
               </div>
-            ) : filteredActiveViolations.length === 0 ? (
+            ) : paginatedViolations.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground text-left">
                 <FileQuestion className="h-6 w-6 sm:h-8 sm:w-8 mb-2 opacity-50" />
                 <p className="text-xs sm:text-sm text-left">
@@ -2211,21 +2263,27 @@ export default function Dashboard() {
             ) : (
               paginatedViolations.map((violation) => {
                 const timeSinceAdded = getTimeSinceAdded(violation.reportedAt);
-                const warningLevel = getWarningLevelForViolation(
-                  violation.minutesSinceAdded,
-                  currentWeekMinutesSinceAdded,
-                );
                 // Convert violation ID to string for consistent hash fragment
                 const violationIdStr = String(violation.id || "");
+                // Check if violation has a bulkId
+                const bulkId = (violation as any).bulkId;
 
                 return (
                   <div
                     key={violation.id}
                     onClick={() => {
-                      if (violation.matchId && violationIdStr) {
-                        navigate(
-                          `/match/${violation.matchId}#violation-${violationIdStr}`,
-                        );
+                      if (violation.matchId) {
+                        // If violation has a bulkId, navigate to bulk instead
+                        if (bulkId) {
+                          navigate(
+                            `/match/${violation.matchId}#bulk-${bulkId}`,
+                          );
+                        } else if (violationIdStr) {
+                          // Otherwise navigate to the violation
+                          navigate(
+                            `/match/${violation.matchId}#violation-${violationIdStr}`,
+                          );
+                        }
                       }
                     }}
                     className={`group flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 min-h-[42px] sm:h-[42px] border-b border-border/40 last:border-0 hover:bg-muted/30 transition-colors px-2 py-2 sm:py-0 sm:justify-start ${
@@ -2307,20 +2365,7 @@ export default function Dashboard() {
                             ? t("dashboard.active").toLowerCase()
                             : violation.status}
                       </Badge>
-                      {warningLevel === "urgent" && (
-                        <Badge
-                          variant="destructive"
-                          className="h-[16px] sm:h-[18px] text-[9px] sm:text-[10px] px-1 sm:px-1.5 text-left">
-                          {t("dashboard.overdue")}
-                        </Badge>
-                      )}
-                      {warningLevel === "warning" && (
-                        <Badge
-                          variant="secondary"
-                          className="h-[16px] sm:h-[18px] text-[9px] sm:text-[10px] px-1 sm:px-1.5 bg-amber-500/10 text-amber-700 border-amber-500/20">
-                          {t("dashboard.slower")}
-                        </Badge>
-                      )}
+                      {/* Slower and Urgent badges removed */}
                     </div>
                   </div>
                 );
@@ -2330,7 +2375,7 @@ export default function Dashboard() {
 
           {/* Pagination Controls */}
           {!troubleListLoading &&
-            filteredActiveViolations.length > 0 &&
+            paginatedViolations.length > 0 &&
             totalPages > 1 && (
               <div className="flex-shrink-0 pt-2 mt-2 border-t border-border/40">
                 <Pagination>

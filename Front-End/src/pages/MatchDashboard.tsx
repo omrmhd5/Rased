@@ -390,10 +390,11 @@ export default function MatchDashboard() {
     }
   }, [refetchTrigger, id, refetchAllData]);
 
-  // Scroll to violation when hash fragment is present in URL
+  // Scroll to violation or bulk when hash fragment is present in URL
   useEffect(() => {
     if (!loading && platformOperations.length > 0) {
       const hash = window.location.hash;
+
       if (hash && hash.startsWith("#violation-")) {
         const violationIdFromHash = hash.replace("#violation-", "");
         // Wait a bit for DOM to render violations
@@ -445,6 +446,50 @@ export default function MatchDashboard() {
             }, 2000);
           }
         }, 500); // Increased timeout to ensure violations are rendered
+        return () => clearTimeout(scrollTimeout);
+      }
+
+      // Scroll to bulk violation when hash fragment is present in URL
+      if (hash && hash.startsWith("#bulk-")) {
+        const bulkIdFromHash = hash.replace("#bulk-", "");
+        // Wait a bit for DOM to render bulk violations
+        const scrollTimeout = setTimeout(() => {
+          // Try to find the bulk element by ID
+          let bulkElement = document.getElementById(`bulk-${bulkIdFromHash}`);
+
+          // If not found, try to find by checking all bulk violations
+          if (!bulkElement && bulkViolations.length > 0) {
+            const matchingBulk = bulkViolations.find((b) => {
+              return b.bulkId === bulkIdFromHash;
+            });
+
+            if (matchingBulk) {
+              bulkElement = document.getElementById(
+                `bulk-${matchingBulk.bulkId}`,
+              );
+            }
+          }
+
+          if (bulkElement) {
+            bulkElement.scrollIntoView({
+              behavior: "smooth",
+              block: "center",
+            });
+            // Highlight the bulk briefly
+            bulkElement.classList.add(
+              "ring-2",
+              "ring-primary",
+              "ring-offset-2",
+            );
+            setTimeout(() => {
+              bulkElement?.classList.remove(
+                "ring-2",
+                "ring-primary",
+                "ring-offset-2",
+              );
+            }, 2000);
+          }
+        }, 500); // Increased timeout to ensure bulk violations are rendered
         return () => clearTimeout(scrollTimeout);
       }
     }

@@ -449,22 +449,25 @@ export function PlatformCard({
                 {processedViolations.map((item, index) => {
                   if (item.type === "bulk" && item.bulkViolation) {
                     return (
-                      <BulkViolationItem
+                      <div
                         key={`bulk-${item.bulkViolation.bulkId}`}
-                        bulkViolation={item.bulkViolation}
-                        platformId={platform.id}
-                        platform={platform}
-                        onEdit={onEdit}
-                        onToggleStatus={onToggleStatus}
-                        onDelete={onDelete}
-                        onCopyUrl={onCopyUrl}
-                        onAddNote={onAddNote}
-                        getPlatformIcon={getPlatformIcon}
-                        canModifyViolations={canModifyViolations}
-                        onRefetch={onRefetch}
-                        onBulkDelete={onBulkDelete}
-                        onBulkStatusChange={onBulkStatusChange}
-                      />
+                        id={`bulk-${item.bulkViolation.bulkId}`}>
+                        <BulkViolationItem
+                          bulkViolation={item.bulkViolation}
+                          platformId={platform.id}
+                          platform={platform}
+                          onEdit={onEdit}
+                          onToggleStatus={onToggleStatus}
+                          onDelete={onDelete}
+                          onCopyUrl={onCopyUrl}
+                          onAddNote={onAddNote}
+                          getPlatformIcon={getPlatformIcon}
+                          canModifyViolations={canModifyViolations}
+                          onRefetch={onRefetch}
+                          onBulkDelete={onBulkDelete}
+                          onBulkStatusChange={onBulkStatusChange}
+                        />
+                      </div>
                     );
                   } else if (item.type === "individual" && item.violation) {
                     return (
@@ -655,22 +658,25 @@ export function PlatformCard({
                 {processedViolations.map((item, index) => {
                   if (item.type === "bulk" && item.bulkViolation) {
                     return (
-                      <BulkViolationItem
+                      <div
                         key={`bulk-${item.bulkViolation.bulkId}`}
-                        bulkViolation={item.bulkViolation}
-                        platformId={platform.id}
-                        platform={platform}
-                        onEdit={onEdit}
-                        onToggleStatus={onToggleStatus}
-                        onDelete={onDelete}
-                        onCopyUrl={onCopyUrl}
-                        onAddNote={onAddNote}
-                        getPlatformIcon={getPlatformIcon}
-                        canModifyViolations={canModifyViolations}
-                        onRefetch={onRefetch}
-                        onBulkDelete={onBulkDelete}
-                        onBulkStatusChange={onBulkStatusChange}
-                      />
+                        id={`bulk-${item.bulkViolation.bulkId}`}>
+                        <BulkViolationItem
+                          bulkViolation={item.bulkViolation}
+                          platformId={platform.id}
+                          platform={platform}
+                          onEdit={onEdit}
+                          onToggleStatus={onToggleStatus}
+                          onDelete={onDelete}
+                          onCopyUrl={onCopyUrl}
+                          onAddNote={onAddNote}
+                          getPlatformIcon={getPlatformIcon}
+                          canModifyViolations={canModifyViolations}
+                          onRefetch={onRefetch}
+                          onBulkDelete={onBulkDelete}
+                          onBulkStatusChange={onBulkStatusChange}
+                        />
+                      </div>
                     );
                   } else if (item.type === "individual" && item.violation) {
                     return (

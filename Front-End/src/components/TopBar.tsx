@@ -94,11 +94,11 @@ export function TopBar() {
       try {
         const response = await fetch(
           `${API_URL}/matches/search?query=${encodeURIComponent(
-            query.trim()
+            query.trim(),
           )}&league=${encodeURIComponent(selectedLeague)}`,
           {
             credentials: "include", // Use cookie-based authentication
-          }
+          },
         );
 
         if (!response.ok) {
@@ -114,7 +114,7 @@ export function TopBar() {
         setIsSearching(false);
       }
     },
-    [API_URL]
+    [API_URL],
   );
 
   // Handle search input change with debouncing
@@ -304,7 +304,7 @@ export function TopBar() {
                                   month: "short",
                                   day: "numeric",
                                   year: "numeric",
-                                }
+                                },
                               )}
                             </span>
                           )}
@@ -378,7 +378,7 @@ export function TopBar() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 sm:h-9 sm:w-10 sm:w-10 p-0 touch-manipulation"
+              className="h-8 w-8 sm:h-9 sm:w-10 p-0 touch-manipulation"
               aria-label={t("topBar.userMenu")}>
               <div className="h-7 w-7 sm:h-8 sm:w-8 md:h-9 md:w-9 rounded-full bg-primary flex items-center justify-center">
                 <User className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-primary-foreground" />
