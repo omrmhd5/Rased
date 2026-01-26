@@ -1,8 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, RefreshCw, UserCircle } from "lucide-react";
-import { useState } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { BulkDeleteConfirmDialog } from "./BulkDeleteConfirmDialog";
 
 interface ActivityLogItem {
   type: string;
@@ -20,8 +18,6 @@ interface ActivityLogItem {
   violationUrl?: string;
   bulkId?: string;
   count?: number;
-  status?: string;
-  accountChannel?: string;
   totalCount?: number;
   oldStatus?: string;
   newStatus?: string;
@@ -30,7 +26,6 @@ interface ActivityLogItem {
 interface BulkActivityLogItemProps {
   bulkId: string;
   log: ActivityLogItem;
-  getPlatformColor: (platform: string | null) => string;
   getPlatformIcon: (platformName: string) => React.ReactNode;
   onDeleteLog?: (item: ActivityLogItem) => void;
   isSuperAdmin?: boolean;
@@ -53,13 +48,11 @@ const getEventIcon = (type: string) => {
 export function BulkActivityLogItem({
   bulkId,
   log,
-  getPlatformColor,
   getPlatformIcon,
   onDeleteLog,
   isSuperAdmin = false,
 }: BulkActivityLogItemProps) {
   const { t, isRTL } = useLanguage();
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   // Translate status badge
   const translateStatus = (status: string): string => {
@@ -171,7 +164,7 @@ export function BulkActivityLogItem({
                 className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setIsDeleteConfirmOpen(true);
+                  onDeleteLog(log);
                 }}
                 title={t("matchDashboard.activityLog.actions.deleteLogEntry")}>
                 <Trash2 className="h-4 w-4" />
@@ -221,7 +214,15 @@ export function BulkActivityLogItem({
             {log.type === "deleted" && (
               <div>
                 {log.count}{" "}
-                {t("matchDashboard.activityLog.bulk.violationsDeleted")}
+                {t("matchDashboard.activityLog.bulk.violationsDeleted")}{" "}
+                {log.accountChannel && (
+                  <>
+                    {t("matchDashboard.violationItem.forChannelUser")}{" "}
+                    <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                      {log.accountChannel}
+                    </code>
+                  </>
+                )}
               </div>
             )}
             {log.type === "status_change" && (
@@ -284,25 +285,6 @@ export function BulkActivityLogItem({
           </div>
         )}
       </div>
-
-      {/* Delete Confirm Modal */}
-      {isDeleteConfirmOpen && onDeleteLog && (
-        <BulkDeleteConfirmDialog
-          open={isDeleteConfirmOpen}
-          onOpenChange={setIsDeleteConfirmOpen}
-          violationCount={1}
-          title={t("matchDashboard.activityLog.actions.deleteLogEntry")}
-          description={
-            t("matchDashboard.activityLog.deleteConfirm.description") ||
-            "Are you sure you want to delete this log entry? This action cannot be undone."
-          }
-          confirmText={t("matchDashboard.activityLog.actions.delete")}
-          onConfirm={() => {
-            onDeleteLog(log);
-            setIsDeleteConfirmOpen(false);
-          }}
-        />
-      )}
     </>
   );
 }

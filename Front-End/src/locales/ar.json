@@ -962,7 +962,9 @@
         "changedFrom": "تم التغيير من",
         "violationUpdated": "تم تحديث الانتهاك",
         "unknownPlatform": "منصة غير معروفة",
-        "platform": "منصة"
+        "platform": "منصة",
+        "violationsDeletedBulk": "انتهاكات تم حذفها دفعة واحدة",
+        "bulkDeletedIn": "تم الحذف دفعة واحدة"
       },
       "timeAgo": {
         "justNow": "الآن",

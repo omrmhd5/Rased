@@ -962,7 +962,9 @@
         "changedFrom": "changed from",
         "violationUpdated": "Violation updated",
         "unknownPlatform": "Unknown Platform",
-        "platform": "platform"
+        "platform": "platform",
+        "violationsDeletedBulk": "violations deleted in bulk",
+        "bulkDeletedIn": "deleted in bulk"
       },
       "timeAgo": {
         "justNow": "just now",

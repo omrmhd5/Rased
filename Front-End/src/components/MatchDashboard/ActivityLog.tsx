@@ -254,15 +254,6 @@ export function ActivityLog({
     };
   }, []);
 
-  // Debug: Log bulk violations to see if they exist
-  console.log("bulkViolations:", bulkViolations);
-  console.log("bulkViolations length:", bulkViolations?.length);
-  bulkViolations?.forEach((bv, i) => {
-    console.log(`Bulk violation ${i}:`, bv);
-    console.log(`  - auditLog:`, bv.auditLog);
-    console.log(`  - auditLog length:`, bv.auditLog?.length);
-  });
-
   // Helper function to format date with Arabic AM/PM (صباحا/مساءا) for RTL, AM/PM for LTR
   const formatDateWithArabicTime = (dateValue: string | number): string => {
     if (!dateValue) return "";
@@ -411,8 +402,8 @@ export function ActivityLog({
       deletedLog.changes?.platformName ||
       t("matchDashboard.activityLog.descriptions.platform");
     const accountName = deletedLog.changes?.accountChannel || "";
-    const status = deletedLog.changes?.status || "";
-    const views = deletedLog.changes?.views || "0";
+    const count = deletedLog.changes?.count || "1";
+    const isBulk = deletedLog.changes?.bulkId && count !== "1";
 
     // Helper function to translate status values
     const translateStatus = (status: string): string => {
@@ -440,6 +431,179 @@ export function ActivityLog({
       return "bg-primary/10 text-primary";
     };
 
+    // For bulk deletions, show: "{count} violations deleted in bulk for channel/user {accountName}"
+    const bulkDescription = isBulk ? (
+      <div className="text-left">
+        {isRTL ? (
+          <>
+            {accountName ? (
+              <>
+                <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  {accountName}
+                </code>{" "}
+                {t(
+                  "matchDashboard.activityLog.descriptions.forChannelUser",
+                )}{" "}
+              </>
+            ) : (
+              <>
+                <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  N/A
+                </code>{" "}
+                {t(
+                  "matchDashboard.activityLog.descriptions.forChannelUser",
+                )}{" "}
+              </>
+            )}
+            {t("matchDashboard.activityLog.descriptions.bulkDeletedIn")}{" "}
+            <code className="text-xs bg-destructive/10 text-destructive px-1.5 py-0.5 rounded font-mono">
+              {count}
+            </code>{" "}
+            {t("matchDashboard.activityLog.descriptions.violationsDeletedBulk")}
+          </>
+        ) : (
+          <>
+            <code className="text-xs bg-destructive/10 text-destructive px-1.5 py-0.5 rounded font-mono">
+              {count}
+            </code>{" "}
+            {t("matchDashboard.activityLog.descriptions.violationsDeletedBulk")}{" "}
+            {t("matchDashboard.activityLog.descriptions.forChannelUser")}{" "}
+            {accountName ? (
+              <>
+                <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  {accountName}
+                </code>
+              </>
+            ) : (
+              <>
+                <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  N/A
+                </code>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    ) : (
+      // For single deletions, show original format
+      <div className="text-left">
+        {isRTL ? (
+          <>
+            {status && (
+              <>
+                {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
+                <code
+                  className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
+                    status,
+                  )}`}>
+                  {translateStatus(status)}
+                </code>{" "}
+              </>
+            )}
+            {views && views !== "0" && (
+              <>
+                {t("matchDashboard.activityLog.descriptions.with")}{" "}
+                <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  {formatViewsString(views)}{" "}
+                  {t("matchDashboard.activityLog.descriptions.views")}
+                </code>{" "}
+              </>
+            )}
+            {accountName ? (
+              <>
+                <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  {accountName}
+                </code>{" "}
+                {t(
+                  "matchDashboard.activityLog.descriptions.forChannelUser",
+                )}{" "}
+              </>
+            ) : (
+              <>
+                <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  N/A
+                </code>{" "}
+                {t(
+                  "matchDashboard.activityLog.descriptions.forChannelUser",
+                )}{" "}
+              </>
+            )}
+            <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+              {platformName}
+            </code>{" "}
+            {t("matchDashboard.activityLog.descriptions.violationDeletedFrom")}
+          </>
+        ) : (
+          <>
+            {t("matchDashboard.activityLog.descriptions.violationDeletedFrom")}{" "}
+            <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+              {platformName}
+            </code>
+            {accountName ? (
+              <>
+                {" "}
+                {t(
+                  "matchDashboard.activityLog.descriptions.forChannelUser",
+                )}{" "}
+                <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  {accountName}
+                </code>
+              </>
+            ) : (
+              <>
+                {" "}
+                {t(
+                  "matchDashboard.activityLog.descriptions.forChannelUser",
+                )}{" "}
+                <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  N/A
+                </code>
+              </>
+            )}
+            {views && views !== "0" && status && (
+              <>
+                {" "}
+                {t("matchDashboard.activityLog.descriptions.with")}{" "}
+                <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  {formatViewsString(views)}{" "}
+                  {t("matchDashboard.activityLog.descriptions.views")}
+                </code>{" "}
+                {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
+                <code
+                  className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
+                    status,
+                  )}`}>
+                  {translateStatus(status)}
+                </code>
+              </>
+            )}
+            {views && views !== "0" && !status && (
+              <>
+                {" "}
+                {t("matchDashboard.activityLog.descriptions.with")}{" "}
+                <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
+                  {formatViewsString(views)}{" "}
+                  {t("matchDashboard.activityLog.descriptions.views")}
+                </code>
+              </>
+            )}
+            {views === "0" && status && (
+              <>
+                {" "}
+                {t("matchDashboard.activityLog.descriptions.withStatus")}{" "}
+                <code
+                  className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
+                    status,
+                  )}`}>
+                  {translateStatus(status)}
+                </code>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    );
+
     auditLogItems.push({
       type: "deleted",
       time: isRTL
@@ -451,128 +615,7 @@ export function ActivityLog({
           )} ${formattedTime} • ${timeAgo}`,
       badge: t("matchDashboard.activityLog.badges.deleted"),
       badgeVariant: "destructive",
-      description: (
-        <div className="text-left">
-          {isRTL ? (
-            <>
-              {status && (
-                <>
-                  {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
-                  <code
-                    className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
-                      status,
-                    )}`}>
-                    {translateStatus(status)}
-                  </code>{" "}
-                </>
-              )}
-              {views && views !== "0" && (
-                <>
-                  {t("matchDashboard.activityLog.descriptions.with")}{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {formatViewsString(views)}{" "}
-                    {t("matchDashboard.activityLog.descriptions.views")}
-                  </code>{" "}
-                </>
-              )}
-              {accountName ? (
-                <>
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {accountName}
-                  </code>{" "}
-                  {t(
-                    "matchDashboard.activityLog.descriptions.forChannelUser",
-                  )}{" "}
-                </>
-              ) : (
-                <>
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    N/A
-                  </code>{" "}
-                  {t(
-                    "matchDashboard.activityLog.descriptions.forChannelUser",
-                  )}{" "}
-                </>
-              )}
-              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                {platformName}
-              </code>{" "}
-              {t(
-                "matchDashboard.activityLog.descriptions.violationDeletedFrom",
-              )}
-            </>
-          ) : (
-            <>
-              {t(
-                "matchDashboard.activityLog.descriptions.violationDeletedFrom",
-              )}{" "}
-              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                {platformName}
-              </code>
-              {accountName ? (
-                <>
-                  {" "}
-                  {t(
-                    "matchDashboard.activityLog.descriptions.forChannelUser",
-                  )}{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {accountName}
-                  </code>
-                </>
-              ) : (
-                <>
-                  {" "}
-                  {t(
-                    "matchDashboard.activityLog.descriptions.forChannelUser",
-                  )}{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    N/A
-                  </code>
-                </>
-              )}
-              {views && views !== "0" && status && (
-                <>
-                  {" "}
-                  {t("matchDashboard.activityLog.descriptions.with")}{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {formatViewsString(views)}{" "}
-                    {t("matchDashboard.activityLog.descriptions.views")}
-                  </code>{" "}
-                  {t("matchDashboard.activityLog.descriptions.andStatus")}{" "}
-                  <code
-                    className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
-                      status,
-                    )}`}>
-                    {translateStatus(status)}
-                  </code>
-                </>
-              )}
-              {views && views !== "0" && !status && (
-                <>
-                  {" "}
-                  {t("matchDashboard.activityLog.descriptions.with")}{" "}
-                  <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono">
-                    {formatViewsString(views)}{" "}
-                    {t("matchDashboard.activityLog.descriptions.views")}
-                  </code>
-                </>
-              )}
-              {views === "0" && status && (
-                <>
-                  {" "}
-                  {t("matchDashboard.activityLog.descriptions.withStatus")}{" "}
-                  <code
-                    className={`text-xs px-1.5 py-0.5 rounded font-mono ${getStatusColorClasses(
-                      status,
-                    )}`}>
-                    {translateStatus(status)}
-                  </code>
-                </>
-              )}
-            </>
-          )}
-        </div>
-      ),
+      description: bulkDescription,
       platform: platformName,
       timestamp: timestamp.getTime(),
       userName: deletedLog.userName,
@@ -580,6 +623,7 @@ export function ActivityLog({
       accountChannel: accountName,
       violationUrl: deletedLog.changes?.violationUrl,
       bulkId: deletedLog.changes?.bulkId as string | undefined, // Extract bulkId from changes
+      count: count,
     });
   });
 
@@ -1376,8 +1420,6 @@ export function ActivityLog({
     });
   });
 
-  console.log("bulkAuditLogItems:", bulkAuditLogItems);
-
   // Combine existing log items with audit log items, sort by timestamp (newest first)
   const allLogItems = [...log, ...auditLogItems, ...bulkAuditLogItems].sort(
     (a, b) => {
@@ -1526,9 +1568,6 @@ export function ActivityLog({
     return true; // "all"
   });
 
-  console.log("displayItems:", displayItems);
-  console.log("filteredDisplayItems:", filteredDisplayItems);
-
   // Calculate total items for pagination (count individual logs within bulk groups)
   const totalItems = filteredDisplayItems.reduce((count, item) => {
     if (item.type === "bulk") {
@@ -1554,8 +1593,6 @@ export function ActivityLog({
   });
 
   const paginatedItems = flattenedItems.slice(startIndex, endIndex);
-
-  console.log("paginatedItems:", paginatedItems);
 
   // Reset page when filters change
   React.useEffect(() => {

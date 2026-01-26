@@ -405,34 +405,8 @@ router.delete(
       // Find all violations with this bulkId
       const violations = await Violation.find({ bulkId });
 
-      // Delete each violation and log it
+      // Delete each violation
       for (const violation of violations) {
-        // Save deleted violation log
-        let externalMatchId = violation.externalMatchId;
-        if (!externalMatchId && violation.matchId) {
-          const match = await Match.findById(violation.matchId);
-          if (match) {
-            externalMatchId = match.externalMatchId;
-          }
-        }
-
-        await DeletedViolationLog.create({
-          externalMatchId: externalMatchId || null,
-          action: "deleted",
-          userId: req.user ? req.user.userId : null,
-          userName: req.user ? req.user.username : "System",
-          timestamp: new Date(),
-          changes: {
-            platformId: violation.platformId,
-            platformName: violation.platformName,
-            accountChannel: violation.accountChannel,
-            status: violation.status,
-            views: violation.views || "0",
-            violationUrl: violation.violationUrl,
-            bulkId: bulkId,
-          },
-        });
-
         // Log deletion
         await logViolationChange(violation._id, "deleted", {
           user: req.user,
@@ -447,6 +421,31 @@ router.delete(
         // Delete the violation
         await Violation.findByIdAndDelete(violation._id);
       }
+
+      // Create a single deleted log entry for the entire bulk (after all violations are deleted)
+      let externalMatchId = bulkViolation.externalMatchId;
+      if (!externalMatchId && bulkViolation.matchId) {
+        const match = await Match.findById(bulkViolation.matchId);
+        if (match) {
+          externalMatchId = match.externalMatchId;
+        }
+      }
+
+      await DeletedViolationLog.create({
+        externalMatchId: externalMatchId || null,
+        action: "deleted",
+        userId: req.user ? req.user.userId : null,
+        userName: req.user ? req.user.username : "System",
+        timestamp: new Date(),
+        changes: {
+          platformId: bulkViolation.platformId,
+          platformName: bulkViolation.platformName,
+          accountChannel: bulkViolation.accountChannel,
+          status: bulkViolation.status,
+          bulkId: bulkId,
+          count: violations.length, // Include count of violations deleted
+        },
+      });
 
       // Delete the bulk violation entry
       await deleteBulkViolation(bulkId);
@@ -1988,14 +1987,17 @@ router.delete(
       });
 
       // Log deletion in violation's audit log before deleting (optional, for consistency)
-      await logViolationChange(violationId, "deleted", {
-        user: req.user,
-        initialData: {
-          violationUrl: violation.violationUrl,
-          accountChannel: violation.accountChannel,
-          status: violation.status,
-        },
-      });
+      // Skip logging for bulk violations - they have their own audit logging
+      if (!violation.bulkId) {
+        await logViolationChange(violationId, "deleted", {
+          user: req.user,
+          initialData: {
+            violationUrl: violation.violationUrl,
+            accountChannel: violation.accountChannel,
+            status: violation.status,
+          },
+        });
+      }
 
       await Violation.findByIdAndDelete(req.params.id);
 
