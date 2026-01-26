@@ -24,21 +24,31 @@ const settingsSchema = new mongoose.Schema(
       default: 5,
       min: 0,
     },
+    allowDuplicates: {
+      type: Boolean,
+      default: false,
+    },
+    showDuplicates: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true, // Adds createdAt and updatedAt fields
-  }
+  },
 );
 
 // Static method to get or create the singleton settings
 settingsSchema.statics.getSingleton = async function () {
   let settings = await this.findOne({ identifier: "singleton" });
   if (!settings) {
-    settings = await this.create({ 
-      identifier: "singleton", 
+    settings = await this.create({
+      identifier: "singleton",
       targetMins: 15,
       viewsThreshold: 1000,
       violationsThreshold: 5,
+      allowDuplicates: false,
+      showDuplicates: false,
     });
   }
   return settings;
@@ -49,7 +59,7 @@ settingsSchema.statics.updateSingleton = async function (updates) {
   const settings = await this.findOneAndUpdate(
     { identifier: "singleton" },
     { $set: updates },
-    { new: true, upsert: true, runValidators: true }
+    { new: true, upsert: true, runValidators: true },
   );
   return settings;
 };

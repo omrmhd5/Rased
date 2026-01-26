@@ -33,7 +33,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
   Pagination,
@@ -50,9 +50,7 @@ interface PlatformCardProps {
   filteredViolations: Violation[];
   bulkViolations?: BulkViolation[]; // Bulk violation items for this platform
   cardFilter: string;
-  searchQuery: string;
   onFilterChange: (filter: string) => void;
-  onSearchChange: (query: string) => void;
   onAddViolation: () => void;
   onEdit: (platformId: string, violation: Violation) => void;
   onToggleStatus: (
@@ -80,9 +78,7 @@ export function PlatformCard({
   filteredViolations,
   bulkViolations = [], // Bulk violation items from backend
   cardFilter,
-  searchQuery,
   onFilterChange,
-  onSearchChange,
   onAddViolation,
   onEdit,
   onToggleStatus,
@@ -101,8 +97,104 @@ export function PlatformCard({
   const [viewMetaFilter, setViewMetaFilter] = useState<
     "all" | "bulk" | "individual"
   >("all");
+  const [localSearchQuery, setLocalSearchQuery] = useState<string>("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchedViolationIds, setSearchedViolationIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const [searchedBulkIds, setSearchedBulkIds] = useState<Set<string>>(
+    new Set(),
+  );
+  const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const violationsPerPage = 5;
   const IconComponent = platform.icon;
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+  // Debounced backend search for violations and bulk violations by URL or account
+  const performSearch = useCallback(
+    async (query: string) => {
+      if (!query || query.trim().length < 2) {
+        setSearchedViolationIds(new Set());
+        setSearchedBulkIds(new Set());
+        setIsSearching(false);
+        return;
+      }
+
+      setIsSearching(true);
+
+      try {
+        const response = await fetch(
+          `${API_URL}/violations/bulk/search?query=${encodeURIComponent(
+            query.trim(),
+          )}`,
+          {
+            credentials: "include",
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error("Search failed");
+        }
+
+        const matchingBulks = await response.json();
+        const matchingBulkIds: Set<string> = new Set(
+          matchingBulks.map((b: any) => b.bulkId as string),
+        );
+        setSearchedBulkIds(matchingBulkIds);
+
+        // For individual violations, do client-side search on filtered violations
+        const query_lower = query.toLowerCase();
+        const matchingIds = new Set<string>();
+        filteredViolations.forEach((v) => {
+          const violationId = v._id || v.id?.toString();
+          const accountMatch = v.accountChannel
+            ?.toLowerCase()
+            .includes(query_lower);
+          const urlMatch = v.violationUrl?.toLowerCase().includes(query_lower);
+          if (accountMatch || urlMatch) {
+            if (violationId) {
+              matchingIds.add(violationId);
+            }
+          }
+        });
+        setSearchedViolationIds(matchingIds);
+      } catch (error) {
+        console.error("Error searching violations:", error);
+        setSearchedViolationIds(new Set());
+        setSearchedBulkIds(new Set());
+      } finally {
+        setIsSearching(false);
+      }
+    },
+    [filteredViolations, API_URL],
+  );
+
+  // Handle search input with debouncing
+  const handleSearchChange = useCallback(
+    (value: string) => {
+      setLocalSearchQuery(value);
+
+      // Clear existing timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+
+      // Set new timeout for debounced search
+      searchTimeoutRef.current = setTimeout(() => {
+        performSearch(value);
+      }, 300); // 300ms debounce
+    },
+    [performSearch],
+  );
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Use stats from backend (no calculations needed)
   const violations = platform.violations; // Single violations only
@@ -130,6 +222,14 @@ export function PlatformCard({
     // Apply View Type Filter
     if (viewMetaFilter === "bulk") return; // Skip singles if only showing bulks
 
+    // Apply search filter
+    if (localSearchQuery.trim().length > 0) {
+      const violationId = violation._id || violation.id?.toString();
+      if (!violationId || !searchedViolationIds.has(violationId)) {
+        return; // Skip if search query exists but violation not in results
+      }
+    }
+
     allDisplayItems.push({
       type: "individual",
       violation: violation,
@@ -140,6 +240,13 @@ export function PlatformCard({
   bulkViolations.forEach((bulkViolation) => {
     // Apply View Type Filter
     if (viewMetaFilter === "individual") return; // Skip bulks if only showing singles
+
+    // Apply search filter
+    if (localSearchQuery.trim().length > 0) {
+      if (!searchedBulkIds.has(bulkViolation.bulkId)) {
+        return; // Skip if search query exists but bulk not in results
+      }
+    }
 
     allDisplayItems.push({
       type: "bulk",
@@ -196,7 +303,7 @@ export function PlatformCard({
   // Reset to page 1 when filter or search changes
   useEffect(() => {
     setViolationsPage(1);
-  }, [cardFilter, searchQuery, viewMetaFilter]);
+  }, [cardFilter, localSearchQuery, viewMetaFilter]);
 
   // Render the platform card content (used in both normal and maximized views)
   const renderCardContent = (isFullScreen?: boolean) => (
@@ -416,14 +523,28 @@ export function PlatformCard({
         </div>
 
         <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Search
+            className={`absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground ${
+              isRTL ? "right-2" : "left-2"
+            }`}
+          />
+          {isSearching && (
+            <div
+              className={`absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin ${
+                isRTL ? "left-2" : "right-2"
+              }`}>
+              <Search className="h-3.5 w-3.5 text-chart-4 opacity-60" />
+            </div>
+          )}
           <Input
             placeholder={t(
               "matchDashboard.expandedPlatformDialog.searchPlaceholder",
             )}
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="h-8 pl-8 text-xs"
+            value={localSearchQuery}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className={`h-8 text-xs ${isRTL ? "pr-8" : "pl-8"} ${
+              isSearching ? (isRTL ? "pl-8" : "pr-8") : ""
+            }`}
           />
         </div>
       </div>

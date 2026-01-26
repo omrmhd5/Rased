@@ -20,7 +20,13 @@ router.get("/", async (req, res) => {
 // PUT /api/settings - Update settings (singleton)
 router.put("/", async (req, res) => {
   try {
-    const { targetMins, viewsThreshold, violationsThreshold } = req.body;
+    const {
+      targetMins,
+      viewsThreshold,
+      violationsThreshold,
+      allowDuplicates,
+      showDuplicates,
+    } = req.body;
 
     // Validate targetMins if provided
     if (targetMins !== undefined) {
@@ -47,7 +53,8 @@ router.put("/", async (req, res) => {
       const violationsThresholdNum = Number(violationsThreshold);
       if (isNaN(violationsThresholdNum) || violationsThresholdNum < 0) {
         return res.status(400).json({
-          error: "violationsThreshold must be a number greater than or equal to 0",
+          error:
+            "violationsThreshold must be a number greater than or equal to 0",
         });
       }
     }
@@ -62,6 +69,12 @@ router.put("/", async (req, res) => {
     }
     if (violationsThreshold !== undefined) {
       updates.violationsThreshold = Number(violationsThreshold);
+    }
+    if (allowDuplicates !== undefined) {
+      updates.allowDuplicates = Boolean(allowDuplicates);
+    }
+    if (showDuplicates !== undefined) {
+      updates.showDuplicates = Boolean(showDuplicates);
     }
 
     // Update the singleton settings
@@ -79,7 +92,13 @@ router.put("/", async (req, res) => {
 // PATCH /api/settings - Partially update settings (singleton)
 router.patch("/", async (req, res) => {
   try {
-    const { targetMins, viewsThreshold, violationsThreshold } = req.body;
+    const {
+      targetMins,
+      viewsThreshold,
+      violationsThreshold,
+      allowDuplicates,
+      showDuplicates,
+    } = req.body;
 
     // Build update object (only include provided fields)
     const updates = {};
@@ -105,10 +124,17 @@ router.patch("/", async (req, res) => {
       const violationsThresholdNum = Number(violationsThreshold);
       if (isNaN(violationsThresholdNum) || violationsThresholdNum < 0) {
         return res.status(400).json({
-          error: "violationsThreshold must be a number greater than or equal to 0",
+          error:
+            "violationsThreshold must be a number greater than or equal to 0",
         });
       }
       updates.violationsThreshold = violationsThresholdNum;
+    }
+    if (allowDuplicates !== undefined) {
+      updates.allowDuplicates = Boolean(allowDuplicates);
+    }
+    if (showDuplicates !== undefined) {
+      updates.showDuplicates = Boolean(showDuplicates);
     }
 
     // If no updates provided, return current settings

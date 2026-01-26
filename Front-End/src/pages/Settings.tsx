@@ -74,6 +74,13 @@ export default function Settings() {
   const [violationsThreshold, setViolationsThreshold] = useState<number>(5);
   const [violationsThresholdInput, setViolationsThresholdInput] =
     useState<string>("5");
+
+  // Allow Duplicates state
+  const [allowDuplicates, setAllowDuplicates] = useState<boolean>(false);
+
+  // Show Duplicates state
+  const [showDuplicates, setShowDuplicates] = useState<boolean>(false);
+
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadingSettings, setLoadingSettings] = useState(true);
@@ -158,6 +165,12 @@ export default function Settings() {
         setViewsThresholdInput(viewsThresh.toLocaleString("en-US"));
         setViolationsThreshold(violationsThresh);
         setViolationsThresholdInput(violationsThresh.toString());
+
+        // Load allow duplicates setting
+        setAllowDuplicates(settings.allowDuplicates ?? false);
+
+        // Load show duplicates setting
+        setShowDuplicates(settings.showDuplicates ?? false);
       } catch (error) {
         console.error("Error loading settings:", error);
         toast({
@@ -658,6 +671,102 @@ export default function Settings() {
     }
   };
 
+  // Handle save allow duplicates setting
+  const handleSaveAllowDuplicates = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch(`${API_URL}/settings`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          allowDuplicates: allowDuplicates,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || "Failed to save allow duplicates setting",
+        );
+      }
+
+      const updatedSettings = await response.json();
+
+      // Update local state with the response
+      setAllowDuplicates(updatedSettings.allowDuplicates ?? allowDuplicates);
+
+      toast({
+        title: t("settings.allowDuplicates.saved"),
+        description: allowDuplicates
+          ? t("settings.allowDuplicates.enabledDescription")
+          : t("settings.allowDuplicates.disabledDescription"),
+      });
+    } catch (error) {
+      console.error("Error saving allow duplicates setting:", error);
+      toast({
+        title: t("settings.allowDuplicates.error.failedToSave"),
+        description:
+          error instanceof Error
+            ? error.message
+            : t("settings.allowDuplicates.error.failedToSave"),
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Handle save show duplicates setting
+  const handleSaveShowDuplicates = async () => {
+    setSaving(true);
+    try {
+      const response = await fetch(`${API_URL}/settings`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          showDuplicates: showDuplicates,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || "Failed to save show duplicates setting",
+        );
+      }
+
+      const updatedSettings = await response.json();
+
+      // Update local state with the response
+      setShowDuplicates(updatedSettings.showDuplicates ?? showDuplicates);
+
+      toast({
+        title: t("settings.showDuplicates.saved"),
+        description: showDuplicates
+          ? t("settings.showDuplicates.enabledDescription")
+          : t("settings.showDuplicates.disabledDescription"),
+      });
+    } catch (error) {
+      console.error("Error saving show duplicates setting:", error);
+      toast({
+        title: t("settings.showDuplicates.error.failedToSave"),
+        description:
+          error instanceof Error
+            ? error.message
+            : t("settings.showDuplicates.error.failedToSave"),
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div>
@@ -847,6 +956,94 @@ export default function Settings() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Duplicates Settings */}
+      <Card>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-lg sm:text-xl">
+            {t("settings.duplicates.title")}
+          </CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
+            {t("settings.duplicates.description")}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          {loadingSettings ? (
+            <div className="flex items-center justify-center py-6">
+              <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin text-primary" />
+            </div>
+          ) : (
+            <>
+              {/* Allow Duplicates Toggle */}
+              <div className="flex items-center justify-between p-3 sm:p-4 border rounded-lg bg-background/50">
+                <div className="flex items-center gap-3">
+                  <div>
+                    <p className="text-sm sm:text-base font-medium">
+                      {t("settings.allowDuplicates.toggleLabel")}
+                    </p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      {allowDuplicates
+                        ? t("settings.allowDuplicates.enabledStatus")
+                        : t("settings.allowDuplicates.disabledStatus")}
+                    </p>
+                  </div>
+                </div>
+                <Checkbox
+                  checked={allowDuplicates}
+                  onCheckedChange={(checked) => {
+                    setAllowDuplicates(checked === true);
+                  }}
+                  className="h-5 w-5 sm:h-6 sm:w-6"
+                />
+              </div>
+
+              {/* Show Duplicates Toggle */}
+              <div className="flex items-center justify-between p-3 sm:p-4 border rounded-lg bg-background/50">
+                <div className="flex items-center gap-3">
+                  <div>
+                    <p className="text-sm sm:text-base font-medium">
+                      {t("settings.showDuplicates.toggleLabel")}
+                    </p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">
+                      {showDuplicates
+                        ? t("settings.showDuplicates.enabledStatus")
+                        : t("settings.showDuplicates.disabledStatus")}
+                    </p>
+                  </div>
+                </div>
+                <Checkbox
+                  checked={showDuplicates}
+                  onCheckedChange={(checked) => {
+                    setShowDuplicates(checked === true);
+                  }}
+                  className="h-5 w-5 sm:h-6 sm:w-6"
+                />
+              </div>
+
+              {/* Save Button */}
+              <Button
+                onClick={() => {
+                  handleSaveAllowDuplicates();
+                  handleSaveShowDuplicates();
+                }}
+                className="w-full sm:w-auto h-9 sm:h-10 text-xs sm:text-sm touch-manipulation"
+                disabled={saving || loadingSettings}>
+                {saving ? (
+                  <>
+                    <Loader2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2 animate-spin" />
+                    {t("settings.duplicates.saving")}
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                    {t("settings.duplicates.save")}
+                  </>
+                )}
+              </Button>
+            </>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Leagues Management */}
       <Card>

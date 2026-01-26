@@ -559,6 +559,42 @@
       "validationError": "خطأ في التحقق",
       "mustBeGreaterThanZero": "يجب أن تكون العتبات أكبر من أو تساوي 0."
     },
+    "allowDuplicates": {
+      "title": "السماح بالانتهاكات المكررة",
+      "description": "تحكم في ما إذا كانت الانتهاكات المكررة مسموحة في النظام",
+      "toggleLabel": "السماح بانتهاكات مكررة",
+      "enabledStatus": "الانتهاكات المكررة مسموحة حالياً",
+      "disabledStatus": "الانتهاكات المكررة غير مسموحة حالياً",
+      "save": "حفظ الإعداد",
+      "saving": "جاري الحفظ...",
+      "saved": "تم حفظ الإعداد",
+      "enabledDescription": "الانتهاكات المكررة مسموحة الآن",
+      "disabledDescription": "الانتهاكات المكررة معطلة الآن",
+      "error": {
+        "failedToSave": "فشل حفظ إعداد السماح بالانتهاكات المكررة"
+      }
+    },
+    "duplicates": {
+      "title": "الانتهاكات المكررة",
+      "description": "تحكم في ما إذا كانت الانتهاكات المكررة مسموحة ومعروضة",
+      "save": "حفظ الإعدادات",
+      "saving": "جاري الحفظ..."
+    },
+    "showDuplicates": {
+      "title": "عرض الانتهاكات المكررة",
+      "description": "تحكم في ما إذا كانت الانتهاكات المكررة معروضة في الواجهة",
+      "toggleLabel": "عرض الانتهاكات المكررة",
+      "enabledStatus": "الانتهاكات المكررة مرئية حالياً",
+      "disabledStatus": "الانتهاكات المكررة مخفية حالياً",
+      "save": "حفظ الإعداد",
+      "saving": "جاري الحفظ...",
+      "saved": "تم حفظ الإعداد",
+      "enabledDescription": "الانتهاكات المكررة مرئية الآن",
+      "disabledDescription": "الانتهاكات المكررة مخفية الآن",
+      "error": {
+        "failedToSave": "فشل حفظ إعداد عرض الانتهاكات المكررة"
+      }
+    },
     "leaguesManagement": {
       "title": "إدارة الدوريات",
       "description": "إدارة الدوريات وتكوينات واجهة برمجة التطبيقات الخاصة بها",
@@ -779,6 +815,8 @@
       "violationUrlPlaceholder": "https://x.com/...",
       "multipleUrlsHint": "أدخل رابطاً واحداً في كل سطر لإضافة انتهاكات متعددة",
       "urlCount": "العدد: {count}",
+      "duplicatesNotAllowed": "⚠️ تم الكشف عن {count} رابط(روابط) مكررة. الروابط المكررة غير مسموحة في الإعدادات.",
+      "duplicatesAllowed": "✓ تم الكشف عن {count} رابط(روابط) مكررة. الروابط المكررة مسموحة.",
       "accountChannel": "الحساب / القناة",
       "optional": "اختياري",
       "accountChannelPlaceholder": "@username أو اسم القناة",

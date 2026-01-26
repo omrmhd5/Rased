@@ -17,10 +17,11 @@ import {
   SheetTitle,
   SheetFooter,
 } from "@/components/ui/sheet";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import React from "react";
 import { Match, PlatformData } from "./types";
 import { getKSATime, extractAccountHandleFromUrl } from "./utils";
-import { Plus, X, Loader2 } from "lucide-react";
+import { Plus, X, Loader2, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 interface AddViolationSheetProps {
@@ -53,6 +54,7 @@ interface AddViolationSheetProps {
   onDeleteNote: (index: number) => void;
   onSave: () => void;
   isLoading?: boolean; // Loading state while saving
+  allowDuplicates?: boolean; // Whether duplicates are allowed
 }
 
 export function AddViolationSheet({
@@ -83,8 +85,34 @@ export function AddViolationSheet({
   onDeleteNote,
   onSave,
   isLoading = false,
+  allowDuplicates = false,
 }: AddViolationSheetProps) {
   const { t, isRTL } = useLanguage();
+
+  // Check for duplicate URLs
+  const getDuplicateUrls = () => {
+    const urls = formUrl
+      .split("\n")
+      .map((url) => url.trim())
+      .filter((url) => url !== "");
+
+    const seen = new Set<string>();
+    const duplicates = new Set<string>();
+
+    urls.forEach((url) => {
+      if (seen.has(url)) {
+        duplicates.add(url);
+      } else {
+        seen.add(url);
+      }
+    });
+
+    return Array.from(duplicates);
+  };
+
+  const duplicateUrls = getDuplicateUrls();
+  const hasDuplicates = duplicateUrls.length > 0;
+  const isDuplicateBlocked = hasDuplicates && !allowDuplicates;
 
   const handleUrlChange = (url: string) => {
     onFormUrlChange(url);
@@ -190,6 +218,37 @@ export function AddViolationSheet({
                 })}
               </p>
             </div>
+
+            {/* Duplicate URLs Warning */}
+            {hasDuplicates && (
+              <Alert
+                className={
+                  isDuplicateBlocked
+                    ? "border-destructive bg-destructive/5"
+                    : "border-yellow-600 bg-yellow-50 dark:bg-yellow-950/20"
+                }>
+                <AlertTriangle
+                  className={`h-4 w-4 ${isDuplicateBlocked ? "text-destructive" : "text-yellow-600 dark:text-yellow-400"}`}
+                />
+                <AlertDescription
+                  className={
+                    isDuplicateBlocked
+                      ? "text-destructive"
+                      : "text-yellow-800 dark:text-yellow-200"
+                  }>
+                  {isDuplicateBlocked
+                    ? t(
+                        "matchDashboard.addViolationSheet.duplicatesNotAllowed",
+                        {
+                          count: duplicateUrls.length.toString(),
+                        },
+                      )
+                    : t("matchDashboard.addViolationSheet.duplicatesAllowed", {
+                        count: duplicateUrls.length.toString(),
+                      })}
+                </AlertDescription>
+              </Alert>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -359,7 +418,7 @@ export function AddViolationSheet({
             disabled={isLoading}>
             {t("matchDashboard.addViolationSheet.cancel")}
           </Button>
-          <Button onClick={onSave} disabled={isLoading}>
+          <Button onClick={onSave} disabled={isLoading || isDuplicateBlocked}>
             {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {isEditMode
               ? t("matchDashboard.addViolationSheet.save.edit")

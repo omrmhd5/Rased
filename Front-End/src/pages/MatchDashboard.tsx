@@ -113,6 +113,7 @@ export default function MatchDashboard() {
 
   // Settings state
   const [targetMins, setTargetMins] = useState<number>(15);
+  const [allowDuplicates, setAllowDuplicates] = useState<boolean>(false);
 
   // Refs for report components
   const matchOverviewRef = useRef<HTMLDivElement>(null);
@@ -645,11 +646,13 @@ export default function MatchDashboard() {
         if (response.ok) {
           const settings = await response.json();
           setTargetMins(settings.targetMins || 15);
+          setAllowDuplicates(settings.allowDuplicates ?? false);
         }
       } catch (error) {
         console.error("Error fetching settings:", error);
-        // Use default value if API fails
+        // Use default values if API fails
         setTargetMins(15);
+        setAllowDuplicates(false);
       }
     };
 
@@ -1024,9 +1027,6 @@ export default function MatchDashboard() {
   const [platformCardFilter, setPlatformCardFilter] = useState<{
     [key: string]: string;
   }>({});
-  const [platformSearchQuery, setPlatformSearchQuery] = useState<{
-    [key: string]: string;
-  }>({});
 
   // Add/Edit violation state
   const [isAddViolationOpen, setIsAddViolationOpen] = useState(false);
@@ -1198,18 +1198,7 @@ export default function MatchDashboard() {
     violations: Violation[],
   ) => {
     const cardFilter = platformCardFilter[platformId] || "all";
-    const searchQuery = platformSearchQuery[platformId] || "";
     let filtered = violations;
-
-    // Apply search filter
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (v) =>
-          v.url.toLowerCase().includes(query) ||
-          (v.accountHandle && v.accountHandle.toLowerCase().includes(query)),
-      );
-    }
 
     // Apply card filter (All/Active/Blocked/Removed/Review)
     if (cardFilter !== "all") {
@@ -3130,17 +3119,10 @@ export default function MatchDashboard() {
                   filteredViolations={filteredViolations}
                   bulkViolations={platformBulkViolations}
                   cardFilter={cardFilter}
-                  searchQuery={platformSearchQuery[platform.id] || ""}
                   onFilterChange={(filter) =>
                     setPlatformCardFilter({
                       ...platformCardFilter,
                       [platform.id]: filter,
-                    })
-                  }
-                  onSearchChange={(query) =>
-                    setPlatformSearchQuery({
-                      ...platformSearchQuery,
-                      [platform.id]: query,
                     })
                   }
                   onAddViolation={() => openAddViolationDrawer(platform.id)}
@@ -3236,6 +3218,7 @@ export default function MatchDashboard() {
         }}
         onSave={saveViolation}
         isLoading={isSaving}
+        allowDuplicates={allowDuplicates}
       />
 
       <DeleteConfirmDialog

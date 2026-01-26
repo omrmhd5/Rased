@@ -553,6 +553,42 @@
       "validationError": "Validation Error",
       "mustBeGreaterThanZero": "Thresholds must be greater than or equal to 0."
     },
+    "allowDuplicates": {
+      "title": "Allow Duplicates",
+      "description": "Control whether duplicate violations are allowed in the system",
+      "toggleLabel": "Allow Duplicate Violations",
+      "enabledStatus": "Duplicates are currently allowed",
+      "disabledStatus": "Duplicates are currently not allowed",
+      "save": "Save Setting",
+      "saving": "Saving...",
+      "saved": "Setting Saved",
+      "enabledDescription": "Duplicate violations are now allowed",
+      "disabledDescription": "Duplicate violations are now disabled",
+      "error": {
+        "failedToSave": "Failed to save allow duplicates setting"
+      }
+    },
+    "duplicates": {
+      "title": "Duplicates",
+      "description": "Control whether duplicate violations are allowed and displayed",
+      "save": "Save Settings",
+      "saving": "Saving..."
+    },
+    "showDuplicates": {
+      "title": "Show Duplicates",
+      "description": "Control whether duplicate violations are displayed in the interface",
+      "toggleLabel": "Show Duplicate Violations",
+      "enabledStatus": "Duplicates are currently visible",
+      "disabledStatus": "Duplicates are currently hidden",
+      "save": "Save Setting",
+      "saving": "Saving...",
+      "saved": "Setting Saved",
+      "enabledDescription": "Duplicate violations are now visible",
+      "disabledDescription": "Duplicate violations are now hidden",
+      "error": {
+        "failedToSave": "Failed to save show duplicates setting"
+      }
+    },
     "leaguesManagement": {
       "title": "Leagues Management",
       "description": "Manage leagues and their API configurations",
@@ -773,6 +809,8 @@
       "violationUrlPlaceholder": "https://x.com/...",
       "multipleUrlsHint": "Enter one URL per line to add multiple violations",
       "urlCount": "Count: {count}",
+      "duplicatesNotAllowed": "⚠️ {count} duplicate URL(s) detected. Duplicates are not allowed in settings.",
+      "duplicatesAllowed": "✓ {count} duplicate URL(s) detected. Duplicates are allowed.",
       "accountChannel": "Account / Channel",
       "optional": "optional",
       "accountChannelPlaceholder": "@username or channel name",
