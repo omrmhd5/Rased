@@ -60,6 +60,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useTheme } from "next-themes";
 import { useGlobalSocket } from "@/hooks/useGlobalSocket";
+import { useSocket } from "@/hooks/useSocket";
 import { useCallback } from "react";
 
 type League = string | null;
@@ -272,11 +273,62 @@ export default function Dashboard() {
 
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
+  // Cache for dashboard stats (5 minute TTL)
+  const cacheRef = useRef<{
+    [key: string]: {
+      data: typeof dashboardStats;
+      timestamp: number;
+    };
+  }>({});
+  const CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+  // Helper to generate cache key from filter params
+  const generateCacheKey = (
+    league: string,
+    weekFilterType: string,
+    singleWeek: string,
+    weekRangeStart: string,
+    weekRangeEnd: string,
+    stageFilterType: string,
+    singleStage: string,
+    stageRangeStart: string,
+    stageRangeEnd: string,
+  ) => {
+    return `${league}|${weekFilterType}|${singleWeek}|${weekRangeStart}|${weekRangeEnd}|${stageFilterType}|${singleStage}|${stageRangeStart}|${stageRangeEnd}`;
+  };
+
+  // Helper to get cached data if valid
+  const getCachedData = (cacheKey: string) => {
+    const cached = cacheRef.current[cacheKey];
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      console.log("Using cached dashboard stats");
+      return cached.data;
+    }
+    return null;
+  };
+
+  // Helper to set cache
+  const setCachedData = (cacheKey: string, data: typeof dashboardStats) => {
+    cacheRef.current[cacheKey] = {
+      data,
+      timestamp: Date.now(),
+    };
+  };
+
+  // Helper to clear cache (called on WebSocket refetch)
+  const clearCache = () => {
+    cacheRef.current = {};
+    console.log("Cache cleared - forcing fresh API call");
+  };
+
   // Refetch trigger for real-time updates
   const [refetchTrigger, setRefetchTrigger] = useState(0);
 
   // Global socket listener for real-time updates
   const handleGlobalChange = useCallback(() => {
+    // Clear cache to force fresh API call
+    clearCache();
+
     setRefetchTrigger((prev) => prev + 1);
 
     // Show toast notification
@@ -288,6 +340,24 @@ export default function Dashboard() {
   }, [t, toast]);
 
   useGlobalSocket(handleGlobalChange);
+
+  // Dashboard-specific socket listener for violation updates
+  const handleDashboardViolationUpdate = useCallback(() => {
+    // Clear cache to force fresh API call
+    clearCache();
+
+    setRefetchTrigger((prev) => prev + 1);
+  }, []);
+
+  // Listen for dashboard violations events
+  useSocket("dashboard", {
+    "violation-updated": handleDashboardViolationUpdate,
+    "violation-deleted": handleDashboardViolationUpdate,
+    "violation-created": handleDashboardViolationUpdate,
+    "bulk-violations-added": handleDashboardViolationUpdate,
+    "bulk-violations-deleted": handleDashboardViolationUpdate,
+    "bulk-status-changed": handleDashboardViolationUpdate,
+  });
 
   // Load selected league from localStorage on mount and validate it
   useEffect(() => {
@@ -359,6 +429,27 @@ export default function Dashboard() {
     }
 
     const fetchDashboardStats = async () => {
+      // Generate cache key
+      const cacheKey = generateCacheKey(
+        selectedLeague,
+        weekFilterType,
+        singleWeek,
+        weekRangeStart,
+        weekRangeEnd,
+        stageFilterType,
+        singleStage,
+        stageRangeStart,
+        stageRangeEnd,
+      );
+
+      // Check if we have valid cached data (only if refetchTrigger hasn't changed)
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        setDashboardStats(cachedData);
+        setStatsLoading(false);
+        return; // Use cached data, skip API call
+      }
+
       setStatsLoading(true);
       try {
         const isSuperCup = isSuperCupLeague(selectedLeague);
@@ -406,7 +497,7 @@ export default function Dashboard() {
         }
 
         const data = await response.json();
-        setDashboardStats({
+        const newStats = {
           totalViolations: data.totalViolations || 0,
           blocked: data.blocked || 0,
           stillActive: data.stillActive || 0,
@@ -430,7 +521,11 @@ export default function Dashboard() {
           },
           platforms: data.platforms || [],
           matches: data.matches || [],
-        });
+        };
+
+        setDashboardStats(newStats);
+        // Cache the new data
+        setCachedData(cacheKey, newStats);
         // Only set loading to false after successful fetch
         setStatsLoading(false);
       } catch (error) {
@@ -478,7 +573,7 @@ export default function Dashboard() {
     stageRangeEnd,
     API_URL,
     leagues,
-    refetchTrigger, // Add refetch trigger for real-time updates
+    refetchTrigger, // Add refetch trigger for real-time updates - invalidates cache
   ]);
 
   // Fetch trouble list violations when filters change

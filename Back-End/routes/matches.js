@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import Match from "../models/Match.js";
 import Competition from "../models/Competition.js";
 import Violation from "../models/Violation.js";
+import BulkViolation from "../models/BulkViolation.js";
 import PlatformByMatch from "../models/PlatformByMatch.js";
 import DeletedViolationLog from "../models/DeletedViolationLog.js";
 import User from "../models/User.js";
@@ -139,7 +140,7 @@ async function transformApiMatches(apiData, leagueFromQuery = null) {
       // Skip matches where teams have probableTeams (not yet determined)
       if (homeTeam?.probableTeams || awayTeam?.probableTeams) {
         console.log(
-          `Skipping match ${matchInfo.id} - has probableTeams (teams not yet determined)`
+          `Skipping match ${matchInfo.id} - has probableTeams (teams not yet determined)`,
         );
         return null;
       }
@@ -152,7 +153,7 @@ async function transformApiMatches(apiData, leagueFromQuery = null) {
 
       if (!homeTeamName || !awayTeamName) {
         console.log(
-          `Skipping match ${matchInfo.id} - missing team names (home: ${homeTeamName}, away: ${awayTeamName})`
+          `Skipping match ${matchInfo.id} - missing team names (home: ${homeTeamName}, away: ${awayTeamName})`,
         );
         return null;
       }
@@ -324,7 +325,7 @@ async function transformApiMatches(apiData, leagueFromQuery = null) {
           venueId: matchInfo.venue?.id,
         },
       };
-    })
+    }),
   );
 
   // Filter out null entries (skipped matches)
@@ -345,7 +346,7 @@ async function saveCompetitionsToDatabase(competitionsData) {
         {
           upsert: true,
           new: true,
-        }
+        },
       );
     });
 
@@ -498,7 +499,7 @@ async function saveMatchesToDatabase(transformedMatches) {
             {
               $set: dbMatchData,
             },
-            { new: true }
+            { new: true },
           );
           updatedCount++;
         } else {
@@ -510,7 +511,7 @@ async function saveMatchesToDatabase(transformedMatches) {
 
     await Promise.all(savePromises);
     console.log(
-      `Matches sync: ${createdCount} created, ${updatedCount} updated, ${unchangedCount} unchanged (total: ${transformedMatches.length})`
+      `Matches sync: ${createdCount} created, ${updatedCount} updated, ${unchangedCount} unchanged (total: ${transformedMatches.length})`,
     );
   } catch (error) {
     console.error("Error saving matches to database:", error);
@@ -594,7 +595,7 @@ async function returnMatchesFromDatabase(req, res) {
           // If it's not an ObjectId (it's a string like "Saudi League"), keep it as is
         }
         return match;
-      })
+      }),
     );
 
     // Format dates to strings for frontend
@@ -686,7 +687,9 @@ router.get("/search", authenticateToken, async (req, res) => {
     };
 
     const matches = await Match.find(searchQuery)
-      .select("_id externalMatchId description team1 team2 date time week stage status league")
+      .select(
+        "_id externalMatchId description team1 team2 date time week stage status league",
+      )
       .limit(20) // Get more results to sort properly
       .lean();
 
@@ -697,7 +700,9 @@ router.get("/search", authenticateToken, async (req, res) => {
         description: match.description || `${match.team1} vs ${match.team2}`,
         team1: match.team1,
         team2: match.team2,
-        date: match.date ? new Date(match.date).toISOString().split("T")[0] : "",
+        date: match.date
+          ? new Date(match.date).toISOString().split("T")[0]
+          : "",
         time: match.time || "",
         week: match.week || "",
         stage: match.stage || "",
@@ -1257,7 +1262,7 @@ router.put(
       }
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 );
 
 // DELETE /api/matches/:externalMatchId - Delete match (superAdmin only)
@@ -1303,7 +1308,7 @@ router.delete(
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
-  }
+  },
 );
 
 // GET /api/matches/dashboard/stats - Get dashboard statistics aggregated by week/league
@@ -1362,7 +1367,7 @@ router.get("/dashboard/stats", async (req, res) => {
         const endWeek = parseInt(weekEnd);
         const weekArray = Array.from(
           { length: endWeek - startWeek + 1 },
-          (_, i) => (startWeek + i).toString()
+          (_, i) => (startWeek + i).toString(),
         );
         matchQuery.week = { $in: weekArray };
       }
@@ -1403,11 +1408,12 @@ router.get("/dashboard/stats", async (req, res) => {
       });
     }
 
-    // Aggregate violations by status
+    // Aggregate SINGLE violations only (where bulkId is null/undefined)
     const stats = await Violation.aggregate([
       {
         $match: {
           matchId: { $in: matchIds },
+          bulkId: null,
         },
       },
       {
@@ -1418,12 +1424,22 @@ router.get("/dashboard/stats", async (req, res) => {
       },
     ]);
 
-    // Get detailed violation data for additional calculations
-    const violations = await Violation.find({
+    // Get detailed SINGLE violation data for additional calculations
+    const singleViolations = await Violation.find({
+      matchId: { $in: matchIds },
+      bulkId: null,
+    })
+      .select(
+        "status views blockedAt timeAdded platformId platformName matchId contentType",
+      )
+      .lean();
+
+    // Get BULK violations data
+    const bulkViolations = await BulkViolation.find({
       matchId: { $in: matchIds },
     })
       .select(
-        "status views blockedAt timeAdded platformId platformName matchId contentType"
+        "totalCount activeCount blockedCount removedCount underReviewCount avgBlockTime blockSuccessRate totalViews platformId platformName matchId liveCount highlightsCount othersCount",
       )
       .lean();
 
@@ -1434,7 +1450,7 @@ router.get("/dashboard/stats", async (req, res) => {
     let removed = 0;
     let underReview = 0;
 
-    // Process aggregation results
+    // Process SINGLE violation aggregation results
     stats.forEach((stat) => {
       const status = stat._id;
       const count = stat.count;
@@ -1452,9 +1468,18 @@ router.get("/dashboard/stats", async (req, res) => {
       }
     });
 
-    // Calculate total views
+    // Process BULK violations - add their pre-calculated stats
+    bulkViolations.forEach((bulk) => {
+      totalViolations += bulk.totalCount || 0;
+      blocked += bulk.blockedCount || 0;
+      removed += bulk.removedCount || 0;
+      underReview += bulk.underReviewCount || 0;
+      stillActive += bulk.activeCount || 0;
+    });
+
+    // Calculate total views from SINGLE violations
     let totalViews = 0;
-    violations.forEach((v) => {
+    singleViolations.forEach((v) => {
       const viewsStr = v.views || "0";
       // Handle "K" suffix (e.g., "1.5K" = 1500) and comma separators (e.g., "1,000" = 1000)
       if (viewsStr.includes("K") || viewsStr.includes("k")) {
@@ -1465,11 +1490,19 @@ router.get("/dashboard/stats", async (req, res) => {
       }
     });
 
-    // Calculate average block time (only for blocked violations with blockedAt)
+    // Add total views from BULK violations
+    bulkViolations.forEach((bulk) => {
+      totalViews += bulk.totalViews || 0;
+    });
+
+    // Calculate average block time from SINGLE violations (only for blocked violations with blockedAt)
     let avgBlockTime = 0;
-    const blockedViolations = violations.filter(
-      (v) => v.status === "Blocked" && v.blockedAt && v.timeAdded
+    const blockedViolations = singleViolations.filter(
+      (v) => v.status === "Blocked" && v.blockedAt && v.timeAdded,
     );
+    let totalBlockTimeMinutes = 0;
+    let totalBlockedCount = 0;
+
     if (blockedViolations.length > 0) {
       const validBlockTimes = [];
       blockedViolations.forEach((v) => {
@@ -1485,17 +1518,24 @@ router.get("/dashboard/stats", async (req, res) => {
           // This prevents absurd values from bad data
           if (diffMinutes >= 0 && diffMinutes <= 10080) {
             validBlockTimes.push(diffMinutes);
+            totalBlockTimeMinutes += diffMinutes;
+            totalBlockedCount++;
           }
         }
       });
+    }
 
-      if (validBlockTimes.length > 0) {
-        const totalBlockTime = validBlockTimes.reduce(
-          (sum, time) => sum + time,
-          0
-        );
-        avgBlockTime = Math.round(totalBlockTime / validBlockTimes.length);
+    // Add block time from BULK violations (weighted by their blocked counts)
+    bulkViolations.forEach((bulk) => {
+      if (bulk.blockedCount > 0 && bulk.avgBlockTime > 0) {
+        totalBlockTimeMinutes += bulk.avgBlockTime * (bulk.blockedCount || 0);
+        totalBlockedCount += bulk.blockedCount || 0;
       }
+    });
+
+    // Calculate overall average
+    if (totalBlockedCount > 0) {
+      avgBlockTime = Math.round(totalBlockTimeMinutes / totalBlockedCount);
     }
 
     // Helper function to process views (handle "K" suffix)
@@ -1510,9 +1550,9 @@ router.get("/dashboard/stats", async (req, res) => {
       return parseFloat(viewsStr.replace(/,/g, "")) || 0;
     };
 
-    // Find top platform (platform with most violations)
+    // Find top platform (platform with most violations) - from SINGLES
     const platformStats = {};
-    violations.forEach((v) => {
+    singleViolations.forEach((v) => {
       if (!platformStats[v.platformId]) {
         platformStats[v.platformId] = {
           id: v.platformId,
@@ -1522,10 +1562,23 @@ router.get("/dashboard/stats", async (req, res) => {
       }
       platformStats[v.platformId].count++;
     });
+
+    // Add BULK violations to platform stats
+    bulkViolations.forEach((bulk) => {
+      if (!platformStats[bulk.platformId]) {
+        platformStats[bulk.platformId] = {
+          id: bulk.platformId,
+          name: bulk.platformName,
+          count: 0,
+        };
+      }
+      platformStats[bulk.platformId].count += bulk.totalCount || 0;
+    });
+
     const topPlatform =
       Object.values(platformStats).length > 0
         ? Object.values(platformStats).reduce((top, current) =>
-            current.count > top.count ? current : top
+            current.count > top.count ? current : top,
           )
         : null;
 
@@ -1533,7 +1586,8 @@ router.get("/dashboard/stats", async (req, res) => {
     const platformDetails = {};
     const platformMatchSet = {}; // Track unique matches per platform
 
-    violations.forEach((v) => {
+    // Process SINGLE violations
+    singleViolations.forEach((v) => {
       const platformId = v.platformId;
       const platformName = v.platformName || platformId;
 
@@ -1597,7 +1651,7 @@ router.get("/dashboard/stats", async (req, res) => {
       } else if (contentType === "Highlights") {
         platform.contentSplit.highlights.violations++;
         platform.contentSplit.highlights.views += processViewsForPlatform(
-          v.views
+          v.views,
         );
       } else {
         // "Other" or anything else goes to others
@@ -1606,8 +1660,80 @@ router.get("/dashboard/stats", async (req, res) => {
       }
     });
 
+    // Process BULK violations - add their pre-calculated stats
+    bulkViolations.forEach((bulk) => {
+      const platformId = bulk.platformId;
+      const platformName = bulk.platformName || platformId;
+
+      if (!platformDetails[platformId]) {
+        platformDetails[platformId] = {
+          id: platformId,
+          name: platformName,
+          violations: 0,
+          views: 0,
+          statusBreakdown: {
+            active: 0,
+            blocked: 0,
+            removed: 0,
+            underReview: 0,
+          },
+          contentSplit: {
+            live: { violations: 0, views: 0 },
+            highlights: { violations: 0, views: 0 },
+            others: { violations: 0, views: 0 },
+          },
+          blockedViolations: [],
+          totalBlockTime: 0,
+          matchesAffected: new Set(),
+        };
+        platformMatchSet[platformId] = new Set();
+      }
+
+      const platform = platformDetails[platformId];
+      platform.violations += bulk.totalCount || 0;
+      platform.views += bulk.totalViews || 0;
+
+      // Track unique matches
+      const matchIdStr = bulk.matchId.toString();
+      platformMatchSet[platformId].add(matchIdStr);
+
+      // Status breakdown
+      platform.statusBreakdown.active += bulk.activeCount || 0;
+      platform.statusBreakdown.blocked += bulk.blockedCount || 0;
+      platform.statusBreakdown.removed += bulk.removedCount || 0;
+      platform.statusBreakdown.underReview += bulk.underReviewCount || 0;
+
+      // Content type breakdown
+      // Add violations to all content types, but views only to the type with most violations
+      if (bulk.liveCount > 0) {
+        platform.contentSplit.live.violations += bulk.liveCount;
+      }
+      if (bulk.highlightsCount > 0) {
+        platform.contentSplit.highlights.violations += bulk.highlightsCount;
+      }
+      if (bulk.othersCount > 0) {
+        platform.contentSplit.others.violations += bulk.othersCount;
+      }
+
+      // Find which content type has the most violations and add views only to that
+      const counts = {
+        live: bulk.liveCount || 0,
+        highlights: bulk.highlightsCount || 0,
+        others: bulk.othersCount || 0,
+      };
+
+      const maxType = Object.keys(counts).reduce((a, b) =>
+        counts[a] > counts[b] ? a : b,
+      );
+
+      if (counts[maxType] > 0) {
+        platform.contentSplit[maxType].views += bulk.totalViews || 0;
+      }
+    });
+
     // Calculate success rates, avg block times, and matches affected
     const platformsArray = Object.values(platformDetails).map((platform) => {
+      // For success rate: use combined status breakdown
       const totalBlocked =
         platform.statusBreakdown.blocked + platform.statusBreakdown.removed;
       const successRate =
@@ -1615,8 +1741,11 @@ router.get("/dashboard/stats", async (req, res) => {
           ? Math.round((totalBlocked / platform.violations) * 100)
           : 0;
 
-      // Calculate average block time
-      let avgBlockTime = 0;
+      // For average block time: combine singles' calculated times with bulks' pre-calculated times
+      let totalBlockTimeMinutes = 0;
+      let totalBlockedCount = 0;
+
+      // Get block times from singles
       if (platform.blockedViolations.length > 0) {
         const validBlockTimes = [];
         platform.blockedViolations.forEach((v) => {
@@ -1633,18 +1762,28 @@ router.get("/dashboard/stats", async (req, res) => {
               // This prevents absurd values from bad data
               if (diffMinutes >= 0 && diffMinutes <= 10080) {
                 validBlockTimes.push(diffMinutes);
+                totalBlockTimeMinutes += diffMinutes;
+                totalBlockedCount++;
               }
             }
           }
         });
+      }
 
-        if (validBlockTimes.length > 0) {
-          const totalBlockTime = validBlockTimes.reduce(
-            (sum, time) => sum + time,
-            0
-          );
-          avgBlockTime = Math.round(totalBlockTime / validBlockTimes.length);
+      // Add weighted block times from bulks
+      const bulksForPlatform = bulkViolations.filter(
+        (b) => b.platformId === platform.id,
+      );
+      bulksForPlatform.forEach((bulk) => {
+        if (bulk.blockedCount > 0 && bulk.avgBlockTime > 0) {
+          totalBlockTimeMinutes += bulk.avgBlockTime * bulk.blockedCount;
+          totalBlockedCount += bulk.blockedCount;
         }
+      });
+
+      let avgBlockTime = 0;
+      if (totalBlockedCount > 0) {
+        avgBlockTime = Math.round(totalBlockTimeMinutes / totalBlockedCount);
       }
 
       return {
@@ -1663,9 +1802,11 @@ router.get("/dashboard/stats", async (req, res) => {
     // Sort platforms by violations (descending)
     platformsArray.sort((a, b) => b.violations - a.violations);
 
-    // Find top match (match with most violations)
+    // Find top match (match with most violations) - from SINGLES and BULKS
     const matchViolationCounts = {};
-    violations.forEach((v) => {
+
+    // Count from singles
+    singleViolations.forEach((v) => {
       const matchIdStr = v.matchId.toString();
       if (!matchViolationCounts[matchIdStr]) {
         matchViolationCounts[matchIdStr] = {
@@ -1675,10 +1816,23 @@ router.get("/dashboard/stats", async (req, res) => {
       }
       matchViolationCounts[matchIdStr].count++;
     });
+
+    // Count from bulks
+    bulkViolations.forEach((bulk) => {
+      const matchIdStr = bulk.matchId.toString();
+      if (!matchViolationCounts[matchIdStr]) {
+        matchViolationCounts[matchIdStr] = {
+          matchId: bulk.matchId,
+          count: 0,
+        };
+      }
+      matchViolationCounts[matchIdStr].count += bulk.totalCount || 0;
+    });
+
     const topMatchData =
       Object.values(matchViolationCounts).length > 0
         ? Object.values(matchViolationCounts).reduce((top, current) =>
-            current.count > top.count ? current : top
+            current.count > top.count ? current : top,
           )
         : null;
 
@@ -1689,8 +1843,14 @@ router.get("/dashboard/stats", async (req, res) => {
         .select("team1 team2 week date externalMatchId")
         .lean();
       if (match) {
-        // Get violations for this match
-        const matchViolations = await Violation.find({
+        // Get SINGLE violations for this match
+        const matchSingleViolations = await Violation.find({
+          matchId: topMatchData.matchId,
+          bulkId: null,
+        }).lean();
+
+        // Get BULK violations for this match
+        const matchBulkViolations = await BulkViolation.find({
           matchId: topMatchData.matchId,
         }).lean();
 
@@ -1706,14 +1866,21 @@ router.get("/dashboard/stats", async (req, res) => {
           return parseFloat(viewsStr.replace(/,/g, "")) || 0;
         };
 
-        const totalViews = matchViolations.reduce(
+        // Calculate views from singles
+        let totalViews = matchSingleViolations.reduce(
           (sum, v) => sum + processViews(v.views),
-          0
+          0,
         );
 
-        // Aggregate by platform
+        // Add views from bulks
+        totalViews += matchBulkViolations.reduce(
+          (sum, b) => sum + (b.totalViews || 0),
+          0,
+        );
+
+        // Aggregate by platform from SINGLES
         const platformBreakdown = {};
-        matchViolations.forEach((v) => {
+        matchSingleViolations.forEach((v) => {
           const platformId = v.platformId;
           const platformName = v.platformName || platformId;
           if (!platformBreakdown[platformId]) {
@@ -1734,6 +1901,24 @@ router.get("/dashboard/stats", async (req, res) => {
           ) {
             platformBreakdown[platformId].blocked++;
           }
+        });
+
+        // Add data from BULKS to platform breakdown
+        matchBulkViolations.forEach((bulk) => {
+          const platformId = bulk.platformId;
+          const platformName = bulk.platformName || platformId;
+          if (!platformBreakdown[platformId]) {
+            platformBreakdown[platformId] = {
+              name: platformName,
+              violations: 0,
+              views: 0,
+              blocked: 0,
+            };
+          }
+          platformBreakdown[platformId].violations += bulk.totalCount || 0;
+          platformBreakdown[platformId].views += bulk.totalViews || 0;
+          platformBreakdown[platformId].blocked +=
+            (bulk.blockedCount || 0) + (bulk.removedCount || 0);
         });
 
         // Convert to array and calculate success rates
@@ -1805,11 +1990,12 @@ router.get("/dashboard/stats", async (req, res) => {
       return parseFloat(viewsStr.replace(/,/g, "")) || 0;
     };
 
-    // Calculate content split statistics (Live, Highlights, Others)
+    // Calculate content split statistics (Live, Highlights, Others) from SINGLES
     const contentSplitStats = await Violation.aggregate([
       {
         $match: {
           matchId: { $in: matchIds },
+          bulkId: null,
         },
       },
       {
@@ -1833,7 +2019,7 @@ router.get("/dashboard/stats", async (req, res) => {
       const contentType = (stat._id || "").trim();
       const totalViews = stat.viewsArray.reduce(
         (sum, v) => sum + processViews(v),
-        0
+        0,
       );
 
       if (contentType === "Live") {
@@ -1849,11 +2035,42 @@ router.get("/dashboard/stats", async (req, res) => {
       }
     });
 
-    // Calculate matches leaderboard - get matches with violation counts and views
+    // Add content split from BULKS
+    // Add violation counts to ALL content types, but views only to the type with most violations
+    bulkViolations.forEach((bulk) => {
+      // Add violation counts to all content types
+      if (bulk.liveCount > 0) {
+        contentSplit.live.violations += bulk.liveCount;
+      }
+      if (bulk.highlightsCount > 0) {
+        contentSplit.highlights.violations += bulk.highlightsCount;
+      }
+      if (bulk.othersCount > 0) {
+        contentSplit.others.violations += bulk.othersCount;
+      }
+
+      // Find which content type has the most violations and add views only to that
+      const counts = {
+        live: bulk.liveCount || 0,
+        highlights: bulk.highlightsCount || 0,
+        others: bulk.othersCount || 0,
+      };
+
+      const maxType = Object.keys(counts).reduce((a, b) =>
+        counts[a] > counts[b] ? a : b,
+      );
+
+      if (counts[maxType] > 0) {
+        contentSplit[maxType].views += bulk.totalViews || 0;
+      }
+    });
+
+    // Calculate matches leaderboard - get matches with violation counts and views from SINGLES
     const matchesLeaderboard = await Violation.aggregate([
       {
         $match: {
           matchId: { $in: matchIds },
+          bulkId: null,
         },
       },
       {
@@ -1872,11 +2089,24 @@ router.get("/dashboard/stats", async (req, res) => {
     matchesLeaderboard.forEach((stat) => {
       const totalViews = stat.views.reduce(
         (sum, v) => sum + processViews(v),
-        0
+        0,
       );
       matchStatsMap.set(stat._id.toString(), {
         violations: stat.violations,
         totalViews: totalViews,
+      });
+    });
+
+    // Add BULK violations to match stats map
+    bulkViolations.forEach((bulk) => {
+      const matchIdStr = bulk.matchId.toString();
+      const existing = matchStatsMap.get(matchIdStr) || {
+        violations: 0,
+        totalViews: 0,
+      };
+      matchStatsMap.set(matchIdStr, {
+        violations: existing.violations + (bulk.totalCount || 0),
+        totalViews: existing.totalViews + (bulk.totalViews || 0),
       });
     });
 
@@ -1947,10 +2177,10 @@ router.get("/:externalMatchId/stats", async (req, res) => {
 
     const totalViolations = violations.length;
     const blockedViolations = violations.filter(
-      (v) => v.status === "blocked" || v.status === "removed"
+      (v) => v.status === "blocked" || v.status === "removed",
     ).length;
     const activeViolations = violations.filter((v) =>
-      ["reported", "active", "pending", "review"].includes(v.status)
+      ["reported", "active", "pending", "review"].includes(v.status),
     ).length;
 
     const totalViews = violations.reduce((sum, v) => {
