@@ -147,6 +147,19 @@ export function PlatformCard({
     });
   });
 
+  // Sort all display items by time (most recent first)
+  allDisplayItems.sort((a, b) => {
+    const timeA =
+      a.type === "bulk"
+        ? new Date(a.bulkViolation?.timeAdded || 0).getTime()
+        : new Date(a.violation?.timeAdded || 0).getTime();
+    const timeB =
+      b.type === "bulk"
+        ? new Date(b.bulkViolation?.timeAdded || 0).getTime()
+        : new Date(b.violation?.timeAdded || 0).getTime();
+    return timeB - timeA; // Descending order (newest first)
+  });
+
   // Pagination for display items (treating bulk as one item)
   const totalViolationsPages = Math.ceil(
     allDisplayItems.length / violationsPerPage,

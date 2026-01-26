@@ -61,6 +61,7 @@ export function BulkViolationItem({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false); // Loading state for delete
+  const [isStatusChanging, setIsStatusChanging] = useState(false); // Loading state for status change
   const [selectedStatus, setSelectedStatus] = useState<
     "Active" | "Blocked" | "Removed" | "Under Review"
   >("Active");
@@ -220,6 +221,7 @@ export function BulkViolationItem({
 
   // Handle bulk status change
   const handleBulkStatusChange = async () => {
+    setIsStatusChanging(true);
     try {
       const payload: Record<string, unknown> = {
         status: selectedStatus,
@@ -252,6 +254,7 @@ export function BulkViolationItem({
             "Failed to update bulk violation status",
           variant: "destructive",
         });
+        setIsStatusChanging(false);
         return;
       }
 
@@ -263,6 +266,7 @@ export function BulkViolationItem({
       });
 
       setStatusDialogOpen(false);
+      setIsStatusChanging(false);
 
       // Refetch data after successful status change
       if (onRefetch) {
@@ -276,6 +280,7 @@ export function BulkViolationItem({
           "Failed to update bulk violation status",
         variant: "destructive",
       });
+      setIsStatusChanging(false);
     }
   };
 
@@ -333,7 +338,7 @@ export function BulkViolationItem({
               </Badge>
             )}
             {removedCount > 0 && (
-              <Badge className="bg-purple-500/10 text-purple-600 dark:text-purple-400 text-xs">
+              <Badge className="bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400 text-xs">
                 <div dir={isRTL ? "rtl" : "ltr"}>
                   {removedCount} {t("dashboard.removed")}
                 </div>
@@ -457,6 +462,7 @@ export function BulkViolationItem({
         blockedAt={blockedAt}
         onBlockedAtChange={setBlockedAt}
         onConfirm={handleBulkStatusChange}
+        isLoading={isStatusChanging}
       />
     </>
   );

@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Mail, Lock, Shield, Eye, EyeOff } from "lucide-react";
+import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -47,12 +47,18 @@ export default function Login() {
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="space-y-1 text-center px-4 sm:px-6 pt-6 sm:pt-6">
           <div className="flex justify-center mb-4">
-            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-primary rounded-xl flex items-center justify-center">
-              <Shield className="h-7 w-7 sm:h-8 sm:w-8 text-primary-foreground" />
-            </div>
+            <img
+              src="/Logo.png"
+              alt="Rased Logo"
+              className="h-14 w-14 sm:h-16 sm:w-16 object-contain"
+            />
           </div>
-          <CardTitle className="text-xl sm:text-2xl font-bold">{t("login.title")}</CardTitle>
-          <CardDescription className="text-sm sm:text-base">{t("login.description")}</CardDescription>
+          <CardTitle className="text-xl sm:text-2xl font-bold">
+            {t("login.title")}
+          </CardTitle>
+          <CardDescription className="text-sm sm:text-base">
+            {t("login.description")}
+          </CardDescription>
         </CardHeader>
         <CardContent className="px-4 sm:px-6 pb-6">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -62,7 +68,9 @@ export default function Login() {
               </Alert>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm sm:text-base">{t("login.email")}</Label>
+              <Label htmlFor="email" className="text-sm sm:text-base">
+                {t("login.email")}
+              </Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                 <Input
@@ -78,7 +86,9 @@ export default function Login() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm sm:text-base">{t("login.password")}</Label>
+              <Label htmlFor="password" className="text-sm sm:text-base">
+                {t("login.password")}
+              </Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10" />
                 <Input
@@ -98,7 +108,11 @@ export default function Login() {
                   className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-9 sm:w-9 hover:bg-transparent touch-manipulation"
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={loading}
-                  aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}>
+                  aria-label={
+                    showPassword
+                      ? t("login.hidePassword")
+                      : t("login.showPassword")
+                  }>
                   {showPassword ? (
                     <EyeOff className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                   ) : (
@@ -107,7 +121,10 @@ export default function Login() {
                 </Button>
               </div>
             </div>
-            <Button type="submit" className="w-full h-11 sm:h-10 text-base sm:text-sm font-medium" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full h-11 sm:h-10 text-base sm:text-sm font-medium"
+              disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

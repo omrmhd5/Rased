@@ -233,7 +233,7 @@ export function ViolationItem({
 
   // Truncate URL for display - shorter on mobile
   const url = violation.violationUrl || violation.url || "";
-  const truncatedUrl = url.length > 50 ? url.slice(0, 50) + "..." : url;
+  const truncatedUrl = url.length > 40 ? url.slice(0, 40) + "..." : url;
 
   // Get violation ID for scrolling - ensure it's a string
   const violationId = violation._id
@@ -502,20 +502,17 @@ export function ViolationItem({
           {/* Link */}
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
-                onClick={() =>
-                  window.open(
-                    violation.violationUrl || violation.url || "",
-                    "_blank",
-                  )
-                }
-                className="flex items-center gap-1 sm:gap-1.5 min-w-0 hover:text-foreground transition-colors rounded px-1 sm:px-1.5 py-0.5 hover:bg-accent touch-manipulation overflow-hidden text-left">
+              <a
+                href={violation.violationUrl || violation.url || "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 sm:gap-1.5 min-w-0 hover:text-foreground transition-colors rounded px-1 sm:px-1.5 py-0.5 hover:bg-accent touch-manipulation overflow-hidden text-left cursor-pointer">
                 <LinkIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
                 <span className="truncate min-w-0 max-w-[120px] xs:max-w-[180px] sm:max-w-none text-[10px] sm:text-xs text-muted-foreground">
                   {truncatedUrl}
                 </span>
                 <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0 opacity-0 sm:group-hover:opacity-100" />
-              </button>
+              </a>
             </TooltipTrigger>
             <TooltipContent className="text-xs max-w-xs break-all">
               {violation.url}
@@ -548,20 +545,17 @@ export function ViolationItem({
             )}
             <Tooltip>
               <TooltipTrigger asChild>
-                <button
-                  onClick={() =>
-                    window.open(
-                      violation.violationUrl || violation.url || "",
-                      "_blank",
-                    )
-                  }
-                  className="flex items-center gap-1 sm:gap-1.5 min-w-0 flex-1 hover:text-foreground transition-colors rounded px-1 sm:px-1.5 py-0.5 hover:bg-accent touch-manipulation overflow-hidden max-w-full">
+                <a
+                  href={violation.violationUrl || violation.url || "#"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 sm:gap-1.5 min-w-0 flex-1 hover:text-foreground transition-colors rounded px-1 sm:px-1.5 py-0.5 hover:bg-accent touch-manipulation overflow-hidden max-w-full cursor-pointer">
                   <LinkIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0" />
                   <span className="truncate min-w-0 max-w-[120px] xs:max-w-[180px] sm:max-w-none">
                     {truncatedUrl}
                   </span>
                   <ExternalLink className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0 opacity-0 sm:group-hover:opacity-100" />
-                </button>
+                </a>
               </TooltipTrigger>
               <TooltipContent className="text-xs max-w-xs break-all">
                 {violation.url}

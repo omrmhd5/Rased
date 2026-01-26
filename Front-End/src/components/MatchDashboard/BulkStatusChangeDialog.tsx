@@ -19,6 +19,7 @@ import {
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Badge } from "@/components/ui/badge";
 import { getKSATime } from "./utils";
+import { Loader2 } from "lucide-react";
 
 interface BulkStatusChangeDialogProps {
   open: boolean;
@@ -26,11 +27,12 @@ interface BulkStatusChangeDialogProps {
   violationCount: number;
   selectedStatus: "Active" | "Blocked" | "Removed" | "Under Review";
   onStatusChange: (
-    status: "Active" | "Blocked" | "Removed" | "Under Review"
+    status: "Active" | "Blocked" | "Removed" | "Under Review",
   ) => void;
   blockedAt: string;
   onBlockedAtChange: (time: string) => void;
   onConfirm: () => void;
+  isLoading?: boolean;
 }
 
 export function BulkStatusChangeDialog({
@@ -42,6 +44,7 @@ export function BulkStatusChangeDialog({
   blockedAt,
   onBlockedAtChange,
   onConfirm,
+  isLoading = false,
 }: BulkStatusChangeDialogProps) {
   const { t, isRTL } = useLanguage();
 
@@ -151,7 +154,8 @@ export function BulkStatusChangeDialog({
             onClick={(e) => {
               e.preventDefault();
               onOpenChange(false);
-            }}>
+            }}
+            disabled={isLoading}>
             {t("matchDashboard.bulk.statusChange.cancel") || "Cancel"}
           </Button>
           <Button
@@ -159,7 +163,9 @@ export function BulkStatusChangeDialog({
             onClick={(e) => {
               e.preventDefault();
               onConfirm();
-            }}>
+            }}
+            disabled={isLoading}>
+            {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             {t("matchDashboard.bulk.statusChange.confirm") || "Change Status"}
           </Button>
         </DialogFooter>
