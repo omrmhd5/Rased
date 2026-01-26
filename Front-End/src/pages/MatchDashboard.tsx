@@ -114,6 +114,7 @@ export default function MatchDashboard() {
   // Settings state
   const [targetMins, setTargetMins] = useState<number>(15);
   const [allowDuplicates, setAllowDuplicates] = useState<boolean>(false);
+  const [showDuplicates, setShowDuplicates] = useState<boolean>(false);
 
   // Refs for report components
   const matchOverviewRef = useRef<HTMLDivElement>(null);
@@ -647,12 +648,14 @@ export default function MatchDashboard() {
           const settings = await response.json();
           setTargetMins(settings.targetMins || 15);
           setAllowDuplicates(settings.allowDuplicates ?? false);
+          setShowDuplicates(settings.showDuplicates ?? false);
         }
       } catch (error) {
         console.error("Error fetching settings:", error);
         // Use default values if API fails
         setTargetMins(15);
         setAllowDuplicates(false);
+        setShowDuplicates(false);
       }
     };
 
@@ -3181,6 +3184,8 @@ export default function MatchDashboard() {
                   getPlatformIcon={getPlatformIcon}
                   canModifyViolations={canModifyViolations}
                   onRefetch={triggerRefetch}
+                  showDuplicates={showDuplicates}
+                  matchId={id}
                 />
               );
             })}

@@ -32,6 +32,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -71,6 +72,8 @@ interface PlatformCardProps {
     status: "Active" | "Blocked" | "Removed" | "Under Review",
     blockedAt?: string,
   ) => void;
+  showDuplicates?: boolean; // Whether to show duplicate violations button
+  matchId?: string; // Match ID for fetching duplicates
 }
 
 export function PlatformCard({
@@ -90,6 +93,8 @@ export function PlatformCard({
   onRefetch,
   onBulkDelete,
   onBulkStatusChange,
+  showDuplicates = false,
+  matchId = "",
 }: PlatformCardProps) {
   const { t, isRTL } = useLanguage();
   const [isMaximized, setIsMaximized] = useState(false);
@@ -105,10 +110,45 @@ export function PlatformCard({
   const [searchedBulkIds, setSearchedBulkIds] = useState<Set<string>>(
     new Set(),
   );
+  const [isDuplicatesModalOpen, setIsDuplicatesModalOpen] = useState(false);
+  const [duplicatesList, setDuplicatesList] = useState<
+    Array<{ url: string; count: number }>
+  >([]);
+  const [isDuplicatesLoading, setIsDuplicatesLoading] = useState(false);
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const violationsPerPage = 5;
   const IconComponent = platform.icon;
   const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+
+  // Fetch duplicates from backend
+  const fetchDuplicates = useCallback(async () => {
+    if (!matchId) return;
+
+    setIsDuplicatesLoading(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/violations/duplicates?matchId=${encodeURIComponent(
+          matchId,
+        )}&platformId=${encodeURIComponent(platform.id)}`,
+        {
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch duplicates");
+      }
+
+      const data = await response.json();
+      setDuplicatesList(data.duplicates || []);
+      setIsDuplicatesModalOpen(true);
+    } catch (error) {
+      console.error("Error fetching duplicates:", error);
+      setDuplicatesList([]);
+    } finally {
+      setIsDuplicatesLoading(false);
+    }
+  }, [matchId, platform.id, API_URL]);
 
   // Debounced backend search for violations and bulk violations by URL or account
   const performSearch = useCallback(
@@ -987,11 +1027,35 @@ export function PlatformCard({
               )}
               <h3 className="font-semibold">{platform.name}</h3>
             </div>
-            <p className="text-xs text-muted-foreground ml-7">
-              {t("matchDashboard.platformCard.live")} {liveCount} •{" "}
-              {t("matchDashboard.platformCard.highlights")} {highlightsCount} •{" "}
-              {t("matchDashboard.platformCard.others")} {othersCount}
-            </p>
+            <div className="flex-1">
+              <p className="text-xs text-muted-foreground ml-7">
+                {t("matchDashboard.platformCard.live")} {liveCount} •{" "}
+                {t("matchDashboard.platformCard.highlights")} {highlightsCount}{" "}
+                • {t("matchDashboard.platformCard.others")} {othersCount}
+              </p>
+              {/* Show Duplicates Button */}
+              {showDuplicates && (
+                <div className="flex gap-2 pt-2 ml-7">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={fetchDuplicates}
+                    disabled={isDuplicatesLoading}
+                    className="text-xs h-7">
+                    {isDuplicatesLoading ? (
+                      <>
+                        <div className="h-3 w-3 animate-spin mr-1">
+                          <Search className="h-3 w-3" />
+                        </div>
+                        {isRTL ? "جاري التحميل..." : "Loading..."}
+                      </>
+                    ) : (
+                      <>{isRTL ? "عرض النسخ المكررة" : "Show Duplicates"}</>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -1057,6 +1121,60 @@ export function PlatformCard({
           <div className="flex-1 overflow-y-auto px-6 pb-6 pt-4">
             {renderCardContent(true)}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicates Modal */}
+      <Dialog
+        open={isDuplicatesModalOpen}
+        onOpenChange={setIsDuplicatesModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {isRTL ? "النسخ المكررة" : "Duplicate URLs"}
+            </DialogTitle>
+            <DialogDescription>
+              {isRTL
+                ? "عرض جميع عناوين URL المكررة في هذه المنصة"
+                : "All duplicate URLs found on this platform"}
+            </DialogDescription>
+          </DialogHeader>
+
+          {isDuplicatesLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="h-5 w-5 animate-spin">
+                <Search className="h-5 w-5 text-chart-4" />
+              </div>
+            </div>
+          ) : duplicatesList.length === 0 ? (
+            <div className="flex flex-col items-center justify-center text-center py-8">
+              <AlertCircle className="h-8 w-8 text-muted-foreground mb-2" />
+              <p className="text-sm text-muted-foreground">
+                {isRTL ? "لا توجد عناوين URL مكررة" : "No duplicate URLs found"}
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {duplicatesList.map((duplicate, index) => (
+                <div
+                  key={index}
+                  className="p-3 bg-muted/50 rounded-lg border border-border/50 hover:bg-muted transition-colors">
+                  <div className="flex items-start justify-between gap-2">
+                    <a
+                      href={duplicate.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline break-all flex-1">
+                      {duplicate.url}
+                    </a>
+                    <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap ml-2">
+                      ({duplicate.count}x)
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

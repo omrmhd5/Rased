@@ -162,6 +162,67 @@ router.post("/check-duplicates", async (req, res) => {
   }
 });
 
+// GET /api/violations/duplicates - Get all duplicate URLs for a match and platform
+router.get("/duplicates", async (req, res) => {
+  try {
+    const { matchId, platformId } = req.query;
+
+    // Validate input
+    if (!matchId || !platformId) {
+      return res.status(400).json({
+        error: "Missing required query parameters: matchId, platformId",
+      });
+    }
+
+    // Find the match by externalMatchId
+    const match = await Match.findOne({ externalMatchId: matchId });
+    if (!match) {
+      return res.status(404).json({ error: "Match not found" });
+    }
+
+    // Get all violations for this match and platform
+    const violations = await Violation.find({
+      matchId: match._id,
+      platformId: platformId,
+    }).select("violationUrl bulkId");
+
+    // Also get bulk violations for this match and platform
+    const bulkViolations = await BulkViolation.find({
+      matchId: match._id,
+      platformId: platformId,
+    }).select("bulkViolations");
+
+    // Combine all URLs from violations and bulk violations
+    const urlCount = {};
+
+    // Count single violations
+    violations.forEach((v) => {
+      const url = v.violationUrl;
+      urlCount[url] = (urlCount[url] || 0) + 1;
+    });
+
+    // Count bulk violation URLs
+    bulkViolations.forEach((bulk) => {
+      if (bulk.bulkViolations && Array.isArray(bulk.bulkViolations)) {
+        bulk.bulkViolations.forEach((v) => {
+          const url = v.violationUrl;
+          urlCount[url] = (urlCount[url] || 0) + 1;
+        });
+      }
+    });
+
+    // Filter to only URLs that appear more than once and sort by count descending
+    const duplicates = Object.entries(urlCount)
+      .filter(([_, count]) => count > 1)
+      .map(([url, count]) => ({ url, count }))
+      .sort((a, b) => b.count - a.count);
+
+    res.json({ duplicates });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GET /api/violations/bulk - Get all bulk violations with filters
 router.get("/bulk", async (req, res) => {
   try {
