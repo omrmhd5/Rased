@@ -321,6 +321,8 @@
     "clickToViewMatch": "Click to view match dashboard",
     "searchViolations": "Search by match name or account...",
     "noViolationsFound": "No violations found matching your search.",
+    "bulkViolations": "Bulk Violations",
+    "individualViolations": "Individual Violations",
     "editWhitelistedAccount": "Edit Whitelisted Account",
     "editDescription": "Update the account channel and platform selections.",
     "accountChannelPlaceholderEdit": "Enter account channel name",

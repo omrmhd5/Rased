@@ -321,6 +321,8 @@
     "clickToViewMatch": "انقر لعرض لوحة تحكم المباراة",
     "searchViolations": "البحث بإسم المباراة أو الحساب...",
     "noViolationsFound": "لا توجد مخالفات تطابق بحثك.",
+    "bulkViolations": "الانتهاكات المجمعة",
+    "individualViolations": "الانتهاكات الفردية",
     "editWhitelistedAccount": "تعديل حساب مسموح",
     "editDescription": "تحديث قناة الحساب واختيارات المنصات.",
     "accountChannelPlaceholderEdit": "أدخل اسم قناة الحساب",

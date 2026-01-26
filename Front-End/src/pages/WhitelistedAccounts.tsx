@@ -45,6 +45,8 @@ import {
   ChevronRight,
   Search,
   UserCircle,
+  Layers,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -95,6 +97,25 @@ interface Violation {
     action: string;
     userName: string;
   }[];
+}
+
+interface BulkViolation {
+  _id: string;
+  bulkId: string;
+  matchId: string;
+  accountChannel: string;
+  platformId: string;
+  platformName: string;
+  totalCount: number;
+  activeCount: number;
+  blockedCount: number;
+  removedCount: number;
+  underReviewCount: number;
+  totalViews: number;
+  liveCount: number;
+  highlightsCount: number;
+  othersCount: number;
+  timeAdded: string;
 }
 
 export default function WhitelistedAccounts() {
@@ -194,6 +215,9 @@ export default function WhitelistedAccounts() {
   const [accountViolations, setAccountViolations] = useState<{
     [key: string]: Violation[];
   }>({});
+  const [accountBulkViolations, setAccountBulkViolations] = useState<{
+    [key: string]: BulkViolation[];
+  }>({});
   const [loadingViolations, setLoadingViolations] = useState<{
     [key: string]: boolean;
   }>({});
@@ -225,6 +249,9 @@ export default function WhitelistedAccounts() {
   const [isViolationsDialogOpen, setIsViolationsDialogOpen] = useState(false);
   const [dialogCurrentPage, setDialogCurrentPage] = useState(1);
   const [dialogSearchQuery, setDialogSearchQuery] = useState("");
+  const [dialogViewMetaFilter, setDialogViewMetaFilter] = useState<
+    "all" | "bulk" | "individual"
+  >("all");
   const dialogItemsPerPage = 10;
 
   // Get platform operations for checkboxes - fetch from backend
@@ -349,10 +376,14 @@ export default function WhitelistedAccounts() {
           ...prev,
           [key]: [],
         }));
+        setAccountBulkViolations((prev) => ({
+          ...prev,
+          [key]: [],
+        }));
         return;
       }
 
-      // Fetch violations for each platform that this account is whitelisted on
+      // Fetch individual violations for each platform that this account is whitelisted on
       const violationPromises = account.platforms.map(async (platformId) => {
         // Get the account name for this platform (main name or platform-specific)
         const accountNameForPlatform = getAccountNameForPlatform(
@@ -399,17 +430,78 @@ export default function WhitelistedAccounts() {
         return leagueViolationsArrays.flat();
       });
 
-      const violationsArrays = await Promise.all(violationPromises);
+      // Fetch bulk violations for each platform
+      const bulkViolationPromises = account.platforms.map(
+        async (platformId) => {
+          const accountNameForPlatform = getAccountNameForPlatform(
+            account,
+            platformId,
+          );
+
+          try {
+            const response = await fetch(
+              `${API_URL}/violations/bulk?accountChannel=${encodeURIComponent(
+                accountNameForPlatform,
+              )}&platformId=${platformId}&limit=1000`,
+              {
+                credentials: "include",
+              },
+            );
+
+            if (!response.ok) {
+              return [];
+            }
+
+            const bulks = await response.json();
+            // Filter to exact match on accountChannel and extract matchId properly
+            return (bulks || [])
+              .filter((b: any) => {
+                const bulkName = b.accountChannel.trim().toLowerCase();
+                const platformName = accountNameForPlatform
+                  .trim()
+                  .toLowerCase();
+                return bulkName === platformName && b.platformId === platformId;
+              })
+              .map((b: any) => ({
+                ...b,
+                // Extract externalMatchId from populated matchId object
+                matchId:
+                  typeof b.matchId === "object" && b.matchId?.externalMatchId
+                    ? b.matchId.externalMatchId
+                    : b.matchId,
+              }));
+          } catch {
+            return [];
+          }
+        },
+      );
+
+      const [violationsArrays, bulksArrays] = await Promise.all([
+        Promise.all(violationPromises),
+        Promise.all(bulkViolationPromises),
+      ]);
+
       const allViolations = violationsArrays.flat();
+      const allBulks = bulksArrays.flat();
 
       // Deduplicate violations by _id to prevent duplicates from manual leagues or overlapping queries
       const uniqueViolations = Array.from(
         new Map(allViolations.map((v: Violation) => [v._id, v])).values(),
       );
 
+      // Deduplicate bulk violations by bulkId
+      const uniqueBulks = Array.from(
+        new Map(allBulks.map((b: BulkViolation) => [b.bulkId, b])).values(),
+      );
+
       setAccountViolations((prev) => ({
         ...prev,
         [key]: uniqueViolations,
+      }));
+
+      setAccountBulkViolations((prev) => ({
+        ...prev,
+        [key]: uniqueBulks,
       }));
     } catch (error) {
       console.error(
@@ -417,6 +509,10 @@ export default function WhitelistedAccounts() {
         error,
       );
       setAccountViolations((prev) => ({
+        ...prev,
+        [key]: [],
+      }));
+      setAccountBulkViolations((prev) => ({
         ...prev,
         [key]: [],
       }));
@@ -1130,8 +1226,14 @@ export default function WhitelistedAccounts() {
                   <TableBody>
                     {paginatedAccounts.map((account) => {
                       const violations = accountViolations[account._id] || [];
+                      const bulks = accountBulkViolations[account._id] || [];
                       const isLoading = loadingViolations[account._id] || false;
-                      const violationCount = violations.length;
+                      const individualCount = violations.length;
+                      const bulkCount = bulks.reduce(
+                        (sum, bulk) => sum + bulk.totalCount,
+                        0,
+                      );
+                      const violationCount = individualCount + bulkCount;
 
                       return (
                         <TableRow key={account._id}>
@@ -1404,228 +1506,402 @@ export default function WhitelistedAccounts() {
         <DialogContent className="w-[95vw] sm:w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">
-              {t("whitelistedAccounts.associatedViolations", {
-                count: violationsAccount
-                  ? accountViolations[violationsAccount._id]?.length || 0
-                  : 0,
-              })}
+              {(() => {
+                if (!violationsAccount) return 0;
+                const individualCount =
+                  accountViolations[violationsAccount._id]?.length || 0;
+                const bulkTotalCount = (
+                  accountBulkViolations[violationsAccount._id] || []
+                ).reduce((sum, bulk) => sum + bulk.totalCount, 0);
+                const totalCount = individualCount + bulkTotalCount;
+                return t("whitelistedAccounts.associatedViolations", {
+                  count: totalCount,
+                });
+              })()}
             </DialogTitle>
             <DialogDescription className="text-xs sm:text-sm">
               {violationsAccount?.accountChannel}
+              {(() => {
+                if (!violationsAccount) return null;
+                const individualCount =
+                  accountViolations[violationsAccount._id]?.length || 0;
+                const bulkTotalCount = (
+                  accountBulkViolations[violationsAccount._id] || []
+                ).reduce((sum, bulk) => sum + bulk.totalCount, 0);
+                if (individualCount > 0 || bulkTotalCount > 0) {
+                  return (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      {individualCount > 0 && (
+                        <span>{individualCount} individual</span>
+                      )}
+                      {individualCount > 0 && bulkTotalCount > 0 && (
+                        <span> + </span>
+                      )}
+                      {bulkTotalCount > 0 && (
+                        <span>{bulkTotalCount} from bulk</span>
+                      )}
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            {violationsAccount && accountViolations[violationsAccount._id] && (
-              <>
-                <div className="relative mb-4">
-                  <Search
-                    className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground ${
-                      isRTL ? "right-3" : "left-3"
-                    }`}
-                  />
-                  <Input
-                    type="text"
-                    placeholder={t("whitelistedAccounts.searchViolations")}
-                    value={dialogSearchQuery}
-                    onChange={(e) => {
-                      setDialogSearchQuery(e.target.value);
-                      setDialogCurrentPage(1);
-                    }}
-                    className={`h-9 text-xs sm:text-sm text-left placeholder:text-left ${
-                      isRTL ? "pr-9 pl-3" : "pl-9 pr-3"
-                    }`}
-                  />
-                </div>
+            {/* View Type Filter and Search */}
+            <div className="space-y-3 pb-4 border-b">
+              <div className="flex gap-1 flex-wrap">
+                <Badge
+                  variant={
+                    dialogViewMetaFilter === "all" ? "secondary" : "outline"
+                  }
+                  className="cursor-pointer text-[10px]"
+                  onClick={() => {
+                    setDialogViewMetaFilter("all");
+                    setDialogCurrentPage(1);
+                  }}>
+                  {isRTL ? "الكل" : "All Items"}
+                </Badge>
+                <Badge
+                  variant={
+                    dialogViewMetaFilter === "bulk" ? "secondary" : "outline"
+                  }
+                  className="cursor-pointer text-[10px]"
+                  onClick={() => {
+                    setDialogViewMetaFilter("bulk");
+                    setDialogCurrentPage(1);
+                  }}>
+                  {isRTL ? "مجمعة فقط" : "Bulks Only"}
+                </Badge>
+                <Badge
+                  variant={
+                    dialogViewMetaFilter === "individual"
+                      ? "secondary"
+                      : "outline"
+                  }
+                  className="cursor-pointer text-[10px]"
+                  onClick={() => {
+                    setDialogViewMetaFilter("individual");
+                    setDialogCurrentPage(1);
+                  }}>
+                  {isRTL ? "فردية فقط" : "Singles Only"}
+                </Badge>
+              </div>
 
-                <div className="space-y-2">
-                  {(() => {
-                    const violations = accountViolations[violationsAccount._id];
+              <div className="relative">
+                <Search
+                  className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground ${
+                    isRTL ? "right-3" : "left-3"
+                  }`}
+                />
+                <Input
+                  type="text"
+                  placeholder={t("whitelistedAccounts.searchViolations")}
+                  value={dialogSearchQuery}
+                  onChange={(e) => {
+                    setDialogSearchQuery(e.target.value);
+                    setDialogCurrentPage(1);
+                  }}
+                  className={`h-9 text-xs sm:text-sm text-left placeholder:text-left ${
+                    isRTL ? "pr-9 pl-3" : "pl-9 pr-3"
+                  }`}
+                />
+              </div>
+            </div>
 
-                    // Filter violations
-                    const filteredViolations = violations.filter(
-                      (violation) => {
-                        if (!dialogSearchQuery.trim()) return true;
+            {/* Combined Violations Section */}
+            {(() => {
+              if (!violationsAccount) return null;
 
-                        const query = dialogSearchQuery.toLowerCase();
-                        const matchName = (
-                          violation.matchName || ""
-                        ).toLowerCase();
-                        const creator =
-                          violation.auditLog
-                            ?.find((log) => log.action === "created")
-                            ?.userName?.toLowerCase() || "";
+              const violations = accountViolations[violationsAccount._id] || [];
+              const bulks = accountBulkViolations[violationsAccount._id] || [];
 
+              // Build combined display items
+              const allDisplayItems: Array<{
+                type: "bulk" | "individual";
+                bulkViolation?: BulkViolation;
+                violation?: Violation;
+              }> = [];
+
+              // Add individual violations (if not filtered out)
+              violations.forEach((violation) => {
+                if (dialogViewMetaFilter === "bulk") return;
+                allDisplayItems.push({
+                  type: "individual",
+                  violation: violation,
+                });
+              });
+
+              // Add bulk violations (if not filtered out)
+              bulks.forEach((bulk) => {
+                if (dialogViewMetaFilter === "individual") return;
+                allDisplayItems.push({
+                  type: "bulk",
+                  bulkViolation: bulk,
+                });
+              });
+
+              // Apply search filter
+              const filteredItems = allDisplayItems.filter((item) => {
+                if (!dialogSearchQuery.trim()) return true;
+                const query = dialogSearchQuery.toLowerCase();
+
+                if (item.type === "bulk" && item.bulkViolation) {
+                  return item.bulkViolation.matchId
+                    .toLowerCase()
+                    .includes(query);
+                } else if (item.type === "individual" && item.violation) {
+                  const matchName = (
+                    item.violation.matchName || ""
+                  ).toLowerCase();
+                  const creator =
+                    item.violation.auditLog
+                      ?.find((log) => log.action === "created")
+                      ?.userName?.toLowerCase() || "";
+                  return matchName.includes(query) || creator.includes(query);
+                }
+                return true;
+              });
+
+              // Sort by time (most recent first)
+              filteredItems.sort((a, b) => {
+                const timeA =
+                  a.type === "bulk"
+                    ? new Date(a.bulkViolation?.timeAdded || 0).getTime()
+                    : new Date(a.violation?.timeAdded || 0).getTime();
+                const timeB =
+                  b.type === "bulk"
+                    ? new Date(b.bulkViolation?.timeAdded || 0).getTime()
+                    : new Date(b.violation?.timeAdded || 0).getTime();
+                return timeB - timeA;
+              });
+
+              // Paginate
+              const totalPages = Math.ceil(
+                filteredItems.length / dialogItemsPerPage,
+              );
+              const startIndex = (dialogCurrentPage - 1) * dialogItemsPerPage;
+              const endIndex = startIndex + dialogItemsPerPage;
+              const paginatedItems = filteredItems.slice(startIndex, endIndex);
+
+              // Create pagination pages
+              const pages: (number | string)[] = [];
+              if (totalPages > 1) {
+                for (let i = 1; i <= totalPages; i++) {
+                  if (
+                    i === 1 ||
+                    i === totalPages ||
+                    (i >= dialogCurrentPage - 1 && i <= dialogCurrentPage + 1)
+                  ) {
+                    pages.push(i);
+                  } else if (
+                    i === dialogCurrentPage - 2 ||
+                    i === dialogCurrentPage + 2
+                  ) {
+                    pages.push("...");
+                  }
+                }
+              }
+              const displayPages = isRTL ? [...pages].reverse() : pages;
+
+              if (filteredItems.length === 0) {
+                return (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <p className="text-xs sm:text-sm">
+                      {t("whitelistedAccounts.noViolations")}
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="flex flex-col gap-4">
+                  <div className="space-y-2 flex-1"></div>
+
+                  <div className="space-y-2">
+                    {paginatedItems.map((item) => {
+                      if (item.type === "bulk" && item.bulkViolation) {
+                        const bulk = item.bulkViolation;
                         return (
-                          matchName.includes(query) || creator.includes(query)
-                        );
-                      },
-                    );
-
-                    const paginatedViolations = filteredViolations.slice(
-                      (dialogCurrentPage - 1) * dialogItemsPerPage,
-                      dialogCurrentPage * dialogItemsPerPage,
-                    );
-
-                    if (filteredViolations.length === 0) {
-                      return (
-                        <div className="text-center py-8 text-muted-foreground">
-                          <p className="text-xs sm:text-sm">
-                            {t("whitelistedAccounts.noViolationsFound")}
-                          </p>
-                        </div>
-                      );
-                    }
-
-                    return paginatedViolations.map((violation) => {
-                      // Get match ID
-                      const matchId =
-                        (typeof violation.matchId === "object" &&
-                          violation.matchId?.externalMatchId) ||
-                        violation.externalMatchId ||
-                        (typeof violation.matchId === "string"
-                          ? violation.matchId
-                          : null);
-
-                      // Convert violation ID to string
-                      const violationIdStr = String(violation._id || "");
-
-                      // Get creator
-                      const creator = violation.auditLog?.find(
-                        (log) => log.action === "created",
-                      )?.userName;
-
-                      return (
-                        <div
-                          key={violation._id}
-                          className={cn(
-                            "flex items-start justify-between p-3 border rounded-lg bg-background cursor-pointer transition-colors",
-                            "hover:bg-accent/50 hover:border-primary/50",
-                          )}
-                          onClick={() => {
-                            if (matchId && violationIdStr) {
-                              navigate(
-                                `/match/${matchId}#violation-${violationIdStr}`,
-                              );
+                          <div
+                            key={bulk.bulkId}
+                            className={cn(
+                              "p-3 border rounded-lg bg-background/50 cursor-pointer transition-colors hover:bg-accent/50 hover:border-primary/50",
+                            )}
+                            onClick={() => {
+                              navigate(`/match/${bulk.matchId}`);
                               setIsViolationsDialogOpen(false);
-                            } else if (matchId) {
-                              navigate(`/match/${matchId}`);
-                              setIsViolationsDialogOpen(false);
-                            } else {
-                              window.open(violation.violationUrl, "_blank");
-                            }
-                          }}
-                          title={t("whitelistedAccounts.clickToViewMatch")}>
-                          <div className="flex-1 space-y-1">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge
-                                variant="outline"
-                                className="text-xs flex items-center gap-1">
-                                {getPlatformIcon(violation.platformId) && (
-                                  <span>
-                                    {getPlatformIcon(violation.platformId)}
+                            }}
+                            title={t("whitelistedAccounts.clickToViewMatch")}>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Layers className="h-3.5 w-3.5 text-muted-foreground" />
+                                  <span className="text-xs font-medium">
+                                    {t("whitelistedAccounts.bulkViolations")}
                                   </span>
-                                )}
-                                {violation.platformName}
-                              </Badge>
-                              <Badge
-                                variant="outline"
-                                className={cn(
-                                  "text-xs",
-                                  (getStatusBadgeKey(violation.status) ===
-                                    "Active" ||
-                                    getStatusBadgeKey(violation.status) ===
-                                      "Reported") &&
-                                    "bg-red-100 text-red-700 hover:bg-red-200 border-red-300 dark:bg-red-900/30 dark:text-red-400",
-                                  getStatusBadgeKey(violation.status) ===
-                                    "Blocked" &&
-                                    "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
-                                  getStatusBadgeKey(violation.status) ===
-                                    "Removed" &&
-                                    "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
-                                  (getStatusBadgeKey(violation.status) ===
-                                    "Review" ||
-                                    getStatusBadgeKey(violation.status) ===
-                                      "Under Review") &&
-                                    "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400",
-                                )}>
-                                {getStatusBadge(violation.status)}
-                              </Badge>
-                              <Badge variant="outline" className="text-xs">
-                                {getContentTypeBadge(violation.contentType)}
-                              </Badge>
-                              {creator && (
-                                <div
-                                  className={cn(
-                                    "flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/50",
-                                    isRTL ? "text-left" : "",
-                                  )}>
-                                  <UserCircle className="h-3.5 w-3.5 text-muted-foreground" />
-                                  <span className="text-xs text-muted-foreground font-medium">
-                                    {creator}
+                                  <span className="text-xs text-muted-foreground">
+                                    {bulk.totalCount} total
                                   </span>
                                 </div>
-                              )}
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                                  <div className="p-2 bg-muted rounded text-center">
+                                    <p className="text-muted-foreground text-[10px]">
+                                      Active
+                                    </p>
+                                    <p className="font-semibold text-destructive">
+                                      {bulk.activeCount}
+                                    </p>
+                                  </div>
+                                  <div className="p-2 bg-muted rounded text-center">
+                                    <p className="text-muted-foreground text-[10px]">
+                                      Blocked
+                                    </p>
+                                    <p className="font-semibold text-success">
+                                      {bulk.blockedCount}
+                                    </p>
+                                  </div>
+                                  <div className="p-2 bg-muted rounded text-center">
+                                    <p className="text-muted-foreground text-[10px]">
+                                      Removed
+                                    </p>
+                                    <p className="font-semibold text-cyan-500">
+                                      {bulk.removedCount}
+                                    </p>
+                                  </div>
+                                  <div className="p-2 bg-muted rounded text-center">
+                                    <p className="text-muted-foreground text-[10px]">
+                                      Review
+                                    </p>
+                                    <p className="font-semibold text-yellow-600 dark:text-yellow-400">
+                                      {bulk.underReviewCount}
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                  <span className="flex items-center gap-1">
+                                    <Eye className="h-3 w-3" />
+                                    {bulk.totalViews.toLocaleString()}
+                                  </span>
+                                  <span>•</span>
+                                  <span>
+                                    {new Date(
+                                      bulk.timeAdded,
+                                    ).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                            {violation.matchName && (
-                              <p className="text-sm text-muted-foreground">
-                                {violation.matchName}
-                              </p>
-                            )}
-                            <p className="text-xs text-muted-foreground">
-                              {t("whitelistedAccounts.added")}{" "}
-                              {new Date(violation.timeAdded).toLocaleString()}
-                            </p>
                           </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
+                        );
+                      } else if (item.type === "individual" && item.violation) {
+                        const violation = item.violation;
+                        const matchId =
+                          (typeof violation.matchId === "object" &&
+                            violation.matchId?.externalMatchId) ||
+                          violation.externalMatchId ||
+                          (typeof violation.matchId === "string"
+                            ? violation.matchId
+                            : null);
 
-                {/* Dialog Pagination */}
-                {(() => {
-                  const violations = accountViolations[violationsAccount._id];
+                        const violationIdStr = String(violation._id || "");
 
-                  // Filter violations for pagination
-                  const filteredViolations = violations.filter((violation) => {
-                    if (!dialogSearchQuery.trim()) return true;
+                        const creator = violation.auditLog?.find(
+                          (log) => log.action === "created",
+                        )?.userName;
 
-                    const query = dialogSearchQuery.toLowerCase();
-                    const matchName = (violation.matchName || "").toLowerCase();
-                    const creator =
-                      violation.auditLog
-                        ?.find((log) => log.action === "created")
-                        ?.userName?.toLowerCase() || "";
+                        return (
+                          <div
+                            key={violation._id}
+                            className={cn(
+                              "flex items-start justify-between p-3 border rounded-lg bg-background cursor-pointer transition-colors",
+                              "hover:bg-accent/50 hover:border-primary/50",
+                            )}
+                            onClick={() => {
+                              if (matchId && violationIdStr) {
+                                navigate(
+                                  `/match/${matchId}#violation-${violationIdStr}`,
+                                );
+                                setIsViolationsDialogOpen(false);
+                              } else if (matchId) {
+                                navigate(`/match/${matchId}`);
+                                setIsViolationsDialogOpen(false);
+                              } else {
+                                window.open(violation.violationUrl, "_blank");
+                              }
+                            }}
+                            title={t("whitelistedAccounts.clickToViewMatch")}>
+                            <div className="flex-1 space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs flex items-center gap-1">
+                                  {getPlatformIcon(violation.platformId) && (
+                                    <span>
+                                      {getPlatformIcon(violation.platformId)}
+                                    </span>
+                                  )}
+                                  {violation.platformName}
+                                </Badge>
+                                <Badge
+                                  variant="outline"
+                                  className={cn(
+                                    "text-xs",
+                                    (getStatusBadgeKey(violation.status) ===
+                                      "Active" ||
+                                      getStatusBadgeKey(violation.status) ===
+                                        "Reported") &&
+                                      "bg-red-100 text-red-700 hover:bg-red-200 border-red-300 dark:bg-red-900/30 dark:text-red-400",
+                                    getStatusBadgeKey(violation.status) ===
+                                      "Blocked" &&
+                                      "bg-green-100 text-green-700 hover:bg-green-200 border-green-300 dark:bg-green-900/30 dark:text-green-400",
+                                    getStatusBadgeKey(violation.status) ===
+                                      "Removed" &&
+                                      "bg-cyan-100 text-cyan-700 hover:bg-cyan-200 border-cyan-300 dark:bg-cyan-900/30 dark:text-cyan-400",
+                                    (getStatusBadgeKey(violation.status) ===
+                                      "Review" ||
+                                      getStatusBadgeKey(violation.status) ===
+                                        "Under Review") &&
+                                      "bg-yellow-100 text-yellow-700 hover:bg-yellow-200 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-400",
+                                  )}>
+                                  {getStatusBadge(violation.status)}
+                                </Badge>
+                                <Badge variant="outline" className="text-xs">
+                                  {getContentTypeBadge(violation.contentType)}
+                                </Badge>
+                                {creator && (
+                                  <div
+                                    className={cn(
+                                      "flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-muted/40 border border-border/50",
+                                      isRTL ? "text-left" : "",
+                                    )}>
+                                    <UserCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <span className="text-xs text-muted-foreground font-medium">
+                                      {creator}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                              {violation.matchName && (
+                                <p className="text-sm text-muted-foreground">
+                                  {violation.matchName}
+                                </p>
+                              )}
+                              <p className="text-xs text-muted-foreground">
+                                {t("whitelistedAccounts.added")}{" "}
+                                {new Date(violation.timeAdded).toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
 
-                    return matchName.includes(query) || creator.includes(query);
-                  });
-
-                  const totalDialogPages = Math.ceil(
-                    filteredViolations.length / dialogItemsPerPage,
-                  );
-
-                  if (totalDialogPages <= 1) return null;
-
-                  const pages: (number | string)[] = [];
-                  for (let i = 1; i <= totalDialogPages; i++) {
-                    if (
-                      i === 1 ||
-                      i === totalDialogPages ||
-                      (i >= dialogCurrentPage - 1 && i <= dialogCurrentPage + 1)
-                    ) {
-                      pages.push(i);
-                    } else if (
-                      i === dialogCurrentPage - 2 ||
-                      i === dialogCurrentPage + 2
-                    ) {
-                      pages.push("...");
-                    }
-                  }
-
-                  const displayPages = isRTL ? [...pages].reverse() : pages;
-
-                  return (
-                    <div className="mt-4 pt-4 border-t">
+                  {/* Combined Pagination */}
+                  {totalPages > 1 && (
+                    <div className="pt-4 mt-4 border-t">
                       <Pagination>
                         <PaginationContent
                           className={`flex-wrap justify-center gap-1 ${
@@ -1638,25 +1914,24 @@ export default function WhitelistedAccounts() {
                                   variant="ghost"
                                   size="default"
                                   onClick={() => {
-                                    if (dialogCurrentPage < totalDialogPages) {
+                                    if (dialogCurrentPage < totalPages) {
                                       setDialogCurrentPage(
                                         dialogCurrentPage + 1,
                                       );
                                     }
                                   }}
-                                  disabled={
-                                    dialogCurrentPage === totalDialogPages
-                                  }
-                                  className="gap-1 pr-2.5 h-8 text-[11px]">
+                                  disabled={dialogCurrentPage === totalPages}
+                                  className="gap-1 pr-2.5 h-9 text-xs">
                                   <span>{t("dashboard.pagination.next")}</span>
-                                  <ChevronRight className="h-3.5 w-3.5 scale-x-[-1]" />
+                                  <ChevronRight className="h-4 w-4 scale-x-[-1]" />
                                 </Button>
                               </PaginationItem>
+
                               {displayPages.map((item, index) => {
                                 if (item === "...") {
                                   return (
                                     <PaginationItem key={`ellipsis-${index}`}>
-                                      <span className="px-2 text-muted-foreground text-[11px]">
+                                      <span className="px-2 text-muted-foreground">
                                         ...
                                       </span>
                                     </PaginationItem>
@@ -1672,12 +1947,13 @@ export default function WhitelistedAccounts() {
                                         setDialogCurrentPage(page);
                                       }}
                                       isActive={dialogCurrentPage === page}
-                                      className="cursor-pointer min-w-[28px] h-7 text-[11px]">
+                                      className="cursor-pointer min-w-[32px] h-8 text-xs">
                                       {page}
                                     </PaginationLink>
                                   </PaginationItem>
                                 );
                               })}
+
                               <PaginationItem>
                                 <Button
                                   variant="ghost"
@@ -1690,8 +1966,8 @@ export default function WhitelistedAccounts() {
                                     }
                                   }}
                                   disabled={dialogCurrentPage === 1}
-                                  className="gap-1 pl-2.5 h-8 text-[11px]">
-                                  <ChevronLeft className="h-3.5 w-3.5 scale-x-[-1]" />
+                                  className="gap-1 pl-2.5 h-9 text-xs">
+                                  <ChevronLeft className="h-4 w-4 scale-x-[-1]" />
                                   <span>
                                     {t("dashboard.pagination.previous")}
                                   </span>
@@ -1712,18 +1988,19 @@ export default function WhitelistedAccounts() {
                                     }
                                   }}
                                   disabled={dialogCurrentPage === 1}
-                                  className="gap-1 pl-2.5 h-8 text-[11px]">
-                                  <ChevronLeft className="h-3.5 w-3.5" />
+                                  className="gap-1 pl-2.5 h-9 text-xs">
+                                  <ChevronLeft className="h-4 w-4" />
                                   <span>
                                     {t("dashboard.pagination.previous")}
                                   </span>
                                 </Button>
                               </PaginationItem>
+
                               {displayPages.map((item, index) => {
                                 if (item === "...") {
                                   return (
                                     <PaginationItem key={`ellipsis-${index}`}>
-                                      <span className="px-2 text-muted-foreground text-[11px]">
+                                      <span className="px-2 text-muted-foreground">
                                         ...
                                       </span>
                                     </PaginationItem>
@@ -1739,29 +2016,28 @@ export default function WhitelistedAccounts() {
                                         setDialogCurrentPage(page);
                                       }}
                                       isActive={dialogCurrentPage === page}
-                                      className="cursor-pointer min-w-[28px] h-7 text-[11px]">
+                                      className="cursor-pointer min-w-[32px] h-8 text-xs">
                                       {page}
                                     </PaginationLink>
                                   </PaginationItem>
                                 );
                               })}
+
                               <PaginationItem>
                                 <Button
                                   variant="ghost"
                                   size="default"
                                   onClick={() => {
-                                    if (dialogCurrentPage < totalDialogPages) {
+                                    if (dialogCurrentPage < totalPages) {
                                       setDialogCurrentPage(
                                         dialogCurrentPage + 1,
                                       );
                                     }
                                   }}
-                                  disabled={
-                                    dialogCurrentPage === totalDialogPages
-                                  }
-                                  className="gap-1 pr-2.5 h-8 text-[11px]">
+                                  disabled={dialogCurrentPage === totalPages}
+                                  className="gap-1 pr-2.5 h-9 text-xs">
                                   <span>{t("dashboard.pagination.next")}</span>
-                                  <ChevronRight className="h-3.5 w-3.5" />
+                                  <ChevronRight className="h-4 w-4" />
                                 </Button>
                               </PaginationItem>
                             </>
@@ -1769,24 +2045,10 @@ export default function WhitelistedAccounts() {
                         </PaginationContent>
                       </Pagination>
                     </div>
-                  );
-                })()}
-              </>
-            )}
-            {violationsAccount &&
-              (!accountViolations[violationsAccount._id] ||
-                accountViolations[violationsAccount._id].length === 0) && (
-                <div className="text-center py-4 text-muted-foreground">
-                  {loadingViolations[violationsAccount._id] ? (
-                    <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>{t("whitelistedAccounts.loading")}</span>
-                    </div>
-                  ) : (
-                    t("whitelistedAccounts.noViolations")
                   )}
                 </div>
-              )}
+              );
+            })()}
           </div>
           <DialogFooter>
             <Button
