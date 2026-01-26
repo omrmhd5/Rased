@@ -402,6 +402,8 @@ export function ActivityLog({
       deletedLog.changes?.platformName ||
       t("matchDashboard.activityLog.descriptions.platform");
     const accountName = deletedLog.changes?.accountChannel || "";
+    const status = deletedLog.changes?.status || "";
+    const views = deletedLog.changes?.views || "0";
     const count = deletedLog.changes?.count || "1";
     const isBulk = deletedLog.changes?.bulkId && count !== "1";
 
