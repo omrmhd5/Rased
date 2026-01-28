@@ -41,6 +41,9 @@ interface MatchOverviewProps {
   avgBlockTimeNumber?: number;
   blockSuccessRate?: number;
   targetMins?: number;
+  liveAvgBlockTime?: number;
+  highlightsAvgBlockTime?: number;
+  othersAvgBlockTime?: number;
   onDownloadReport?: () => void;
   isDownloading?: boolean;
   onRoundReport?: () => void;
@@ -63,6 +66,9 @@ export function MatchOverview({
   avgBlockTimeNumber,
   blockSuccessRate,
   targetMins = 15,
+  liveAvgBlockTime,
+  highlightsAvgBlockTime,
+  othersAvgBlockTime,
   onDownloadReport,
   isDownloading = false,
   onRoundReport,
@@ -90,7 +96,11 @@ export function MatchOverview({
 
   const getCompetitionName = () => {
     if (typeof match.competition === "object" && match.competition !== null) {
-      const competition = match.competition as { knownName?: string; name?: string; arabicName?: string };
+      const competition = match.competition as {
+        knownName?: string;
+        name?: string;
+        arabicName?: string;
+      };
       if (isRTL && competition.arabicName) {
         return competition.arabicName;
       }
@@ -143,14 +153,17 @@ export function MatchOverview({
           </h1>
           <p className="text-[10px] sm:text-xs text-muted-foreground break-words">
             {(() => {
-              const leagueInfo = leagues?.find((l) => l.league === match.league);
+              const leagueInfo = leagues?.find(
+                (l) => l.league === match.league,
+              );
               const isSuperCup = leagueInfo?.competitionType === "cup";
               if (isSuperCup) {
                 return `${t("matchDashboard.matchOverview.stage")} ${match.stage || t("matchDashboard.matchOverview.nA")}`;
               }
               return `${t("matchDashboard.matchOverview.week")} ${match.week || t("matchDashboard.matchOverview.nA")}`;
             })()}{" "}
-            • {getCompetitionName() || t("matchDashboard.matchOverview.nA")} • {match.stadium || t("matchDashboard.matchOverview.nA")}
+            • {getCompetitionName() || t("matchDashboard.matchOverview.nA")} •{" "}
+            {match.stadium || t("matchDashboard.matchOverview.nA")}
           </p>
         </div>
         <div className="flex flex-row sm:flex-col sm:text-right sm:items-end gap-2 sm:gap-2 w-full sm:w-auto">
@@ -169,14 +182,22 @@ export function MatchOverview({
                     {isDownloading ? (
                       <>
                         <Loader2 className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5 animate-spin" />
-                        <span className="hidden xs:inline">{t("matchDashboard.matchOverview.download.generating")}</span>
+                        <span className="hidden xs:inline">
+                          {t(
+                            "matchDashboard.matchOverview.download.generating",
+                          )}
+                        </span>
                         <span className="xs:hidden">...</span>
                       </>
                     ) : (
                       <>
                         <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5 mr-1 sm:mr-1.5" />
-                        <span className="hidden xs:inline">{t("matchDashboard.matchOverview.download.download")}</span>
-                        <span className="xs:hidden">{t("matchDashboard.matchOverview.download.dl")}</span>
+                        <span className="hidden xs:inline">
+                          {t("matchDashboard.matchOverview.download.download")}
+                        </span>
+                        <span className="xs:hidden">
+                          {t("matchDashboard.matchOverview.download.dl")}
+                        </span>
                       </>
                     )}
                   </Button>
@@ -193,7 +214,9 @@ export function MatchOverview({
                         onClick={onDownloadReport}
                         disabled={isDownloading}>
                         <Download className="mr-2 h-4 w-4" />
-                        {t("matchDashboard.matchOverview.download.downloadReport")}
+                        {t(
+                          "matchDashboard.matchOverview.download.downloadReport",
+                        )}
                       </Button>
                     )}
                     {onRoundReport && (
@@ -275,7 +298,9 @@ export function MatchOverview({
               {blockSuccessRate !== undefined && blockSuccessRate !== null
                 ? `${blockSuccessRate}%`
                 : `${blockedRate}%`}{" "}
-              <span className="hidden sm:inline">{t("matchDashboard.matchOverview.stats.successRate")}</span>
+              <span className="hidden sm:inline">
+                {t("matchDashboard.matchOverview.stats.successRate")}
+              </span>
             </p>
             <p className="text-[9px] sm:text-[10px] text-muted-foreground/70 mt-0.5 hidden sm:block">
               {t("matchDashboard.matchOverview.stats.blockedSuccessfully")}
@@ -380,7 +405,8 @@ export function MatchOverview({
                   <span className="text-sm sm:text-base text-muted-foreground ml-1">
                     {t("matchDashboard.matchOverview.stats.min")}{" "}
                     <span className="text-xs sm:text-sm text-muted-foreground">
-                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}{t("matchDashboard.matchOverview.stats.hrs")})
+                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}
+                      {t("matchDashboard.matchOverview.stats.hrs")})
                     </span>
                   </span>
                 </>
@@ -392,9 +418,153 @@ export function MatchOverview({
             <span className="text-[10px] sm:text-xs text-muted-foreground">
               {t("matchDashboard.matchOverview.stats.min")}{" "}
               <span className="text-[9px] sm:text-xs text-muted-foreground">
-                ({(targetMins / 60).toFixed(2)}{t("matchDashboard.matchOverview.stats.hrs")})
+                ({(targetMins / 60).toFixed(2)}
+                {t("matchDashboard.matchOverview.stats.hrs")})
               </span>
             </span>
+          </p>
+        </div>
+
+        {/* Live Avg Block Time */}
+        <div className="p-3 sm:p-4 rounded-lg bg-gradient-to-br from-red-500/20 to-red-500/30 border border-red-500/50 transition-all duration-300 active:scale-[0.98] active:shadow-lg active:shadow-red-500/30 cursor-pointer touch-manipulation">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500" />
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+                {t("matchDashboard.matchOverview.stats.liveAvgBlockTime")}
+              </p>
+            </div>
+            <Badge
+              className={`text-[9px] sm:text-xs transition-all duration-300 ${
+                (liveAvgBlockTime !== undefined && liveAvgBlockTime !== null
+                  ? liveAvgBlockTime
+                  : 0) <= targetMins
+                  ? "bg-success/20 text-success border-success/30"
+                  : "bg-destructive/20 text-destructive border-destructive/30"
+              }`}>
+              {(liveAvgBlockTime !== undefined && liveAvgBlockTime !== null
+                ? liveAvgBlockTime
+                : 0) <= targetMins
+                ? t("matchDashboard.matchOverview.stats.withinTarget")
+                : t("matchDashboard.matchOverview.stats.overTarget")}
+            </Badge>
+          </div>
+          <p className="text-2xl sm:text-3xl font-bold text-foreground mb-1">
+            {(() => {
+              const minutes = liveAvgBlockTime || 0;
+              const hours = minutes / 60;
+              return (
+                <>
+                  {minutes}
+                  <span className="text-sm sm:text-base text-muted-foreground ml-1">
+                    {t("matchDashboard.matchOverview.stats.min")}{" "}
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}
+                      {t("matchDashboard.matchOverview.stats.hrs")})
+                    </span>
+                  </span>
+                </>
+              );
+            })()}
+          </p>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            {t("matchDashboard.matchOverview.stats.liveContent")}
+          </p>
+        </div>
+
+        {/* Highlights Avg Block Time */}
+        <div className="p-3 sm:p-4 rounded-lg bg-gradient-to-br from-blue-500/20 to-blue-500/30 border border-blue-500/50 transition-all duration-300 active:scale-[0.98] active:shadow-lg active:shadow-blue-500/30 cursor-pointer touch-manipulation">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500" />
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+                {t("matchDashboard.matchOverview.stats.highlightsAvgBlockTime")}
+              </p>
+            </div>
+            <Badge
+              className={`text-[9px] sm:text-xs transition-all duration-300 ${
+                (highlightsAvgBlockTime !== undefined &&
+                highlightsAvgBlockTime !== null
+                  ? highlightsAvgBlockTime
+                  : 0) <= targetMins
+                  ? "bg-success/20 text-success border-success/30"
+                  : "bg-destructive/20 text-destructive border-destructive/30"
+              }`}>
+              {(highlightsAvgBlockTime !== undefined &&
+              highlightsAvgBlockTime !== null
+                ? highlightsAvgBlockTime
+                : 0) <= targetMins
+                ? t("matchDashboard.matchOverview.stats.withinTarget")
+                : t("matchDashboard.matchOverview.stats.overTarget")}
+            </Badge>
+          </div>
+          <p className="text-2xl sm:text-3xl font-bold text-foreground mb-1">
+            {(() => {
+              const minutes = highlightsAvgBlockTime || 0;
+              const hours = minutes / 60;
+              return (
+                <>
+                  {minutes}
+                  <span className="text-sm sm:text-base text-muted-foreground ml-1">
+                    {t("matchDashboard.matchOverview.stats.min")}{" "}
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}
+                      {t("matchDashboard.matchOverview.stats.hrs")})
+                    </span>
+                  </span>
+                </>
+              );
+            })()}
+          </p>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            {t("matchDashboard.matchOverview.stats.highlightsContent")}
+          </p>
+        </div>
+
+        {/* Others Avg Block Time */}
+        <div className="p-3 sm:p-4 rounded-lg bg-gradient-to-br from-purple-500/20 to-purple-500/30 border border-purple-500/50 transition-all duration-300 active:scale-[0.98] active:shadow-lg active:shadow-purple-500/30 cursor-pointer touch-manipulation">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-500" />
+              <p className="text-[10px] sm:text-xs font-medium text-muted-foreground">
+                {t("matchDashboard.matchOverview.stats.othersAvgBlockTime")}
+              </p>
+            </div>
+            <Badge
+              className={`text-[9px] sm:text-xs transition-all duration-300 ${
+                (othersAvgBlockTime !== undefined && othersAvgBlockTime !== null
+                  ? othersAvgBlockTime
+                  : 0) <= targetMins
+                  ? "bg-success/20 text-success border-success/30"
+                  : "bg-destructive/20 text-destructive border-destructive/30"
+              }`}>
+              {(othersAvgBlockTime !== undefined && othersAvgBlockTime !== null
+                ? othersAvgBlockTime
+                : 0) <= targetMins
+                ? t("matchDashboard.matchOverview.stats.withinTarget")
+                : t("matchDashboard.matchOverview.stats.overTarget")}
+            </Badge>
+          </div>
+          <p className="text-2xl sm:text-3xl font-bold text-foreground mb-1">
+            {(() => {
+              const minutes = othersAvgBlockTime || 0;
+              const hours = minutes / 60;
+              return (
+                <>
+                  {minutes}
+                  <span className="text-sm sm:text-base text-muted-foreground ml-1">
+                    {t("matchDashboard.matchOverview.stats.min")}{" "}
+                    <span className="text-xs sm:text-sm text-muted-foreground">
+                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}
+                      {t("matchDashboard.matchOverview.stats.hrs")})
+                    </span>
+                  </span>
+                </>
+              );
+            })()}
+          </p>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            {t("matchDashboard.matchOverview.stats.othersContent")}
           </p>
         </div>
 
@@ -412,14 +582,16 @@ export function MatchOverview({
             {match.mostViews !== undefined && match.mostViews !== null
               ? match.mostViews.toLocaleString("en-US")
               : topPlatform
-              ? topPlatform.totalViews
-              : "0"}
+                ? topPlatform.totalViews
+                : "0"}
             <span className="text-sm sm:text-base text-muted-foreground ml-1">
               {t("matchDashboard.matchOverview.stats.views")}
             </span>
           </p>
           <p className="text-[10px] sm:text-xs text-muted-foreground">
-            {topPlatform ? `${topPlatform.name} • ${t("matchDashboard.matchOverview.stats.biggestSource")}` : t("matchDashboard.matchOverview.nA")}
+            {topPlatform
+              ? `${topPlatform.name} • ${t("matchDashboard.matchOverview.stats.biggestSource")}`
+              : t("matchDashboard.matchOverview.nA")}
           </p>
         </div>
       </div>

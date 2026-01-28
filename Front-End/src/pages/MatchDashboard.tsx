@@ -198,6 +198,9 @@ export default function MatchDashboard() {
               totalViews?: number;
               avgBlockTime?: number;
               blockSuccessRate?: number;
+              liveAvgBlockTime?: number;
+              highlightsAvgBlockTime?: number;
+              othersAvgBlockTime?: number;
             };
           } = {};
           if (platformStatsResponse.ok) {
@@ -213,6 +216,9 @@ export default function MatchDashboard() {
                 totalViews?: number;
                 avgBlockTime?: number;
                 blockSuccessRate?: number;
+                liveAvgBlockTime?: number;
+                highlightsAvgBlockTime?: number;
+                othersAvgBlockTime?: number;
               }) => {
                 platformStatsMap[stat.platformId] = stat;
               },
@@ -249,16 +255,8 @@ export default function MatchDashboard() {
               // Format totalViews from backend (it's a number, convert to string format)
               const totalViewsNumber = backendStats.totalViews ?? 0;
               const totalViews = formatViews(totalViewsNumber);
-              // Format avgBlockTime from backend (it's in minutes)
-              const avgBlockTimeMinutes = backendStats.avgBlockTime ?? 0;
-              const avgBlockTime =
-                avgBlockTimeMinutes > 0
-                  ? avgBlockTimeMinutes < 60
-                    ? `${avgBlockTimeMinutes} min`
-                    : avgBlockTimeMinutes < 1440
-                      ? `${Math.round(avgBlockTimeMinutes / 60)}h`
-                      : `${Math.round(avgBlockTimeMinutes / 1440)}d`
-                  : "0 min";
+              // Keep avgBlockTime as number from backend (in minutes)
+              const avgBlockTime = backendStats.avgBlockTime ?? 0;
               // Use blockSuccessRate directly from backend (0-100)
               const blockSuccessRate = backendStats.blockSuccessRate ?? 0;
               const blockedSuccess = `${blockSuccessRate}%`;
@@ -272,6 +270,11 @@ export default function MatchDashboard() {
               const highlightsCount =
                 (backendStats as any).highlightsCount ?? 0;
               const othersCount = (backendStats as any).othersCount ?? 0;
+              // Get content type avgBlockTime from backend
+              const liveAvgBlockTime = backendStats.liveAvgBlockTime ?? 0;
+              const highlightsAvgBlockTime =
+                backendStats.highlightsAvgBlockTime ?? 0;
+              const othersAvgBlockTime = backendStats.othersAvgBlockTime ?? 0;
 
               return {
                 ...platform,
@@ -290,6 +293,9 @@ export default function MatchDashboard() {
                 liveCount,
                 highlightsCount,
                 othersCount,
+                liveAvgBlockTime,
+                highlightsAvgBlockTime,
+                othersAvgBlockTime,
               };
             }),
           );
@@ -741,6 +747,9 @@ export default function MatchDashboard() {
               totalViews?: number;
               avgBlockTime?: number;
               blockSuccessRate?: number;
+              liveAvgBlockTime?: number;
+              highlightsAvgBlockTime?: number;
+              othersAvgBlockTime?: number;
             };
           } = {};
           if (platformStatsResponse.ok) {
@@ -756,6 +765,9 @@ export default function MatchDashboard() {
                 totalViews?: number;
                 avgBlockTime?: number;
                 blockSuccessRate?: number;
+                liveAvgBlockTime?: number;
+                highlightsAvgBlockTime?: number;
+                othersAvgBlockTime?: number;
               }) => {
                 platformStatsMap[stat.platformId] = stat;
               },
@@ -792,16 +804,8 @@ export default function MatchDashboard() {
               // Format totalViews from backend (it's a number, convert to string format)
               const totalViewsNumber = backendStats.totalViews ?? 0;
               const totalViews = formatViews(totalViewsNumber);
-              // Format avgBlockTime from backend (it's in minutes)
-              const avgBlockTimeMinutes = backendStats.avgBlockTime ?? 0;
-              const avgBlockTime =
-                avgBlockTimeMinutes > 0
-                  ? avgBlockTimeMinutes < 60
-                    ? `${avgBlockTimeMinutes} min`
-                    : avgBlockTimeMinutes < 1440
-                      ? `${Math.round(avgBlockTimeMinutes / 60)}h`
-                      : `${Math.round(avgBlockTimeMinutes / 1440)}d`
-                  : "0 min";
+              // Keep avgBlockTime as number from backend (in minutes)
+              const avgBlockTime = backendStats.avgBlockTime ?? 0;
               // Use blockSuccessRate directly from backend (0-100)
               const blockSuccessRate = backendStats.blockSuccessRate ?? 0;
               const blockedSuccess = `${blockSuccessRate}%`;
@@ -815,6 +819,11 @@ export default function MatchDashboard() {
               const highlightsCount =
                 (backendStats as any).highlightsCount ?? 0;
               const othersCount = (backendStats as any).othersCount ?? 0;
+              // Get content type avgBlockTime from backend
+              const liveAvgBlockTime = backendStats.liveAvgBlockTime ?? 0;
+              const highlightsAvgBlockTime =
+                backendStats.highlightsAvgBlockTime ?? 0;
+              const othersAvgBlockTime = backendStats.othersAvgBlockTime ?? 0;
 
               return {
                 ...platform,
@@ -833,6 +842,9 @@ export default function MatchDashboard() {
                 liveCount,
                 highlightsCount,
                 othersCount,
+                liveAvgBlockTime,
+                highlightsAvgBlockTime,
+                othersAvgBlockTime,
               };
             }),
           );
@@ -2844,6 +2856,15 @@ export default function MatchDashboard() {
         quality: 1,
         pixelRatio: 2,
         width: targetWidth,
+        skipFonts: true,
+        preferredFontFormat: "woff2",
+        filter: (node) => {
+          // Skip images that might fail to load
+          if (node instanceof HTMLImageElement) {
+            return node.complete && node.naturalHeight !== 0;
+          }
+          return true;
+        },
       });
 
       // Remove from DOM
@@ -2857,6 +2878,15 @@ export default function MatchDashboard() {
           backgroundColor: backgroundColor,
           quality: 1,
           pixelRatio: 2,
+          skipFonts: true,
+          preferredFontFormat: "woff2",
+          filter: (node) => {
+            // Skip images that might fail to load
+            if (node instanceof HTMLImageElement) {
+              return node.complete && node.naturalHeight !== 0;
+            }
+            return true;
+          },
         });
         images.push(dataUrl);
       }
@@ -2867,6 +2897,15 @@ export default function MatchDashboard() {
           backgroundColor: backgroundColor,
           quality: 1,
           pixelRatio: 2,
+          skipFonts: true,
+          preferredFontFormat: "woff2",
+          filter: (node) => {
+            // Skip images that might fail to load
+            if (node instanceof HTMLImageElement) {
+              return node.complete && node.naturalHeight !== 0;
+            }
+            return true;
+          },
         });
         images.push(dataUrl);
       }
@@ -2931,6 +2970,15 @@ export default function MatchDashboard() {
           quality: 1,
           pixelRatio: 2,
           width: targetWidth,
+          skipFonts: true,
+          preferredFontFormat: "woff2",
+          filter: (node) => {
+            // Skip images that might fail to load
+            if (node instanceof HTMLImageElement) {
+              return node.complete && node.naturalHeight !== 0;
+            }
+            return true;
+          },
         });
 
         // Restore original styles
@@ -2954,6 +3002,15 @@ export default function MatchDashboard() {
           backgroundColor: backgroundColor,
           quality: 1,
           pixelRatio: 2,
+          skipFonts: true,
+          preferredFontFormat: "woff2",
+          filter: (node) => {
+            // Skip images that might fail to load
+            if (node instanceof HTMLImageElement) {
+              return node.complete && node.naturalHeight !== 0;
+            }
+            return true;
+          },
         });
         images.push(dataUrl);
       }
@@ -3068,6 +3125,9 @@ export default function MatchDashboard() {
           avgBlockTimeNumber={avgBlockTimeNumber}
           blockSuccessRate={blockSuccessRate}
           targetMins={targetMins}
+          liveAvgBlockTime={match.liveAvgBlockTime}
+          highlightsAvgBlockTime={match.highlightsAvgBlockTime}
+          othersAvgBlockTime={match.othersAvgBlockTime}
           onDownloadReport={handleDownloadReport}
           isDownloading={isDownloading}
           onRoundReport={() => setIsRoundReportOpen(true)}

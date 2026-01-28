@@ -115,6 +115,9 @@ export function PlatformCard({
     Array<{ url: string; count: number }>
   >([]);
   const [isDuplicatesLoading, setIsDuplicatesLoading] = useState(false);
+  const [duplicatesPage, setDuplicatesPage] = useState(1);
+  const [duplicatesSearchQuery, setDuplicatesSearchQuery] =
+    useState<string>("");
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const violationsPerPage = 5;
   const IconComponent = platform.icon;
@@ -125,6 +128,7 @@ export function PlatformCard({
     if (!matchId) return;
 
     setIsDuplicatesLoading(true);
+    setDuplicatesPage(1); // Reset to first page
     try {
       const response = await fetch(
         `${API_URL}/violations/duplicates?matchId=${encodeURIComponent(
@@ -422,25 +426,33 @@ export function PlatformCard({
           </div>
           <p className="text-lg font-bold text-success transition-transform duration-300 group-hover:scale-110">
             {(() => {
-              // Parse avgBlockTime string (could be "10 min", "10h", "1d", etc.) to minutes
-              const avgBlockTimeStr = platform.avgBlockTime || "0 min";
+              // Handle avgBlockTime as either number or string
               let minutes = 0;
-              if (avgBlockTimeStr.includes("d")) {
-                const days =
-                  parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
-                minutes = days * 1440;
-              } else if (avgBlockTimeStr.includes("h")) {
-                const hours =
-                  parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
-                minutes = hours * 60;
+
+              // If it's already a number, use it directly
+              if (typeof platform.avgBlockTime === "number") {
+                minutes = platform.avgBlockTime;
               } else {
-                minutes =
-                  parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
+                // Parse avgBlockTime string (could be "10 min", "10h", "1d", etc.) to minutes
+                const avgBlockTimeStr = platform.avgBlockTime || "0 min";
+                if (avgBlockTimeStr.includes("d")) {
+                  const days =
+                    parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
+                  minutes = days * 1440;
+                } else if (avgBlockTimeStr.includes("h")) {
+                  const hours =
+                    parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
+                  minutes = hours * 60;
+                } else {
+                  minutes =
+                    parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
+                }
               }
+
               const hours = minutes / 60;
               return (
                 <>
-                  {minutes % 1 === 0 ? minutes : minutes.toFixed(1)}
+                  {minutes}
                   <span className="text-xs text-muted-foreground ml-1">
                     {t("matchDashboard.platformCard.min")}{" "}
                     <span className="text-xs text-muted-foreground">
@@ -502,6 +514,96 @@ export function PlatformCard({
           </div>
           <p className="text-lg font-bold text-yellow-600 dark:text-yellow-400 transition-transform duration-300 group-hover:scale-110">
             {underReviewCount}
+          </p>
+        </div>
+
+        {/* Live Avg Block Time */}
+        <div className="p-3 rounded-xl bg-gradient-to-br from-red-500/10 to-red-500/5 border border-red-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-red-500/20 cursor-pointer group">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="p-0.5 rounded bg-red-500/20 group-hover:bg-red-500/30 transition-colors">
+              <Clock className="h-2.5 w-2.5 text-red-500" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">
+              {t("matchDashboard.platformCard.liveAvgBlockTime")}
+            </p>
+          </div>
+          <p className="text-lg font-bold text-red-600 dark:text-red-400 transition-transform duration-300 group-hover:scale-110">
+            {(() => {
+              const minutes = (platform as any).liveAvgBlockTime || 0;
+              const hours = minutes / 60;
+              return (
+                <>
+                  {minutes}
+                  <span className="text-xs text-muted-foreground ml-1">
+                    {t("matchDashboard.platformCard.min")}{" "}
+                    <span className="text-xs text-muted-foreground">
+                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}
+                      {t("matchDashboard.platformCard.hrs")})
+                    </span>
+                  </span>
+                </>
+              );
+            })()}
+          </p>
+        </div>
+
+        {/* Highlights Avg Block Time */}
+        <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500/10 to-blue-500/5 border border-blue-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-blue-500/20 cursor-pointer group">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="p-0.5 rounded bg-blue-500/20 group-hover:bg-blue-500/30 transition-colors">
+              <Clock className="h-2.5 w-2.5 text-blue-500" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">
+              {t("matchDashboard.platformCard.highlightsAvgBlockTime")}
+            </p>
+          </div>
+          <p className="text-lg font-bold text-blue-600 dark:text-blue-400 transition-transform duration-300 group-hover:scale-110">
+            {(() => {
+              const minutes = (platform as any).highlightsAvgBlockTime || 0;
+              const hours = minutes / 60;
+              return (
+                <>
+                  {minutes}
+                  <span className="text-xs text-muted-foreground ml-1">
+                    {t("matchDashboard.platformCard.min")}{" "}
+                    <span className="text-xs text-muted-foreground">
+                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}
+                      {t("matchDashboard.platformCard.hrs")})
+                    </span>
+                  </span>
+                </>
+              );
+            })()}
+          </p>
+        </div>
+
+        {/* Others Avg Block Time */}
+        <div className="p-3 rounded-xl bg-gradient-to-br from-purple-500/10 to-purple-500/5 border border-purple-500/20 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/20 cursor-pointer group">
+          <div className="flex items-center gap-1.5 mb-2">
+            <div className="p-0.5 rounded bg-purple-500/20 group-hover:bg-purple-500/30 transition-colors">
+              <Clock className="h-2.5 w-2.5 text-purple-500" />
+            </div>
+            <p className="text-[10px] font-medium text-muted-foreground">
+              {t("matchDashboard.platformCard.othersAvgBlockTime")}
+            </p>
+          </div>
+          <p className="text-lg font-bold text-purple-600 dark:text-purple-400 transition-transform duration-300 group-hover:scale-110">
+            {(() => {
+              const minutes = (platform as any).othersAvgBlockTime || 0;
+              const hours = minutes / 60;
+              return (
+                <>
+                  {minutes}
+                  <span className="text-xs text-muted-foreground ml-1">
+                    {t("matchDashboard.platformCard.min")}{" "}
+                    <span className="text-xs text-muted-foreground">
+                      ({hours < 1 ? hours.toFixed(2) : hours.toFixed(1)}
+                      {t("matchDashboard.platformCard.hrs")})
+                    </span>
+                  </span>
+                </>
+              );
+            })()}
           </p>
         </div>
       </div>
@@ -1124,10 +1226,17 @@ export function PlatformCard({
         </DialogContent>
       </Dialog>
 
-      {/* Duplicates Modal */}
+      {/* Duplicates Modal with Pagination */}
       <Dialog
         open={isDuplicatesModalOpen}
-        onOpenChange={setIsDuplicatesModalOpen}>
+        onOpenChange={(open) => {
+          setIsDuplicatesModalOpen(open);
+          // Reset to page 1 and search when closing
+          if (!open) {
+            setDuplicatesPage(1);
+            setDuplicatesSearchQuery("");
+          }
+        }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
@@ -1139,6 +1248,23 @@ export function PlatformCard({
                 : "All duplicate URLs found on this platform"}
             </DialogDescription>
           </DialogHeader>
+
+          {/* Search Bar */}
+          {duplicatesList.length > 0 && (
+            <div className="mb-4">
+              <Input
+                placeholder={
+                  isRTL ? "ابحث عن عنوان URL..." : "Search by URL..."
+                }
+                value={duplicatesSearchQuery}
+                onChange={(e) => {
+                  setDuplicatesSearchQuery(e.target.value);
+                  setDuplicatesPage(1); // Reset to first page when searching
+                }}
+                className="text-xs h-8"
+              />
+            </div>
+          )}
 
           {isDuplicatesLoading ? (
             <div className="flex items-center justify-center py-8">
@@ -1154,26 +1280,113 @@ export function PlatformCard({
               </p>
             </div>
           ) : (
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {duplicatesList.map((duplicate, index) => (
-                <div
-                  key={index}
-                  className="p-3 bg-muted/50 rounded-lg border border-border/50 hover:bg-muted transition-colors">
-                  <div className="flex items-start justify-between gap-2">
-                    <a
-                      href={duplicate.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-blue-600 dark:text-blue-400 hover:underline break-all flex-1">
-                      {duplicate.url}
-                    </a>
-                    <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap ml-2">
-                      ({duplicate.count}x)
+            <>
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {(() => {
+                  const itemsPerPage = 10;
+                  // Filter duplicates based on search query
+                  const filteredDuplicates = duplicatesList.filter(
+                    (duplicate) =>
+                      duplicate.url
+                        .toLowerCase()
+                        .includes(duplicatesSearchQuery.toLowerCase()),
+                  );
+                  const totalPages = Math.ceil(
+                    filteredDuplicates.length / itemsPerPage,
+                  );
+                  const startIndex = (duplicatesPage - 1) * itemsPerPage;
+                  const endIndex = startIndex + itemsPerPage;
+                  const paginatedDuplicates = filteredDuplicates.slice(
+                    startIndex,
+                    endIndex,
+                  );
+
+                  // Show "no results" message if search returns nothing
+                  if (
+                    duplicatesSearchQuery &&
+                    filteredDuplicates.length === 0
+                  ) {
+                    return (
+                      <div className="flex flex-col items-center justify-center text-center py-8">
+                        <AlertCircle className="h-6 w-6 text-muted-foreground mb-2" />
+                        <p className="text-xs text-muted-foreground">
+                          {isRTL
+                            ? "لم يتم العثور على نتائج"
+                            : "No results found"}
+                        </p>
+                      </div>
+                    );
+                  }
+
+                  return paginatedDuplicates.map((duplicate, index) => (
+                    <div
+                      key={startIndex + index}
+                      className="p-3 bg-muted/50 rounded-lg border border-border/50 hover:bg-muted transition-colors">
+                      <div className="flex items-start justify-between gap-2">
+                        <a
+                          href={duplicate.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 dark:text-blue-400 hover:underline break-all flex-1">
+                          {duplicate.url}
+                        </a>
+                        <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap ml-2">
+                          ({duplicate.count}x)
+                        </span>
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+
+              {/* Pagination Controls */}
+              {(() => {
+                const itemsPerPage = 10;
+                // Filter duplicates based on search query
+                const filteredDuplicates = duplicatesList.filter((duplicate) =>
+                  duplicate.url
+                    .toLowerCase()
+                    .includes(duplicatesSearchQuery.toLowerCase()),
+                );
+                const totalPages = Math.ceil(
+                  filteredDuplicates.length / itemsPerPage,
+                );
+
+                return (
+                  <div className="flex items-center justify-between gap-2 pt-4 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setDuplicatesPage((prev) => Math.max(1, prev - 1))
+                      }
+                      disabled={duplicatesPage === 1}
+                      className="text-xs h-8">
+                      {isRTL ? "السابق" : "Previous"}
+                    </Button>
+
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {isRTL
+                        ? `صفحة ${duplicatesPage} من ${totalPages}`
+                        : `Page ${duplicatesPage} of ${totalPages}`}
                     </span>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setDuplicatesPage((prev) =>
+                          Math.min(totalPages, prev + 1),
+                        )
+                      }
+                      disabled={duplicatesPage === totalPages}
+                      className="text-xs h-8">
+                      {isRTL ? "التالي" : "Next"}
+                    </Button>
                   </div>
-                </div>
-              ))}
-            </div>
+                );
+              })()}
+            </>
           )}
         </DialogContent>
       </Dialog>

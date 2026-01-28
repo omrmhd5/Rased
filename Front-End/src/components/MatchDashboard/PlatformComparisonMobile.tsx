@@ -56,18 +56,24 @@ export function PlatformComparisonMobile({
     const activeCount = platform.activeViolations ?? 0;
     const removedCount = platform.removedCount ?? 0;
     const underReviewCount = platform.underReviewCount ?? 0;
-    // Parse avgBlockTime from string format (e.g., "21 min", "2h", "1d") to minutes
-    const avgBlockTimeStr = platform.avgBlockTime || "0 min";
+    // Handle avgBlockTime as either number or string
     let avgBlockTimeMinutes = 0;
-    if (avgBlockTimeStr.includes("d")) {
-      const days = parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
-      avgBlockTimeMinutes = days * 1440;
-    } else if (avgBlockTimeStr.includes("h")) {
-      const hours = parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
-      avgBlockTimeMinutes = hours * 60;
+    if (typeof platform.avgBlockTime === "number") {
+      avgBlockTimeMinutes = platform.avgBlockTime;
     } else {
-      const minutes = parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
-      avgBlockTimeMinutes = minutes;
+      // Parse avgBlockTime from string format (e.g., "21 min", "2h", "1d") to minutes
+      const avgBlockTimeStr = platform.avgBlockTime || "0 min";
+      if (avgBlockTimeStr.includes("d")) {
+        const days = parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
+        avgBlockTimeMinutes = days * 1440;
+      } else if (avgBlockTimeStr.includes("h")) {
+        const hours = parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
+        avgBlockTimeMinutes = hours * 60;
+      } else {
+        const minutes =
+          parseFloat(avgBlockTimeStr.replace(/[^0-9.]/g, "")) || 0;
+        avgBlockTimeMinutes = minutes;
+      }
     }
     // Use backend blockSuccessRate (0-100)
     const blockSuccessRate = platform.blockSuccessRate ?? 0;
