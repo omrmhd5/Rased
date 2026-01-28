@@ -13,7 +13,7 @@ const statusHistorySchema = new mongoose.Schema(
       default: Date.now,
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const matchSchema = new mongoose.Schema(
@@ -133,6 +133,18 @@ const matchSchema = new mongoose.Schema(
       type: Number,
       default: 0, // in minutes
     },
+    liveAvgBlockTime: {
+      type: Number,
+      default: 0, // in minutes
+    },
+    highlightsAvgBlockTime: {
+      type: Number,
+      default: 0, // in minutes
+    },
+    othersAvgBlockTime: {
+      type: Number,
+      default: 0, // in minutes
+    },
     blockSuccessRate: {
       type: Number,
       default: 0, // percentage (0-100)
@@ -153,7 +165,7 @@ const matchSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Indexes

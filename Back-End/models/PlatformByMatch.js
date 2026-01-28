@@ -67,6 +67,18 @@ const platformByMatchSchema = new mongoose.Schema(
       type: Number,
       default: 0, // in minutes
     },
+    liveAvgBlockTime: {
+      type: Number,
+      default: 0, // in minutes
+    },
+    highlightsAvgBlockTime: {
+      type: Number,
+      default: 0, // in minutes
+    },
+    othersAvgBlockTime: {
+      type: Number,
+      default: 0, // in minutes
+    },
     blockSuccessRate: {
       type: Number,
       default: 0, // percentage (0-100)
@@ -74,19 +86,19 @@ const platformByMatchSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Compound index for unique platform-match combination
 platformByMatchSchema.index(
   { platformId: 1, externalMatchId: 1 },
-  { unique: true }
+  { unique: true },
 );
 platformByMatchSchema.index({ matchId: 1, platformId: 1 });
 
 const PlatformByMatch = mongoose.model(
   "PlatformByMatch",
-  platformByMatchSchema
+  platformByMatchSchema,
 );
 
 export default PlatformByMatch;

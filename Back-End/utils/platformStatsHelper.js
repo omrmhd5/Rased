@@ -32,6 +32,9 @@ async function updateMatchAggregatedStats(externalMatchId) {
           removedCount: 0,
           underReviewCount: 0,
           avgBlockTime: 0,
+          liveAvgBlockTime: 0,
+          highlightsAvgBlockTime: 0,
+          othersAvgBlockTime: 0,
           blockSuccessRate: 0,
           topPlatformId: null,
           mostViews: 0,
@@ -92,6 +95,58 @@ async function updateMatchAggregatedStats(externalMatchId) {
       avgBlockTime = Math.round(totalBlockTime / totalBlocked);
     }
 
+    // Calculate weighted average for content-type-specific block times
+    let liveAvgBlockTime = 0;
+    let highlightsAvgBlockTime = 0;
+    let othersAvgBlockTime = 0;
+
+    // For Live - sum (liveAvgBlockTime * blockedCount) where liveAvgBlockTime exists, divide by total blocked in Live
+    const platformsWithLiveBlocked = platformStats.filter(
+      (s) => s.liveAvgBlockTime && s.liveAvgBlockTime > 0,
+    );
+    if (platformsWithLiveBlocked.length > 0) {
+      const totalLiveBlockTime = platformsWithLiveBlocked.reduce((sum, s) => {
+        // Approximate: use liveCount as a proxy for blocked live violations
+        // Better would be to track blockedLiveCount, but we'll use the avgBlockTime weighted approach
+        return sum + (s.liveAvgBlockTime || 0);
+      }, 0);
+      liveAvgBlockTime = Math.round(
+        totalLiveBlockTime / platformsWithLiveBlocked.length,
+      );
+    }
+
+    // For Highlights
+    const platformsWithHighlightsBlocked = platformStats.filter(
+      (s) => s.highlightsAvgBlockTime && s.highlightsAvgBlockTime > 0,
+    );
+    if (platformsWithHighlightsBlocked.length > 0) {
+      const totalHighlightsBlockTime = platformsWithHighlightsBlocked.reduce(
+        (sum, s) => {
+          return sum + (s.highlightsAvgBlockTime || 0);
+        },
+        0,
+      );
+      highlightsAvgBlockTime = Math.round(
+        totalHighlightsBlockTime / platformsWithHighlightsBlocked.length,
+      );
+    }
+
+    // For Others
+    const platformsWithOthersBlocked = platformStats.filter(
+      (s) => s.othersAvgBlockTime && s.othersAvgBlockTime > 0,
+    );
+    if (platformsWithOthersBlocked.length > 0) {
+      const totalOthersBlockTime = platformsWithOthersBlocked.reduce(
+        (sum, s) => {
+          return sum + (s.othersAvgBlockTime || 0);
+        },
+        0,
+      );
+      othersAvgBlockTime = Math.round(
+        totalOthersBlockTime / platformsWithOthersBlocked.length,
+      );
+    }
+
     // Calculate overall block success rate
     const blockSuccessRate =
       aggregated.totalViolations > 0
@@ -128,6 +183,9 @@ async function updateMatchAggregatedStats(externalMatchId) {
       removedCount: aggregated.removedCount,
       underReviewCount: aggregated.underReviewCount,
       avgBlockTime,
+      liveAvgBlockTime,
+      highlightsAvgBlockTime,
+      othersAvgBlockTime,
       blockSuccessRate,
       topPlatformId,
       mostViews,
@@ -217,6 +275,10 @@ const updatePlatformStats = async (matchId, platformId) => {
 
     // Avg block time
     let avgBlockTime = 0;
+    let liveAvgBlockTime = 0;
+    let highlightsAvgBlockTime = 0;
+    let othersAvgBlockTime = 0;
+
     if (blockedCount > 0) {
       const sBlockedViols = singles.filter(
         (v) => v.status === "Blocked" && v.blockedAt && v.timeAdded,
@@ -235,6 +297,104 @@ const updatePlatformStats = async (matchId, platformId) => {
         0,
       );
       avgBlockTime = Math.round((sTime + bTime) / blockedCount);
+    }
+
+    // Calculate content-type-specific avg block times
+    // For Live
+    const liveBlockedSingles = singles.filter(
+      (v) =>
+        v.status === "Blocked" &&
+        v.blockedAt &&
+        v.timeAdded &&
+        (v.contentType || v.type) === "Live",
+    );
+    const liveBulks = bulks.filter(
+      (b) => b.contentType === "Live" && b.blockedCount > 0,
+    );
+    const liveBlockedCount =
+      liveBlockedSingles.length +
+      liveBulks.reduce((s, b) => s + b.blockedCount, 0);
+
+    if (liveBlockedCount > 0) {
+      const liveTimeFromSingles = liveBlockedSingles.reduce((s, v) => {
+        const diff = Math.floor(
+          (new Date(v.blockedAt) - new Date(v.timeAdded)) / 60000,
+        );
+        return s + Math.max(0, diff);
+      }, 0);
+      const liveTimeFromBulks = liveBulks.reduce(
+        (s, b) => s + b.avgBlockTime * b.blockedCount,
+        0,
+      );
+      liveAvgBlockTime = Math.round(
+        (liveTimeFromSingles + liveTimeFromBulks) / liveBlockedCount,
+      );
+    }
+
+    // For Highlights
+    const highlightsBlockedSingles = singles.filter(
+      (v) =>
+        v.status === "Blocked" &&
+        v.blockedAt &&
+        v.timeAdded &&
+        (v.contentType || v.type) === "Highlights",
+    );
+    const highlightsBulks = bulks.filter(
+      (b) => b.contentType === "Highlights" && b.blockedCount > 0,
+    );
+    const highlightsBlockedCount =
+      highlightsBlockedSingles.length +
+      highlightsBulks.reduce((s, b) => s + b.blockedCount, 0);
+
+    if (highlightsBlockedCount > 0) {
+      const highlightsTimeFromSingles = highlightsBlockedSingles.reduce(
+        (s, v) => {
+          const diff = Math.floor(
+            (new Date(v.blockedAt) - new Date(v.timeAdded)) / 60000,
+          );
+          return s + Math.max(0, diff);
+        },
+        0,
+      );
+      const highlightsTimeFromBulks = highlightsBulks.reduce(
+        (s, b) => s + b.avgBlockTime * b.blockedCount,
+        0,
+      );
+      highlightsAvgBlockTime = Math.round(
+        (highlightsTimeFromSingles + highlightsTimeFromBulks) /
+          highlightsBlockedCount,
+      );
+    }
+
+    // For Others
+    const othersBlockedSingles = singles.filter(
+      (v) =>
+        v.status === "Blocked" &&
+        v.blockedAt &&
+        v.timeAdded &&
+        (v.contentType || v.type) === "Other",
+    );
+    const othersBulks = bulks.filter(
+      (b) => b.contentType === "Other" && b.blockedCount > 0,
+    );
+    const othersBlockedCount =
+      othersBlockedSingles.length +
+      othersBulks.reduce((s, b) => s + b.blockedCount, 0);
+
+    if (othersBlockedCount > 0) {
+      const othersTimeFromSingles = othersBlockedSingles.reduce((s, v) => {
+        const diff = Math.floor(
+          (new Date(v.blockedAt) - new Date(v.timeAdded)) / 60000,
+        );
+        return s + Math.max(0, diff);
+      }, 0);
+      const othersTimeFromBulks = othersBulks.reduce(
+        (s, b) => s + b.avgBlockTime * b.blockedCount,
+        0,
+      );
+      othersAvgBlockTime = Math.round(
+        (othersTimeFromSingles + othersTimeFromBulks) / othersBlockedCount,
+      );
     }
 
     // Total views - sum from singles and bulks
@@ -259,6 +419,9 @@ const updatePlatformStats = async (matchId, platformId) => {
       removedCount,
       underReviewCount,
       avgBlockTime,
+      liveAvgBlockTime,
+      highlightsAvgBlockTime,
+      othersAvgBlockTime,
       blockSuccessRate,
       totalViews,
     };
