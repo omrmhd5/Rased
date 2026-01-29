@@ -121,6 +121,11 @@ export default function Settings() {
   const [addingLeague, setAddingLeague] = useState(false);
   const [updatingLeague, setUpdatingLeague] = useState(false);
 
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
   // Check if user is superAdmin
   useEffect(() => {
     if (!currentUser || currentUser.role !== "superAdmin") {

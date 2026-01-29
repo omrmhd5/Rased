@@ -20,6 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { useSocket } from "@/hooks/useSocket";
 import {
   HoverCard,
@@ -1864,12 +1865,61 @@ export default function MatchDashboard() {
               const firstUrl = checkResult.duplicates[0];
               const count = checkResult.duplicates.length;
               const moreCount = count > 1 ? count - 1 : 0;
+              const duplicateUrls = checkResult.duplicates; // Store all duplicate URLs
 
               toast({
                 title: t("matchDashboard.error.duplicateUrlsFound"),
                 description:
                   moreCount > 0 ? `${firstUrl} + ${moreCount} more` : firstUrl,
                 variant: "destructive",
+                action: (
+                  <ToastAction
+                    altText={isRTL ? "حذف الكل" : "Delete All"}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white border-yellow-700"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch(
+                          `${API_URL}/violations/duplicates?matchId=${encodeURIComponent(
+                            match.externalMatchId,
+                          )}&platformId=${encodeURIComponent(platform.id)}&urls=${encodeURIComponent(JSON.stringify(duplicateUrls))}`,
+                          {
+                            method: "DELETE",
+                            headers: {
+                              "Content-Type": "application/json",
+                            },
+                            credentials: "include",
+                          },
+                        );
+
+                        if (!response.ok) {
+                          throw new Error("Failed to delete duplicates");
+                        }
+
+                        const data = await response.json();
+
+                        toast({
+                          title: isRTL ? "تم الحذف" : "Deleted",
+                          description: isRTL
+                            ? `تم حذف ${data.deletedCount || 0} نسخة مكررة بنجاح`
+                            : `Successfully deleted ${data.deletedCount || 0} duplicate violations`,
+                        });
+
+                        // Refetch all data
+                        await refetchAllData(true);
+                      } catch (error) {
+                        console.error("Error deleting duplicates:", error);
+                        toast({
+                          title: isRTL ? "خطأ" : "Error",
+                          description: isRTL
+                            ? "فشل حذف النسخ المكررة"
+                            : "Failed to delete duplicates",
+                          variant: "destructive",
+                        });
+                      }
+                    }}>
+                    {isRTL ? "حذف الكل" : "Delete All"}
+                  </ToastAction>
+                ),
               });
               setIsSaving(false);
               return;

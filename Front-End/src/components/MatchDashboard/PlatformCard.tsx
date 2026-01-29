@@ -27,6 +27,7 @@ import { PlatformData, Violation, BASE_URL, BulkViolation } from "./types";
 import { ViolationItem } from "./ViolationItem";
 import { BulkViolationItem } from "./BulkViolationItem";
 import { groupViolationsByBulkId, isPartOfBulkGroup } from "./utils";
+import { BulkDeleteConfirmDialog } from "./BulkDeleteConfirmDialog";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useToast } from "@/hooks/use-toast";
 import {
   Pagination,
   PaginationContent,
@@ -97,6 +99,7 @@ export function PlatformCard({
   matchId = "",
 }: PlatformCardProps) {
   const { t, isRTL } = useLanguage();
+  const { toast } = useToast();
   const [isMaximized, setIsMaximized] = useState(false);
   const [violationsPage, setViolationsPage] = useState(1);
   const [viewMetaFilter, setViewMetaFilter] = useState<
@@ -115,6 +118,10 @@ export function PlatformCard({
     Array<{ url: string; count: number }>
   >([]);
   const [isDuplicatesLoading, setIsDuplicatesLoading] = useState(false);
+  const [isDuplicatesDeletingLoading, setIsDuplicatesDeletingLoading] =
+    useState(false);
+  const [isDuplicatesDeleteConfirmOpen, setIsDuplicatesDeleteConfirmOpen] =
+    useState(false);
   const [duplicatesPage, setDuplicatesPage] = useState(1);
   const [duplicatesSearchQuery, setDuplicatesSearchQuery] =
     useState<string>("");
@@ -153,6 +160,66 @@ export function PlatformCard({
       setIsDuplicatesLoading(false);
     }
   }, [matchId, platform.id, API_URL]);
+
+  // Delete all duplicate violations
+  const deleteAllDuplicates = useCallback(() => {
+    if (!matchId || duplicatesList.length === 0) return;
+    // Open the confirm dialog
+    setIsDuplicatesDeleteConfirmOpen(true);
+  }, [matchId, duplicatesList]);
+
+  // Confirm and actually delete the duplicates
+  const confirmDeleteAllDuplicates = useCallback(async () => {
+    if (!matchId || duplicatesList.length === 0) return;
+
+    setIsDuplicatesDeletingLoading(true);
+    try {
+      const response = await fetch(
+        `${API_URL}/violations/duplicates?matchId=${encodeURIComponent(
+          matchId,
+        )}&platformId=${encodeURIComponent(platform.id)}`,
+        {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete duplicates");
+      }
+
+      // Close both dialogs and refetch data
+      setIsDuplicatesDeleteConfirmOpen(false);
+      setIsDuplicatesModalOpen(false);
+      setDuplicatesList([]);
+      setDuplicatesSearchQuery("");
+      setDuplicatesPage(1);
+
+      // Trigger refetch of violations
+      onRefetch?.();
+
+      toast({
+        title: isRTL ? "تم الحذف" : "Deleted",
+        description: isRTL
+          ? "تم حذف جميع النسخ المكررة بنجاح"
+          : "All duplicates deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error deleting duplicates:", error);
+      toast({
+        title: isRTL ? "خطأ" : "Error",
+        description: isRTL
+          ? "فشل حذف النسخ المكررة"
+          : "Failed to delete duplicates",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDuplicatesDeletingLoading(false);
+    }
+  }, [matchId, duplicatesList, isRTL, onRefetch]);
 
   // Debounced backend search for violations and bulk violations by URL or account
   const performSearch = useCallback(
@@ -1239,14 +1306,37 @@ export function PlatformCard({
         }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {isRTL ? "النسخ المكررة" : "Duplicate URLs"}
-            </DialogTitle>
-            <DialogDescription>
-              {isRTL
-                ? "عرض جميع عناوين URL المكررة في هذه المنصة"
-                : "All duplicate URLs found on this platform"}
-            </DialogDescription>
+            <div className="flex items-center justify-between w-full">
+              <div>
+                <DialogTitle>
+                  {isRTL ? "النسخ المكررة" : "Duplicate URLs"}
+                </DialogTitle>
+                <DialogDescription>
+                  {isRTL
+                    ? "عرض جميع عناوين URL المكررة في هذه المنصة"
+                    : "All duplicate URLs found on this platform"}
+                </DialogDescription>
+              </div>
+              {duplicatesList.length > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={deleteAllDuplicates}
+                  disabled={isDuplicatesDeletingLoading || isDuplicatesLoading}
+                  className="text-xs h-8 whitespace-nowrap ml-2">
+                  {isDuplicatesDeletingLoading ? (
+                    <>
+                      <div className="h-3 w-3 animate-spin mr-1.5">
+                        <Search className="h-3 w-3" />
+                      </div>
+                      {isRTL ? "جاري الحذف..." : "Deleting..."}
+                    </>
+                  ) : (
+                    <>{isRTL ? "حذف الكل" : "Delete All"}</>
+                  )}
+                </Button>
+              )}
+            </div>
           </DialogHeader>
 
           {/* Search Bar */}
@@ -1390,6 +1480,22 @@ export function PlatformCard({
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Duplicates Confirmation Dialog */}
+      <BulkDeleteConfirmDialog
+        open={isDuplicatesDeleteConfirmOpen}
+        onOpenChange={setIsDuplicatesDeleteConfirmOpen}
+        violationCount={duplicatesList.length}
+        onConfirm={confirmDeleteAllDuplicates}
+        title={isRTL ? "حذف جميع النسخ المكررة" : "Delete All Duplicates"}
+        description={
+          isRTL
+            ? "هذا الإجراء لا يمكن التراجع عنه"
+            : "This action cannot be undone."
+        }
+        confirmText={isRTL ? "حذف الكل" : "Delete All"}
+        isLoading={isDuplicatesDeletingLoading}
+      />
     </>
   );
 }

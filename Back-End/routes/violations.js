@@ -223,6 +223,212 @@ router.get("/duplicates", async (req, res) => {
   }
 });
 
+// DELETE /api/violations/duplicates - Delete all duplicate violations for a match and platform
+router.delete(
+  "/duplicates",
+  authenticateToken,
+  requireSuperAdminOrEmployee,
+  async (req, res) => {
+    try {
+      const { matchId, platformId, urls } = req.query;
+
+      // Validate input
+      if (!matchId || !platformId) {
+        return res.status(400).json({
+          error: "Missing required query parameters: matchId, platformId",
+        });
+      }
+
+      // Find the match by externalMatchId
+      const match = await Match.findOne({ externalMatchId: matchId });
+      if (!match) {
+        return res.status(404).json({ error: "Match not found" });
+      }
+
+      let targetUrls = [];
+
+      // If URLs are provided, delete only those specific URLs
+      if (urls) {
+        try {
+          targetUrls = JSON.parse(urls);
+        } catch (e) {
+          // If not JSON, treat as single URL or comma-separated
+          targetUrls = urls.split(",").map((u) => u.trim());
+        }
+      } else {
+        // If no URLs provided, find duplicate URLs (count > 1)
+        const violations = await Violation.find({
+          matchId: match._id,
+          platformId: platformId,
+        }).select("violationUrl bulkId _id");
+
+        const bulkViolations = await BulkViolation.find({
+          matchId: match._id,
+          platformId: platformId,
+        });
+
+        const urlCount = {};
+
+        violations.forEach((v) => {
+          const url = v.violationUrl;
+          urlCount[url] = (urlCount[url] || 0) + 1;
+        });
+
+        targetUrls = Object.keys(urlCount).filter((url) => urlCount[url] > 1);
+      }
+
+      if (targetUrls.length === 0) {
+        return res.json({
+          message: "No duplicates found",
+          deletedCount: 0,
+        });
+      }
+
+      // Get all violations with these URLs
+      const violations = await Violation.find({
+        matchId: match._id,
+        platformId: platformId,
+        violationUrl: { $in: targetUrls },
+      }).select("violationUrl bulkId _id");
+
+      // Also get bulk violations for this match and platform
+      const bulkViolations = await BulkViolation.find({
+        matchId: match._id,
+        platformId: platformId,
+      });
+
+      // Find which violations belong to bulks and which are standalone
+      const urlToViolations = {};
+      const urlToBulks = {};
+
+      violations.forEach((v) => {
+        const url = v.violationUrl;
+        if (!urlToViolations[url]) {
+          urlToViolations[url] = [];
+        }
+        urlToViolations[url].push(v);
+      });
+
+      bulkViolations.forEach((bulk) => {
+        const bulkViolationsData = violations.filter(
+          (v) => v.bulkId && v.bulkId === bulk.bulkId,
+        );
+
+        if (bulkViolationsData.length > 0) {
+          const url = bulkViolationsData[0].violationUrl;
+          if (targetUrls.includes(url)) {
+            if (!urlToBulks[url]) {
+              urlToBulks[url] = new Set();
+            }
+            urlToBulks[url].add(bulk.bulkId);
+          }
+        }
+      });
+
+      // Collect violations to delete by type
+      const singleViolationsToDelete = []; // Standalone violations
+      const bulkChildrenToDelete = []; // Bulk children violations with duplicate URLs
+      const bulksToCheck = new Set(); // Bulk IDs to check if empty after deletion
+
+      targetUrls.forEach((url) => {
+        // Add single violations (no bulkId)
+        if (urlToViolations[url]) {
+          urlToViolations[url].forEach((v) => {
+            if (!v.bulkId) {
+              singleViolationsToDelete.push(v._id);
+            } else {
+              // This is a bulk child with duplicate URL
+              bulkChildrenToDelete.push(v._id);
+              bulksToCheck.add(v.bulkId);
+            }
+          });
+        }
+      });
+
+      let deletedCount = 0;
+      let deletedSingle = 0;
+      let deletedBulkChildren = 0;
+      let deletedBulkParents = 0;
+      const errors = [];
+
+      // Delete single violations
+      for (const violationId of singleViolationsToDelete) {
+        try {
+          const violation = await Violation.findById(violationId);
+          if (violation) {
+            await Violation.findByIdAndDelete(violationId);
+            deletedSingle++;
+            deletedCount++;
+          }
+        } catch (error) {
+          errors.push({
+            type: "single",
+            id: violationId,
+            error: error.message,
+          });
+        }
+      }
+
+      // Delete bulk children violations (only the duplicates)
+      for (const violationId of bulkChildrenToDelete) {
+        try {
+          const violation = await Violation.findById(violationId);
+          if (violation) {
+            await Violation.findByIdAndDelete(violationId);
+            deletedBulkChildren++;
+            deletedCount++;
+          }
+        } catch (error) {
+          errors.push({
+            type: "bulk-child",
+            id: violationId,
+            error: error.message,
+          });
+        }
+      }
+
+      // Check each affected bulk - delete parent only if no children remain
+      for (const bulkId of bulksToCheck) {
+        try {
+          // Check if there are any remaining children for this bulk
+          const remainingChildren = await Violation.countDocuments({ bulkId });
+
+          if (remainingChildren === 0) {
+            // No children left, delete the bulk parent
+            await deleteBulkViolation(bulkId);
+            deletedBulkParents++;
+          } else {
+            // Still has children, just update the bulk stats
+            await updateBulkViolationStats(bulkId);
+          }
+        } catch (error) {
+          errors.push({
+            type: "bulk-parent",
+            id: bulkId,
+            error: error.message,
+          });
+        }
+      }
+
+      // Update platform stats once at the end
+      await updatePlatformStats(match._id, platformId);
+
+      res.json({
+        message: "All duplicates deleted successfully",
+        deletedCount,
+        deletedSingle,
+        deletedBulkChildren,
+        deletedBulkParents,
+        duplicateUrls: targetUrls,
+        errors: errors.length > 0 ? errors : undefined,
+      });
+    } catch (error) {
+      console.error("Error deleting duplicates:", error);
+      res.status(500).json({ error: error.message, stack: error.stack });
+    }
+  },
+);
+
 // GET /api/violations/bulk - Get all bulk violations with filters
 router.get("/bulk", async (req, res) => {
   try {
