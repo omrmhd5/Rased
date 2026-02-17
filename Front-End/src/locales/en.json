@@ -868,6 +868,7 @@
     },
     "bulk": {
       "violations": "violations",
+      "blockedIn": "blocked in",
       "changeStatus": "Change Status",
       "deleteAll": "Delete All",
       "expandAll": "Expand All",

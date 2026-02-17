@@ -874,6 +874,7 @@
     },
     "bulk": {
       "violations": "انتهاكات",
+      "blockedIn": "تم الحظر خلال",
       "changeStatus": "تغيير الحالة",
       "deleteAll": "حذف الكل",
       "expandAll": "توسيع الكل",

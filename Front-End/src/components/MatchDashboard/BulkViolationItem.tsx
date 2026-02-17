@@ -161,6 +161,20 @@ export function BulkViolationItem({
     }
   };
 
+  // Format average block time (in minutes) to display format
+  const formatAvgBlockTime = (minutes: number | null): string => {
+    if (!minutes || minutes === 0) return "-";
+    if (minutes >= 1440) {
+      const days = Math.round(minutes / 1440);
+      return `${days}${t("matchDashboard.violationItem.timeUnits.d")}`;
+    } else if (minutes >= 60) {
+      const hours = Math.round(minutes / 60);
+      return `${hours}${t("matchDashboard.violationItem.timeUnits.h")}`;
+    } else {
+      return `${Math.round(minutes)}${t("matchDashboard.violationItem.timeUnits.m")}`;
+    }
+  };
+
   const timeCreated = formatTimeWithPeriod(bulkViolation.timeAdded);
   const dateCreated = formatDate(bulkViolation.timeAdded);
   const timeAgo = formatTimeAgo(bulkViolation.timeAdded);
@@ -420,6 +434,11 @@ export function BulkViolationItem({
             <Eye className="h-3 w-3" />
             <span className="font-medium">{formattedTotalViews}</span>
           </div>
+          <span>•</span>
+          <span>
+            {t("matchDashboard.bulk.blockedIn") || "blocked in"}{" "}
+            {formatAvgBlockTime(bulkViolation.avgBlockTime)}
+          </span>
         </div>
       </div>
 

@@ -3266,9 +3266,17 @@ export default function MatchDashboard() {
               );
 
               // Filter bulk violations for this platform
-              const platformBulkViolations = bulkViolations.filter(
+              let platformBulkViolations = bulkViolations.filter(
                 (bulk) => bulk.platformId === platform.id,
               );
+
+              // Apply content type filter to bulk violations
+              if (contentTypeFilter !== "all") {
+                platformBulkViolations = platformBulkViolations.filter(
+                  (bulk) =>
+                    bulk.contentType.toLowerCase() === contentTypeFilter,
+                );
+              }
 
               return (
                 <PlatformCard
