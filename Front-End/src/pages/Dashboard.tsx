@@ -50,7 +50,11 @@ import { PlatformsOverview } from "@/components/Dashboard/PlatformsOverview";
 import { PlatformsOverviewMobile } from "@/components/Dashboard/PlatformsOverviewMobile";
 import { PlatformComparison } from "@/components/MatchDashboard/PlatformComparison";
 import { PlatformComparisonMobile } from "@/components/MatchDashboard/PlatformComparisonMobile";
-import { PlatformData, BASE_URL } from "@/components/MatchDashboard/types";
+import {
+  PlatformData,
+  BASE_URL,
+  BulkViolation,
+} from "@/components/MatchDashboard/types";
 import { formatViews as formatViewsUtil } from "@/components/MatchDashboard/utils";
 import {
   getInitialPlatformOperations,
@@ -222,6 +226,9 @@ export default function Dashboard() {
     }>,
   });
   const [statsLoading, setStatsLoading] = useState(true); // Start with true to show loading initially
+
+  // Bulk violations state for round report
+  const [bulkViolations, setBulkViolations] = useState<BulkViolation[]>([]);
 
   // Active Trouble List state
   const [troubleListFilter, setTroubleListFilter] = useState<
@@ -579,6 +586,83 @@ export default function Dashboard() {
     API_URL,
     leagues,
     refetchTrigger, // Add refetch trigger for real-time updates - invalidates cache
+  ]);
+
+  // Fetch bulk violations for round report
+  useEffect(() => {
+    if (!selectedLeague) {
+      setBulkViolations([]);
+      return;
+    }
+
+    const fetchBulkViolations = async () => {
+      try {
+        const isSuperCup = isSuperCupLeague(selectedLeague);
+        const params = new URLSearchParams({
+          league: selectedLeague,
+        });
+
+        if (isSuperCup) {
+          params.append("stageFilter", stageFilterType);
+          if (stageFilterType === "single" && singleStage) {
+            params.append("stage", singleStage);
+          } else if (
+            stageFilterType === "range" &&
+            stageRangeStart &&
+            stageRangeEnd
+          ) {
+            params.append("stageStart", stageRangeStart);
+            params.append("stageEnd", stageRangeEnd);
+          }
+        } else {
+          params.append("weekFilter", weekFilterType);
+          if (weekFilterType === "single" && singleWeek) {
+            params.append("week", singleWeek);
+          } else if (
+            weekFilterType === "range" &&
+            weekRangeStart &&
+            weekRangeEnd
+          ) {
+            params.append("weekStart", weekRangeStart);
+            params.append("weekEnd", weekRangeEnd);
+          }
+        }
+
+        const response = await fetch(
+          `${API_URL}/bulk-violations?${params.toString()}`,
+          {
+            credentials: "include",
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch bulk violations");
+        }
+
+        const data = await response.json();
+        setBulkViolations(
+          Array.isArray(data) ? data : data.bulkViolations || [],
+        );
+      } catch (error) {
+        console.error("Error fetching bulk violations:", error);
+        setBulkViolations([]);
+      }
+    };
+
+    fetchBulkViolations();
+  }, [
+    selectedLeague,
+    weekFilterType,
+    singleWeek,
+    weekRangeStart,
+    weekRangeEnd,
+    stageFilterType,
+    singleStage,
+    stageRangeStart,
+    stageRangeEnd,
+    API_URL,
+    leagues,
+    refetchTrigger,
   ]);
 
   // Fetch trouble list violations with backend pagination
@@ -2548,14 +2632,74 @@ export default function Dashboard() {
                 }.png`
         }
         liveMetrics={dashboardStats.platforms
-          .filter((platform) => platform.contentSplit.live.violations > 0)
           .map((platform) => {
+            // Get bulk violations for this platform with Live content
+            const liveBulkViolations = bulkViolations.filter(
+              (b) => b.platformId === platform.id && b.contentType === "Live",
+            );
+
+            // Get detected count from individual violations and bulk violations
+            let detected = platform.contentSplit.live.violations;
+            detected += liveBulkViolations.reduce(
+              (sum, b) => sum + b.totalCount,
+              0,
+            );
+
+            // Calculate blocked count
+            let blocked = Math.round(
+              (platform.contentSplit.live.violations * platform.successRate) /
+                100,
+            );
+            blocked += liveBulkViolations.reduce(
+              (sum, b) => sum + b.blockedCount,
+              0,
+            );
+
+            // Calculate success rate
+            const successRate =
+              detected > 0 ? Math.round((blocked / detected) * 100) : 0;
+
+            // Calculate weighted average block time
+            let totalBlockTimeMs = 0;
+            let totalBlockedCount = 0;
+
+            // Add time from individual violations (estimated using platform avgBlockTime)
+            if (platform.contentSplit.live.violations > 0) {
+              totalBlockTimeMs =
+                platform.avgBlockTime * platform.contentSplit.live.violations;
+              totalBlockedCount = platform.contentSplit.live.violations;
+            }
+
+            // Add bulk violation block times
+            if (liveBulkViolations.length > 0) {
+              liveBulkViolations.forEach((bulk) => {
+                if (
+                  bulk.avgBlockTime !== null &&
+                  bulk.avgBlockTime !== undefined
+                ) {
+                  totalBlockTimeMs += bulk.avgBlockTime * bulk.blockedCount;
+                  totalBlockedCount += bulk.blockedCount;
+                }
+              });
+            }
+
+            const avgBlockTime =
+              totalBlockedCount > 0
+                ? Math.round(totalBlockTimeMs / totalBlockedCount)
+                : 0;
+
+            // Calculate total views
+            let views = platform.contentSplit.live.views;
+            views += liveBulkViolations.reduce(
+              (sum, b) => sum + b.totalViews,
+              0,
+            );
+
+            // Only include if has violations
+            if (detected === 0) return null;
+
             const Icon = getPlatformIconComponent(platform.name);
             const platformColor = getPlatformColor(platform.name);
-            const detected = platform.contentSplit.live.violations;
-            // Calculate blocked count for Live content type
-            // Use overall success rate to estimate blocked count for Live
-            const blocked = Math.round((detected * platform.successRate) / 100);
 
             return {
               platform: platform.name,
@@ -2564,20 +2708,84 @@ export default function Dashboard() {
               ),
               detected: detected,
               blocked: blocked,
-              successRate: platform.successRate,
-              avgBlockTime: platform.avgBlockTime,
-              views: platform.contentSplit.live.views,
+              successRate: successRate,
+              avgBlockTime: avgBlockTime,
+              views: views,
             };
-          })}
+          })
+          .filter((metric) => metric !== null)}
         highlightsMetrics={dashboardStats.platforms
-          .filter((platform) => platform.contentSplit.highlights.violations > 0)
           .map((platform) => {
+            // Get bulk violations for this platform with Highlights content
+            const highlightsBulkViolations = bulkViolations.filter(
+              (b) =>
+                b.platformId === platform.id && b.contentType === "Highlights",
+            );
+
+            // Get detected count from individual violations and bulk violations
+            let detected = platform.contentSplit.highlights.violations;
+            detected += highlightsBulkViolations.reduce(
+              (sum, b) => sum + b.totalCount,
+              0,
+            );
+
+            // Calculate blocked count
+            let blocked = Math.round(
+              (platform.contentSplit.highlights.violations *
+                platform.successRate) /
+                100,
+            );
+            blocked += highlightsBulkViolations.reduce(
+              (sum, b) => sum + b.blockedCount,
+              0,
+            );
+
+            // Calculate success rate
+            const successRate =
+              detected > 0 ? Math.round((blocked / detected) * 100) : 0;
+
+            // Calculate weighted average block time
+            let totalBlockTimeMs = 0;
+            let totalBlockedCount = 0;
+
+            // Add time from individual violations (estimated using platform avgBlockTime)
+            if (platform.contentSplit.highlights.violations > 0) {
+              totalBlockTimeMs =
+                platform.avgBlockTime *
+                platform.contentSplit.highlights.violations;
+              totalBlockedCount = platform.contentSplit.highlights.violations;
+            }
+
+            // Add bulk violation block times
+            if (highlightsBulkViolations.length > 0) {
+              highlightsBulkViolations.forEach((bulk) => {
+                if (
+                  bulk.avgBlockTime !== null &&
+                  bulk.avgBlockTime !== undefined
+                ) {
+                  totalBlockTimeMs += bulk.avgBlockTime * bulk.blockedCount;
+                  totalBlockedCount += bulk.blockedCount;
+                }
+              });
+            }
+
+            const avgBlockTime =
+              totalBlockedCount > 0
+                ? Math.round(totalBlockTimeMs / totalBlockedCount)
+                : 0;
+
+            // Calculate total views
+            let views = platform.contentSplit.highlights.views;
+            views += highlightsBulkViolations.reduce(
+              (sum, b) => sum + b.totalViews,
+              0,
+            );
+
+            // Only include if has violations
+            if (detected === 0) return null;
+
             const Icon = getPlatformIconComponent(platform.name);
             const platformColor = getPlatformColor(platform.name);
-            const detected = platform.contentSplit.highlights.violations;
-            // Calculate blocked count for Highlights content type
-            // Use overall success rate to estimate blocked count for Highlights
-            const blocked = Math.round((detected * platform.successRate) / 100);
 
             return {
               platform: platform.name,
@@ -2586,11 +2794,12 @@ export default function Dashboard() {
               ),
               detected: detected,
               blocked: blocked,
-              successRate: platform.successRate,
-              avgBlockTime: platform.avgBlockTime,
-              views: platform.contentSplit.highlights.views,
+              successRate: successRate,
+              avgBlockTime: avgBlockTime,
+              views: views,
             };
-          })}
+          })
+          .filter((metric) => metric !== null)}
       />
     </div>
   );

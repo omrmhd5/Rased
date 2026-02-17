@@ -3460,33 +3460,48 @@ export default function MatchDashboard() {
             new Date().toISOString().split("T")[0]
           }.png`}
           liveMetrics={platformOperations
-            .filter((platform) => {
-              const liveViolations = platform.violations.filter(
-                (v) => (v.contentType || v.type) === "Live",
-              );
-              return liveViolations.length > 0;
-            })
             .map((platform) => {
-              const IconComponent = platform.icon;
+              // Get individual live violations
               const liveViolations = platform.violations.filter(
                 (v) => (v.contentType || v.type) === "Live",
               );
-              const detected = liveViolations.length;
-              const blocked = liveViolations.filter(
+
+              // Get bulk violations for this platform with Live content
+              const liveBulkViolations = bulkViolations.filter(
+                (b) => b.platformId === platform.id && b.contentType === "Live",
+              );
+
+              // Aggregate counts from individual violations
+              let detected = liveViolations.length;
+              let blocked = liveViolations.filter(
                 (v) => v.status === "Blocked" || v.statusBadge === "Blocked",
               ).length;
+
+              // Add counts from bulk violations
+              detected += liveBulkViolations.reduce(
+                (sum, b) => sum + b.totalCount,
+                0,
+              );
+              blocked += liveBulkViolations.reduce(
+                (sum, b) => sum + b.blockedCount,
+                0,
+              );
+
+              // Calculate success rate
               const successRate =
                 detected > 0 ? Math.round((blocked / detected) * 100) : 0;
 
-              // Calculate avg block time for live violations
+              // Calculate avg block time from individual violations
               const blockedViolations = liveViolations.filter(
                 (v) =>
                   v.blockedAt &&
                   (v.status === "Blocked" || v.statusBadge === "Blocked"),
               );
-              let avgBlockTime = 0;
+              let totalBlockTimeMs = 0;
+              let totalBlockedCount = blockedViolations.length;
+
               if (blockedViolations.length > 0) {
-                const totalBlockTime = blockedViolations.reduce((sum, v) => {
+                totalBlockTimeMs = blockedViolations.reduce((sum, v) => {
                   if (v.blockedAt && v.timeAdded) {
                     const diffMs =
                       new Date(v.blockedAt).getTime() -
@@ -3496,22 +3511,47 @@ export default function MatchDashboard() {
                   }
                   return sum;
                 }, 0);
-                avgBlockTime = Math.round(
-                  totalBlockTime / blockedViolations.length,
-                );
               }
 
-              // Calculate views for live violations
-              const views = liveViolations.reduce((sum, v) => {
+              // Add bulk violation block times (weighted average)
+              if (liveBulkViolations.length > 0) {
+                liveBulkViolations.forEach((bulk) => {
+                  if (
+                    bulk.avgBlockTime !== null &&
+                    bulk.avgBlockTime !== undefined
+                  ) {
+                    totalBlockTimeMs += bulk.avgBlockTime * bulk.blockedCount;
+                    totalBlockedCount += bulk.blockedCount;
+                  }
+                });
+              }
+
+              const avgBlockTime =
+                totalBlockedCount > 0
+                  ? Math.round(totalBlockTimeMs / totalBlockedCount)
+                  : 0;
+
+              // Calculate views from individual violations
+              const individualViews = liveViolations.reduce((sum, v) => {
                 if (!v.views || v.views === "0") return sum;
                 const viewsStr = v.views || "0";
-                // Remove all non-numeric characters except commas, then parse
                 const numStr = viewsStr
                   .replace(/[^0-9,]/g, "")
                   .replace(/,/g, "");
                 return sum + (parseFloat(numStr) || 0);
               }, 0);
 
+              // Add views from bulk violations
+              const bulkViews = liveBulkViolations.reduce(
+                (sum, b) => sum + b.totalViews,
+                0,
+              );
+              const views = individualViews + bulkViews;
+
+              // Only include platform if it has any violations
+              if (detected === 0) return null;
+
+              const IconComponent = platform.icon;
               return {
                 platform: platform.name,
                 icon: platform.iconUrl ? (
@@ -3536,35 +3576,53 @@ export default function MatchDashboard() {
                 avgBlockTime: avgBlockTime,
                 views: views,
               };
-            })}
-          highlightsMetrics={platformOperations
-            .filter((platform) => {
-              const highlightsViolations = platform.violations.filter(
-                (v) => (v.contentType || v.type) === "Highlights",
-              );
-              return highlightsViolations.length > 0;
             })
+            .filter((metric) => metric !== null)}
+          highlightsMetrics={platformOperations
             .map((platform) => {
-              const IconComponent = platform.icon;
+              // Get individual highlights violations
               const highlightsViolations = platform.violations.filter(
                 (v) => (v.contentType || v.type) === "Highlights",
               );
-              const detected = highlightsViolations.length;
-              const blocked = highlightsViolations.filter(
+
+              // Get bulk violations for this platform with Highlights content
+              const highlightsBulkViolations = bulkViolations.filter(
+                (b) =>
+                  b.platformId === platform.id &&
+                  b.contentType === "Highlights",
+              );
+
+              // Aggregate counts from individual violations
+              let detected = highlightsViolations.length;
+              let blocked = highlightsViolations.filter(
                 (v) => v.status === "Blocked" || v.statusBadge === "Blocked",
               ).length;
+
+              // Add counts from bulk violations
+              detected += highlightsBulkViolations.reduce(
+                (sum, b) => sum + b.totalCount,
+                0,
+              );
+              blocked += highlightsBulkViolations.reduce(
+                (sum, b) => sum + b.blockedCount,
+                0,
+              );
+
+              // Calculate success rate
               const successRate =
                 detected > 0 ? Math.round((blocked / detected) * 100) : 0;
 
-              // Calculate avg block time for highlights violations
+              // Calculate avg block time from individual violations
               const blockedViolations = highlightsViolations.filter(
                 (v) =>
                   v.blockedAt &&
                   (v.status === "Blocked" || v.statusBadge === "Blocked"),
               );
-              let avgBlockTime = 0;
+              let totalBlockTimeMs = 0;
+              let totalBlockedCount = blockedViolations.length;
+
               if (blockedViolations.length > 0) {
-                const totalBlockTime = blockedViolations.reduce((sum, v) => {
+                totalBlockTimeMs = blockedViolations.reduce((sum, v) => {
                   if (v.blockedAt && v.timeAdded) {
                     const diffMs =
                       new Date(v.blockedAt).getTime() -
@@ -3574,22 +3632,47 @@ export default function MatchDashboard() {
                   }
                   return sum;
                 }, 0);
-                avgBlockTime = Math.round(
-                  totalBlockTime / blockedViolations.length,
-                );
               }
 
-              // Calculate views for highlights violations
-              const views = highlightsViolations.reduce((sum, v) => {
+              // Add bulk violation block times (weighted average)
+              if (highlightsBulkViolations.length > 0) {
+                highlightsBulkViolations.forEach((bulk) => {
+                  if (
+                    bulk.avgBlockTime !== null &&
+                    bulk.avgBlockTime !== undefined
+                  ) {
+                    totalBlockTimeMs += bulk.avgBlockTime * bulk.blockedCount;
+                    totalBlockedCount += bulk.blockedCount;
+                  }
+                });
+              }
+
+              const avgBlockTime =
+                totalBlockedCount > 0
+                  ? Math.round(totalBlockTimeMs / totalBlockedCount)
+                  : 0;
+
+              // Calculate views from individual violations
+              const individualViews = highlightsViolations.reduce((sum, v) => {
                 if (!v.views || v.views === "0") return sum;
                 const viewsStr = v.views || "0";
-                // Remove all non-numeric characters except commas, then parse
                 const numStr = viewsStr
                   .replace(/[^0-9,]/g, "")
                   .replace(/,/g, "");
                 return sum + (parseFloat(numStr) || 0);
               }, 0);
 
+              // Add views from bulk violations
+              const bulkViews = highlightsBulkViolations.reduce(
+                (sum, b) => sum + b.totalViews,
+                0,
+              );
+              const views = individualViews + bulkViews;
+
+              // Only include platform if it has any violations
+              if (detected === 0) return null;
+
+              const IconComponent = platform.icon;
               return {
                 platform: platform.name,
                 icon: platform.iconUrl ? (
@@ -3614,7 +3697,8 @@ export default function MatchDashboard() {
                 avgBlockTime: avgBlockTime,
                 views: views,
               };
-            })}
+            })
+            .filter((metric) => metric !== null)}
         />
       )}
     </div>
